@@ -169,6 +169,37 @@ whole job is stylesheet position.
 
 ---
 
+### `!important` is not the top of the cascade — a running animation is
+
+Before assuming a rule "did not apply", check whether the site is **animating** that property.
+CSS animations and Web Animations occupy a cascade origin **above author-important**, so a site
+that animates a property owns it outright: your `!important` is ignored with no error, no
+warning, and a computed value that is simply not yours [F-ANIMATION-BEATS-IMPORTANT].
+
+The tell is that **one declaration loses while its neighbours in the same rule win** — position,
+inset, z-index and visibility all take, and only the animated property reads back wrong.
+
+```js
+getComputedStyle(el).transform;                       // not what you wrote
+el.getAnimations().map(a => [a.playState,             // a `running` effect listing that
+  a.effect.getKeyframes().flatMap(Object.keys)]);     // property is the diagnosis
+```
+
+**Do not cancel the animation** — the site restarts it, and you have then taken over a behaviour
+you do not control. Stop competing instead: `translate`, `rotate` and `scale` are **independent
+longhands** that compose with `transform` rather than overriding it, so an animation on
+`transform` cannot reach them.
+
+```css
+/* loses to the site's transform animation */   transform: translateX(-110%) !important;
+/* composes with it, and wins            */     translate: -110% 0 !important;
+```
+
+Keep the `transform` line below it as the fallback for an engine without `translate`; where both
+are supported the longhand decides. The same trick applies to `opacity` only by luck — there is
+no independent longhand for it, so an animated `opacity` needs a different property entirely
+(`visibility`, or a wrapper you own).
+
 ## 5 · Replay the site's own condition
 
 **The lesson, generalised:**
