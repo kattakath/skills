@@ -28,7 +28,7 @@
     },
     {
       "name": "llmstxt",
-      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
+      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work \u2014 docs, a site, a repo, or a developer accomplishment document.",
       "version": "0.1.0",
       "author": {
         "name": "Ismail Kattakath"
@@ -47,8 +47,8 @@
     },
     {
       "name": "page-lab",
-      "description": "Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, performance/network/console diagnosis, and a Greasy Fork readiness linter.",
-      "version": "0.3.0",
+      "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, an acceptance runner that exercises a redesign with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter.",
+      "version": "0.4.0",
       "author": {
         "name": "Ismail Kattakath"
       },
