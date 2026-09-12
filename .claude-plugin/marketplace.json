@@ -1,12 +1,31 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kattakath",
-  "description": "Ismail Kattakath's Claude Code plugins: userscript authoring with live-page diagnosis, and llms.txt authoring.",
+  "description": "Ismail Kattakath's Claude Code plugins: hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, and llms.txt authoring.",
   "owner": {
     "name": "Ismail Kattakath",
     "url": "https://github.com/kattakath"
   },
   "plugins": [
+    {
+      "name": "claude-code-nix",
+      "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "nix",
+        "flakes",
+        "hooks",
+        "home-manager",
+        "claude-code"
+      ],
+      "homepage": "https://github.com/kattakath/claude-plugins",
+      "license": "MIT",
+      "source": "./plugins/claude-code-nix"
+    },
     {
       "name": "llmstxt",
       "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
@@ -46,6 +65,25 @@
       "homepage": "https://greasyfork.org/en/help/code-rules",
       "license": "MIT",
       "source": "./plugins/page-lab"
+    },
+    {
+      "name": "superhook",
+      "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "hooks",
+        "reliability",
+        "supervisor",
+        "claude-code",
+        "loop-breaker"
+      ],
+      "homepage": "https://github.com/kattakath/claude-plugins",
+      "license": "MIT",
+      "source": "./plugins/superhook"
     }
   ]
 }
