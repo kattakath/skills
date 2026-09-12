@@ -9,7 +9,7 @@ description: >
   and can hand the operator a click-to-point element picker.
 ---
 
-# Userscript author — measure → replay → write → lint → prove
+# Userscript author — measure → replay → write → lint → accept → prove
 
 **The invariant is MEASURE.** Never ship a selector, class or breakpoint that was not dumped
 from the live page. **If no route is reachable, say so and stop** — asking the operator to
@@ -19,7 +19,7 @@ This skill owns the *judgment*: is the state you want **already rendered** by th
 selectors are **real**, what gets **asked** instead of guessed.
 
 ```
-wish → shelf → route → measure A vs B → diff → replay-or-select → write → lint → prove
+wish → shelf → route → measure A vs B → diff → replay-or-select → write → lint → accept → prove
 ```
 
 **Delivery is out of scope.** This skill stops at a lint-clean, proven file.
@@ -138,6 +138,32 @@ scripts/userscript-meta-lint.sh <file.user.js>      # or a directory
 `node --check`, required/banned metadata keys, dotted-numeric `@version`, minified or bundled
 output, vendored attribution, and that no minted `kapture-` selector reached the file. What it
 **cannot** check: [`patterns.md`](patterns.md) § 10.
+
+### F.5 Acceptance — exercise the host's primary actions
+
+```bash
+scripts/userscript-acceptance.mjs --repeat 3 <file>.acceptance.mjs
+```
+
+**Lint plus geometry is not a gate.** A shipped script passed both with its search completely
+dead: the button was present, 40x40, on top at its own centre, and inert under a trusted click
+— `activeElement` stayed `BODY` [F-PRESENT-NOT-WORKING]. `getBoundingClientRect` proves a
+control is *present*; only operating it proves it *works*.
+
+- [ ] Every **primary action of the host** still works under a **trusted** event
+      (`Input.dispatchMouseEvent`, never `el.click()`): the thing the user came to the site to
+      do, plus anything the redesign moved, hid or floated over.
+- [ ] Anything the redesign **relocated** is exercised where it now lives, not where it was.
+- [ ] **Teardown returns the page to stock** — including any node the script moved, back at its
+      original parent and next-sibling.
+- [ ] A **second injection** does not livelock: that is the Greasy Fork install plus a manual
+      one, which is the case the teardown contract exists for.
+- [ ] Never assert at a fixed delay. Poll until the value stops changing, and raise the
+      stability count for anything that grows in steps [F-TRANSITION-RACE].
+
+The spec is a `.mjs` module beside the `.user.js`, so the script's repo needs no test runner —
+the runner lives here. Write assertions against what an operator would *do*, not against the
+numbers a layout happens to have.
 
 ### G. Prove it after install
 

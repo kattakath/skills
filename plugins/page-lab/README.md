@@ -46,7 +46,7 @@ removed.
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
 | `references/pick-protocol.md` + `pick-envelope.schema.json` | The pick contract |
 | `references/cdp-extras.md` | Raw-CDP surface no MCP tool exposes, as symptom → command |
-| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe |
+| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the acceptance runner |
 
 ## Scripts
 
@@ -56,8 +56,15 @@ scripts/route-up.sh                        # how to OPEN a route, not just name 
 scripts/userscript-meta-lint.sh <path|dir> # Greasy Fork readiness
 scripts/pick-validate.mjs --self-test scripts/fixtures
 scripts/devtools-doctor.sh                 # CDP connection preflight
+scripts/userscript-acceptance.mjs <spec>   # does the redesign still WORK? (trusted events)
 node scripts/pick-element.mjs              # arm the picker (or the page-lab-pick CLI)
 ```
+
+`userscript-acceptance.mjs` is the gate the linter is not. Lint says the file is publishable
+and `selector-verify.mjs` says the nodes are there; neither says the redesign still works.
+A real script shipped through exactly that gap — its search button was present, sized and
+hit-testable, and inert under a trusted click [F-PRESENT-NOT-WORKING]. The spec is a `.mjs`
+module living beside the `.user.js` it tests, so the script's own repo needs no test runner.
 
 Wire the linter into CI:
 
