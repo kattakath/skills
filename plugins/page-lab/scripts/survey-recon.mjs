@@ -247,14 +247,64 @@ const themeExpr = `(()=>{
     rules, crossOriginSheets:crossOrigin,
     toggleLike: toggle?toggle.tagName+(toggle.id?'#'+toggle.id:'.'+String(toggle.className).split(/\\s+/)[0]):null};})()`;
 
-const pagerExpr = `(()=>{
-  const sels=['.pagination','[class*="pagin"]','[class*="pager"]','nav[aria-label*="age"]'];
-  for(const s of sels){ const e=document.querySelector(s);
-    if(e&&e.getBoundingClientRect().height>4){
-      const sig=e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+
-        (typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\\s+/)[0]:'');
-      return {found:sig, links:e.querySelectorAll('a[href]').length};}}
-  return {found:null, links:0};})()`;
+/**
+ * PAGINATION, and it is a QUALIFYING SIGNAL rather than a nice-to-have.
+ *
+ * A pager with at least one real page link is the characteristic every page this method
+ * targets shares, and the pages it excludes are exactly the awkward ones: a watch page has
+ * none, and neither does an infinite-scroll shape. Measured across four sites on
+ * 2026-09-13, it rejected a watch page whose related strip otherwise scored an organic
+ * share of 1.00 and passed every other signal [F-PAGINATION-IS-A-QUALIFYING-SIGNAL].
+ *
+ * A pager ELEMENT is not enough. One site's infinite-scroll shape ships a
+ * `#load-more-container` holding a label `span` and ZERO anchors; keying on the container
+ * would readmit precisely the page the rule exists to exclude. Count LINKS.
+ *
+ * Named selectors first because they are cheap and legible, then a structural pass: a
+ * rendered element holding 3+ links that differ by a page token. The structural pass is
+ * what covers a site whose pager carries a hashed class.
+ */
+const pagerExpr = (unitHref) => `(()=>{
+  const U=${j(unitHref || '')};
+  /* A PAGER NEVER LINKS TO A UNIT. Without this guard the structural pass matched a CARD:
+     div#video_<id>.thumb-block, whose own links end in a slug carrying digits, scored 3
+     "page links" and was reported as the page's pagination
+     [F-A-CARD-IS-NOT-A-PAGER]. */
+  const unitLink=a=>{const h=a.getAttribute('href')||'';
+    return U?h.includes(U):/\\/(videos?|watch|clips?|v)[\\/.\\-]/i.test(h)};
+  const sig=e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+
+    (typeof e.className==='string'&&e.className?'.'+e.className.trim().split(/\\s+/)[0]:'');
+  const paged=a=>{let p;try{p=new URL(a.getAttribute('href')||'',location.href)}catch(x){return false}
+    const s=p.pathname+p.search;
+    return /(?:[?&](?:p|page|from)=\\d+)|(?:\\/\\d{1,4}(?:\\/|$))|(?:-\\d{1,4}(?:\\/|$))/.test(s)};
+  const renders=e=>{const c=getComputedStyle(e);
+    return c.display!=='none'&&c.visibility!=='hidden'&&e.getBoundingClientRect().height>4};
+  const named=['.pagination','.numlist2','nav[aria-label*="age"]','[class*="pagin"]',
+    '[class*="pager"]','[class*="page-list"]','[class*="load-more"]','[class*="loadmore"]'];
+  for(const sel of named){
+    for(const e of document.querySelectorAll(sel)){
+      if(!renders(e))continue;
+      const as=[...e.querySelectorAll('a[href]')];
+      if(as.some(unitLink))continue;
+      const links=as.filter(paged).length;
+      if(links>=1) return {found:sig(e), links, how:'named'};}}
+  /* structural: a hashed-class pager still looks like a pager */
+  const cands=[];
+  for(const e of document.querySelectorAll('div,nav,ul,section')){
+    if(!renders(e))continue;
+    const as=[...e.querySelectorAll('a[href]')];
+    if(as.length<3||as.length>60)continue;
+    if(as.some(unitLink))continue;
+    /* DISTINCT targets: three links to the same page are not three pages. */
+    const tokens=new Set();
+    for(const a of as){ if(!paged(a))continue;
+      let p;try{p=new URL(a.getAttribute('href')||'',location.href)}catch(x){continue}
+      tokens.add(p.pathname+p.search);}
+    const n=tokens.size;
+    if(n>=3&&n/as.length>=0.5) cands.push({e,n});}
+  const outer=cands.filter(c=>!cands.some(o=>o!==c&&c.e.contains(o.e)));
+  if(outer.length) return {found:sig(outer[0].e), links:outer[0].n, how:'structural'};
+  return {found:null, links:0, how:null};})()`;
 
 const report = [];
 for (const sh of shapes) {
@@ -353,8 +403,10 @@ for (const sh of shapes) {
     await lab.movePointer(5, 700);
   }
 
-  row.qualifies = !!(row.organicShare >= 0.5 && win.unitKids >= 4);
-  row.pagination = await lab.ev(pagerExpr);
+  row.pagination = await lab.ev(pagerExpr(opts.unitHref));
+  // FOUR signals, not three. The pager is the one that rejects a watch page whose related
+  // strip passes all the others [F-PAGINATION-IS-A-QUALIFYING-SIGNAL].
+  row.qualifies = !!(row.organicShare >= 0.5 && win.unitKids >= 4 && row.pagination.links >= 1);
   row.theme = await lab.ev(themeExpr);
 
   row.widths = [];
@@ -416,6 +468,7 @@ for (const r of report) {
   }
   process.stdout.write(`  theme     bg ${r.theme.bodyBg} lum ${r.theme.bodyLuminance} · sheets ${r.theme.sheets} rules ${r.theme.rules} cross-origin ${r.theme.crossOriginSheets} · prefers-color-scheme blocks ${r.theme.prefersColorSchemeBlocks}${r.theme.toggleLike ? ` · toggle-like ${r.theme.toggleLike}` : ''}\n`);
   process.stdout.write(`  widths    ${r.widths.map((w) => `${w.w}:${w.unit ?? '?'}${w.overflowX ? ` OVERFLOW ${w.overflowX}` : ''}`).join('  ')}\n`);
-  process.stdout.write(`  pager     ${r.pagination.found ?? 'none found'}${r.pagination.links ? ` (${r.pagination.links} links)` : ''}\n\n`);
+  process.stdout.write(`  pager     ${r.pagination.found ?? 'NONE — this shape cannot qualify'}`
+    + `${r.pagination.links ? ` (${r.pagination.links} page links, ${r.pagination.how})` : ' (0 page links)'}\n\n`);
 }
 process.stdout.write('M5 (chrome, LAYERED), M6-M8 (listeners/styles/dialogs — N/A unless something moves)\nand M9 (colour) are NOT measured here. UNMEASURED is a finding; do not infer them.\n');

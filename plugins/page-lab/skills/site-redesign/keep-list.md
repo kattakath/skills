@@ -29,7 +29,8 @@ The keep-list is only applied to a page that **is** the surface. Deciding that b
 three signals **together**, and the worked form for a video wall is:
 
 > A page qualifies when it carries a **grid** of video **cards** where **(a)** the cards
-> **autoplay a preview on hover** and **(b)** clicking a card **goes to a video page**.
+> **autoplay a preview on hover**, **(b)** clicking a card **goes to a video page**, and
+> **(c)** the page has **pagination carrying at least one real page link**.
 
 Everything else gets **nothing** — no sheet, no attribute, no marker, no theme.
 
@@ -40,6 +41,7 @@ Each signal is doing a job, and dropping any one of them has let a page through:
 | **The link target** | the strongest machine-checkable test, so make it the primary one: a card whose anchor resolves to a video route |
 | **Hover autoplay** | card markup reused by something that is not a video wall — a channel/profile strip and a photo gallery, on two different sites, both shipped the same card class and neither previews nor links to a video |
 | **The grid** | a rail. A related-videos strip beside a player *is* a grid of video cards that previews and links to videos — and is still out of scope |
+| **Pagination** | the watch page, and every infinite-scroll shape. It is the characteristic the target pages actually share, and the cheapest signal to measure [F-PAGINATION-IS-A-QUALIFYING-SIGNAL] |
 
 **The gate is about the PAGE, not only about the cards.** That last row is the subtle one
 and it cost a rework: gating on "this page has a qualifying grid" let the watch page in,
@@ -47,6 +49,18 @@ because the watch page has one. The rule is **"this page's purpose IS a grid of 
 cards"** — the watch page's purpose is the player.
 
 Three practical rules, all paid for:
+
+- **Count pager LINKS, never the pager element.** One site's infinite-scroll shape ships a
+  `#load-more-container` holding a label `span` and **zero** anchors; an element test
+  readmits exactly the page the signal exists to exclude. Measured across four sites, the
+  link test rejected a watch page scoring an organic share of **1.00** on every other
+  signal, and it rejected the awkward infinite-scroll shapes with it.
+
+  **It is a real trade, not a free win.** The same measurement dropped four shapes that are
+  genuine galleries — two profile shapes, a `/best/` sort shape and a studio page — because
+  they scroll infinitely and have no pager at all. They render stock. That was the
+  operator's call and it is the right default: one structural test, uniform across sites,
+  beats a second signal that is harder to verify and readmits the problem page.
 
 - **Test the href with `contains`, not a prefix, and verify the shapes.** One kind of card
   came in **two** href shapes on one site; a prefix test missed **29** of them on one shape
