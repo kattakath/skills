@@ -4,6 +4,28 @@
 A redesign is verified when every primary action still works under a **trusted** event —
 `Input.dispatchMouseEvent` and `Input.dispatchKeyEvent`, never `el.click()`.
 
+## Verify at document-start, or verify nothing
+
+**An `eval` of the IIFE into a loaded page tests a world the installed script never
+sees** [F-INJECT-IS-NOT-INSTALL]. The real script runs at `@run-at document-start`:
+no `<body>`, no site JS yet, and **the site's own scripts run after it** and may
+overwrite what it did. Evaluating at `readyState: "complete"` inverts that order.
+
+This is not a theoretical gap. A suite of **88 injected checks reported 0 failures**
+on a build that, once installed, themed only four of six page shapes, rendered one
+gallery completely blank, and opened a drawer laid out 55px wide by 5132px tall.
+**Six probes at document-start found all five defects in minutes.**
+
+- Inject with **`Page.addScriptToEvaluateOnNewDocument`**, which runs at
+  document-start on every navigation.
+- **Drive real navigations**, one per URL shape — not one `eval` into a settled page.
+- Remember the operator's genuinely installed copy is running too. Two copies in one
+  document produce **doubled UI counts that look like a teardown bug and are not**;
+  tear the previous copy down via its registered global before measuring, and prove
+  single-copy behaviour separately.
+
+The repo rule states it in four words: **injecting is not installing.**
+
 Build the suite on `scripts/userscript-acceptance.mjs` and `scripts/lib/harness.mjs`.
 Hand-rolling a CDP driver for this is the reinvented wheel; the harness already carries
 the node-without-`WebSocket` re-exec [F-NODE-NO-WS], trusted input, and `settle()`.

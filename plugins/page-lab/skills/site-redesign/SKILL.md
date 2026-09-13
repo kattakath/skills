@@ -34,6 +34,11 @@ same "degrade to stock" failure mode.
 
 ## Hard rules — additional to `userscript-author`'s
 
+0. **Check the shelf, including your own.** Before building any affordance, grep
+   the sibling scripts in the same repo for the mechanism — a repo that ships
+   several redesigns has usually solved the card overlay, the drawer or the
+   lazy-load fade already, with its measurements in the header comment
+   ([`overlays.md`](overlays.md)).
 1. **No selector may be written before the survey is complete.** The survey is a
    blocking phase with its own deliverable ([`survey.md`](survey.md)). "I will measure
    it when I get there" is how a redesign ships a guess.
@@ -159,6 +164,8 @@ Do not re-litigate these without a new measurement that contradicts the recorded
 - [`survey.md`](survey.md) — **the blocking phase.** M1-M12, re-usable verbatim.
 - [`theming.md`](theming.md) — dark mode, the remap, contrast repair, motion, media.
 - [`relocation.md`](relocation.md) — moving live controls without breaking them.
+- [`overlays.md`](overlays.md) — the hover-title card overlay, measured; and the
+  reminder to check your OWN sibling scripts before building any affordance.
 - [`acceptance.md`](acceptance.md) — verification groups and how specs lie.
 - [`../userscript-author/SKILL.md`](../userscript-author/SKILL.md) — the base rules this
   skill assumes.
