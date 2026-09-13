@@ -6,6 +6,15 @@ verbatim on any site; the twelve questions are site-agnostic by construction.
 
 ## Rules for the surveyor
 
+- **Assert the rig before you trust a NULL result.** A CDP target can silently stop
+  delivering trusted press/release while still delivering `mouseMoved`, which makes every
+  working control read as "renders, does nothing" [F-INPUT-SILENTLY-DROPPED]. Before
+  concluding anything does not work: trusted-click a **plain stock control** and require
+  its observable effect. Prefer a fresh target per phase over one long-lived tab —
+  especially when several agents share a browser.
+- **Activate the target.** A backgrounded tab freezes the animation clock, which both
+  stalls observers and makes `settle()` confirm a stock value as "stable"
+  [F-BG-TAB-FREEZES-ANIM].
 - **Measure the STOCK page.** Tear down any existing script first, or you measure your
   own output.
 - **Every selector carries a verdict and a match count.** Use
@@ -144,13 +153,54 @@ stylesheets for `prefers-color-scheme`.
 it on every axis: less code, no remap, no contrast repair, and it survives the site's
 own redesigns. Report it before anyone writes a palette.
 
+### M13 — Existing compact layout *(check before building a shell)*
+
+**Most legacy sites already ship a design for "everything except the content" — their
+mobile layout.** Someone decided what survives when the screen is small. That is the same
+judgement a redesign has to make, already made, already shipped, already tested against
+the site's own content.
+
+Ask:
+
+- At a narrow viewport, does the chrome **collapse into a menu**? Which nodes hide, which
+  appear?
+- Is that menu **the same DOM** as the desktop page, or a different document (a separate
+  host, or server-side UA sniffing)? Same DOM is the reusable case.
+- **What is the actual lever** — a class, an attribute, a media query, or JS?
+- How much of the mobile CSS **matches anything** on the page? Not how much exists —
+  how much *matches*.
+
+Report the mechanism precisely, because the obvious answer is usually wrong in a specific
+way: **a class whose declaration lives inside a media query is inert outside it**, so
+toggling it does nothing and the shortcut silently fails [F-MEDIA-GATED-CLASS-INERT]. The
+lever is the *rule*, not the class.
+
+Media queries key on the real viewport and **cannot be faked**, so inheriting a mobile
+layout means **re-emitting its rules un-gated**, not "switching the site to mobile mode".
+That is why the matching-rule count matters so much:
+
+| Measured on one video site, 2026-09-13 | |
+|---|---|
+| Mobile `@media` blocks in the sheet | 95 blocks, 701 rules, 103,603 bytes |
+| Minus the content-surface rules | 608 |
+| **Actually matching a node on the page** | **60 rules, 5,377 bytes** |
+
+548 of 608 matched nothing. The difference between those two numbers is the difference
+between vendoring 92 KB of someone else's stylesheet — which bloats the script and
+freezes at today's version while the site moves — and writing about a dozen rules.
+
+**Check every surface separately.** On that same site the mechanism existed on one of the
+two page shells and was entirely absent on the other (`0` matching nodes), so the script
+needs two modes — [`relocation.md`](relocation.md) § Adopt or relocate.
+
 ## Output shape
 
 One `## M<n>` section each, tables wherever the data is tabular, every selector with a
 verdict and a count, every number measured rather than estimated, the date at the top.
 
-Then a summary of the **decision-relevant** findings only — M2, M4, M6, M8, M10, M12 —
-because those six are the ones that change what the other agents build.
+Then a summary of the **decision-relevant** findings only — M2, M4, M6, M8, M10, M12,
+M13 — because those are the ones that change what the other agents build. **M12 and M13
+first**: a stock dark theme or a stock compact layout can delete most of a phase.
 
 ## Where to read next
 

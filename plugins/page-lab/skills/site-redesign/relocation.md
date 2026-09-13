@@ -4,6 +4,32 @@ The premise: an overlay or drawer that holds the site's real controls, **moved**
 rebuilt. A rebuilt control diverges from the site the first time the site changes; a
 moved one cannot.
 
+## Adopt or relocate — decide per surface, from the DOM
+
+Moving a node is the fallback, not the default. If M13 found the site already collapses
+its own chrome, the cheaper build **adopts** that: leave every node where it is, un-gate
+the site's own rules, and drive the site's own switch.
+
+| | **Adopt** | **Relocate** |
+|---|---|---|
+| Nodes move | no | yes |
+| Ancestor chain changes | no | yes |
+| Matched-style breakage below | **cannot occur** | applies in full |
+| Needs | the site ships a compact layout | nothing |
+
+The whole of the next two sections is "what breaks when the ancestor chain changes".
+**Adopt mode makes them moot** — which is most of the value.
+
+Two cautions, both measured:
+
+- **Decide the mode structurally, each run, never by URL and never latched.** One site
+  served two different shells at the *same* URL across loads, with the mechanism present
+  on one and absent on the other (`0` matching nodes).
+- **Adopting can invert a removal.** If the drawer lives inside the very chrome you meant
+  to delete, deleting it takes the drawer with it. The resolution is usually that the
+  container **becomes** the panel rather than being removed — but you must check, because
+  it silently contradicts the "remove all chrome" half of the brief.
+
 ## Before you move anything
 
 | Check | Source | Failure if skipped |

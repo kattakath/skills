@@ -23,14 +23,22 @@ the node-without-`WebSocket` re-exec [F-NODE-NO-WS], trusted input, and `settle(
 | **Reduced motion** | Under `prefers-reduced-motion: reduce`, faded elements are **visible** — not stuck at `opacity: 0`. |
 | **Performance** | Inject time, and any remap cost, as **numbers**. |
 
-## Three ways a spec lies to you
+## Four ways a spec lies to you
+
+0. **The rig itself is dead.** A CDP target can silently stop delivering trusted
+   press/release while still delivering `mouseMoved`, so every control reads as "renders
+   correctly, does nothing" and the redesign takes the blame [F-INPUT-SILENTLY-DROPPED].
+   **Assert liveness on a plain stock control before trusting any null result.** This one
+   is listed first because it invalidates the other three rather than competing with them.
 
 1. **A fixed sleep races a transition** [F-TRANSITION-RACE]. Poll with `settle()` until
    the value stops changing. Two equal reads are not proof for anything that grows in
    steps — raise `stableFor`.
-2. **An observer-driven spec stalls in a background tab** [F-IO-BACKGROUND-TAB].
-   `IntersectionObserver` delivers nothing until the target is activated, and the
-   resulting false negative looks exactly like broken lazy-loading.
+2. **A background tab breaks three things at once** — `IntersectionObserver` delivers
+   nothing [F-IO-BACKGROUND-TAB], transitions never tick so `settle()` confirms a stock
+   value as "stable", and a frozen transition **pins its property above author-`!important`**
+   [F-BG-TAB-FREEZES-ANIM]. These present as unrelated defects (lazy-loading broken,
+   colours unreached, clicks not navigating) and clear together on `Target.activateTarget`.
 3. **Ordering inside a spec.** A dismissal check placed after an Escape check runs
    against an already-closed dialog and passes for the wrong reason. Re-open between
    assertions, and make each assertion establish its own precondition.

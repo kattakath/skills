@@ -71,15 +71,19 @@ Survey (blocking, one agent)
 
 ### 1. Survey — blocking
 
-Run [`survey.md`](survey.md) end to end. It is a 12-point template (M1-M12) written to
+Run [`survey.md`](survey.md) end to end. It is a 13-point template (M1-M13) written to
 be re-used verbatim on any site. Its output is a dated table that every later phase
 treats as the source of truth.
 
-Two of the twelve routinely change the whole plan, so read them first when the survey
-lands:
+Three of the thirteen routinely change the whole plan, so read them first when the survey
+lands. **Two of them can delete most of a phase before it starts:**
 
 - **M12 — does the site already ship a dark theme?** If it does, drive it. Overpainting
   a stock theme is the reinvented wheel at its most expensive.
+- **M13 — does the site already ship a compact layout?** Its mobile view is a shipped
+  design for "everything except the content" — the same judgement the redesign has to
+  make, already made. Adopting it can make the whole relocation problem moot
+  ([`relocation.md`](relocation.md) § Adopt or relocate).
 - **M6 — are the controls' handlers delegated to an ancestor?** If they are, relocation
   breaks them and the Shell phase needs a different strategy entirely.
 
@@ -130,8 +134,12 @@ three ways a spec lies to you.
   weight, so a preserved colour must be re-declared [F-NOT-TAKES-MAX-SPECIFICITY].
 - **`transform` for off-canvas** — it re-anchors every fixed descendant
   [F-TRANSFORM-CONTAINING-BLOCK].
-- **A fixed sleep in a spec** [F-TRANSITION-RACE], and **an observer-driven spec in a
-  background tab** [F-IO-BACKGROUND-TAB].
+- **A fixed sleep in a spec** [F-TRANSITION-RACE], and **anything measured in a
+  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM].
+- **Trusting a null result before asserting the rig** [F-INPUT-SILENTLY-DROPPED] — a dead
+  target makes every working control look broken.
+- **Treating a site class as a lever without checking its rule is in scope**
+  [F-MEDIA-GATED-CLASS-INERT].
 
 ## Approaches already measured and rejected
 
