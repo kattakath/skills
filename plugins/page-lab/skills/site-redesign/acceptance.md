@@ -16,8 +16,18 @@ on a build that, once installed, themed only four of six page shapes, rendered o
 gallery completely blank, and opened a drawer laid out 55px wide by 5132px tall.
 **Six probes at document-start found all five defects in minutes.**
 
-- Inject with **`Page.addScriptToEvaluateOnNewDocument`**, which runs at
-  document-start on every navigation.
+- Inject with **`lab.addDocStart(body)`** — NOT a raw
+  `Page.addScriptToEvaluateOnNewDocument`. **CDP injects EARLIER than a userscript
+  manager's `document-start`**, early enough that `document.documentElement` is still
+  `null` [F-DOCSTART-NO-DOCUMENTELEMENT]; a script whose first act is to check for it
+  returns, and **the page then reports stock**. `addDocStart` wraps the body for exactly
+  this, and the wrap is skipped by passing the body as an `openLab` option instead.
+
+  This is the most expensive mistake in this file's history, because it does not look
+  like a failure. It produced two confident reports that a feature "works identically
+  stock and scripted" — when in truth **neither arm had the script**, so stock was being
+  compared to stock. A suite that injects this way passes everything and proves nothing.
+  If a whole redesign appears not to apply, suspect this **before** the script.
 - **Drive real navigations**, one per URL shape — not one `eval` into a settled page.
 - Remember the operator's genuinely installed copy is running too. Two copies in one
   document produce **doubled UI counts that look like a teardown bug and are not**;

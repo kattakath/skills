@@ -32,6 +32,51 @@ Crossing into this skill does **not** relax anything: the same two gates, the sa
 metadata bans, the same "anchors are roles and `href`s, never generated classes", the
 same "degrade to stock" failure mode.
 
+## Scope first: which surfaces are actually the point
+
+**Ask this before the survey, and make the operator answer it.** A redesign spreads by
+default — every page you look at has something wrong with it — and the spread is where the
+cost is. Almost all of it buys nothing.
+
+The question is: **which surface is the reason the user opens this site at all?** On a video
+site that is the gallery of links into content. Not the watch page, not the category index,
+not the profile pages, not the tag listings.
+
+**A page that is not that surface should get NOTHING.** Not a relocated menu, not a tidy-up,
+and *not even a theme*. "While we are here, make it dark too" is how a two-rule change
+becomes two thousand lines.
+
+Measured on two sites that were built the wide way first and then narrowed:
+
+| Built for every shape | Narrowed to the gallery |
+|---|---|
+| a drawer, with focus trap, `inert`, Escape and click-outside | **deleted** |
+| relocation of the site's own controls, and its repair rules | **deleted** |
+| harvesting stranded links so nothing lost its only route | **deleted** — nothing is hidden, so nothing is stranded |
+| a keep-only island for the watch page | **deleted** |
+| two structural modes, because two shells host chrome differently | **deleted** — no chrome is touched |
+| a theme that had to reach every surface uniformly | **one surface** |
+
+Every one of those existed to solve a problem **created by widening the scope**. The drawer
+existed because chrome was removed; the harvesting existed because the drawer hid things;
+the modes existed because two shells hid them differently. None of it served the wall.
+
+**The cheap version of "everything else out of the way":**
+
+- **Autohide the top bar** rather than relocating a menu — it is a handful of rules, it
+  strands nothing, and it needs no focus management because nothing is ever removed from
+  the accessibility tree.
+- **Purge side rails and the footer** on the surfaces you own. No harvesting needed: on a
+  page you leave alone, every route is still there.
+- **Gate on the content surface itself** — "does this page carry the thing I am here for" —
+  so every other shape is stock by construction rather than by a list of exceptions.
+
+**The trade, stated honestly.** A narrow script leaves the rest of the site looking like the
+rest of the site: a reader who clicks through to a watch page gets the stock page, theme and
+all. That inconsistency is the price, and on both sites the operator judged it cheap against
+the machinery it deletes. Put the choice to them in those terms rather than assuming either
+answer.
+
 ## Hard rules — additional to `userscript-author`'s
 
 0. **Check the shelf, including your own.** Before building any affordance, grep
@@ -39,29 +84,32 @@ same "degrade to stock" failure mode.
    several redesigns has usually solved the card overlay, the drawer or the
    lazy-load fade already, with its measurements in the header comment
    ([`overlays.md`](overlays.md)).
-1. **No selector may be written before the survey is complete.** The survey is a
+1. **Redesign only the surface that is the point.** Everything else is stock, including
+   its theme. A rule that exists only because an earlier rule widened the scope is a rule
+   neither of them needed.
+2. **No selector may be written before the survey is complete.** The survey is a
    blocking phase with its own deliverable ([`survey.md`](survey.md)). "I will measure
    it when I get there" is how a redesign ships a guess.
-2. **Move the site's node; never rebuild its control.** A relocated control brings its
+3. **Move the site's node; never rebuild its control.** A relocated control brings its
    own handler. A rebuilt one is the reinvented wheel, and it silently diverges the
    first time the site changes. Confirm the handler is on the node and not delegated to
    an ancestor before you move it — [`relocation.md`](relocation.md).
-3. **One palette, declared once.** A redesign that hard-codes colours at each use site
+4. **One palette, declared once.** A redesign that hard-codes colours at each use site
    cannot be verified or retuned. Tokens on a root data attribute; the count that
    replaced 51 literals in the reference implementation was 17.
-4. **One lifecycle object, one `AbortController`.** Every observer, listener, fetch,
+5. **One lifecycle object, one `AbortController`.** Every observer, listener, fetch,
    sheet and saved-state handle lives on it, so teardown is an `abort()` plus a loop —
    not a set of hand-matched removals that drift apart.
-5. **Teardown stops new work BEFORE it undoes the DOM**, and every coalescer, builder
+6. **Teardown stops new work BEFORE it undoes the DOM**, and every coalescer, builder
    and scan checks a `torn` flag at entry — a queued frame outlives teardown and
    rebuilds what it just removed [F-RAF-SURVIVES-TEARDOWN].
-6. **Never name a script-scope const after a global** you also use. `const CSS` shadows
+7. **Never name a script-scope const after a global** you also use. `const CSS` shadows
    `window.CSS` and `CSS.escape` then throws a TDZ error that reads like something else
    entirely [F-CSS-SHADOWS-GLOBAL].
-7. **Geometry proves presence, never function** — the reference plugin's own
+8. **Geometry proves presence, never function** — the reference plugin's own
    `[F-PRESENT-NOT-WORKING]`. Every primary action is re-exercised under a **trusted**
    event, before and after. A redesign is not verified until the site still works.
-8. **Record numbers, not adjectives.** "Contrast is fine" is not a measurement; "4.8:1"
+9. **Record numbers, not adjectives.** "Contrast is fine" is not a measurement; "4.8:1"
    is. Every claim in the header block and the changelog carries the figure and the date.
 
 ## Phases
