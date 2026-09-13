@@ -230,7 +230,7 @@ A refactor lane without a net is a rewrite.
   so grep for the row instead:
 
   ```bash
-  pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/references | tail -1)
+  pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/references | sort -V | tail -1)
   grep -n 'F-INSIDE-THE-GRID-IS-NOT-A-CARD' "$pl/facts.md"   # one fact, by ID
   grep -oE '^\| `F-[A-Z0-9-]+`' "$pl/facts.md"               # list every fact ID
   grep -n 'F-.*PAGER\|F-.*PAGINATION' "$pl/facts.md"         # by topic

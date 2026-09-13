@@ -58,7 +58,7 @@ Two entrypoints, and the second is not a bigger version of the first:
 | A whole redesign, many URL shapes, document-start | `scripts/redesign-acceptance.mjs <config.mjs>` — a **declarative config**; the groups below come for free |
 
 ```bash
-pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | tail -1)
+pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | sort -V | tail -1)
 
 # START HERE when something is wrong: facts per URL shape, no verdicts.
 node "$pl/redesign-acceptance.mjs" --diagnose ./my-site.redesign.mjs

@@ -19,7 +19,8 @@ const HELP = `Usage: selector-verify.mjs [options] <selector...>
        selector-verify.mjs [options] -          # selectors on stdin, one per line,
                                                 # or one page-lab/pick@1 envelope
 
-  --browser-url <url>     debug browser (default http://127.0.0.1:9222)
+  --browser-url <url>     debug browser (or PL_BROWSER_URL; default http://127.0.0.1:9222 —
+                          the operator's own browser, which is correct for /pick flows only)
   --target-id <id>        page target to query (default: the first page target)
   --root <nodeId>         scoring root, as a nodeId
   --root-selector <css>   scoring root, resolved in this session (nodeIds are ephemeral
@@ -35,7 +36,11 @@ Exit: 0 at least one UNIQUE · 1 otherwise · 7 this Node cannot speak WebSocket
 
 function parseArgs(argv) {
   const o = {
-    browserUrl: 'http://127.0.0.1:9222',
+    // PL_BROWSER_URL first: every other script in this plugin reads it, and a caller who
+    // exported it for a throwaway browser must not be silently routed to :9222. The default
+    // STAYS :9222 because this tool's home is the /pick and userscript-author flows, where
+    // the operator's own browser is the legitimate target [F-TWO-NAMES-FOR-ONE-BROWSER].
+    browserUrl: process.env.PL_BROWSER_URL || 'http://127.0.0.1:9222',
     targetId: null,
     root: null,
     rootSelector: null,

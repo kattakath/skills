@@ -57,8 +57,11 @@ Three practical rules, all paid for:
   signal, and it rejected the awkward infinite-scroll shapes with it.
 
   **It is a real trade, not a free win.** The same measurement dropped four shapes that are
-  genuine galleries — two profile shapes, a `/best/` sort shape and a studio page — because
-  they scroll infinitely and have no pager at all. They render stock. That was the
+  genuine galleries — SITE-C's `/best/` and `/profile/`, SITE-A's `/porn-maker/` and
+  SITE-B's `/pornstars/` — because they scroll infinitely and have no pager at all. They
+  render stock. **The bindings matter**: a route name alone is not a claim about every
+  site — SITE-B's own `/best/<month>` shape has a real 19-link pager and QUALIFIES, and an
+  unbound reading of this list once sent a surveyor there expecting none. That was the
   operator's call and it is the right default: one structural test, uniform across sites,
   beats a second signal that is harder to verify and readmits the problem page.
 

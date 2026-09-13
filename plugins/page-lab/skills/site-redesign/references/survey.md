@@ -36,7 +36,10 @@ verbatim on any site; the thirteen questions are site-agnostic by construction.
 ## Run the tool first — M1-M4 and M10-M12 are measured, not eyeballed
 
 ```bash
-pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | tail -1)
+# sort -V, NOT bare tail: version strings sort lexically ("0.4.1" > "0.22.0"), so the
+# unsorted glob hands you the OLDEST cache once versions cross a digit boundary — measured
+# resolving to 0.4.1 with 0.22.0 installed [F-LEXICAL-TAIL-PICKS-THE-OLDEST-CACHE].
+pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | sort -V | tail -1)
 export PL_BROWSER_URL=http://127.0.0.1:9345      # a THROWAWAY browser, never the operator's
 node "$pl/survey-recon.mjs" --origin https://example.com \
   --shapes 'index=/,search=/search/x,category=/c/x,watch=/video/x,photos=/photos' \

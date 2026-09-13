@@ -122,7 +122,7 @@ const containersExpr = (href) => `(()=>{
   /* A class token carrying a build hash is NOT an anchor — it changes on the site's next
      deploy. Marking it here is the no-framework-class rule enforced mechanically, the same
      job selector-verify.mjs does with its GENERATED verdict. */
-  const gen=t=>/-[0-9a-f]{4,}$/i.test(t)||/-\\d{4,}$/.test(t)||/^[a-z]+_[A-Za-z0-9]{5,}$/.test(t);
+  const gen=t=>/-[0-9a-f]{4,}$/i.test(t)||/-\\d{4,}$/.test(t)||/^[a-z]+_(?=[A-Za-z0-9]*\\d)[A-Za-z0-9]{5,}$/.test(t);
   /* sig() returns a USABLE SELECTOR and nothing else. An earlier version appended a
      "[GENERATED]" note to the same string, which was then handed to querySelector and
      matched nothing — three shapes reported UNMEASURED on grids that were sitting right
@@ -351,7 +351,7 @@ const pagerExpr = (unitHref) => `(()=>{
  * after every removal. One pass is never the answer.
  */
 const chromeExpr = (gridSel, barSel) => `(()=>{
-  const gen=t=>/-[0-9a-f]{4,}$/i.test(t)||/-\\d{4,}$/.test(t)||/^[a-z]+_[A-Za-z0-9]{5,}$/.test(t);
+  const gen=t=>/-[0-9a-f]{4,}$/i.test(t)||/-\\d{4,}$/.test(t)||/^[a-z]+_(?=[A-Za-z0-9]*\\d)[A-Za-z0-9]{5,}$/.test(t);
   const cls=e=>(typeof e.className==='string'&&e.className)
     ?e.className.trim().split(/\\s+/).slice(0,2):[];
   const sig=e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+
@@ -385,16 +385,38 @@ const report = [];
 for (const sh of shapes) {
   let url = sh.path === undefined ? null : origin + sh.path;
   if (sh.follow !== undefined) {
-    // Follow a REAL card. A guessed watch URL is a 404 that still renders a related grid,
-    // and every measurement taken on it describes a page nobody visits.
+    // Follow a REAL card, FROM THE GRID. A guessed watch URL is a 404 that still renders a
+    // related grid — and a whole-document search is the quieter failure: the default href
+    // heuristic matched a nav link (a /videos-i-like recently-watched entry sits before any
+    // card in the DOM) and produced a confident non-qualifying verdict for a page that was
+    // never a watch page at all. Found by a Sonnet trial [F-FOLLOW-FROM-THE-GRID].
+    // So: find a multi-row container whose children carry unit links, and follow ITS first
+    // unit. Only when no such grid exists fall back to the document, and say so.
     const from = origin + sh.follow;
     if (await goto(from) !== null) {
       const href = await lab.ev(`(()=>{const H=${j(opts.unitHref || '')};
         const hit=a=>{const h=a.getAttribute('href')||'';
           return H?h.includes(H):/\\/(videos?|watch|clips?|v)[\\/.\\-]/i.test(h)};
+        const rows=g=>new Set([...g.children].filter(k=>k.getBoundingClientRect().height>20)
+          .map(k=>Math.round(k.getBoundingClientRect().top/10))).size;
+        let best=null;
+        for(const g of document.querySelectorAll('div,ul,section,main,ol')){
+          const cs=getComputedStyle(g);
+          if(cs.display==='none'||cs.visibility==='hidden')continue;
+          const r=g.getBoundingClientRect(); if(r.width<300||r.height<150)continue;
+          const units=[...g.children].filter(k=>[...k.querySelectorAll('a[href]')].some(hit));
+          if(units.length<4)continue;
+          if(rows(g)<2)continue;
+          if(!best||units.length>best.n) best={n:units.length,u:units[0]};}
+        if(best){const a=[...best.u.querySelectorAll('a[href]')].find(hit);
+          if(a)return {href:a.href, how:'grid'};}
         const a=[...document.querySelectorAll('a[href]')].find(hit);
-        return a?a.href:null})()`);
-      url = href;
+        return a?{href:a.href, how:'document'}:null})()`);
+      if (href && href.how === 'document') {
+        process.stderr.write(`follow: no qualifying grid on ${from} — followed the first `
+          + `document-order match instead. Verify the landed URL is really a unit page.\n`);
+      }
+      url = href ? href.href : null;
     }
     if (!url) {
       report.push({ shape: sh.label, url: from, error: 'FOLLOW FAILED — no unit link found' });
@@ -532,11 +554,32 @@ for (const sh of shapes) {
      dark ground comes from a media query is dark only for a reader whose OS agrees. Reading
      it once, under whatever the surveying machine happens to be set to, answers a different
      question than the one asked [F-M12-IS-TWO-MEASUREMENTS]. */
+  /* EACH PASS STARTS FROM A WIPED ORIGIN, and the reload after the wipe is the actual
+     measurement. Measured on SITE-B: the site detects prefers-color-scheme in JS (zero CSS
+     scheme blocks) and PERSISTS the answer to localStorage on the first visit — fresh+dark
+     reads rgb(22,22,22), fresh+light reads rgb(255,255,255), and whichever pass runs first
+     writes the key that pins the second, so an uncleared comparison reports
+     "same under both schemes" for a site that genuinely follows the OS
+     [F-FIRST-VISIT-PERSISTS-THE-SCHEME]. Clearing between passes is what makes the two
+     numbers commensurable. Cookie clearing is best-effort and REPORTED, never assumed:
+     the CDP calls have measured failure modes (Network.clearBrowserCookies needs
+     Network.enable first; Storage.clearDataForOrigin returned a bare Internal error). */
   const scheme = async (v) => {
     await lab.client.send('Emulation.setEmulatedMedia',
       { features: [{ name: 'prefers-color-scheme', value: v }] }, lab.sessionId);
     await goto(url);
-    return lab.ev(themeExpr);
+    const priorKeys = await lab.ev(`(()=>{try{
+      const k=Object.keys(localStorage).filter(x=>/theme|dark|night|scheme/i.test(x));
+      localStorage.clear();sessionStorage.clear();return k}catch(e){return null}})()`);
+    let cookiesCleared = true;
+    try {
+      await lab.client.send('Network.enable', {}, lab.sessionId);
+      await lab.client.send('Network.clearBrowserCookies', {}, lab.sessionId);
+    } catch { cookiesCleared = false; }
+    await goto(url);
+    const t = await lab.ev(themeExpr);
+    /* themeExpr's stateful now means: written by the site ON THIS FRESH LOAD. */
+    return { ...t, priorKeys, cookiesCleared };
   };
   const dark = await scheme('dark');
   const light = await scheme('light');
@@ -549,7 +592,24 @@ for (const sh of shapes) {
 }
 await lab.close();
 
-if (opts.json) { process.stdout.write(`${JSON.stringify(report, null, 2)}\n`); process.exit(0); }
+if (opts.json) {
+  /* SAME PRIVACY DISCIPLINE AS THE TABLE. The renderer collapses ids and slugs; --json used
+     to emit them verbatim — full explicit title slugs, on the tool's own automation path,
+     against the survey's own rule. Structure is what automation needs; content is what the
+     rule forbids. Collapse hex runs and digit runs, and slug words past the route segment. */
+  const scrub = (v) => {
+    if (typeof v === 'string') {
+      return v.replace(/[0-9a-f]{6,}/gi, 'H').replace(/[0-9]{2,}/g, 'N')
+        .replace(/((?:videos?|video|watch|clips?)[./-])[A-Za-z0-9%+_-]{12,}/gi, '$1SLUG');
+    }
+    if (Array.isArray(v)) { return v.map(scrub); }
+    if (v && typeof v === 'object') {
+      const o = {}; for (const k of Object.keys(v)) { o[k] = scrub(v[k]); } return o;
+    }
+    return v;
+  };
+  process.stdout.write(`${JSON.stringify(scrub(report), null, 2)}\n`); process.exit(0);
+}
 
 const pad = (s, n) => String(s ?? '').padEnd(n);
 process.stdout.write(`\n=== survey recon — ${origin} · ${shapes.length} shape(s) ===\n\n`);
@@ -601,8 +661,18 @@ for (const r of report) {
       + `light ${r.theme.lightScheme.bodyBg}\n`);
   }
   if (r.theme.stateful) {
-    process.stdout.write(`  THEME     STATEFUL — a stored preference is present (${r.theme.stateful}).\n`
-      + '            This profile may be answering, not the site. Re-measure in a FRESH one.\n');
+    process.stdout.write(`  THEME     the site WRITES a preference on first visit (${r.theme.stateful}) —\n`
+      + '            the scheme passes above cleared storage first, so they are commensurable;\n'
+      + '            but any LATER single reading of this origin reports the pinned choice,\n'
+      + '            not the site.\n');
+  }
+  if (r.theme.priorKeys && r.theme.priorKeys.length) {
+    process.stdout.write(`  THEME     this profile ARRIVED with ${r.theme.priorKeys.join(', ')} — cleared before\n`
+      + '            measuring, so the verdicts above are the site\'s, not the profile\'s.\n');
+  }
+  if (r.theme.cookiesCleared === false) {
+    process.stdout.write('  THEME     cookie clearing FAILED — a cookie-persisted theme could still pin the\n'
+      + '            comparison. Treat scheme-dependence as UNMEASURED if the two schemes agree.\n');
   }
   process.stdout.write(`  theme     bg ${r.theme.bodyBg} lum ${r.theme.bodyLuminance} · sheets ${r.theme.sheets} rules ${r.theme.rules} cross-origin ${r.theme.crossOriginSheets} · prefers-color-scheme blocks ${r.theme.prefersColorSchemeBlocks}${r.theme.toggleLike ? ` · toggle-like ${r.theme.toggleLike}` : ''}\n`);
   process.stdout.write(`  widths    ${r.widths.map((w) => `${w.w}:${w.unit ?? '?'}${w.overflowX ? ` OVERFLOW ${w.overflowX}` : ''}`).join('  ')}\n`);
