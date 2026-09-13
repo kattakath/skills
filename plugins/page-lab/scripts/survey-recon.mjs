@@ -22,6 +22,10 @@ const HELP = `Usage: survey-recon.mjs --origin <url> --shapes <label=path,...> [
   --shapes a=/,b=/x     URL shapes to measure. Include the LOOKALIKES (a watch page, a
                         profile, a photo gallery): the ones that must NOT qualify are the
                         ones worth measuring.
+                        A shape written  watch=follow:/  is RESOLVED BY FOLLOWING a real
+                        unit link from that path, rather than by inventing a URL. Use it
+                        for watch pages: a guessed slug returns a 404 that still renders a
+                        related grid, and measuring that says nothing.
   --unit-href <str>     substring identifying a unit's link (CONTAINS, never a prefix
                         [F-HREF-PREFIX-MISSES]). Omit to auto-detect and report the guess.
   --widths 1280,1512    desktop widths for M11 (default 1280,1512,1920,2560)
@@ -66,7 +70,10 @@ if (!opts.browserUrl) {
 
 const shapes = opts.shapes.split(',').map((s) => {
   const [label, ...rest] = s.split('=');
-  return { label: label.trim(), path: rest.join('=').trim() };
+  const raw = rest.join('=').trim();
+  return raw.startsWith('follow:')
+    ? { label: label.trim(), follow: raw.slice('follow:'.length) || '/' }
+    : { label: label.trim(), path: raw };
 });
 
 const j = JSON.stringify;
@@ -166,6 +173,16 @@ const containersExpr = (href) => `(()=>{
   /* A container anchored on hashed classes loses a tie: those names rot. Measured, one such
      class stopped matching between two loads MINUTES apart [F-GENERATED-CLASS-ROTS-IN-MINUTES]. */
   keep.sort((a,b)=>(b.unitKids-a.unitKids)||(isGen(a.el)-isGen(b.el)));
+  /* MARK THE WINNER. Everything downstream used to re-resolve the winner from its class
+     SIGNATURE, and a signature is not a selector: on one site three separate containers
+     shared the string div.js-media-list.grid.h-fit, so querySelector returned the FIRST -
+     not the node that was scored. Unit box came back 0x0, every width column came back
+     "?", the hover probe aimed its pointer at the wrong element and reported UNMEASURED,
+     and the verdict line still said the shape qualified. Silent, and exactly the failure
+     this tool exists to catch [F-A-SIGNATURE-IS-NOT-A-SELECTOR].
+     An attribute on the element itself cannot be ambiguous. */
+  for(const el of document.querySelectorAll('[data-sr-grid]')) el.removeAttribute('data-sr-grid');
+  if(keep.length) keep[0].el.setAttribute('data-sr-grid','');
   const railNote=rails.filter(r=>!out.some(o=>o.el.contains(r.el))).slice(0,3)
     .map(r=>sig(r.el)+' rows='+r.rows+' units='+r.unitKids);
   const missNote=nearMiss.filter(m=>!nearMiss.some(o=>o!==m&&m.el.contains(o.el)))
@@ -176,7 +193,9 @@ const containersExpr = (href) => `(()=>{
     const r=c.el.getBoundingClientRect();
     const first=c.el.querySelector(':scope > *');
     const nonUnit=[...c.el.children].filter(k=>![...k.querySelectorAll('a[href]')].some(hit));
-    return {sel:sig(c.el),generated:isGen(c.el),kids:c.kids,unitKids:c.unitKids,rows:c.rows,
+    return {sel:sig(c.el),generated:isGen(c.el),
+      matches:document.querySelectorAll(sig(c.el)).length,
+      kids:c.kids,unitKids:c.unitKids,rows:c.rows,
       share:+(c.unitKids/c.kids).toFixed(3),
       display:getComputedStyle(c.el).display,
       box:Math.round(r.width)+'x'+Math.round(r.height),
@@ -188,8 +207,9 @@ const containersExpr = (href) => `(()=>{
   });})()`;
 
 /** Every distinct href SHAPE under the winning container, digits collapsed. */
-const hrefShapesExpr = (sel) => `(()=>{
-  const g=document.querySelector(${j(sel)}); if(!g)return [];
+const MARK = '[data-sr-grid]';
+const hrefShapesExpr = () => `(()=>{
+  const g=document.querySelector('[data-sr-grid]'); if(!g)return [];
   const seen={};
   for(const a of g.querySelectorAll('a[href]')){
     /* Normalise to a PATH first: an absolute href sliced by segment collapses to its own
@@ -201,8 +221,8 @@ const hrefShapesExpr = (sel) => `(()=>{
     seen[k]=(seen[k]||0)+1;}
   return Object.entries(seen).sort((a,b)=>b[1]-a[1]).slice(0,6);})()`;
 
-const unitExpr = (sel, href) => `(()=>{
-  const g=document.querySelector(${j(sel)}); if(!g)return null;
+const unitExpr = (href) => `(()=>{
+  const g=document.querySelector('[data-sr-grid]'); if(!g)return null;
   const HREF=${j(href || '')};
   const hit=a=>{const h=a.getAttribute('href')||'';return HREF?h.includes(HREF):/\\/(videos?|watch|clips?|v)[\\/.\\-]/i.test(h)};
   const unit=[...g.children].find(k=>[...k.querySelectorAll('a[href]')].some(hit));
@@ -353,7 +373,24 @@ const chromeExpr = (gridSel, barSel) => `(()=>{
 
 const report = [];
 for (const sh of shapes) {
-  const url = origin + sh.path;
+  let url = sh.path === undefined ? null : origin + sh.path;
+  if (sh.follow !== undefined) {
+    // Follow a REAL card. A guessed watch URL is a 404 that still renders a related grid,
+    // and every measurement taken on it describes a page nobody visits.
+    const from = origin + sh.follow;
+    if (await goto(from) !== null) {
+      const href = await lab.ev(`(()=>{const H=${j(opts.unitHref || '')};
+        const hit=a=>{const h=a.getAttribute('href')||'';
+          return H?h.includes(H):/\\/(videos?|watch|clips?|v)[\\/.\\-]/i.test(h)};
+        const a=[...document.querySelectorAll('a[href]')].find(hit);
+        return a?a.href:null})()`);
+      url = href;
+    }
+    if (!url) {
+      report.push({ shape: sh.label, url: from, error: 'FOLLOW FAILED — no unit link found' });
+      continue;
+    }
+  }
   const row = { shape: sh.label, url };
   const links = await goto(url);
   if (links === null) { row.error = 'NAV FAILED'; report.push(row); continue; }
@@ -386,8 +423,8 @@ for (const sh of shapes) {
   const win = cands[0];
   row.grid = win.sel;
   row.organicShare = win.share;
-  row.hrefShapes = await lab.ev(hrefShapesExpr(win.sel));
-  const unit = await lab.ev(unitExpr(win.sel, opts.unitHref));
+  row.hrefShapes = await lab.ev(hrefShapesExpr());
+  const unit = await lab.ev(unitExpr(opts.unitHref));
   row.unit = unit;
 
   // Hover autoplay. Three things have to be true before a verdict means anything, and the
@@ -404,7 +441,7 @@ for (const sh of shapes) {
   // A probe that cannot satisfy 1 and 2 reports UNMEASURED and names the blocker. UNMEASURED
   // is a finding; NO is a claim.
   if (unit) {
-    const hoverSel = j(win.sel);
+    const hoverSel = j(MARK);
     let verdict = null; let blocker = null;
     for (let attempt = 0; attempt < 4 && verdict === null; attempt += 1) {
       const pick = await lab.ev(`(()=>{const g=document.querySelector(${hoverSel});
@@ -462,7 +499,7 @@ for (const sh of shapes) {
     // `1268x0` or `0x0` and a nonsense column count. Measured on two shapes of the first
     // site this tool was ever pointed at — the very class of node it exists to surface
     // [F-INSIDE-THE-GRID-IS-NOT-A-CARD].
-    row.widths.push(await lab.ev(`(()=>{const g=document.querySelector(${j(win.sel)});
+    row.widths.push(await lab.ev(`(()=>{const g=document.querySelector('[data-sr-grid]');
       const de=document.documentElement;
       const HREF=${j(opts.unitHref || '')};
       const hit=a=>{const h=a.getAttribute('href')||'';
@@ -476,7 +513,7 @@ for (const sh of shapes) {
         cols:(g&&ur&&ur.width)?Math.max(1,Math.round(g.getBoundingClientRect().width/ur.width)):null}})()`));
   }
   await setWidth(1512);
-  row.chrome = await lab.ev(chromeExpr(win.sel,
+  row.chrome = await lab.ev(chromeExpr(MARK,
     opts.bar || 'header, [class*="top-menu"]'));
   // A left-behind override makes every later measurement in the session wrong.
   await clearWidth();
@@ -507,6 +544,18 @@ for (const r of report) {
   if (r.hoverAutoplay === null) {
     process.stdout.write(`  hover     UNMEASURED — the pointer never reached a card${r.hoverBlocker ? `; covered by ${r.hoverBlocker}` : ''}.\n`
       + '            Not a "does not preview" verdict. Clear the blocker and re-run.\n');
+  }
+  /* The measurements above used the winning ELEMENT, via a temporary attribute. A userscript
+     cannot do that, so a signature matching more than one node has to be said out loud. */
+  if ((r.containers[0].matches ?? 1) > 1) {
+    process.stdout.write(`  ANCHOR    AMBIGUOUS — ${r.containers[0].matches} elements share the winner's `
+      + `signature ${r.containers[0].sel}.\n`
+      + '            These numbers came from the winning ELEMENT; a userscript cannot. Find a\n'
+      + '            scoping ancestor or a structural test before writing a selector.\n');
+  }
+  if (r.containers[0].generated) {
+    process.stdout.write('  ANCHOR    the winner\'s classes carry a build hash [GENERATED] — do NOT anchor\n'
+      + '            on them. Use a role, an href shape or a data attribute.\n');
   }
   if (r.containers.length > 1) {
     process.stdout.write(`  runners-up ${r.containers.slice(1).map((c) => `${c.sel} share ${c.share}`).join(' · ')}\n`);

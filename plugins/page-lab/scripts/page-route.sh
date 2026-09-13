@@ -27,7 +27,17 @@ set -uo pipefail
 
 SCRIPT_DIR=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 STAMP="${TMPDIR:-/tmp}/page-lab-pick.arm.json"
-CDP_URL="${PAGE_LAB_BROWSER_URL:-http://127.0.0.1:9222}"
+# Accept BOTH names. Every other script in this plugin reads PL_BROWSER_URL, and this one
+# read only PAGE_LAB_BROWSER_URL - so exporting the documented variable and then running this
+# script "first", as its own header advises, silently probed :9222, which is usually the
+# OPERATOR'S OWN browser [F-TWO-NAMES-FOR-ONE-BROWSER].
+CDP_URL="${PL_BROWSER_URL:-${PAGE_LAB_BROWSER_URL:-http://127.0.0.1:9222}}"
+if [ -z "${PL_BROWSER_URL:-}${PAGE_LAB_BROWSER_URL:-}" ]; then
+  printf 'NOTE: no PL_BROWSER_URL set — probing the DEFAULT %s.\n' "$CDP_URL" >&2
+  printf '      That is usually the operator'"'"'s own browser. Probing is read-only and safe;\n' >&2
+  printf '      do not ATTACH a verification run there — an installed userscript would be\n' >&2
+  printf '      measured instead of the file under test. Use a throwaway browser for that.\n' >&2
+fi
 CDP_HOST=127.0.0.1
 CDP_PORT=9222
 KAPTURE_URL="${PAGE_LAB_KAPTURE_URL:-http://127.0.0.1:61822}"
