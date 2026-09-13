@@ -105,6 +105,26 @@ correct one — and can never stack two:
 Adding a dismissal path of your own instead would work and would be wrong: it duplicates
 behaviour the site already has, and diverges the moment the site changes it.
 
+## Keeping only a few things on a page
+
+"Only the player and the gallery", "only the article", "only the listing" — the shape is
+always the same: a few **keepers**, and everything else gone.
+
+Walk from each keeper up to `body` marking the path, then hide, level by level, every
+node that is neither on a path nor inside a keeper. That handles arbitrary nesting
+without naming a single container.
+
+**Gate it on finding a keeper.** If no keeper resolves, do *nothing* — hiding by
+elimination hides **more** as it matches **less**, so a renamed selector must render the
+page stock rather than blank it. This is the same rule as the elimination gate in
+`SKILL.md`, and it is the one that stops a redesign shipping an empty page.
+
+**Check what the keeper is nested inside before you remove its container.** A drawer,
+a player or a gallery frequently lives inside the very chrome the brief says to delete —
+measured on one site, the `<header>` tag sat inside `DIV#header` and *contained* the
+adopted drawer, so a blanket rule on either would have deleted the overlay along with
+the chrome.
+
 ## Accessibility — not optional polish
 
 - `aria-expanded` on the toggle; a real `role` on the panel.

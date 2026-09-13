@@ -10,9 +10,29 @@ is what to do when it does not.
 | 1 | **Drive the site's own theme** — set its cookie, storage key, or root attribute | M12 found one |
 | 2 | **A static sheet of overrides** on tokens the site already declares | The site uses custom properties |
 | 3 | **A static sheet declaring a full palette** on a root data attribute | The site hard-codes colours in few places |
-| 4 | **A CSSOM remap** — walk the stylesheets, map each colour, re-emit under the same selectors | The site hard-codes colours everywhere |
+| 4 | **A CSSOM remap** — walk the stylesheets, map each colour, re-emit under the same selectors | The site hard-codes colours everywhere **and** its sheets are same-origin |
+| 5 | **A computed-style repaint** — read the computed colour of every element and derive a dark equivalent | The sheets are **cross-origin**, or the paint comes from inline styles and site JS |
 
-Rung 4 is expensive and fragile. Do not start there because it sounds thorough.
+Rungs 4 and 5 are expensive. Do not start there because they sound thorough.
+
+**Rung 4 is simply unavailable against a cross-origin sheet** — `.cssRules` throws
+`SecurityError`, so there are no rules to walk. Check this in the survey (M9), not
+when the remap fails.
+
+**Rung 5 is the one that makes a theme uniform**, and it is often *better* than rung 4
+rather than a fallback from it: `getComputedStyle` is readable on every element and
+already folds in inline styles and anything the site's JS set at runtime — exactly the
+paint a selector-based theme keeps missing [F-COMPUTED-STYLE-IS-THE-REMAP]. A static
+palette can only darken what someone wrote a selector for, which is how one page comes
+out black and the next one stock.
+
+Two rules make rung 5 safe to layer on top of rungs 2-3:
+
+- **Make it idempotent by construction.** Phrase the test as *"is this still too
+  light"*, so a surface the static sheet already darkened measures as dark and is
+  skipped. Running twice then changes nothing, and it cannot fight your own sheet.
+- **Cap the walk.** A few thousand nodes, so a pathological page cannot hang the tab.
+  Measured cost on a real listing: 96 ms, 1445 nodes repainted.
 
 ## The palette
 
@@ -38,6 +58,17 @@ wins, and a running animation still outranks everything [F-ANIMATION-BEATS-IMPOR
 
 Walk `document.styleSheets`, read each rule's colour properties, map them, and emit the
 mapped declarations **under the same selectors**. Four things decide whether it works.
+
+### 0. Channel scaling preserves hue — and cannot lift black
+
+Scaling `r`, `g`, `b` by **one** factor is the correct way to change a colour's
+lightness while keeping its hue exactly. It has a singularity: **zero times any factor
+is still zero**, so black can never be lifted, and the failure ships as unreadable text
+rather than as an error — measured at a contrast ratio of **1.22**, black ink on a newly
+black ground, while every other colour mapped correctly [F-HUE-SCALE-CANNOT-LIFT-BLACK].
+
+A near-black colour carries **no hue to preserve**, so map it to a neutral at the target
+lightness instead. The mirror case exists at white for any mapping that scales downward.
 
 ### 1. Neutrality is chroma, not HSL saturation
 
