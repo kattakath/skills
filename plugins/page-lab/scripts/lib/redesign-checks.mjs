@@ -790,9 +790,28 @@ export const GROUPS = {
       // the one control the keep-list keeps, so it is the one that gets exercised.
       if (cfg.pagination.next && vis.length) {
         const before = await lab.ev('location.href');
-        const boxRect = await lab.clickStable(cfg.pagination.next);
+        /* MARK THE FIRST LINK THAT ACTUALLY LEAVES THIS PAGE. A pager's first
+           anchor is routinely the CURRENT page - the "1" in "1 2 3 ..." - or a
+           disabled "previous". Clicking it and asserting the URL changed is a
+           false failure on a working pager, and it has now cost two diagnoses
+           on two sites [F-PAGER-FIRST-LINK-IS-THIS-PAGE]. The mark is removed
+           again below so nothing of ours outlives the check. */
+        const picked = await lab.ev(`(()=>{
+          for(const a of document.querySelectorAll(${j(cfg.pagination.next)})){
+            let u; try{u=new URL(a.getAttribute('href')||'',location.href)}catch(e){continue}
+            if(u.href===location.href)continue;
+            const r=a.getBoundingClientRect(); if(r.width<4||r.height<4)continue;
+            a.setAttribute('data-pl-next','');
+            return (a.getAttribute('href')||'').slice(0,80);}
+          return null})()`);
+        const boxRect = await lab.clickStable(picked ? '[data-pl-next]' : cfg.pagination.next);
         if (boxRect === null) {
-          t('pager "next" is present', false, { next: `nothing matched ${cfg.pagination.next}` });
+          t('pager "next" is present', false, {
+            next: picked
+              ? `matched ${picked} but it was not clickable`
+              : `no link matching ${cfg.pagination.next} leaves this page — every candidate `
+                + 'resolves to the current URL or has no box',
+          });
         } else {
           if (boxRect.covered) {
             t('pager "next" is not covered', false, {
@@ -817,6 +836,8 @@ export const GROUPS = {
                 : undefined,
           });
           if (after !== before) await lab.navigate(shape.url ?? String(before));
+          await lab.ev(`(()=>{const a=document.querySelector('[data-pl-next]');
+            if(a)a.removeAttribute('data-pl-next');return 1})()`);
         }
       }
     },
