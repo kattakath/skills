@@ -79,7 +79,7 @@ the panel off-screen [F-TRANSFORM-CONTAINING-BLOCK]. The same applies to `filter
 Slide off-canvas with a `right` (or `inset-inline-end`) offset instead, or with the
 independent `translate` longhand on a node with no fixed descendants.
 
-Respect `env(safe-area-inset-*)` on the fixed controls, and size the panel in `dvh`
+Size the panel in `dvh` (`env(safe-area-inset-*)` is a phone concern and these scripts are desktop-only)
 rather than `vh` so a mobile URL bar does not clip it.
 
 ## Dialogs — the trap

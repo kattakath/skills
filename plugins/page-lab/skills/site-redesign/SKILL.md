@@ -77,6 +77,29 @@ all. That inconsistency is the price, and on both sites the operator judged it c
 the machinery it deletes. Put the choice to them in those terms rather than assuming either
 answer.
 
+## Desktop only — there is no mobile case
+
+**A userscript manager runs in a desktop browser.** Mobile Chrome has no extension support
+at all, so no reader ever meets one of these scripts at 320px. Every rule and every check
+aimed at a phone is effort spent on a case that cannot occur.
+
+- **Verify at desktop widths only.** 1280 is the floor; 1280 / 1512 / 1920 / 2560 is a
+  complete matrix. Drop the 320 and 768 arms.
+- **Drop `@media (hover: none)`.** A desktop pointer always hovers.
+- **Drop `env(safe-area-inset-*)`.** There is no notch.
+- **Drop `min(clamp(…), 100%)` wrappers** whose only job was stopping a clamp's floor
+  overflowing a phone. Check that *is* their only job first.
+
+**Do not over-delete — three things look responsive and are not:**
+
+| Keep | Because |
+|---|---|
+| `repeat(auto-fill, minmax(…))` | not a concession to phones — it is what makes ONE rule serve 1280 through 2560 without a breakpoint stack |
+| `:focus-within` | the **keyboard** path, not the touch path. A desktop keyboard user needs it |
+| `prefers-reduced-motion` | an accessibility preference, not a viewport |
+
+`dvh` also stays: it is not a mobile-only unit and it costs nothing.
+
 ## Hard rules — additional to `userscript-author`'s
 
 0. **Check the shelf, including your own.** Before building any affordance, grep

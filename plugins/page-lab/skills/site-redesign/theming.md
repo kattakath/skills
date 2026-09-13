@@ -139,11 +139,11 @@ design; three different durations read as three different authors.
 
 ## Layout
 
-Intrinsic sizing over breakpoints. One rule that holds from 320 to 2560 beats a stack of
+Intrinsic sizing over breakpoints. One rule that holds from 1280 to 2560 beats a stack of
 media queries and cannot fall out of sync with itself:
 
 ```css
-grid-template-columns: repeat(auto-fill, minmax(clamp(160px, 22vw, 320px), 1fr));
+grid-template-columns: repeat(auto-fill, minmax(clamp(300px, 28.5vw, 510px), 1fr));
 ```
 
 Verify at all four widths from M11, and assert **no horizontal overflow** on the

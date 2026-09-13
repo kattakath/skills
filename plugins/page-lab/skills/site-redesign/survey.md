@@ -137,7 +137,9 @@ must never be `subtree: true`.
 
 ### M11 — Viewport behaviour
 
-With `Emulation.setDeviceMetricsOverride`, measure at **320 / 768 / 1280 / 2560**.
+With `Emulation.setDeviceMetricsOverride`, measure at **1280 / 1512 / 1920 / 2560** —
+desktop widths only, because a userscript manager only runs in a desktop browser
+(SKILL.md § Desktop only). 1280 is the floor, not a small case to defend.
 
 Deliver per width: stock column count, unit dimensions, and any horizontal overflow on
 the document element. **Clear the override when done** — a left-behind override makes

@@ -68,14 +68,14 @@ direction, the word-break choice and the pointer-events split.
 - **`overflow-wrap: anywhere`, never `word-break: break-all`** — break-all splits
   words mid-syllable; anywhere breaks only a word that cannot fit on its own line.
 
-**Reveal on hover AND focus, and pin it open where hover does not exist.**
+**Reveal on hover AND focus.**
 
-```css
-@media (hover: none) { .overlay { opacity: 1; } }
-```
+A hover-only affordance strands every keyboard user, and `:focus-within` is what covers
+them — it is the keyboard path, not the touch path, so it stays even though these scripts
+are desktop-only (SKILL.md § Desktop only).
 
-A hover-only affordance strands every touch user and every keyboard user.
-`:focus-within` covers the keyboard; `(hover: none)` covers touch. Both, always.
+The `@media (hover: none)` branch that pins the overlay open for touch is **not needed**: a
+userscript manager runs in a desktop browser, where the pointer always hovers.
 
 ## Reading the title
 
@@ -97,7 +97,7 @@ Assert the property that carries the claim, not a keyword:
 - `getComputedStyle().top` returns the **used value in pixels, never `auto`**
   [F-COMPUTED-TOP-IS-USED]. "Anchored at the bottom, growing up" is proved by
   `bottom === "0px"` **and** overlay height < card height — not by `top === "auto"`.
-- At rest the overlay reads `opacity: 0`; under `(hover: none)` it reads `1`.
+- At rest the overlay reads `opacity: 0`; on hover and on `:focus-within` it reads `1`.
 - Count the furniture you removed: assert **zero** badge/sub/meta nodes, so a
   regression that reintroduces them fails loudly.
 
