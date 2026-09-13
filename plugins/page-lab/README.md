@@ -36,11 +36,21 @@ wants only page diagnosis also installs the userscript machinery. Softened by ke
 `page-diagnose` a self-contained skill with its own references and its own `/devtools`, not
 removed.
 
+## Two scales of change
+
+`userscript-author` owns the single change: hide a banner, fix a rotted selector, restyle one
+element. **`site-redesign` starts where that escalates** — every surface recoloured, the site's
+own controls relocated into a new shell, work large enough to split across parallel agents. The
+second does not relax the first: same two gates, same metadata bans, same anchors-are-roles rule,
+same degrade-to-stock failure mode. It adds a blocking survey phase, because a redesign that
+guesses a selector does not fail loudly — it mangles the page.
+
 ## Layout
 
 | Piece | What it owns |
 |---|---|
 | `skills/userscript-author/` | The authoring method, `patterns.md`, `probes.md`, `greasyfork.md`, `gm-api.md` |
+| `skills/site-redesign/` | Whole-site redesign: the M1-M12 survey, `theming.md`, `relocation.md`, `acceptance.md` |
 | `skills/page-diagnose/` | Symptom-first diagnosis, `attaching.md`, `tools.md` |
 | `references/facts.md` | **Every falsifiable claim, once**, with an ID, a date and a re-measure recipe |
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |

@@ -47,8 +47,8 @@
     },
     {
       "name": "page-lab",
-      "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, an acceptance runner that exercises a redesign with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter.",
-      "version": "0.4.1",
+      "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, an acceptance runner that exercises a redesign with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
+      "version": "0.5.0",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -60,7 +60,9 @@
         "chrome",
         "devtools",
         "cdp",
-        "browser"
+        "browser",
+        "dark-mode",
+        "redesign"
       ],
       "homepage": "https://greasyfork.org/en/help/code-rules",
       "license": "MIT",
