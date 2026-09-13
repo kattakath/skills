@@ -51,8 +51,14 @@ The spec module exports:
 
 t.ev(expr)                    evaluate in the page, throwing page-side exceptions
 t.rect(sel) / t.rects(sel)    bounding boxes, rounded
+t.renderedRect(sel)           the box of the first match that RENDERS — use this when a site
+                              ships a duplicate of the node inside a display:none parent
+t.count(sel)                  how many match
 t.hit(x, y, [withinSel])      what is really on top there, and whether it is inside withinSel
 t.click(x, y) / t.clickSel(s) trusted mouse — NOT el.click()
+t.clickStable(sel)            trusted click AFTER the control stops moving and is scrolled
+                              into view; reports what covers it. Prefer it to clickSel.
+t.parkPointer()               move the pointer away before reading a REST state
 t.type(text) / t.key(name)    trusted keyboard
 t.settle(read, opts)          poll until a value stops changing; never sleep at a transition
 t.inject() / t.teardown()     run the script / call its teardown contract
@@ -122,7 +128,7 @@ try {
   die(err.message, err.exitCode ?? 1);
 }
 
-const { ev, sleep, click, clickSelector, type, key, selectAll } = page;
+const { ev, sleep, click, clickSelector, clickStable, parkPointer, type, key, selectAll } = page;
 
 const teardown = async () => {
   // The contract this plugin's authoring skill requires: a global that undoes the run.
@@ -138,6 +144,10 @@ const t = {
   sleep,
   click,
   clickSel: clickSelector,
+  clickStable,
+  parkPointer,
+  renderedRect: page.renderedRect,
+  count: page.count,
   type,
   key,
   selectAll,

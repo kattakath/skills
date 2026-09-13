@@ -71,7 +71,8 @@ Survey (blocking, one agent)
   -> Theme | Grid/Content | Shell  (parallel)
     -> Integrator (merge, DRY, gates)
       -> Harness (acceptance, responsive, degradation)
-        -> Ship
+        -> Hardening  (structure | runtime | harness, in parallel)
+          -> Ship
 ```
 
 ### 1. Survey — blocking
@@ -114,7 +115,28 @@ Escalation is unchanged from `userscript-author` § I: **do not grow a bundler.*
 ### 4. Verify
 
 [`acceptance.md`](acceptance.md) — the groups, the trusted-event discipline, and the
-three ways a spec lies to you.
+four ways a spec lies to you.
+
+**Do not write this harness again.** `scripts/redesign-acceptance.mjs` takes a declarative
+config and runs the whole group set at **document-start across real navigations**; a new
+site is a config file, not a program. Start with `--diagnose`, which prints one line of
+decision-relevant facts per URL shape and what to look at next.
+
+### 4.5 Harden — before you call it finished
+
+[`hardening.md`](hardening.md). Three lanes in parallel — structure, runtime, harness —
+sharing no files, each reporting the line ranges it touched.
+
+Not a tidy-up. On the run that produced that file it found a defect whose symptom
+**scaled with the number of script copies**, three comments describing features that had
+been removed two versions earlier, ~76 lines of unreachable code, and a colour parser
+blind to half of CSS's modern serialisations — on a script that had already shipped five
+versions and passed 66 acceptance checks.
+
+Two things decide whether the pass is worth running. Hand each lane **the failure
+patterns already paid for**, or it rediscovers them at full price. And give it a
+**regression net** — the existing suites, required identical or better, not merely green.
+A refactor lane without a net is a rewrite.
 
 ### 5. Ship
 
@@ -140,7 +162,12 @@ three ways a spec lies to you.
 - **`transform` for off-canvas** — it re-anchors every fixed descendant
   [F-TRANSFORM-CONTAINING-BLOCK].
 - **A fixed sleep in a spec** [F-TRANSITION-RACE], and **anything measured in a
-  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM].
+  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM] — the fix is a live
+  clock via `Emulation.setFocusEmulationEnabled`, not stealing the operator's window with
+  `Target.activateTarget` [F-FOCUS-EMULATION].
+- **Verifying by `eval` into a loaded page** [F-INJECT-IS-NOT-INSTALL]. Run
+  `scripts/redesign-acceptance.mjs`, which injects at document-start across real
+  navigations, rather than writing that harness again.
 - **Trusting a null result before asserting the rig** [F-INPUT-SILENTLY-DROPPED] — a dead
   target makes every working control look broken.
 - **Treating a site class as a lever without checking its rule is in scope**
@@ -166,6 +193,8 @@ Do not re-litigate these without a new measurement that contradicts the recorded
 - [`relocation.md`](relocation.md) — moving live controls without breaking them.
 - [`overlays.md`](overlays.md) — the hover-title card overlay, measured; and the
   reminder to check your OWN sibling scripts before building any affordance.
+- [`hardening.md`](hardening.md) — the final pass: three lanes, what each hunts, and
+  the rules of engagement with the operator's browser.
 - [`acceptance.md`](acceptance.md) — verification groups and how specs lie.
 - [`../userscript-author/SKILL.md`](../userscript-author/SKILL.md) — the base rules this
   skill assumes.

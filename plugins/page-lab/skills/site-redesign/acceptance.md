@@ -26,24 +26,101 @@ gallery completely blank, and opened a drawer laid out 55px wide by 5132px tall.
 
 The repo rule states it in four words: **injecting is not installing.**
 
-Build the suite on `scripts/userscript-acceptance.mjs` and `scripts/lib/harness.mjs`.
-Hand-rolling a CDP driver for this is the reinvented wheel; the harness already carries
-the node-without-`WebSocket` re-exec [F-NODE-NO-WS], trusted input, and `settle()`.
+Two details that make a document-start probe lie if you skip them:
+
+- The registration **does not run in the page already open** — only on the next
+  navigation [F-DOCSTART-NEXT-NAV]. Register, *then* navigate.
+- CDP's document-start is **earlier than a manager's**: `document.documentElement` is
+  still `null` [F-DOCSTART-NO-DOCUMENTELEMENT]. Wrap the body so it waits for `<html>`,
+  or a script that works on install throws under the probe.
+
+Build the suite on the plugin's own scripts, not a second CDP driver: the harness already
+carries the node-without-`WebSocket` re-exec [F-NODE-NO-WS], trusted input, `settle()`,
+the document-start wrapper and the live-clock fix.
+
+## Running it
+
+Two entrypoints, and the second is not a bigger version of the first:
+
+| Scale | Run |
+|---|---|
+| One change, one page, already loaded | `scripts/userscript-acceptance.mjs <spec.mjs>` — a `.mjs` spec of hand-written assertions |
+| A whole redesign, many URL shapes, document-start | `scripts/redesign-acceptance.mjs <config.mjs>` — a **declarative config**; the groups below come for free |
+
+```bash
+pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | tail -1)
+
+# START HERE when something is wrong: facts per URL shape, no verdicts.
+node "$pl/redesign-acceptance.mjs" --diagnose ./my-site.redesign.mjs
+
+# The baseline every comparison needs — the same probe with nothing injected.
+node "$pl/redesign-acceptance.mjs" --diagnose --stock ./my-site.redesign.mjs
+
+# The suite. --groups and --shape narrow it while you are iterating.
+node "$pl/redesign-acceptance.mjs" ./my-site.redesign.mjs
+node "$pl/redesign-acceptance.mjs" --groups drawer,actions --shape home ./my-site.redesign.mjs
+```
+
+The runner opens its tab in the **background** and never brings a window forward, so it can
+share a browser. It still drives whichever browser `--browser-url` names, and the default
+`:9222` is usually the **operator's own**. When several agents are working at once, give
+verification its own throwaway profile on its own port —
+`scripts/route-up.sh --tier 1 --yes --isolated` — and pass that port. A throwaway profile
+has no userscript manager, which is a feature: no second installed copy to double the
+control counts.
+
+A new site is a **config file**, not a new program — copy
+[`../../scripts/redesign.config.example.mjs`](../../scripts/redesign.config.example.mjs),
+which is the listing/gallery shape written out in full: URL shapes (including one reached
+by *following* a link, and one with **zero organic items**), the surface selector, the card
+test, the own-UI prefix, the teardown global, the widths, and which groups to run.
+
+`--diagnose` is the mode that matters when you are lost. One line per shape — mode, theme,
+grid, visible-vs-total units, overflow, control counts, error count — then the **next thing
+to look at** under each shape that is off:
+
+```
+shape       mode     theme  grid  units  ovf  controls             err
+----------  -------  -----  ----  -----  ---  -------------------  ---
+home        applied  yes    on    10/12  0    launcher:1 drawer:1  0
+search      applied  yes    on    16/18  0    launcher:1 drawer:1  0
+promo-only  blank    yes    -     0/1    0    launcher:1 drawer:1  0
+
+promo-only:
+  → grid has children and none render: the hide-by-elimination gate matched everything —
+    this is the blank-gallery defect, not a styling problem
+```
+
+**A group whose config is absent SKIPS and says so.** It never fails and never silently
+passes — a suite scoring 30/30 because six groups quietly did nothing is the same lie as a
+suite that measured the wrong world.
 
 ## The groups
 
+The names in the first column are the runner's `--groups` values, so this table and
+`scripts/lib/redesign-checks.mjs` cannot drift apart.
+
 | Group | Must prove |
 |---|---|
-| **Primary surface** | Fills its container at every M11 width. **No horizontal overflow** on the document element. Unit count and aspect ratio match the survey. |
-| **Units** | Organic count matches stock; promoted count is **zero**; a unit's link still navigates under a trusted click. |
-| **Theme** | A measured contrast ratio for **every** text-on-background pair, each at or above target. No stock light colour left behind. No unstyled flash at `document-start`. |
-| **Shell** | Opens and closes by control, by Escape, and by **trusted click-outside**. `aria-expanded` tracks. Focus trapped, then **restored**. Background `inert`. |
-| **Relocated controls** | **Each one still performs its action** — search submits, a filter filters, pagination pages. One assertion per control; there is no sampling here. |
-| **Dialogs** | Every dialog dismisses by **both** Escape and trusted click-outside, with the shell still open behind it [F-BACKDROP-ADJACENCY]. |
-| **Lifecycle** | Inject **twice**: exactly one panel, one control, one sheet. Teardown restores stock — relocated nodes back at original parent **and** next sibling, site classes restored. |
-| **Degradation** | Break a site selector by hand and assert the page renders **stock**, not mangled. This is the test that proves the failure mode. |
-| **Reduced motion** | Under `prefers-reduced-motion: reduce`, faded elements are **visible** — not stuck at `opacity: 0`. |
-| **Performance** | Inject time, and any remap cost, as **numbers**. |
+| `rig` | A trusted click on a **plain stock control** has its effect — before any null result is believed. Runs first because it invalidates the rest rather than competing with it. |
+| `surface` | The primary surface **renders at all**: present, units visible, redesign landed on it, one aspect ratio. The single most valuable check. |
+| `fullbleed` | Fills the viewport and shows **no horizontal overflow**, at every configured width. |
+| `promo-gate` | On a shape with **zero organic units**, the elimination gate degrades to **stock, never blank**. |
+| `theme` | A measured contrast ratio for **every** text-on-background pair, each at or above target. No stock light background left behind. |
+| `controls` | **Exactly one** of each own-UI control. The double-copy detector. |
+| `cards` | Unit geometry, banned unit chrome gone, and the overlay asserted on the property that carries the claim — never on a keyword computed style cannot return [F-COMPUTED-TOP-IS-USED]. |
+| `pagination` | At most one pager renders, after the surface, outside our own UI. |
+| `drawer` | Opens by control, closes by Escape **and** by trusted click-outside, with the click-outside assertion re-establishing its own precondition. `aria-expanded` tracks. Focus trapped, then **restored**. Background `inert`. |
+| `actions` | **Each relocated control still performs its action.** One assertion per control; there is no sampling here. |
+| `lifecycle` | Inject **twice**: still exactly one of each control, surface still rendering. |
+| `teardown` | Own UI gone, root flag gone, stock surface rendering, relocated node back at its original parent **and** next sibling. |
+| `degradation` | Break the anchor **at document-start** and assert the page renders **stock**, not mangled. The test that proves the failure mode. |
+
+Not generalised, and deliberately still hand-written per site: **dialog** dismissal beyond
+the main drawer [F-BACKDROP-ADJACENCY], **reduced motion** (faded elements visible under
+`prefers-reduced-motion: reduce`, not stuck at `opacity: 0`), and **performance** numbers —
+inject time and any remap cost. Write those as a `.mjs` spec against
+`scripts/userscript-acceptance.mjs`.
 
 ## Four ways a spec lies to you
 
@@ -60,7 +137,11 @@ the node-without-`WebSocket` re-exec [F-NODE-NO-WS], trusted input, and `settle(
    nothing [F-IO-BACKGROUND-TAB], transitions never tick so `settle()` confirms a stock
    value as "stable", and a frozen transition **pins its property above author-`!important`**
    [F-BG-TAB-FREEZES-ANIM]. These present as unrelated defects (lazy-loading broken,
-   colours unreached, clicks not navigating) and clear together on `Target.activateTarget`.
+   colours unreached, clicks not navigating) and clear together the moment the tab has a
+   live clock. **Reach for `Emulation.setFocusEmulationEnabled`, not `Target.activateTarget`**
+   [F-FOCUS-EMULATION]: it fixes all three without stealing the operator's window, and
+   several agents sharing one browser stop fighting over which tab is frontmost.
+   `Page.setWebLifecycleState` does **nothing** for this — do not ship it as half of a pair.
 3. **Ordering inside a spec.** A dismissal check placed after an Escape check runs
    against an already-closed dialog and passes for the wrong reason. Re-open between
    assertions, and make each assertion establish its own precondition.

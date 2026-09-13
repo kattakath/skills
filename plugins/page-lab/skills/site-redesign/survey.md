@@ -170,6 +170,10 @@ Ask:
 - How much of the mobile CSS **matches anything** on the page? Not how much exists —
   how much *matches*.
 
+Get the block, rule and byte counts, and the content-versus-shell split, from
+`scripts/stylesheet-media-extract.mjs <sheet-url>` rather than by eye — it brace-matches
+the blocks, so a nested at-rule does not end one early and quietly deflate the count.
+
 Report the mechanism precisely, because the obvious answer is usually wrong in a specific
 way: **a class whose declaration lives inside a media query is inert outside it**, so
 toggling it does nothing and the shortcut silently fails [F-MEDIA-GATED-CLASS-INERT]. The

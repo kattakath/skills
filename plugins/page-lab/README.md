@@ -56,7 +56,9 @@ guesses a selector does not fail loudly — it mangles the page.
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
 | `references/pick-protocol.md` + `pick-envelope.schema.json` | The pick contract |
 | `references/cdp-extras.md` | Raw-CDP surface no MCP tool exposes, as symptom → command |
-| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the acceptance runner |
+| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the two acceptance runners |
+| `scripts/lib/` | `cdp.mjs` (one CDP client), `harness.mjs` (trusted input, `settle`, the document-start lab), `redesign-checks.mjs` (the check groups) |
+| `scripts/redesign.config.example.mjs` | The shape a new site fills in — a listing/gallery redesign, written out in full |
 
 ## Scripts
 
@@ -66,7 +68,10 @@ scripts/route-up.sh                        # how to OPEN a route, not just name 
 scripts/userscript-meta-lint.sh <path|dir> # Greasy Fork readiness
 scripts/pick-validate.mjs --self-test scripts/fixtures
 scripts/devtools-doctor.sh                 # CDP connection preflight
-scripts/userscript-acceptance.mjs <spec>   # does the redesign still WORK? (trusted events)
+scripts/userscript-acceptance.mjs <spec>   # does ONE change still WORK? (trusted events)
+scripts/redesign-acceptance.mjs <config>   # does the WHOLE redesign work? (document-start)
+scripts/redesign-acceptance.mjs --diagnose <config>   # facts per URL shape, no verdicts
+scripts/stylesheet-media-extract.mjs <url> # does the site already ship a compact layout?
 node scripts/pick-element.mjs              # arm the picker (or the page-lab-pick CLI)
 ```
 
@@ -75,6 +80,19 @@ and `selector-verify.mjs` says the nodes are there; neither says the redesign st
 A real script shipped through exactly that gap — its search button was present, sized and
 hit-testable, and inert under a trusted click [F-PRESENT-NOT-WORKING]. The spec is a `.mjs`
 module living beside the `.user.js` it tests, so the script's own repo needs no test runner.
+
+**`redesign-acceptance.mjs` is the gate `userscript-acceptance.mjs` is not**, and the
+difference is not the assertions — it is the world they run in. A suite of **88 checks
+reported 0 failures** on a build with **five live defects**, because every check evaluated
+the script into a page at `readyState: "complete"` while the installed script runs at
+`@run-at document-start` [F-INJECT-IS-NOT-INSTALL]. Six document-start probes found all
+five in minutes. So this runner injects with `Page.addScriptToEvaluateOnNewDocument`,
+drives real navigations, and keeps the tab's clock live without taking over the operator's
+window [F-FOCUS-EMULATION]. **A new site is a config file, not a program** — the check
+groups (surface renders, full-bleed at N widths, the promo gate, WCAG-measured theme,
+one-of-each control, drawer by control/Escape/trusted click-outside, focus trap and
+restore, relocated controls that still act, double-inject, teardown, degradation) come for
+free, and each one skips loudly rather than silently passing when its config is absent.
 
 Wire the linter into CI:
 
