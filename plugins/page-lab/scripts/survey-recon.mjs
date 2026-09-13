@@ -260,6 +260,15 @@ const themeExpr = `(()=>{
     const p=(c.match(/[\\d.]+/g)||[]).map(Number);
     if(p.length>=3&&(p.length<4||p[3]>0.05))return c;}
     return 'rgb(255, 255, 255)'};
+  /* STATEFUL THEMES. A site's ground can come from a stored preference rather than from a
+     media query, so a survey run in a REUSED throwaway profile measures the profile. One
+     site read rgb(255,255,255) on a fresh profile in the morning and rgb(22,22,22) on the
+     same profile that evening, after a stored user_theme_fav key had accumulated
+     [F-A-THEME-CAN-BE-STATEFUL]. */
+  let stateful=null;
+  try{ const k=Object.keys(localStorage).filter(x=>/theme|dark|night|scheme/i.test(x));
+    if(k.length) stateful='localStorage: '+k.slice(0,3).join(', '); }catch(e){}
+  if(!stateful&&/theme|dark|night|scheme/i.test(document.cookie||'')) stateful='a cookie';
   const bg=opaque(document.body);
   const m=(bg.match(/[\\d.]+/g)||[255,255,255]).map(Number);
   const lum=(0.2126*m[0]+0.7152*m[1]+0.0722*m[2])/255;
@@ -267,6 +276,7 @@ const themeExpr = `(()=>{
   return {bodyBg:bg, bodyLuminance:+lum.toFixed(3), stockDark:lum<0.25,
     prefersColorSchemeBlocks:prefersDark, sheets:document.styleSheets.length,
     rules, crossOriginSheets:crossOrigin,
+    stateful,
     toggleLike: toggle?toggle.tagName+(toggle.id?'#'+toggle.id:'.'+String(toggle.className).split(/\\s+/)[0]):null};})()`;
 
 /**
@@ -489,8 +499,6 @@ for (const sh of shapes) {
   // FOUR signals, not three. The pager is the one that rejects a watch page whose related
   // strip passes all the others [F-PAGINATION-IS-A-QUALIFYING-SIGNAL].
   row.qualifies = !!(row.organicShare >= 0.5 && win.unitKids >= 4 && row.pagination.links >= 1);
-  row.theme = await lab.ev(themeExpr);
-
   row.widths = [];
   for (const w of opts.widths) {
     await setWidth(w);
@@ -517,6 +525,26 @@ for (const sh of shapes) {
     opts.bar || 'header, [class*="top-menu"]'));
   // A left-behind override makes every later measurement in the session wrong.
   await clearWidth();
+  /* LAST, because both scheme passes RE-NAVIGATE — and a navigation destroys the
+     data-sr-grid mark every measurement above depends on. Running this earlier returned
+     the widths as "?" and dropped the M5 inventory entirely, silently. */
+  /* BOTH SCHEMES. M12 is the measure that can invalidate a plan outright, and a site whose
+     dark ground comes from a media query is dark only for a reader whose OS agrees. Reading
+     it once, under whatever the surveying machine happens to be set to, answers a different
+     question than the one asked [F-M12-IS-TWO-MEASUREMENTS]. */
+  const scheme = async (v) => {
+    await lab.client.send('Emulation.setEmulatedMedia',
+      { features: [{ name: 'prefers-color-scheme', value: v }] }, lab.sessionId);
+    await goto(url);
+    return lab.ev(themeExpr);
+  };
+  const dark = await scheme('dark');
+  const light = await scheme('light');
+  await lab.client.send('Emulation.setEmulatedMedia', { features: [] }, lab.sessionId);
+  await goto(url);
+  row.theme = { ...dark, darkScheme: dark, lightScheme: light,
+                schemeDependent: dark.stockDark !== light.stockDark };
+
   report.push(row);
 }
 await lab.close();
@@ -562,6 +590,19 @@ for (const r of report) {
   }
   if (r.containers[0].nonUnitChildren.length) {
     process.stdout.write(`  NON-UNIT CHILDREN (a keeper sweep cannot see these): ${r.containers[0].nonUnitChildren.join(' · ')}\n`);
+  }
+  if (r.theme.schemeDependent) {
+    process.stdout.write('  THEME     SCHEME-DEPENDENT — the site is dark under one prefers-color-scheme\n'
+      + `            and light under the other (dark: ${r.theme.darkScheme.bodyBg}, `
+      + `light: ${r.theme.lightScheme.bodyBg}).\n`
+      + '            A reader whose OS disagrees gets the other one. Do NOT record "ships dark".\n');
+  } else {
+    process.stdout.write(`  theme     same under both schemes — dark ${r.theme.darkScheme.bodyBg}, `
+      + `light ${r.theme.lightScheme.bodyBg}\n`);
+  }
+  if (r.theme.stateful) {
+    process.stdout.write(`  THEME     STATEFUL — a stored preference is present (${r.theme.stateful}).\n`
+      + '            This profile may be answering, not the site. Re-measure in a FRESH one.\n');
   }
   process.stdout.write(`  theme     bg ${r.theme.bodyBg} lum ${r.theme.bodyLuminance} · sheets ${r.theme.sheets} rules ${r.theme.rules} cross-origin ${r.theme.crossOriginSheets} · prefers-color-scheme blocks ${r.theme.prefersColorSchemeBlocks}${r.theme.toggleLike ? ` · toggle-like ${r.theme.toggleLike}` : ''}\n`);
   process.stdout.write(`  widths    ${r.widths.map((w) => `${w.w}:${w.unit ?? '?'}${w.overflowX ? ` OVERFLOW ${w.overflowX}` : ''}`).join('  ')}\n`);

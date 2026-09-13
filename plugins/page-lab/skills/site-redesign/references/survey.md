@@ -202,6 +202,13 @@ Does the site already ship a dark theme, a theme toggle, or a `prefers-color-sch
 branch? Check for a theme cookie or storage key, a toggle control, and grep the
 stylesheets for `prefers-color-scheme`.
 
+**Measure it TWICE, and in a FRESH profile.** `survey-recon.mjs` forces
+`prefers-color-scheme` both ways and reports whether the ground moves — a site dark only
+under one scheme is dark only for a reader whose OS agrees [F-M12-IS-TWO-MEASUREMENTS]. It
+also flags a theme-ish localStorage or cookie key: one site's dark ground came entirely from
+a stored `user_theme_fav` preference with ZERO `prefers-color-scheme` blocks, so a reused
+profile reported the profile's setting as the site's default [F-A-THEME-CAN-BE-STATEFUL].
+
 **A stock dark mode is a major finding.** Driving the site's own theme beats overpainting
 it on every axis: less code, no remap, no contrast repair, and it survives the site's
 own redesigns. Report it before anyone writes a palette.
