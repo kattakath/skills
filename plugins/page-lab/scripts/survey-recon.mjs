@@ -134,13 +134,27 @@ const containersExpr = (href) => `(()=>{
     .map(k=>Math.round(k.getBoundingClientRect().top/10))).size;
   const railish=el=>{const c=getComputedStyle(el);
     return /auto|scroll/.test(c.overflowX)&&el.scrollWidth>el.clientWidth*1.2};
-  const out=[],rails=[];
+  /* CARD-SHAPED children that no unit-link test matched. The difference between "this page
+     is not a gallery" and "my href test is wrong" is not cosmetic: one card type routinely
+     resolves through MORE THAN ONE route, and on one site a whole shape served its cards
+     through an opaque redirect - 73 cards, 0 matched, reported as "does not qualify" on a
+     page that plainly qualifies [F-ONE-CARD-TYPE-TWO-ROUTES]. Saying "not a gallery" there
+     is a claim; saying "nothing matched, here is a sample href" is a measurement. */
+  const cardish=k=>{const r=k.getBoundingClientRect();
+    return r.width>80&&r.height>60&&!!k.querySelector('img')&&!!k.querySelector('a[href]')};
+  const out=[],rails=[],nearMiss=[];
   for(const el of document.querySelectorAll('div,ul,section,main,ol')){
     const kids=[...el.children];
     if(kids.length<4)continue;
     if(!renders(el))continue;
     const unitKids=kids.filter(k=>[...k.querySelectorAll('a[href]')].some(hit));
-    if(unitKids.length<4)continue;
+    if(unitKids.length<4){
+      const cards=kids.filter(cardish);
+      if(cards.length>=8&&cards.length/kids.length>=0.6){
+        const a=cards[0].querySelector('a[href]');
+        nearMiss.push({el,cards:cards.length,kids:kids.length,
+          sample:a?(a.getAttribute('href')||'').slice(0,70):null});}
+      continue;}
     const rows=rowsOf(el);
     if(rows<2||railish(el)){ rails.push({el,rows,unitKids:unitKids.length}); continue; }
     out.push({el,kids:kids.length,unitKids:unitKids.length,rows});
@@ -152,7 +166,10 @@ const containersExpr = (href) => `(()=>{
   keep.sort((a,b)=>(b.unitKids-a.unitKids)||(isGen(a.el)-isGen(b.el)));
   const railNote=rails.filter(r=>!out.some(o=>o.el.contains(r.el))).slice(0,3)
     .map(r=>sig(r.el)+' rows='+r.rows+' units='+r.unitKids);
-  if(!keep.length)return {none:true,railsSeen:railNote};
+  const missNote=nearMiss.filter(m=>!nearMiss.some(o=>o!==m&&m.el.contains(o.el)))
+    .sort((a,b)=>b.cards-a.cards).slice(0,2)
+    .map(m=>sig(m.el)+' cards='+m.cards+'/'+m.kids+' sampleHref='+m.sample);
+  if(!keep.length)return {none:true,railsSeen:railNote,nearMiss:missNote};
   return keep.slice(0,3).map(c=>{
     const r=c.el.getBoundingClientRect();
     const first=c.el.querySelector(':scope > *');
@@ -251,9 +268,18 @@ for (const sh of shapes) {
   if (!Array.isArray(cands)) {
     row.containers = [];
     row.qualifies = false;
-    row.why = cands?.railsSeen?.length
-      ? `only RAILS carry unit links (single-row / horizontally scrolling): ${cands.railsSeen.join(' · ')}`
-      : 'no rendering, multi-row container whose children carry unit links';
+    if (cands?.nearMiss?.length) {
+      // Loudest case first: a card-shaped grid is sitting there and NOTHING matched the
+      // href test. That is a broken test, not a non-qualifying page.
+      row.why = `HREF TEST PROBABLY WRONG — card-shaped grid found, 0 children matched `
+        + `${opts.unitHref ? j(opts.unitHref) : 'the default /videos?|watch|clip/ heuristic'}: `
+        + cands.nearMiss.join(' · ');
+      row.hrefTestSuspect = true;
+    } else if (cands?.railsSeen?.length) {
+      row.why = `only RAILS carry unit links (single-row / horizontally scrolling): ${cands.railsSeen.join(' · ')}`;
+    } else {
+      row.why = 'no rendering, multi-row container whose children carry unit links';
+    }
     report.push(row); continue;
   }
   row.containers = cands;

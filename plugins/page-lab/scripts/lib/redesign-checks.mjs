@@ -151,6 +151,9 @@ export function probeExpr(cfg) {
     const grid=all.find(e=>{const r=e.getBoundingClientRect();
       return r.width>0&&r.height>0&&getComputedStyle(e).display!=='none'})||all[0]||null;
     const kids=grid?[...grid.children]:[];
+    const unitKids=${g.unitLink
+      ? `kids.filter(k=>k.matches(${j(g.unitLink)})||!!k.querySelector(${j(g.unitLink)}))`
+      : g.card ? `kids.filter(k=>k.matches(${j(g.card)})||!!k.querySelector(${j(g.card)}))` : 'kids'};
     const cards=${g.card ? `[...document.querySelectorAll(${j(g.card)})]` : '[]'};
     const gr=grid?grid.getBoundingClientRect():null;
     return {
@@ -164,6 +167,15 @@ export function probeExpr(cfg) {
       innerW:innerWidth, innerH:innerHeight,
       overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth),
       units:kids.length, unitsVisible:kids.filter(vis).length,
+      /* UNIT children only — children that carry a unit link, or match the card
+         selector. The keep gate asks "did the elimination rule hide most of the
+         GALLERY?", and answering it over ALL children penalises a build for hiding
+         non-unit children, which is exactly what the purge group now requires
+         [F-KEEP-GATE-COUNTED-NON-UNITS]. The whole-children count stays because the
+         degradation group reads it to mean "the container still renders something",
+         and a break that removes the href would make a unit-scoped count 0 and pass
+         that check for the wrong reason. */
+      unitKids:unitKids.length, unitKidsVisible:unitKids.filter(vis).length,
       cards:cards.length,
       aspects:cards.slice(0,3).map(c=>{const r=c.getBoundingClientRect();
         return r.height?+(r.width/r.height).toFixed(2):0}),
@@ -357,11 +369,14 @@ export const GROUPS = {
       // FIRST, because it is the failure that looks like success: a gate satisfied by ONE
       // keeper passes every "the surface renders" check while the complement hides the rest
       // — measured at 38 of 39 units gone [F-ELIMINATION-GATE-ONE-CARD].
-      if (probe.units > 2) {
-        const kept = probe.units === 0 ? 1 : probe.unitsVisible / probe.units;
-        t(`keep gate kept at least ${Math.round(ratio * 100)}% of the container`, kept >= ratio, {
-          visible: probe.unitsVisible,
-          total: probe.units,
+      const total = probe.unitKids ?? probe.units;
+      const shown = probe.unitKidsVisible ?? probe.unitsVisible;
+      if (total > 2) {
+        const kept = total === 0 ? 1 : shown / total;
+        t(`keep gate kept at least ${Math.round(ratio * 100)}% of the units`, kept >= ratio, {
+          visible: shown,
+          total,
+          allChildren: probe.units,
           kept: +kept.toFixed(3),
           next:
             kept < ratio
