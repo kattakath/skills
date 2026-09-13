@@ -125,12 +125,29 @@ tier_one() {
     return 2
   fi
 
-  # The already-running trap: the flag is read at STARTUP only, so a second `open` on a
-  # live process is a no-op that looks like the flag being ignored.
-  if [ -n "$(chromium_mains)" ]; then
-    say "BLOCKED: a Chromium is already running WITHOUT --remote-debugging-port."
-    step "The flag is read at startup only, so a second \`open\` is silently ignored."
-    step "Quit it fully (Cmd-Q, not just the window), then re-run this command."
+  # The already-running trap: the flag is read at STARTUP only, so a second `open` against
+  # the SAME PROFILE is a no-op that looks like the flag being ignored.
+  #
+  # It does NOT apply to --isolated. A distinct --user-data-dir starts a genuinely separate
+  # instance, and the two coexist: measured, an isolated launch on its own port answered
+  # while the already-running browser kept all 17 of its targets [F-ISOLATED-COEXISTS].
+  # Blocking it was not just a nuisance — the advice was "Cmd-Q the running browser", and
+  # the running browser is almost always the OPERATOR'S OWN session.
+  if [ "$isolated" != 1 ] && [ -n "$(chromium_mains)" ]; then
+    local running_ports
+    running_ports=$(chromium_mains | grep -oE -- '--remote-debugging-port=[0-9]+' |
+      cut -d= -f2 | sort -u | paste -sd, -)
+    if [ -n "$running_ports" ]; then
+      say "BLOCKED: a Chromium is already running, WITH --remote-debugging-port=$running_ports."
+      step "That is almost certainly the operator's own browser. Do not attach to it, and do"
+      step "not quit it: an installed userscript there measures instead of your file."
+    else
+      say "BLOCKED: a Chromium is already running, WITHOUT --remote-debugging-port."
+      step "The flag is read at startup only, so a second \`open\` on that profile is ignored."
+    fi
+    step "Re-run with --isolated to start a SEPARATE throwaway instance on its own port and"
+    step "its own profile. It coexists with what is running and has no userscript manager."
+    step "Quitting the running browser is the last resort, never the first move."
     step "Running now:"
     chromium_mains | sed 's/^/    /'
     return 1
@@ -168,8 +185,12 @@ tier_one() {
     open -na "$bundle" --args "--remote-debugging-port=$port"
   fi
 
-  local i
-  for i in 1 2 3 4 5 6 7 8 9 10; do
+  # A COLD throwaway profile boots slower than a warm one — measured at more than 16s, so
+  # the old 10s budget reported DOWN on a launch that had in fact worked
+  # [F-COLD-PROFILE-BOOTS-SLOWLY].
+  local i budget=10
+  [ "$isolated" = 1 ] && budget=40
+  for i in $(seq 1 "$budget"); do
     port_answers && {
       say ""
       say "  1  cdp-overlay  UP  $URL answered after ${i}s"
@@ -179,7 +200,7 @@ tier_one() {
     sleep 1
   done
   say ""
-  say "  1  cdp-overlay  DOWN  nothing answered on $URL within 10s"
+  say "  1  cdp-overlay  DOWN  nothing answered on $URL within ${budget}s"
   step "check that the browser actually launched, and that no other profile held the port."
   return 1
 }

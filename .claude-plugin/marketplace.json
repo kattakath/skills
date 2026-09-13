@@ -48,7 +48,7 @@
     {
       "name": "page-lab",
       "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
-      "version": "0.14.0",
+      "version": "0.15.0",
       "author": {
         "name": "Ismail Kattakath"
       },

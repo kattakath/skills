@@ -56,7 +56,7 @@ guesses a selector does not fail loudly — it mangles the page.
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
 | `references/pick-protocol.md` + `pick-envelope.schema.json` | The pick contract |
 | `references/cdp-extras.md` | Raw-CDP surface no MCP tool exposes, as symptom → command |
-| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the two acceptance runners |
+| `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the survey recon, the two acceptance runners |
 | `scripts/lib/` | `cdp.mjs` (one CDP client), `harness.mjs` (trusted input, `settle`, the document-start lab), `redesign-checks.mjs` (the check groups) |
 | `scripts/redesign.config.example.mjs` | The shape a new site fills in — the **keep-list** redesign, written out in full |
 
@@ -68,6 +68,7 @@ scripts/route-up.sh                        # how to OPEN a route, not just name 
 scripts/userscript-meta-lint.sh <path|dir> # Greasy Fork readiness
 scripts/pick-validate.mjs --self-test scripts/fixtures
 scripts/devtools-doctor.sh                 # CDP connection preflight
+scripts/survey-recon.mjs --origin <url> --shapes a=/,b=/x   # M1-M4, M10-M12, measured
 scripts/userscript-acceptance.mjs <spec>   # does ONE change still WORK? (trusted events)
 scripts/redesign-acceptance.mjs <config>   # does the WHOLE redesign work? (document-start)
 scripts/redesign-acceptance.mjs --diagnose <config>   # facts per URL shape, no verdicts

@@ -33,6 +33,32 @@ verbatim on any site; the thirteen questions are site-agnostic by construction.
   structure, geometry and colour. It never needs to quote what the page is about, and on
   a personal or adult site it must not.
 
+## Run the tool first — M1-M4 and M10-M12 are measured, not eyeballed
+
+```bash
+pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | tail -1)
+export PL_BROWSER_URL=http://127.0.0.1:9345      # a THROWAWAY browser, never the operator's
+node "$pl/survey-recon.mjs" --origin https://example.com \
+  --shapes 'index=/,search=/search/x,category=/c/x,watch=/video/x,photos=/photos'
+```
+
+It reports, per shape: qualifies / organic share / hover autoplay / pagination / stock dark
+theme / the winning container, then the unit selector and box, the `href` shapes, non-unit
+children of the grid, per-width unit geometry and overflow, and the theme signals.
+
+**Include the LOOKALIKES in `--shapes`.** The shapes that must NOT qualify — a watch page, a
+photo gallery, a tag index — are the ones worth measuring, and they become the acceptance
+runner's `stockShapes`.
+
+What it does NOT do: M5 (chrome inventory, which is layered and needs re-running after every
+removal), M6-M8 (listeners, matched styles, dialogs — N/A under the keep-list unless
+something actually moves) and M9 (colour). Those stay manual. **UNMEASURED is a finding**;
+the tool says UNMEASURED rather than guessing, and so should you.
+
+Why it exists: these measurements used to be prose, so every site hand-rolled them — and the
+hand-rolled version ranked a promoted strip above the real grid on the second URL shape it
+looked at [F-SURVEY-HAD-NO-TOOL].
+
 ## The thirteen
 
 ### M1 — URL shapes
