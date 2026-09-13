@@ -25,6 +25,7 @@ const HELP = `Usage: survey-recon.mjs --origin <url> --shapes <label=path,...> [
   --unit-href <str>     substring identifying a unit's link (CONTAINS, never a prefix
                         [F-HREF-PREFIX-MISSES]). Omit to auto-detect and report the guess.
   --widths 1280,1512    desktop widths for M11 (default 1280,1512,1920,2560)
+  --bar <sel>           the top bar, for M5's keep-list (default: header, [class*="top-menu"])
   --browser-url <url>   REQUIRED, or PL_BROWSER_URL. No default: :9222 is usually the
                         operator's own browser [F-RAN-AGAINST-THE-OPERATORS-BROWSER].
   --json                emit raw JSON instead of the table
@@ -38,6 +39,7 @@ function parse(argv) {
     else if (a === '--origin') o.origin = argv[++i];
     else if (a === '--shapes') o.shapes = argv[++i];
     else if (a === '--unit-href') o.unitHref = argv[++i];
+    else if (a === '--bar') o.bar = argv[++i];
     else if (a === '--widths') o.widths = String(argv[++i]).split(',').map(Number).filter(Boolean);
     else if (a === '--browser-url') o.browserUrl = argv[++i];
     else if (a === '--json') o.json = true;
@@ -306,6 +308,49 @@ const pagerExpr = (unitHref) => `(()=>{
   if(outer.length) return {found:sig(outer[0].e), links:outer[0].n, how:'structural'};
   return {found:null, links:0, how:null};})()`;
 
+/**
+ * M5 — the chrome inventory, as a COUNT with identities rather than a list to maintain.
+ *
+ * Everything that paints and is neither the surface, nor the pager, nor the bar, nor on the
+ * path between the surface and <body>. A node counts as painting when IT or anything in its
+ * subtree does: a collapsed float container measures height 0 with visible children, and a
+ * height filter cannot see it — that is how one block survived four sweeps
+ * [F-INSIDE-THE-GRID-IS-NOT-A-CARD, F-PURGE-IS-LAYERED].
+ *
+ * PURGING IS LAYERED: removing what is visible exposes what was behind it, so re-run this
+ * after every removal. One pass is never the answer.
+ */
+const chromeExpr = (gridSel, barSel) => `(()=>{
+  const gen=t=>/-[0-9a-f]{4,}$/i.test(t)||/-\\d{4,}$/.test(t)||/^[a-z]+_[A-Za-z0-9]{5,}$/.test(t);
+  const cls=e=>(typeof e.className==='string'&&e.className)
+    ?e.className.trim().split(/\\s+/).slice(0,2):[];
+  const sig=e=>e.tagName.toLowerCase()+(e.id?'#'+e.id:'')+
+    (cls(e).length?'.'+cls(e).join('.'):'')+(cls(e).some(gen)?' [GENERATED]':'')
+    +(!e.id&&!cls(e).length?' [NO CLASS]':'');
+  const paints=e=>{const c=getComputedStyle(e);
+    if(c.display==='none'||c.visibility==='hidden')return false;
+    const r=e.getBoundingClientRect(); if(r.height>4&&r.width>20)return true;
+    for(const k of e.querySelectorAll('*')){const kc=getComputedStyle(k);
+      if(kc.display==='none'||kc.visibility==='hidden')continue;
+      const kr=k.getBoundingClientRect(); if(kr.height>4&&kr.width>20)return true;}
+    return false;};
+  const grid=document.querySelector(${j(gridSel)});
+  if(!grid)return {noGrid:true};
+  const bar=document.querySelector(${j(barSel)});
+  const pagerSels='.pagination,.numlist2,[class*="pagin"],[class*="pager"],[class*="page-list"]';
+  const keep=e=>e===grid||grid.contains(e)||(bar&&(e===bar||bar.contains(e)))
+    ||!!e.closest(pagerSels);
+  const onPath=e=>e.contains(grid);
+  const out=[],seen=[];
+  const walk=(n,d)=>{for(const k of n.children){
+    if(!paints(k)||keep(k))continue;
+    if(onPath(k)){ if(d>0) walk(k,d-1); continue; }
+    const r=k.getBoundingClientRect();
+    out.push(sig(k)+' '+Math.round(r.width)+'x'+Math.round(r.height));}};
+  walk(document.body,7);
+  return {count:out.length, blocks:out.slice(0,12),
+    hashed:out.filter(x=>/GENERATED|NO CLASS/.test(x)).length};})()`;
+
 const report = [];
 for (const sh of shapes) {
   const url = origin + sh.path;
@@ -430,6 +475,9 @@ for (const sh of shapes) {
         unit:ur?Math.round(ur.width)+'x'+Math.round(ur.height):null,
         cols:(g&&ur&&ur.width)?Math.max(1,Math.round(g.getBoundingClientRect().width/ur.width)):null}})()`));
   }
+  await setWidth(1512);
+  row.chrome = await lab.ev(chromeExpr(win.sel,
+    opts.bar || 'header, [class*="top-menu"]'));
   // A left-behind override makes every later measurement in the session wrong.
   await clearWidth();
   report.push(row);
@@ -468,6 +516,13 @@ for (const r of report) {
   }
   process.stdout.write(`  theme     bg ${r.theme.bodyBg} lum ${r.theme.bodyLuminance} · sheets ${r.theme.sheets} rules ${r.theme.rules} cross-origin ${r.theme.crossOriginSheets} · prefers-color-scheme blocks ${r.theme.prefersColorSchemeBlocks}${r.theme.toggleLike ? ` · toggle-like ${r.theme.toggleLike}` : ''}\n`);
   process.stdout.write(`  widths    ${r.widths.map((w) => `${w.w}:${w.unit ?? '?'}${w.overflowX ? ` OVERFLOW ${w.overflowX}` : ''}`).join('  ')}\n`);
+  if (r.chrome && !r.chrome.noGrid) {
+    process.stdout.write(`  M5 chrome ${r.chrome.count} rendered block(s) outside the keep-list`
+      + `${r.chrome.hashed ? `, ${r.chrome.hashed} of them hashed or class-less — a NAMED purge list `
+        + 'will rot; purge by elimination against your own marks' : ''}\n`);
+    for (const b of r.chrome.blocks) process.stdout.write(`            ${b}\n`);
+    process.stdout.write('            PURGING IS LAYERED — re-run after every removal.\n');
+  }
   process.stdout.write(`  pager     ${r.pagination.found ?? 'NONE — this shape cannot qualify'}`
     + `${r.pagination.links ? ` (${r.pagination.links} page links, ${r.pagination.how})` : ' (0 page links)'}\n\n`);
 }

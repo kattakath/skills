@@ -123,10 +123,10 @@ The operator's browser holds their tabs, sessions and logins. This project kille
 - [ ] The pre-existing suites are **identical or better**, not merely green.
 - [ ] Every lane's refusals are recorded with a reason.
 - [ ] Anything unverified is marked **UNVERIFIED**, never assumed.
-- [ ] New facts are in [`../../references/facts.md`](../../references/facts.md) with a
+- [ ] New facts are in [`../../references/facts.md`](../../../references/facts.md) with a
       date and a re-measure recipe.
 
 ## Where to read next
 
-- [`SKILL.md`](SKILL.md) — the phases this closes.
+- [`SKILL.md`](../SKILL.md) — the phases this closes.
 - [`acceptance.md`](acceptance.md) — the runner, and the ways a spec lies.

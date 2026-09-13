@@ -1,7 +1,7 @@
 # Userscript patterns — the pre-vetted ladder
 
 **Reference payload, not procedure.** Read it when choosing an API; the loop lives in
-[`SKILL.md`](SKILL.md), the instruments in [`probes.md`](probes.md).
+[`SKILL.md`](../SKILL.md), the instruments in [`probes.md`](probes.md).
 
 **Everything here was verified against primary docs** (violentmonkey.github.io + MDN) on
 **2026-08-30**. The last section lists what could **not** be verified — those stay flagged,
@@ -405,7 +405,7 @@ A selector that is unique and correct in the picker can still be **unreachable f
 userscript**, because `document.querySelector` does not cross a shadow boundary or a frame
 boundary. The pick envelope's **`reachability`** field is what routes this decision —
 `document` · `shadow` · `frame` · `shadow-in-frame` — and anything but `document` arrives
-carrying its own ship blocker ([`SKILL.md`](SKILL.md) hard rule 6).
+carrying its own ship blocker ([`SKILL.md`](../SKILL.md) hard rule 6).
 
 ### Shadow-root targets (`reachability: "shadow"`)
 

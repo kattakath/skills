@@ -39,7 +39,8 @@ verbatim on any site; the thirteen questions are site-agnostic by construction.
 pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/scripts | tail -1)
 export PL_BROWSER_URL=http://127.0.0.1:9345      # a THROWAWAY browser, never the operator's
 node "$pl/survey-recon.mjs" --origin https://example.com \
-  --shapes 'index=/,search=/search/x,category=/c/x,watch=/video/x,photos=/photos'
+  --shapes 'index=/,search=/search/x,category=/c/x,watch=/video/x,photos=/photos' \
+  --unit-href '/videos/' --bar 'header'
 ```
 
 It reports, per shape: qualifies / organic share / hover autoplay / pagination / stock dark
@@ -50,9 +51,15 @@ children of the grid, per-width unit geometry and overflow, and the theme signal
 photo gallery, a tag index — are the ones worth measuring, and they become the acceptance
 runner's `stockShapes`.
 
-What it does NOT do: M5 (chrome inventory, which is layered and needs re-running after every
-removal), M6-M8 (listeners, matched styles, dialogs — N/A under the keep-list unless
-something actually moves) and M9 (colour). Those stay manual. **UNMEASURED is a finding**;
+It also runs **M5**, the chrome inventory: every block that paints and is neither the
+surface, the pager, the bar, nor on the path between them. It flags how many carry a BUILD
+HASH or no class at all — which is the finding that decides the build, because a named purge
+list rots on such a site and the purge has to work by elimination against the script's own
+marks instead. **M5 is LAYERED: re-run after every removal**, since hiding what is visible
+exposes what was behind it.
+
+What it does NOT do: M6-M8 (listeners, matched styles, dialogs — N/A under the keep-list
+unless something actually moves) and M9 (colour). Those stay manual. **UNMEASURED is a finding**;
 the tool says UNMEASURED rather than guessing, and so should you.
 
 Why it exists: these measurements used to be prose, so every site hand-rolled them — and the
@@ -254,8 +261,8 @@ first**: a stock dark theme or a stock compact layout can delete most of a phase
 
 ## Where to read next
 
-- [`SKILL.md`](SKILL.md) — the phases this feeds.
-- [`../userscript-author/probes.md`](../userscript-author/probes.md) — probe bodies and
+- [`SKILL.md`](../SKILL.md) — the phases this feeds.
+- [`../userscript-author/probes.md`](../../userscript-author/references/probes.md) — probe bodies and
   the verdict table.
-- [`../../references/cdp-extras.md`](../../references/cdp-extras.md) — the CDP domains
+- [`../../references/cdp-extras.md`](../../../references/cdp-extras.md) — the CDP domains
   these measurements use.

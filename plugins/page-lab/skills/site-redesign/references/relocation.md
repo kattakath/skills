@@ -161,4 +161,4 @@ group still proves the node went back to its original parent **and** next siblin
 ## Where to read next
 
 - [`keep-list.md`](keep-list.md) — **the default this file is the exception to.**
-- [`SKILL.md`](SKILL.md) · [`survey.md`](survey.md) — M6, M7 and M8 feed this file.
+- [`SKILL.md`](../SKILL.md) · [`survey.md`](survey.md) — M6, M7 and M8 feed this file.

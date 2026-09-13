@@ -6,8 +6,8 @@ description: >
   thumbnails fill the screen and put everything else in a menu", "rebuild this legacy
   app's shell", "redesign <site>", or any userscript that relocates the site's own
   controls, restyles every surface, or is expected to run past a few hundred lines. It
-  runs a measure-first survey, splits the build across parallel agents, and verifies
-  with trusted events before shipping.
+  runs a measure-first survey, builds against a keep-list, and verifies with trusted
+  events at document-start before shipping.
 ---
 
 # Site redesign — survey → design → build → verify → ship
@@ -26,7 +26,7 @@ restating them — read them there first.
 | **Every** surface recoloured (a real dark mode) | **this one** |
 | The site's **own controls move** to a new container | **this one** |
 | A new shell: overlay menu, full-bleed grid, fixed controls | **this one** |
-| Work large enough to split across parallel agents | **this one** |
+| Work large enough to need a survey before any selector is written | **this one** |
 
 Crossing into this skill does **not** relax anything: the same two gates, the same
 metadata bans, the same "anchors are roles and `href`s, never generated classes", the
@@ -35,7 +35,7 @@ same "degrade to stock" failure mode.
 ## Scope first: which surfaces are actually the point
 
 **Ask this before the survey, and make the operator answer it.** A redesign spreads by
-default — every page you look at has something wrong with it — and the spread is where the
+default — every page has something wrong with it — and the spread is where the
 cost is. Almost all of it buys nothing.
 
 The question is: **which surface is the reason the user opens this site at all?** On a video
@@ -46,36 +46,17 @@ not the profile pages, not the tag listings.
 and *not even a theme*. "While we are here, make it dark too" is how a two-rule change
 becomes two thousand lines.
 
-Measured on two sites that were built the wide way first and then narrowed:
-
-| Built for every shape | Narrowed to the gallery |
-|---|---|
-| a drawer, with focus trap, `inert`, Escape and click-outside | **deleted** |
-| relocation of the site's own controls, and its repair rules | **deleted** |
-| harvesting stranded links so nothing lost its only route | **deleted** — nothing is hidden, so nothing is stranded |
-| a keep-only island for the watch page | **deleted** |
-| two structural modes, because two shells host chrome differently | **deleted** — no chrome is touched |
-| a theme that had to reach every surface uniformly | **one surface** |
-
-Every one of those existed to solve a problem **created by widening the scope**. The drawer
-existed because chrome was removed; the harvesting existed because the drawer hid things;
-the modes existed because two shells hid them differently. None of it served the wall.
-
 **The cheap version of "everything else out of the way":**
 
 - **Autohide the top bar** rather than relocating a menu — it is a handful of rules, it
   strands nothing, and it needs no focus management because nothing is ever removed from
   the accessibility tree.
-- **Purge side rails and the footer** on the surfaces you own. No harvesting needed: on a
-  page you leave alone, every route is still there.
+- **Purge side rails and the footer** on the surfaces in scope. No harvesting needed: on a
+  page left alone, every route is still there.
 - **Gate on the content surface itself** — "does this page carry the thing I am here for" —
   so every other shape is stock by construction rather than by a list of exceptions.
 
-**The trade, stated honestly.** A narrow script leaves the rest of the site looking like the
-rest of the site: a reader who clicks through to a watch page gets the stock page, theme and
-all. That inconsistency is the price, and on both sites the operator judged it cheap against
-the machinery it deletes. Put the choice to them in those terms rather than assuming either
-answer.
+The evidence for this — what narrowing deleted on two sites, and the trade it buys — is in [`references/keep-list.md`](references/keep-list.md) § Why the list is this short. **Put the trade to the operator rather than assuming either answer.**
 
 ## The keep-list — the positive form, and the default
 
@@ -84,7 +65,7 @@ forwards, and it is now **the default shape** rather than one site's choice:
 
 > **Keep the content grid. Keep pagination. Autohide the top bar. Remove everything else.**
 
-Read [`keep-list.md`](keep-list.md) before designing anything — it carries the whole
+Read [`keep-list.md`](references/keep-list.md) before designing anything — it carries the whole
 pattern: how to qualify a page as *the* surface (three signals, not the word "gallery"),
 how to hide the complement by marking paths rather than naming containers, and the two
 rules that keep it from shipping a blank page:
@@ -96,83 +77,58 @@ rules that keep it from shipping a blank page:
 - **Check what a keeper is nested INSIDE before removing its container**
   [F-KEEPER-INSIDE-CHROME].
 
-The one thing the list actually builds is the hidden bar — [`topbar.md`](topbar.md), a
+The one thing the list actually builds is the hidden bar — [`topbar.md`](references/topbar.md), a
 standard component now, not a per-site invention.
 
 ## Desktop only — there is no mobile case
 
-**A userscript manager runs in a desktop browser.** Mobile Chrome has no extension support
-at all, so no reader ever meets one of these scripts at 320px. Every rule and every check
-aimed at a phone is effort spent on a case that cannot occur.
+**A userscript manager runs in a desktop browser.** Mobile Chrome has no extension support,
+so no reader ever meets one of these scripts at 320px. Verify at **1280 / 1512 / 1920 /
+2560** only; 1280 is the floor, not a small case to defend. Drop `@media (hover: none)`,
+`env(safe-area-inset-*)`, and any `min(clamp(…), 100%)` wrapper whose only job was stopping
+a clamp's floor overflowing a phone — check that it *is* the only job first.
 
-- **Verify at desktop widths only.** 1280 is the floor; 1280 / 1512 / 1920 / 2560 is a
-  complete matrix. Drop the 320 and 768 arms.
-- **Drop `@media (hover: none)`.** A desktop pointer always hovers.
-- **Drop `env(safe-area-inset-*)`.** There is no notch.
-- **Drop `min(clamp(…), 100%)` wrappers** whose only job was stopping a clamp's floor
-  overflowing a phone. Check that *is* their only job first.
+**Do not over-delete.** `repeat(auto-fill, minmax(…))` is what makes one rule serve 1280
+through 2560 without a breakpoint stack; `:focus-within` is the KEYBOARD path, not the touch
+path; `prefers-reduced-motion` is an accessibility preference, not a viewport. `dvh` stays —
+it is not a mobile-only unit and costs nothing.
 
-**Do not over-delete — three things look responsive and are not:**
+## Rules and anti-patterns — read before writing code
 
-| Keep | Because |
-|---|---|
-| `repeat(auto-fill, minmax(…))` | not a concession to phones — it is what makes ONE rule serve 1280 through 2560 without a breakpoint stack |
-| `:focus-within` | the **keyboard** path, not the touch path. A desktop keyboard user needs it |
-| `prefers-reduced-motion` | an accessibility preference, not a viewport |
+[`references/rules.md`](references/rules.md) carries the hard rules that go beyond
+`userscript-author`'s, the anti-patterns specific to a redesign, and the approaches already
+measured and REJECTED so they are not re-proposed. Read it once per redesign, before the
+build phase. The four that most often decide a build:
 
-`dvh` also stays: it is not a mobile-only unit and it costs nothing.
-
-## Hard rules — additional to `userscript-author`'s
-
-0. **Check the shelf, including your own.** Before building any affordance, grep
-   the sibling scripts in the same repo for the mechanism — a repo that ships
-   several redesigns has usually solved the card overlay, the drawer or the
-   lazy-load fade already, with its measurements in the header comment
-   ([`overlays.md`](overlays.md)).
-1. **Redesign only the surface that is the point**, and qualify that surface by structure
-   rather than by a word — [`keep-list.md`](keep-list.md) § Qualifying the page. Everything
-   else is stock, including its theme. A rule that exists only because an earlier rule
-   widened the scope is a rule neither of them needed.
-2. **No selector may be written before the survey is complete.** The survey is a
-   blocking phase with its own deliverable ([`survey.md`](survey.md)). "I will measure
-   it when I get there" is how a redesign ships a guess.
-3. **Prefer hiding to moving — and IF a control must move, move the site's node, never
-   rebuild it.** The keep-list moves nothing, which is most of its value. Relocation is the
-   exception: a relocated control brings its own handler, a rebuilt one is the reinvented
-   wheel and diverges the first time the site changes, and a delegated handler breaks on the
-   move [`relocation.md`](relocation.md).
-4. **One palette, declared once.** A redesign that hard-codes colours at each use site
-   cannot be verified or retuned. Tokens on a root data attribute; the count that
-   replaced 51 literals in the reference implementation was 17.
-5. **One lifecycle object, one `AbortController`.** Every observer, listener, fetch,
-   sheet and saved-state handle lives on it, so teardown is an `abort()` plus a loop —
-   not a set of hand-matched removals that drift apart.
-6. **Teardown stops new work BEFORE it undoes the DOM**, and every coalescer, builder
-   and scan checks a `torn` flag at entry — a queued frame outlives teardown and
-   rebuilds what it just removed [F-RAF-SURVIVES-TEARDOWN].
-7. **Never name a script-scope const after a global** you also use. `const CSS` shadows
-   `window.CSS` and `CSS.escape` then throws a TDZ error that reads like something else
-   entirely [F-CSS-SHADOWS-GLOBAL].
-8. **Geometry proves presence, never function** — the reference plugin's own
-   `[F-PRESENT-NOT-WORKING]`. Every primary action is re-exercised under a **trusted**
-   event, before and after. A redesign is not verified until the site still works.
-9. **Record numbers, not adjectives.** "Contrast is fine" is not a measurement; "4.8:1"
-   is. Every claim in the header block and the changelog carries the figure and the date.
+- **Gate every rule that hides by ELIMINATION** — such a rule hides MORE as it matches LESS,
+  so scope it to a container the script has marked, and render stock when the gate fails.
+- **Never name a script-scope const after a global the script also uses.**
+- **Measure the page's own state before painting it**, never through the same repaint.
+- **Check the operator's own sibling scripts** before building any affordance.
 
 ## Phases
 
 ```
-Survey (blocking, one agent)
-  -> Theme | Grid/Content | Shell (bar + purge)  (parallel)
-    -> Integrator (merge, DRY, gates)
-      -> Harness (acceptance, responsive, degradation)
-        -> Hardening  (structure | runtime | harness, in parallel)
+Survey (blocking)
+  -> Build: theme? | grid | shell (bar + purge)
+    -> Integrate (one palette, one lifecycle, one teardown)
+      -> Verify (acceptance at document-start, trusted events)
+        -> Harden
           -> Ship
 ```
 
+**Splitting the build across parallel agents is OPTIONAL, and usually not worth it.**
+Measured across four sites: one was built by three parallel agents and three were built by
+a single agent, and the single-agent builds were the smaller and cleaner ones. The split
+costs an integration phase whose whole job is to undo three copies of the palette, the
+lifecycle and the teardown. Split only when the survey shows all three lanes are
+substantial - and note that a site shipping its own dark theme (M12) empties the theme lane
+entirely, which on one site removed the theming half of the script and left 701 lines
+against a sibling's 2576.
+
 ### 1. Survey — blocking
 
-Run [`survey.md`](survey.md) end to end. It is a 13-point template (M1-M13) written to
+Run [`survey.md`](references/survey.md) end to end. It is a 13-point template (M1-M13) written to
 be re-used verbatim on any site. Its output is a dated table that every later phase
 treats as the source of truth.
 
@@ -184,20 +140,25 @@ lands. **Two of them can delete most of a phase before it starts:**
 - **M13 — does the site already ship a compact layout?** Its mobile view is a shipped
   design for "everything except the content" — the same judgement the redesign has to
   make, already made. Adopting it can make the whole relocation problem moot
-  ([`relocation.md`](relocation.md) § Adopt or relocate).
+  ([`relocation.md`](references/relocation.md) § Adopt or relocate).
 - **M6 — are the controls' handlers delegated to an ancestor?** If they are, relocation
   breaks them and the Shell phase needs a different strategy entirely.
 
-### 2. Design, in parallel
+### 2. Build — three lanes, not necessarily three agents
 
-| Agent | Owns | Reference |
+| Lane | Owns | Reference |
 |---|---|---|
-| **Theme** | palette tokens, any CSSOM remap, contrast repair, the own-UI exclusion list | [`theming.md`](theming.md) |
-| **Grid / Content** | the primary surface: layout, intrinsic sizing, promo elimination, media loading | [`theming.md`](theming.md) § Media |
-| **Shell** | the autohiding bar, the purge of everything else, and its gate | [`keep-list.md`](keep-list.md), [`topbar.md`](topbar.md) |
+| **Theme** | palette tokens, any CSSOM remap, contrast repair, the own-UI exclusion list | [`theming.md`](references/theming.md) |
+| **Grid / Content** | the primary surface: layout, intrinsic sizing, promo elimination, media loading | [`theming.md`](references/theming.md) § Media |
+| **Shell** | the autohiding bar, the purge of everything else, and its gate | [`keep-list.md`](references/keep-list.md), [`topbar.md`](references/topbar.md) |
 
-They share two artefacts and must not each invent their own: **the palette** and **the
-own-UI exclusion list**. Name both in the survey output so all three start from one copy.
+**Check M12 before opening the theme lane at all.** A site that already ships a dark theme
+needs no palette, no CSSOM remap and no contrast repair; driving the site's own theme beats
+overpainting it on every axis and survives the site's redesigns.
+
+If the lanes are run as separate agents they share two artefacts and must not each invent
+their own: **the palette** and **the own-UI exclusion list**. Name both in the survey output
+so every lane starts from one copy.
 
 ### 3. Integrate
 
@@ -209,8 +170,8 @@ Escalation is unchanged from `userscript-author` § I: **do not grow a bundler.*
 
 ### 4. Verify
 
-[`acceptance.md`](acceptance.md) — the groups, the trusted-event discipline, and the
-five ways a spec lies to you.
+[`acceptance.md`](references/acceptance.md) — the groups, the trusted-event discipline, and the
+five ways a spec lies.
 
 **Do not write this harness again.** `scripts/redesign-acceptance.mjs` takes a declarative
 config and runs the whole group set at **document-start across real navigations**; a new
@@ -221,9 +182,9 @@ leave one of everything*, *teardown restores* — so a new site's config is the 
 out-of-scope shapes and the thresholds, and nothing else. Start with `--diagnose`, which
 prints one line of decision-relevant facts per URL shape and what to look at next.
 
-### 4.5 Harden — before you call it finished
+### 4.5 Harden — before calling it finished
 
-[`hardening.md`](hardening.md). Three lanes in parallel — structure, runtime, harness —
+[`hardening.md`](references/hardening.md). Three lanes in parallel — structure, runtime, harness —
 sharing no files, each reporting the line ranges it touched.
 
 Not a tidy-up. On the run that produced that file it found a defect whose symptom
@@ -249,62 +210,31 @@ A refactor lane without a net is a rewrite.
       open tab**. A tab open across a re-install keeps running the old body, and this has
       been mistaken for "the fix did not work" more than once.
 
-## Anti-patterns specific to a redesign
-
-- **Rebuilding a control instead of moving it** (rule 2).
-- **Hiding by elimination without a gate** — `> *:not(:has(X))` hides *more* as it
-  matches *less*, so a renamed selector mangles the page instead of degrading to stock. A
-  gate satisfied by ONE keeper is not a gate [F-ELIMINATION-GATE-ONE-CARD].
-- **Removing a container without checking what is nested inside it**
-  [F-KEEPER-INSIDE-CHROME].
-- **Painting a surface and then re-measuring it with your own repaint** — the two are each
-  right by their own rule and the pair is unreadable [F-SHEET-VS-REPAINT-FIGHT].
-- **Assuming `:focus-within` reveals a hidden bar.** Measure it; on one site the pointer
-  path worked and the keyboard path was dead [F-FOCUS-WITHIN-NOT-A-REVEAL].
-- **Deciding neutrality on HSL saturation** — it misclassifies near-white and near-black
-  [F-CHROMA-NOT-HSL].
-- **Skipping a colour to preserve it** — `:not()` carries its most specific argument's
-  weight, so a preserved colour must be re-declared [F-NOT-TAKES-MAX-SPECIFICITY].
-- **`transform` for off-canvas** — it re-anchors every fixed descendant
-  [F-TRANSFORM-CONTAINING-BLOCK].
-- **A fixed sleep in a spec** [F-TRANSITION-RACE], and **anything measured in a
-  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM] — the fix is a live
-  clock via `Emulation.setFocusEmulationEnabled`, not stealing the operator's window with
-  `Target.activateTarget` [F-FOCUS-EMULATION].
-- **Verifying by `eval` into a loaded page** [F-INJECT-IS-NOT-INSTALL]. Run
-  `scripts/redesign-acceptance.mjs`, which injects at document-start across real
-  navigations, rather than writing that harness again.
-- **Trusting a null result before asserting the rig** [F-INPUT-SILENTLY-DROPPED] — a dead
-  target makes every working control look broken.
-- **Treating a site class as a lever without checking its rule is in scope**
-  [F-MEDIA-GATED-CLASS-INERT].
-
-## Approaches already measured and rejected
-
-Do not re-litigate these without a new measurement that contradicts the recorded one.
-
-| Rejected | Why |
-|---|---|
-| `popover` / top layer for our own panel | Paints **over** the site's own dialogs, so the site's modals become unreachable |
-| `@layer` for our sheet | Unlayered author styles beat every layer, so the site wins by default |
-| `:where()` to keep weight low | Contributes zero specificity — the site's own rules then win ties we need |
-| `transform` for off-canvas | [F-TRANSFORM-CONTAINING-BLOCK] |
-| `contrast-color()` | Not shippable across the target browsers yet |
-| Scroll-snap replacing explicit stepping | Fights the pointer on a long strip |
-
 ## Where to read next
 
-- [`keep-list.md`](keep-list.md) — **the default shape**, and how to qualify the surface.
-- [`topbar.md`](topbar.md) — the autohiding bar, measured. The one thing the list builds.
-- [`survey.md`](survey.md) — **the blocking phase.** M1-M13, re-usable verbatim.
-- [`theming.md`](theming.md) — dark mode, the remap, contrast repair, motion, media.
-- [`relocation.md`](relocation.md) — **the exception**: moving live controls without
+- [`keep-list.md`](references/keep-list.md) — **the default shape**, and how to qualify the surface.
+- [`topbar.md`](references/topbar.md) — the autohiding bar, measured. The one thing the list builds.
+- [`survey.md`](references/survey.md) — **the blocking phase.** M1-M13, re-usable verbatim.
+- [`theming.md`](references/theming.md) — dark mode, the remap, contrast repair, motion, media.
+- [`relocation.md`](references/relocation.md) — **the exception**: moving live controls without
   breaking them, for the site that genuinely needs it.
-- [`overlays.md`](overlays.md) — the hover-title card overlay, measured; and the
-  reminder to check your OWN sibling scripts before building any affordance.
-- [`hardening.md`](hardening.md) — the final pass: three lanes, what each hunts, and
+- [`overlays.md`](references/overlays.md) — the hover-title card overlay, measured; and the
+  reminder to check the operator's OWN sibling scripts before building any affordance.
+- [`hardening.md`](references/hardening.md) — the final pass: three lanes, what each hunts, and
   the rules of engagement with the operator's browser.
-- [`acceptance.md`](acceptance.md) — verification groups and how specs lie.
+- [`acceptance.md`](references/acceptance.md) — verification groups and how specs lie.
 - [`../userscript-author/SKILL.md`](../userscript-author/SKILL.md) — the base rules this
   skill assumes.
 - [`../../references/facts.md`](../../references/facts.md) — every `[F-…]` cited above.
+  **It is ~13,000 words: never read it whole.** Each fact is one table row keyed by its ID,
+  so grep for the row instead:
+
+  ```bash
+  pl=$(ls -d ~/.claude/plugins/cache/*/page-lab/*/references | tail -1)
+  grep -n 'F-INSIDE-THE-GRID-IS-NOT-A-CARD' "$pl/facts.md"   # one fact, by ID
+  grep -oE '^\| `F-[A-Z0-9-]+`' "$pl/facts.md"               # list every fact ID
+  grep -n 'F-.*PAGER\|F-.*PAGINATION' "$pl/facts.md"         # by topic
+  ```
+
+  A citation with no row is a build failure in this plugin's own check, so an unfamiliar
+  `[F-…]` always has a row to grep for.

@@ -15,7 +15,7 @@ description: >
 from the live page. **If no route is reachable, say so and stop** — asking the operator to
 paste a probe result is a measurement; inventing a selector is not.
 
-This skill owns the *judgment*: is the state you want **already rendered** by the site, which
+This skill owns the *judgment*: is the wanted state **already rendered** by the site, which
 selectors are **real**, what gets **asked** instead of guessed.
 
 ```
@@ -29,14 +29,14 @@ wish → shelf → route → measure A vs B → diff → replay-or-select → wr
 1. **Never `@require` / `@resource` from a CDN.** Fetched at install time, **no SRI or
    integrity field exists**, nothing pins it; Violentmonkey also refuses local files. Reuse
    enters as **vendored source**, which Greasy Fork permits *provided* the block carries
-   name/version/URL attribution ([`greasyfork.md`](greasyfork.md)).
+   name/version/URL attribution ([`greasyfork.md`](references/greasyfork.md)).
 2. **Every shipped selector is listed in the file's WHY block with the date it was measured.**
    A **template-literal selector containing `${`** is banned — untraceable to a measurement.
 3. **`@grant none` is the target.** Every grant comes from the verified set in
-   [`patterns.md`](patterns.md) § 6 — no linter checks grant *values*, so **a typo grants
-   nothing, silently**. Portability: [`gm-api.md`](gm-api.md).
-4. **`@match` + `@noframes` by default** ([`patterns.md`](patterns.md) § 7). `@downloadURL` /
-   `@updateURL` / `@installURL` are **lint-enforced bans** ([`greasyfork.md`](greasyfork.md)).
+   [`patterns.md`](references/patterns.md) § 6 — no linter checks grant *values*, so **a typo grants
+   nothing, silently**. Portability: [`gm-api.md`](references/gm-api.md).
+4. **`@match` + `@noframes` by default** ([`patterns.md`](references/patterns.md) § 7). `@downloadURL` /
+   `@updateURL` / `@installURL` are **lint-enforced bans** ([`greasyfork.md`](references/greasyfork.md)).
 5. **Never a secret.** A userscript is plain text that ships to the browser and usually gets
    copied somewhere world-readable. A private repo is not a secret store.
 6. **A picked element is a measurement only when** the envelope's `fidelity` is `verified`,
@@ -49,11 +49,11 @@ wish → shelf → route → measure A vs B → diff → replay-or-select → wr
 
 Authoring is the **fallback**. Both hosts publish a free, no-auth **by-site index**, so "has
 someone already solved this" is one fetch. Mechanics and the Sleazy Fork split:
-[`greasyfork.md`](greasyfork.md) § The shelf check.
+[`greasyfork.md`](references/greasyfork.md) § The shelf check.
 
 - [ ] Fetch `https://greasyfork.org/en/scripts/by-site/<domain>` for the **bare** domain
       (`civitai.com`, not `www.civitai.com`), and Sleazy Fork too if the site is adult-adjacent.
-- [ ] A hit is **evidence, not a dependency.** You still cannot `@require` it (rule 1) and must
+- [ ] A hit is **evidence, not a dependency.** It still cannot be `@require`d (rule 1) and must
       not paste it unread. Read it for its **measured selectors and its condition**, then vendor
       *with attribution* or re-derive.
 - [ ] Record: **shelf hit (adapted) / hit (rejected, why) / empty**. "Nobody looked" and
@@ -81,9 +81,9 @@ scripts/page-route.sh
 - [ ] Ladder, gates, and what no fallback can do:
       [`../../references/routes.md`](../../references/routes.md).
 
-### B. Measure state A (what the site gives you)
+### B. Measure state A (what the site renders stock)
 
-- [ ] Run **`dumpSubtree(rootSelector)`** ([`probes.md`](probes.md)); keep the JSON.
+- [ ] Run **`dumpSubtree(rootSelector)`** ([`probes.md`](references/probes.md)); keep the JSON.
 - [ ] Run **`mediaRules()`**; note `crossOrigin` — a high count means the replay route may be
       unavailable.
 - [ ] **May begin with `/pick`** when the operator is pointing rather than describing. Record
@@ -93,7 +93,7 @@ scripts/page-route.sh
 | Ship blocker | Resolution |
 |---|---|
 | `kapture-minted-selector` | Re-pick on a non-mutating route — the minted id evaporates on reload |
-| `shadow-root-target` | The host-piercing shape, [`patterns.md`](patterns.md) § 11 |
+| `shadow-root-target` | The host-piercing shape, [`patterns.md`](references/patterns.md) § 11 |
 | `cross-frame-target` | `@match` the frame's own URL **and** drop the default `@noframes` (§ 11) |
 | `origin-unconfirmed` | Re-pick; a pick from the wrong tab is not a pick |
 
@@ -109,12 +109,12 @@ scripts/page-route.sh
 
 ### D. Diff → verdict
 
-- [ ] Run **`diff(a, b)`** ([`probes.md`](probes.md)). An **empty diff is the finding**, not a
+- [ ] Run **`diff(a, b)`** ([`probes.md`](references/probes.md)). An **empty diff is the finding**, not a
       failure. Probe 3's own table maps the counts to the three verdicts — **DOM-DIFFERS**,
-      **DOM-IDENTICAL**, **STATE-B-UNREACHABLE** — and what each one licenses you to write.
+      **DOM-IDENTICAL**, **STATE-B-UNREACHABLE** — and what each one licenses.
 - [ ] On DOM-IDENTICAL, **no selector can force a media query**: lift the site's rules **by
       condition in a band, never a hardcoded pixel**, accumulating **every block** at each width
-      before picking one ([`patterns.md`](patterns.md) § 5). Reimplementing a state the site
+      before picking one ([`patterns.md`](references/patterns.md) § 5). Reimplementing a state the site
       already renders is the classic loss.
 - [ ] **Prototype the override live before writing a file.** Inject the candidate CSS into the
       running page (a scratch stylesheet, or the protocol's own stylesheet API where the route
@@ -123,7 +123,7 @@ scripts/page-route.sh
 
 ### E. Write the body
 
-- [ ] Work **down the reuse ladder** in [`patterns.md`](patterns.md), first hit wins: platform
+- [ ] Work **down the reuse ladder** in [`patterns.md`](references/patterns.md), first hit wins: platform
       web API → metadata key → granted `GM_*` → vendored source. Take the navigation, waiting,
       CSS-injection and idempotence shapes from there; do not improvise them.
 - [ ] Open the WHY block with the **measured finding, one sentence**, then the dated selectors.
@@ -137,7 +137,7 @@ scripts/userscript-meta-lint.sh <file.user.js>      # or a directory
 
 `node --check`, required/banned metadata keys, dotted-numeric `@version`, minified or bundled
 output, vendored attribution, and that no minted `kapture-` selector reached the file. What it
-**cannot** check: [`patterns.md`](patterns.md) § 10.
+**cannot** check: [`patterns.md`](references/patterns.md) § 10.
 
 ### F.5 Acceptance — exercise the host's primary actions
 
@@ -175,7 +175,7 @@ numbers a layout happens to have.
 
 ### H. Publish
 
-[`greasyfork.md`](greasyfork.md) — rulebook, metadata contract, adult-content marking, and how
+[`greasyfork.md`](references/greasyfork.md) — rulebook, metadata contract, adult-content marking, and how
 to make a `git push` the release without `@updateURL`.
 
 ### I. Escalation trigger (do not grow a bundler)
@@ -188,7 +188,7 @@ to make a `git push` the release without `@updateURL`.
 ## Editing an existing script
 
 **Bump `@version` first** — dotted-numeric; a same-version re-install is a **silent no-op**.
-**Re-measure before re-writing** (B–D): the page changed, your memory of it did not. Then
+**Re-measure before re-writing** (B–D): the page changed, the recorded measurement did not. Then
 re-lint (F) and re-prove (G).
 
 ## Install reality (Chromium)
@@ -196,15 +196,15 @@ re-lint (F) and re-prove (G).
 One-time per profile on the manager's `chrome://extensions` details page: **Allow User
 Scripts**, plus **Allow access to file URLs** for a `file://` install. An agent **cannot**
 install a script, flip a toggle, or drive the manager's dialog — that click is the operator's.
-Why the toggle exists and why policy cannot set it: [`gm-api.md`](gm-api.md).
+Why the toggle exists and why policy cannot set it: [`gm-api.md`](references/gm-api.md).
 
 **Iterating without re-installing by hand:** Violentmonkey's *Track external edits* turns each
 save into an auto-reinstall plus a tab reload. Setup, and the three silent ways tracking dies
-(a git write to the file being the worst): [`patterns.md`](patterns.md) § 12.
+(a git write to the file being the worst): [`patterns.md`](references/patterns.md) § 12.
 
 ## Anti-patterns
 
-CDN `@require`/`@resource` ([`patterns.md`](patterns.md) § 9) · `setInterval` polling for a URL
+CDN `@require`/`@resource` ([`patterns.md`](references/patterns.md) § 9) · `setInterval` polling for a URL
 or an element (§ 1, § 2) · `document` + `subtree: true` on a virtualised list (§ 2) ·
 `!important` escalation to win the cascade (§ 4) · hardcoded generated class names where a
 condition exists (§ 5) · shipping a selector whose envelope still carries a ship blocker
@@ -214,10 +214,10 @@ condition exists (§ 5) · shipping a selector whose envelope still carries a sh
 
 - [`../../references/routes.md`](../../references/routes.md) — routes, gates, opening one.
 - [`../../references/pick-protocol.md`](../../references/pick-protocol.md) — envelope + disarm.
-- [`probes.md`](probes.md) — the four probe bodies, the verdict table.
-- [`patterns.md`](patterns.md) — reuse ladder, vetted code shapes, live-edit loop.
-- [`gm-api.md`](gm-api.md) — `GM_*` portability, `@grant` asymmetry, metadata traps.
-- [`greasyfork.md`](greasyfork.md) — the publishing rulebook.
+- [`probes.md`](references/probes.md) — the four probe bodies, the verdict table.
+- [`patterns.md`](references/patterns.md) — reuse ladder, vetted code shapes, live-edit loop.
+- [`gm-api.md`](references/gm-api.md) — `GM_*` portability, `@grant` asymmetry, metadata traps.
+- [`greasyfork.md`](references/greasyfork.md) — the publishing rulebook.
 - [`../../references/report-format.md`](../../references/report-format.md) — **the Userscript
   report block; end every run with it.**
 

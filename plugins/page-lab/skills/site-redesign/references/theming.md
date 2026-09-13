@@ -168,5 +168,5 @@ document element at any of them.
 
 ## Where to read next
 
-- [`SKILL.md`](SKILL.md) · [`survey.md`](survey.md) — M9 and M12 feed this file.
+- [`SKILL.md`](../SKILL.md) · [`survey.md`](survey.md) — M9 and M12 feed this file.
 - [`acceptance.md`](acceptance.md) — how the theme gets verified rather than asserted.

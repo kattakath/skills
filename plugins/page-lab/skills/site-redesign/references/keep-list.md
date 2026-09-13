@@ -191,9 +191,33 @@ them would mean maintaining a list of which zero-height nodes are safe.
 The `purge` group checks this as *every rendered child of the surface is a unit*; declare
 any you legitimately keep in `grid.keepChildren`.
 
+
+## Why the list is this short
+
+Measured on two sites that were built the wide way first and then narrowed:
+
+| Built for every shape | Narrowed to the gallery |
+|---|---|
+| a drawer, with focus trap, `inert`, Escape and click-outside | **deleted** |
+| relocation of the site's own controls, and its repair rules | **deleted** |
+| harvesting stranded links so nothing lost its only route | **deleted** — nothing is hidden, so nothing is stranded |
+| a keep-only island for the watch page | **deleted** |
+| two structural modes, because two shells host chrome differently | **deleted** — no chrome is touched |
+| a theme that had to reach every surface uniformly | **one surface** |
+
+Every one of those existed to solve a problem **created by widening the scope**. The drawer
+existed because chrome was removed; the harvesting existed because the drawer hid things;
+the modes existed because two shells hid them differently. None of it served the wall.
+
+**The trade, stated honestly.** A narrow script leaves the rest of the site looking like the
+rest of the site: a reader who clicks through to a watch page gets the stock page, theme and
+all. That inconsistency is the price, and on both sites the operator judged it cheap against
+the machinery it deletes. Put the choice to them in those terms rather than assuming either
+answer.
+
 ## Where to read next
 
-- [`SKILL.md`](SKILL.md) § Scope first — why the list is this short.
+- [`SKILL.md`](../SKILL.md) § Scope first — why the list is this short.
 - [`topbar.md`](topbar.md) — the hidden bar, measured.
 - [`relocation.md`](relocation.md) — the exception: when a control must actually move.
-- [`../../references/facts.md`](../../references/facts.md) — every `[F-…]` above.
+- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.

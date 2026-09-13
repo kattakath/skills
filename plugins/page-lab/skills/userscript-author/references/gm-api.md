@@ -6,7 +6,7 @@ yes, and what silently differs between the two managers.
 
 **Provenance, stated up front.** Rows marked **[VM-verified]** come from
 [`patterns.md`](patterns.md) §§ 3/6/7, verified against violentmonkey.github.io + MDN on
-**2026-08-30**. Rows marked **[F-…]** cite [`../../references/facts.md`](../../references/facts.md).
+**2026-08-30**. Rows marked **[F-…]** cite [`../../references/facts.md`](../../../references/facts.md).
 Everything else lives in the **Flagged** table at the bottom and is **not** promoted by being
 useful — same discipline as `patterns.md`'s flagged rows.
 

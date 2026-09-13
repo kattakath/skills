@@ -91,7 +91,7 @@ The runner opens its tab in the **background** and never brings a window forward
 share a browser safely once you have pointed it at the right one.
 
 A new site is a **config file**, not a new program — copy
-[`../../scripts/redesign.config.example.mjs`](../../scripts/redesign.config.example.mjs),
+[`../../scripts/redesign.config.example.mjs`](../../../scripts/redesign.config.example.mjs),
 which is the **keep-list** shape written out in full. What a new site actually fills in is
 short: the three keepers (`grid`, `pagination`, `topbar`), the out-of-scope shapes
 (`stockShapes`, one line), the purge thresholds, the own-UI prefix, the teardown global,
@@ -209,9 +209,9 @@ Counts and figures, never adjectives. `25/25 filters, 14/14 hardening, 82 ms inj
 1690 rules remapped in 23 ms` is a result. "All tests pass, performance is good" is not.
 
 End the run with the plugin's standard report block —
-[`../../references/report-format.md`](../../references/report-format.md).
+[`../../references/report-format.md`](../../../references/report-format.md).
 
 ## Where to read next
 
-- [`SKILL.md`](SKILL.md) · [`relocation.md`](relocation.md) · [`theming.md`](theming.md)
-- [`../../references/facts.md`](../../references/facts.md) — every `[F-…]` above.
+- [`SKILL.md`](../SKILL.md) · [`relocation.md`](relocation.md) · [`theming.md`](theming.md)
+- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.

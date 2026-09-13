@@ -143,4 +143,4 @@ Park at the viewport centre for any at-rest read, and choose the element to meas
 - [`keep-list.md`](keep-list.md) — the shape this belongs to.
 - [`overlays.md`](overlays.md) — the other standard component, the hover title.
 - [`acceptance.md`](acceptance.md) — the `topbar` group.
-- [`../../references/facts.md`](../../references/facts.md) — every `[F-…]` above.
+- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.
