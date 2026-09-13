@@ -1,8 +1,8 @@
-# The survey — M1 to M12
+# The survey — M1 to M13
 
 **This phase blocks every other phase.** Its output is a dated table that the design,
 build and verification phases treat as the only source of truth about the site. Run it
-verbatim on any site; the twelve questions are site-agnostic by construction.
+verbatim on any site; the thirteen questions are site-agnostic by construction.
 
 ## Rules for the surveyor
 
@@ -33,17 +33,23 @@ verbatim on any site; the twelve questions are site-agnostic by construction.
   structure, geometry and colour. It never needs to quote what the page is about, and on
   a personal or adult site it must not.
 
-## The twelve
+## The thirteen
 
 ### M1 — URL shapes
 
 Which URL shapes share one page shell? Probe the site's distinct surfaces: index, a
 search result, a category or tag page, an entity page, a detail or watch page.
 
-Deliver: for each shape, does it carry the primary surface? Is its container selector
-**the same**? This is what decides whether `@match` can be the whole origin with a
-structural gate, or needs per-path matches. A structural gate is strongly preferred —
-it degrades to stock on an unknown page instead of mangling it.
+Deliver: for each shape, does it **qualify** as the primary surface, by the structural test
+in [`keep-list.md`](keep-list.md) § Qualifying the page — not by the word "gallery", and not
+by "it has a grid on it": a watch page has one too. Is its container selector **the same**?
+This is what decides whether `@match` can be the whole origin with a structural gate, or
+needs per-path matches. A structural gate is strongly preferred — it degrades to stock on an
+unknown page instead of mangling it.
+
+**Deliver the non-qualifying shapes by name as well.** The lookalikes — a watch page, a
+profile strip, a photo gallery reusing the card markup — are what a loose gate lets in, and
+they become the acceptance runner's `stockShapes`.
 
 ### M2 — The primary container
 
@@ -67,16 +73,28 @@ computed aspect ratio.
 How do sponsored or injected units differ **structurally** from organic ones? An `href`
 pattern test beats a class test, which beats a text test — never a text test.
 
-Deliver: organic count, promoted count, and the exact test that separates them with zero
-false positives, verified on **at least two** URL shapes. `:has()` matches ancestors, so
-report the match count of any `:has()` test before anyone hides with it.
+Deliver: organic count, promoted count, **organic share**, and the exact test that separates
+them with zero false positives, verified on **at least two** URL shapes. The share is what
+the elimination gate is keyed on — a count of `>= 1` is not a gate
+[F-ELIMINATION-GATE-ONE-CARD].
+
+**Enumerate the `href` shapes before writing the test.** One card type routinely resolves
+through more than one route, and a prefix test then under-matches silently — measured at 29
+cards missed on one shape, where a `contains` test matched every one
+[F-HREF-PREFIX-MISSES]. `:has()` matches ancestors, so report the match count of any
+`:has()` test before anyone hides with it.
 
 ### M5 — Chrome inventory
 
 Every node to remove or relocate: header, nav, search, category rails, sort and filter
 controls, pagination, footer, sticky rails, cookie or age gates, interstitials.
 
-Deliver one row each: purpose, selector, verdict, count, and **REMOVE vs RELOCATE**.
+Deliver one row each: purpose, selector, verdict, count, and **REMOVE vs KEEP** — under the
+keep-list, RELOCATE is the exception and needs a stated reason ([`relocation.md`](relocation.md)).
+
+**Enumerate twice.** Purging is layered: removing the blocks you can see exposes blocks you
+could not, and on one site three removals revealed four more that had been sitting below
+1800 px of ad frame [F-PURGE-IS-LAYERED].
 
 ### M6 — Live listeners *(the highest-value measurement in the survey)*
 

@@ -1,5 +1,5 @@
 ---
-description: Redesign a whole site as a userscript — dark theme, a new primary surface, the site's own controls relocated into an overlay. Survey the live page first, then build in parallel.
+description: Redesign a whole site as a userscript — keep the content grid and pagination, autohide the top bar, remove everything else, and leave every other page untouched. Survey the live page first, then build in parallel.
 argument-hint: <site-or-url> <the experience you want>
 ---
 
@@ -7,8 +7,12 @@ Run the **`site-redesign`** skill from this plugin, end to end, for: `$ARGUMENTS
 
 **First decide it is the right skill.** If the wish is one element, one rule or one
 annoyance, run **`userscript-author`** instead and stop here. This skill is for an
-alternative experience: every surface recoloured, the site's own controls moved, a new
-shell.
+alternative experience: one surface rebuilt into a full-bleed wall, everything else on it
+removed, every other page left alone.
+
+**The default shape is the keep-list** — `skills/site-redesign/keep-list.md`. Keep the
+content grid, keep pagination, autohide the top bar, remove everything else. Widen only
+against a stated reason, and put the widening to the operator as options.
 
 ## Sequence
 
@@ -23,22 +27,25 @@ shell.
   measured selectors, never a dependency to `@require`. Record: hit (adapted) / hit
   (rejected, why) / empty.
 
-- **1. SURVEY — blocking.** Run `skills/site-redesign/survey.md` M1 to M12 against the
+- **1. SURVEY — blocking.** Run `skills/site-redesign/survey.md` M1 to M13 against the
   **stock** page. No selector may be written until it is done. Write the dated table to a
   file the later phases read.
 
-  Report M2, M4, M6, M8, M10 and M12 first — those six change what everyone else builds.
-  **M12** (a stock dark theme exists) and **M6** (handlers delegated to an ancestor) can
-  each invalidate the plan outright.
+  Report M1, M2, M4, M12 and M13 first — those change what everyone else builds. **M1**
+  must name which shapes **qualify** as the surface, by the three-signal structural test in
+  `keep-list.md`, and which lookalikes do not (they become the runner's `stockShapes`).
+  **M12** (a stock dark theme exists) and **M13** (a stock compact layout exists) can each
+  delete a whole phase.
 
-- **2. DESIGN — in parallel**, once the survey lands: **Theme**, **Grid/Content**, **Shell**.
-  They share one palette and one own-UI exclusion list; name both in the survey output so
-  three agents do not invent three.
+- **2. DESIGN — in parallel**, once the survey lands: **Theme**, **Grid/Content**, **Shell**
+  (the autohiding bar plus the purge and its gate). They share one palette and one own-UI
+  exclusion list; name both in the survey output so three agents do not invent three.
 
 - **3. INTEGRATE.** One IIFE, no build step. The integrator's job is subtractive: one
   palette, one exclusion list, one duration scale, one lifecycle object, one teardown.
 
-- **4. VERIFY.** `skills/site-redesign/acceptance.md`. Trusted events only. Numbers, not
+- **4. VERIFY.** `skills/site-redesign/acceptance.md` — a config for
+  `scripts/redesign-acceptance.mjs`, not a new program. Trusted events only. Numbers, not
   adjectives. Suspect the spec as readily as the code.
 
 - **5. SHIP.** Both gates. **Bump `@version` first** — a same-version re-install is a silent
@@ -48,6 +55,6 @@ shell.
 ## Ask, do not assume
 
 Put genuinely open scope questions to the operator as **click-to-select options,
-recommended first** — which surfaces are in scope, whether metadata shows always or on
-hover, whether to add seamless pagination. Resolve them in the survey phase, not by
-guessing during the build.
+recommended first** — which shapes qualify as the surface, whether anything beyond the
+keep-list is kept, whether metadata shows always or on hover. Resolve them in the survey
+phase, not by guessing during the build.

@@ -1,8 +1,20 @@
-# Relocating the site's own controls
+# Relocating the site's own controls — THE ROAD NOT TAKEN
 
-The premise: an overlay or drawer that holds the site's real controls, **moved**, not
-rebuilt. A rebuilt control diverges from the site the first time the site changes; a
-moved one cannot.
+> **This is the exception, not the path.** The default shape is the keep-list
+> ([`keep-list.md`](keep-list.md)): keep the grid, keep pagination, **autohide** the top bar
+> ([`topbar.md`](topbar.md)), remove everything else — which **moves nothing** and therefore
+> needs none of this file. Two sites were built the relocating way first and then narrowed,
+> and the drawer, its focus trap, its `inert`, its Escape and click-outside handling, the
+> relocation itself and the stranded-link harvesting were all **deleted**
+> (SKILL.md § Scope first).
+>
+> Read this when — and only when — a control genuinely has to **move**: the site's own bar
+> cannot be kept in place, or the surface the operator wants demands a container the site
+> does not have. Everything here is measured and still true. It is just no longer first.
+
+The premise, when you are here: an overlay or drawer that holds the site's real controls,
+**moved**, not rebuilt. A rebuilt control diverges from the site the first time the site
+changes; a moved one cannot.
 
 ## Adopt or relocate — decide per surface, from the DOM
 
@@ -119,11 +131,9 @@ elimination hides **more** as it matches **less**, so a renamed selector must re
 page stock rather than blank it. This is the same rule as the elimination gate in
 `SKILL.md`, and it is the one that stops a redesign shipping an empty page.
 
-**Check what the keeper is nested inside before you remove its container.** A drawer,
-a player or a gallery frequently lives inside the very chrome the brief says to delete —
-measured on one site, the `<header>` tag sat inside `DIV#header` and *contained* the
-adopted drawer, so a blanket rule on either would have deleted the overlay along with
-the chrome.
+**Check what the keeper is nested inside before you remove its container**
+[F-KEEPER-INSIDE-CHROME] — the full rule, and the marking walk it belongs to, is in
+[`keep-list.md`](keep-list.md).
 
 ## Accessibility — not optional polish
 
@@ -137,7 +147,18 @@ the chrome.
 - If a fullscreen or theatre state exists, the corner slot swaps toggle for close,
   mutually exclusive — two controls in one corner is a bug, not a feature.
 
+## Verifying a relocation
+
+The runner has **no group for this any more**: `drawer` and `actions` were deleted when the
+scope narrowed, because they verified machinery the keep-list does not build
+([`acceptance.md`](acceptance.md) § The groups). A site that really does relocate writes
+those assertions by hand as a `.mjs` spec against `scripts/userscript-acceptance.mjs` —
+open by control, Escape, trusted click-outside, focus trapped then restored, background
+`inert`, and **one assertion per moved control that it still performs its action**
+[F-PRESENT-NOT-WORKING]. Set `teardownFingerprint` in the redesign config so the `teardown`
+group still proves the node went back to its original parent **and** next sibling.
+
 ## Where to read next
 
+- [`keep-list.md`](keep-list.md) — **the default this file is the exception to.**
 - [`SKILL.md`](SKILL.md) · [`survey.md`](survey.md) — M6, M7 and M8 feed this file.
-- [`acceptance.md`](acceptance.md) — every relocated control gets re-exercised.

@@ -26,7 +26,16 @@ import { isAbsolute, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 import { createReport, openLab, settle, userScriptBody } from './lib/harness.mjs';
-import { GROUP_ORDER, GROUPS, classify, hintFor, missingConfig, probeExpr } from './lib/redesign-checks.mjs';
+import {
+  GROUP_ORDER,
+  GROUPS,
+  STOCK_SAFE_GROUPS,
+  classify,
+  hintFor,
+  identityExpr,
+  missingConfig,
+  probeExpr,
+} from './lib/redesign-checks.mjs';
 
 const HELP = `Usage: redesign-acceptance.mjs [options] <config.mjs>
 
@@ -37,12 +46,16 @@ const HELP = `Usage: redesign-acceptance.mjs [options] <config.mjs>
   --shape <label>       run only this shape
   --stock               measure WITHOUT injecting — the baseline every comparison needs
   --script <path>       the .user.js under test (default: the config's \`script\`)
-  --browser-url <url>   debug browser (default http://127.0.0.1:9222)
+  --browser-url <url>   debug browser. REQUIRED — or set PL_BROWSER_URL. There is no
+                        default, on purpose: the conventional :9222 is usually the operator's
+                        OWN browser, which has the script INSTALLED, so a run that silently
+                        lands there measures a different build and reports its own staleness
+                        as defects [F-RAN-AGAINST-THE-OPERATORS-BROWSER].
   --keep-open           leave the lab target open for inspection
   -h, --help            this text
 
 Groups (each opt-in, each skips loudly when its config is absent):
-${GROUP_ORDER.map((g) => `  ${g.padEnd(12)} ${GROUPS[g].why}`).join('\n')}
+${GROUP_ORDER.map((g) => `  ${g.padEnd(15)} ${GROUPS[g].why}`).join('\n')}
 `;
 
 const die = (msg, code) => {
@@ -51,7 +64,7 @@ const die = (msg, code) => {
 };
 
 function parseArgs(argv) {
-  const o = { browserUrl: 'http://127.0.0.1:9222', config: null, groups: null, shape: null };
+  const o = { browserUrl: process.env.PL_BROWSER_URL || null, config: null, groups: null, shape: null };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '-h' || a === '--help') o.help = true;
@@ -109,10 +122,30 @@ const shapes = cfg.shapes
     label: s.label ?? s.path ?? `shape-${i + 1}`,
     url: s.url ?? (s.path ? cfg.origin.replace(/\/+$/, '') + s.path : null),
     organic: s.organic,
+    expect: s.expect ?? 'applied',
     discover: s.discover,
   }))
   .filter((s) => opts.shape === null || s.label === opts.shape);
 if (shapes.length === 0) die(`no shape labelled ${JSON.stringify(opts.shape)}`, 2);
+
+/**
+ * Refuse rather than default. This runner performs REAL navigations, so the browser it lands
+ * in matters as much as the script it injects, and the conventional debug port is the
+ * operator's own window: their tabs, their extensions, and a userscript manager holding an
+ * INSTALLED copy of the very script under test. A run that defaulted there navigated four
+ * shapes in the operator's browser and returned eight confident failures, every one of them
+ * the difference between the installed build and the one on disk
+ * [F-RAN-AGAINST-THE-OPERATORS-BROWSER]. Refusing costs one flag; guessing costs a diagnosis.
+ */
+if (!opts.browserUrl) {
+  die(
+    'redesign-acceptance: no browser given. Pass --browser-url <url> or set PL_BROWSER_URL.\n' +
+      'There is deliberately no default: :9222 is usually the operator\'s own browser, where an\n' +
+      'INSTALLED copy of the script measures instead of the one on disk. Use a throwaway browser\n' +
+      '(a separate --remote-debugging-port with its own --user-data-dir).',
+    2,
+  );
+}
 
 let lab;
 try {
@@ -147,6 +180,65 @@ async function resolveUrl(shape) {
 let docStartId = null;
 if (!opts.stock) docStartId = await lab.addDocStart(source);
 
+/**
+ * The document-start registration, as something a group can take away and put back.
+ *
+ * `stock-identity` needs a genuine STOCK arm — the same URL loaded with nothing injected —
+ * and the only honest way to get one is to remove the registration and navigate again. It
+ * does not affect the document already open [F-DOCSTART-NEXT-NAV], which is exactly why the
+ * navigation is the load-bearing half.
+ */
+const script = {
+  get injected() {
+    return docStartId !== null;
+  },
+  async detach() {
+    if (docStartId === null) return;
+    await lab.removeDocStart(docStartId);
+    docStartId = null;
+  },
+  async attach() {
+    if (docStartId !== null || opts.stock || !source) return;
+    docStartId = await lab.addDocStart(source);
+  },
+};
+
+/**
+ * PREFLIGHT — is there an INSTALLED copy of this script in the browser we just attached to?
+ *
+ * Every measurement below assumes exactly one copy of the redesign is running: the one on
+ * disk, registered at document-start. A userscript manager holding an installed copy breaks
+ * that assumption twice over. The installed build is whatever the operator last clicked
+ * through, so it is routinely OLDER than the file under test — and the run then reports the
+ * gap between the two as defects in the file. It also races a second copy against the first,
+ * which is the two-copy livelock the teardown contract exists for, arriving here as noise
+ * rather than as the finding it is.
+ *
+ * The test is one navigation with NOTHING injected: the root flag must be absent. It is
+ * cheap, it uses config the suite already has, and it is the check that would have turned
+ * eight confident failures into one accurate line [F-RAN-AGAINST-THE-OPERATORS-BROWSER].
+ */
+if (cfg.rootFlag && shapes[0]?.url) {
+  const wasInjected = script.injected;
+  await script.detach();
+  await lab.navigate(shapes[0].url);
+  await probeSettled();
+  const installed = await lab.ev(
+    `document.documentElement.hasAttribute(${JSON.stringify(cfg.rootFlag)})`,
+  );
+  if (installed) {
+    die(
+      `redesign-acceptance: an INSTALLED copy of this script is running in that browser.\n` +
+        `  ${shapes[0].url} came back carrying ${cfg.rootFlag} with nothing injected.\n` +
+        `Every verdict below would compare the file on disk against whatever build is installed —\n` +
+        `usually an older one — and report the difference as defects. Use a throwaway browser with\n` +
+        `its own --user-data-dir and no userscript manager.`,
+      3,
+    );
+  }
+  if (wasInjected) await script.attach();
+}
+
 // ---------------------------------------------------------------------------------------
 // --diagnose: facts per shape, and what to look at next. No verdicts.
 // ---------------------------------------------------------------------------------------
@@ -171,7 +263,7 @@ if (opts.diagnose) {
 
   // A table nobody can scan is a table nobody reads: size every column to its content.
   const cells = rows.map(({ shape, p, err }) => {
-    if (p === null) return [shape.label, 'UNREACHABLE', '-', '-', '-', '-', '-', '-'];
+    if (p === null) return [shape.label, 'UNREACHABLE', '-', '-', '-', '-', '-', '-', '-'];
     const ctrl = Object.entries(p.controls);
     return [
       shape.label,
@@ -179,12 +271,13 @@ if (opts.diagnose) {
       p.themed === null ? '-' : p.themed ? 'yes' : 'NO',
       String(p.gridOn ?? (p.gridFound ? '-' : 'NONE')),
       `${p.unitsVisible}/${p.units}`,
+      p.strays === null ? '-' : String(p.strays),
       String(p.overflow),
       ctrl.length ? ctrl.map(([n, c]) => `${n}:${c}`).join(' ') : '-',
       String(err.length),
     ];
   });
-  const head = ['shape', 'mode', 'theme', 'grid', 'units', 'ovf', 'controls', 'err'];
+  const head = ['shape', 'mode', 'theme', 'grid', 'units', 'stray', 'ovf', 'controls', 'err'];
   const w = head.map((h, i) => Math.max(h.length, ...cells.map((c) => c[i].length)));
   const line = (c) => `${c.map((v, i) => v.padEnd(w[i])).join('  ')}\n`.replace(/\s+$/, '\n');
   process.stdout.write(`\n${line(head)}${line(w.map((n) => '-'.repeat(n)))}`);
@@ -233,9 +326,12 @@ const onceGroups = runnable.filter((g) => GROUPS[g].scope === 'once');
 const shapeGroups = runnable.filter((g) => GROUPS[g].scope === 'shape');
 
 const runGroup = async (name, shape, probe) => {
-  const t = (n, pass, detail) => report.check(`[${shape.label}] ${n}`, pass, detail);
+  // Most assertions are prefixed with the shape they ran on. A group that visits OTHER
+  // shapes (stock-identity) labels its own, or every line would read as the primary shape.
+  const prefix = GROUPS[name].labelled === false ? '' : `[${shape.label}] `;
+  const t = (n, pass, detail) => report.check(`${prefix}${n}`, pass, detail);
   try {
-    await GROUPS[name].run({ lab, cfg, shape, probe, t, source, note: () => {} });
+    await GROUPS[name].run({ lab, cfg, shape, probe, t, source, script, note: () => {} });
   } catch (err) {
     t(`group "${name}" ran to completion`, false, String(err?.message ?? err));
   }
@@ -260,6 +356,38 @@ for (const shape of shapes) {
     report.check(`[${shape.label}] no page-side exceptions`, false, lab.errors.slice(0, 2));
   }
   if (shape === primary && onceGroups.includes('rig')) await runGroup('rig', shape, probe);
+
+  // A shape declared `expect: 'stock'` is one the gate is SUPPOSED to decline — the
+  // zero-organic shape, a lookalike that must not qualify. Running "did the redesign apply"
+  // against it turns a correct refusal into eight failures and buries the one assertion that
+  // matters, so assert the refusal instead and skip the rest, loudly.
+  if (shape.expect === 'stock') {
+    const ident = await lab.ev(identityExpr(cfg));
+    report.check(
+      `[${shape.label}] declared expect:'stock' — the redesign declined this shape`,
+      ident.rootFlag === false && ident.own === 0,
+      {
+        rootFlag: ident.rootFlag,
+        ownNodes: ident.own,
+        next:
+          ident.rootFlag || ident.own
+            ? 'the gate accepted a shape the config says it must refuse — widen the gate test, ' +
+              "or drop expect:'stock' if the shape really is in scope"
+            : undefined,
+      },
+    );
+    const ran = shapeGroups.filter((g) => STOCK_SAFE_GROUPS.has(g));
+    for (const g of ran) await runGroup(g, shape, probe);
+    const skippedHere = shapeGroups.filter((g) => !STOCK_SAFE_GROUPS.has(g));
+    if (skippedHere.length) {
+      process.stdout.write(
+        `\n[${shape.label}] expect:'stock' — skipped ${skippedHere.length} in-scope group(s): ` +
+          `${skippedHere.join(', ')}\n`,
+      );
+    }
+    continue;
+  }
+
   for (const g of shapeGroups) await runGroup(g, shape, probe);
 }
 
@@ -284,7 +412,7 @@ if (skipped.length) {
   process.stdout.write(`\nSKIPPED (config absent, NOT passed):\n${skipped.map((s) => `  - ${s}`).join('\n')}\n`);
 }
 if (!opts.keepOpen) {
-  if (docStartId !== null) await lab.removeDocStart(docStartId);
+  await script.detach();
   await lab.close();
 }
 process.exit(ok ? 0 : 1);

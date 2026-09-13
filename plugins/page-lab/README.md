@@ -50,7 +50,7 @@ guesses a selector does not fail loudly — it mangles the page.
 | Piece | What it owns |
 |---|---|
 | `skills/userscript-author/` | The authoring method, `patterns.md`, `probes.md`, `greasyfork.md`, `gm-api.md` |
-| `skills/site-redesign/` | Whole-site redesign: the M1-M12 survey, `theming.md`, `relocation.md`, `acceptance.md` |
+| `skills/site-redesign/` | Whole-site redesign: the M1-M13 survey, the `keep-list.md` default shape, `topbar.md`, `theming.md`, `acceptance.md` |
 | `skills/page-diagnose/` | Symptom-first diagnosis, `attaching.md`, `tools.md` |
 | `references/facts.md` | **Every falsifiable claim, once**, with an ID, a date and a re-measure recipe |
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
@@ -58,7 +58,7 @@ guesses a selector does not fail loudly — it mangles the page.
 | `references/cdp-extras.md` | Raw-CDP surface no MCP tool exposes, as symptom → command |
 | `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the two acceptance runners |
 | `scripts/lib/` | `cdp.mjs` (one CDP client), `harness.mjs` (trusted input, `settle`, the document-start lab), `redesign-checks.mjs` (the check groups) |
-| `scripts/redesign.config.example.mjs` | The shape a new site fills in — a listing/gallery redesign, written out in full |
+| `scripts/redesign.config.example.mjs` | The shape a new site fills in — the **keep-list** redesign, written out in full |
 
 ## Scripts
 
@@ -88,11 +88,12 @@ the script into a page at `readyState: "complete"` while the installed script ru
 `@run-at document-start` [F-INJECT-IS-NOT-INSTALL]. Six document-start probes found all
 five in minutes. So this runner injects with `Page.addScriptToEvaluateOnNewDocument`,
 drives real navigations, and keeps the tab's clock live without taking over the operator's
-window [F-FOCUS-EMULATION]. **A new site is a config file, not a program** — the check
-groups (surface renders, full-bleed at N widths, the promo gate, WCAG-measured theme,
-one-of-each control, drawer by control/Escape/trusted click-outside, focus trap and
-restore, relocated controls that still act, double-inject, teardown, degradation) come for
-free, and each one skips loudly rather than silently passing when its config is absent.
+window [F-FOCUS-EMULATION]. **A new site is a config file, not a program** — and the config
+is short, because the groups follow the **keep-list**: the grid applies, everything else is
+gone, the topbar autohides, pagination survives and still navigates, **an out-of-scope page
+is byte-identical to a stock load**, N document-start copies leave one of everything,
+teardown restores, a broken anchor degrades to stock. Each group skips loudly, naming the
+missing config path, rather than silently passing when its config is absent.
 
 Wire the linter into CI:
 

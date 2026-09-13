@@ -1,4 +1,11 @@
-// The check groups a listing/gallery redesign is verified with, each opt-in.
+// The check groups a KEEP-LIST redesign is verified with, each opt-in.
+//
+// The shape these are written for is the one two sites converged on and the one
+// `skills/site-redesign/keep-list.md` documents: keep the content grid, keep pagination,
+// autohide the top bar, remove everything else, and leave every out-of-scope page alone.
+// So the questions are: does the grid apply, does pagination survive, does the bar
+// autohide, is everything else gone, is an out-of-scope page byte-identical to stock, do N
+// document-start copies leave one of everything, and does teardown restore.
 //
 // Every group here was a hand-written probe first, on a real redesign, and earned its place
 // by catching something. What is generalised is the SHAPE of the question, never the site's
@@ -17,17 +24,126 @@
 //      value and never `auto` [F-COMPUTED-TOP-IS-USED], so "grows upward" is proved by
 //      bottom:0 plus a height under the container's, not by a keyword.
 //
+// Retired with the narrowing, and deliberately not kept as dead code: `drawer` (open by
+// control, Escape, click-outside, focus trap, `inert`) and `actions` (a configured list of
+// RELOCATED controls that must still act). Both existed to verify machinery the keep-list
+// deletes rather than builds. Relocation survives as the exception — a site that really does
+// move a control writes those assertions as a `.mjs` spec against userscript-acceptance.mjs,
+// with `skills/site-redesign/relocation.md` for the traps.
+//
 // Not an entrypoint. Importer: redesign-acceptance.mjs.
 
 import { assertRig, contrastAudit, freezeMotion, settle } from './harness.mjs';
 
+const j = JSON.stringify;
+
+/** Every selector the keep-list says stays. Used to define "everything else". */
+function keeperSelectors(cfg) {
+  const extra = cfg.purge?.keep;
+  return [
+    cfg.grid?.selector,
+    cfg.pagination?.selector,
+    cfg.topbar?.selector,
+    ...(Array.isArray(extra) ? extra : extra ? [extra] : []),
+  ].filter(Boolean);
+}
+
+/**
+ * Count what renders and is NOT on the keep-list — "everything else is gone", as a number.
+ *
+ * A node is fine if it IS a keeper, is inside one, or is an ANCESTOR of one (a path node:
+ * the keeper has to hang off something). Anything else that still paints is a stray. Only
+ * the OUTERMOST node of a stray subtree is counted, so one surviving footer reports as 1
+ * and not as its 80 descendants.
+ */
+export function strayExpr(cfg) {
+  const keep = keeperSelectors(cfg);
+  if (keep.length === 0) return null;
+  const own = cfg.ownUiSelector ?? null;
+  const ignore = cfg.purge?.ignore ?? null;
+  const min = cfg.purge?.minArea ?? 8;
+  return `(()=>{
+    const keepers=[...document.querySelectorAll(${j(keep.join(','))})];
+    const inside=new Set();const top=[];let count=0;
+    for(const n of document.querySelectorAll('body *')){
+      if(n.parentElement&&inside.has(n.parentElement)){inside.add(n);continue}
+      ${own ? `if(n.closest(${j(own)}))continue;` : ''}
+      ${ignore ? `if(n.closest(${j(ignore)}))continue;` : ''}
+      if(keepers.some(k=>k===n||k.contains(n)||n.contains(k)))continue;
+      const cs=getComputedStyle(n);
+      if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0')continue;
+      const r=n.getBoundingClientRect();
+      if(r.width<${min}||r.height<${min})continue;
+      inside.add(n);count++;
+      if(top.length<6)top.push(n.tagName.toLowerCase()+(n.id?'#'+n.id:'')+
+        (n.className&&typeof n.className==='string'?'.'+n.className.trim().split(/\\s+/)[0]:'')+
+        ' '+Math.round(r.width)+'x'+Math.round(r.height));
+    }
+    return {count,top}})()`;
+}
+
+/**
+ * Rendered direct children of the SURFACE CONTAINER that are not units.
+ *
+ * `strayExpr` cannot see these, and not by oversight: it skips anything a keeper contains,
+ * which is right for the ancestors of the grid and wrong for its children. A grid
+ * container's children are not all cards. Measured 2026-09-13: a block of marketing prose
+ * laid out as a grid ITEM beside the cards, plus section headings and float clearers on
+ * other shapes — 395px of headers on one page — survived FOUR successive leftover sweeps,
+ * every one of which treated "inside the wall" as "is a card"
+ * [F-INSIDE-THE-GRID-IS-NOT-A-CARD].
+ *
+ * A site whose grid legitimately carries non-unit children (a section heading the redesign
+ * keeps) declares them in `grid.keepChildren`.
+ */
+export function gridStrayExpr(cfg) {
+  const sel = cfg.grid?.selector;
+  const card = cfg.grid?.card;
+  if (!sel || !card) return null;
+  const own = cfg.ownUiSelector ?? null;
+  const keepKids = cfg.grid?.keepChildren ?? null;
+  return `(()=>{
+    const out=[];let count=0;
+    for(const g of document.querySelectorAll(${j(sel)})){
+      for(const k of g.children){
+        if(k.matches(${j(card)}))continue;
+        ${own ? `if(k.closest(${j(own)}))continue;` : ''}
+        ${keepKids ? `if(k.matches(${j(keepKids)}))continue;` : ''}
+        const cs=getComputedStyle(k);
+        if(cs.display==='none'||cs.visibility==='hidden'||cs.opacity==='0')continue;
+        const r=k.getBoundingClientRect();
+        if(r.height<2||r.width<2)continue;
+        count++;
+        if(out.length<6)out.push((g.id?'#'+g.id:g.tagName.toLowerCase())+' > '+
+          k.tagName.toLowerCase()+(k.id?'#'+k.id:'')+
+          (k.className&&typeof k.className==='string'?'.'+k.className.trim().split(/\\s+/)[0]:'')+
+          ' '+Math.round(r.width)+'x'+Math.round(r.height));
+      }
+    }
+    return {count,top:out}})()`;
+}
+
+/** Markers that must be absent from a page the redesign is supposed to leave alone. */
+export function identityExpr(cfg) {
+  return `(()=>({
+    adopted:document.adoptedStyleSheets.length,
+    sheets:document.styleSheets.length,
+    rootFlag:${cfg.rootFlag ? `document.documentElement.hasAttribute(${j(cfg.rootFlag)})` : 'false'},
+    own:${cfg.ownUiSelector ? `document.querySelectorAll(${j(cfg.ownUiSelector)}).length` : '0'},
+    teardown:${cfg.teardownGlobal ? `typeof window[${j(cfg.teardownGlobal)}]` : j('n/a')},
+    htmlAttrs:[...document.documentElement.attributes].map(a=>a.name+'='+a.value).sort().join('|'),
+    bodyBg:document.body?getComputedStyle(document.body).backgroundColor:null,
+    bodyColor:document.body?getComputedStyle(document.body).color:null
+  }))()`;
+}
+
 /** One page-side read that answers the diagnose line and feeds most of the groups. */
 export function probeExpr(cfg) {
-  const j = JSON.stringify;
   const controls = Object.entries(cfg.controls ?? {})
     .map(([name, sel]) => `${j(name)}:document.querySelectorAll(${j(sel)}).length`)
     .join(',');
   const g = cfg.grid ?? {};
+  const stray = cfg.purge ? strayExpr(cfg) : null;
   return `(()=>{
     const vis=e=>{const c=getComputedStyle(e);
       return c.display!=='none'&&c.visibility!=='hidden'&&e.getBoundingClientRect().height>2};
@@ -57,6 +173,8 @@ export function probeExpr(cfg) {
       promo:${g.promoAttr ? `document.querySelectorAll('['+${j(g.promoAttr)}+']').length` : '0'},
       organicLinks:${g.unitLink ? `grid?grid.querySelectorAll(${j(g.unitLink)}).length:0` : '0'},
       controls:{${controls}},
+      adopted:document.adoptedStyleSheets.length,
+      strays:${stray ? `(${stray}).count` : 'null'},
       bodyBg:document.body?getComputedStyle(document.body).backgroundColor:null
     }})()`;
 }
@@ -97,6 +215,19 @@ export function hintFor(p, cfg) {
         'this is the blank-gallery defect, not a styling problem',
     );
   }
+  // The gate that passes on ONE keeper and then hides the rest: the surface "renders", so
+  // every present/visible check is green and 38 of 39 units are gone
+  // [F-ELIMINATION-GATE-ONE-CARD].
+  const ratio = cfg.purge?.minKeeperRatio ?? 0.5;
+  if (p.units > 2 && p.unitsVisible > 0 && p.unitsVisible / p.units < ratio) {
+    out.push(
+      `only ${p.unitsVisible} of ${p.units} units render: the keep gate passed on a handful ` +
+        'and the complement hid the rest — gate on a fraction of the container, not on >= 1',
+    );
+  }
+  if (p.strays !== null && p.strays > (cfg.purge?.maxStrays ?? 0)) {
+    out.push(`${p.strays} rendered block(s) are neither a keeper, a path to one, nor ours`);
+  }
   if (p.overflow > 0) out.push(`${p.overflow}px of horizontal overflow on the document element`);
   if (p.gridW && p.innerW && p.gridW < p.innerW - 2) {
     out.push(`surface is ${p.innerW - p.gridW}px narrower than the viewport — not full-bleed`);
@@ -113,12 +244,24 @@ export function hintFor(p, cfg) {
   return out;
 }
 
+/** URL shapes the redesign must NOT touch, normalised from the one-line config form. */
+export function stockShapes(cfg) {
+  return (cfg.stockShapes ?? []).map((s, i) => {
+    const o = typeof s === 'string' ? { path: s } : s;
+    return {
+      label: o.label ?? o.path ?? `stock-${i + 1}`,
+      url: o.url ?? (o.path ? cfg.origin.replace(/\/+$/, '') + o.path : null),
+    };
+  });
+}
+
 // ---------------------------------------------------------------------------------------
 // Groups
 //
-// Signature: run(ctx) where ctx = { lab, cfg, shape, probe, t, note }.
+// Signature: run(ctx) where ctx = { lab, cfg, shape, probe, t, note, source, script }.
 //   t(name, pass, detail)  records an assertion, prefixed with the shape label by the runner
 //   note(text)             records a non-assertion observation
+//   script.detach/attach   remove / re-add the document-start registration (stock arms)
 // `needs` lists config paths; a missing one skips the group with that path in the reason.
 // `scope` is 'shape' (run per URL shape) or 'once' (run on the primary shape only).
 // ---------------------------------------------------------------------------------------
@@ -138,7 +281,7 @@ export const GROUPS = {
   surface: {
     scope: 'shape',
     needs: ['grid.selector'],
-    why: 'the single most valuable check: the primary surface renders at all',
+    why: 'the grid applies: the primary surface is present, renders its units, and carries our attribute',
     async run({ cfg, probe, t }) {
       const p = probe;
       t('primary surface present', p.gridFound, {
@@ -173,7 +316,7 @@ export const GROUPS = {
     scope: 'shape',
     needs: ['grid.selector', 'widths'],
     why: 'full-bleed at every width, and zero horizontal overflow at every width',
-    async run({ lab, cfg, probe, t }) {
+    async run({ lab, cfg, t }) {
       const tol = cfg.fullbleedTolerance ?? 2;
       for (const w of cfg.widths) {
         await lab.setWidth(w);
@@ -200,6 +343,228 @@ export const GROUPS = {
       // The override is sticky and shared with the operator's own DevTools
       // [F-STICKY-STATE]; leaving it set silently reshapes every later measurement.
       await settle(() => lab.ev('innerWidth'), { tries: 12, gap: 120, stableFor: 2 });
+    },
+  },
+
+  purge: {
+    scope: 'shape',
+    needs: ['purge'],
+    why: 'everything except the keep-list is gone — and the gate that hides it held',
+    async run({ lab, cfg, probe, t }) {
+      const max = cfg.purge.maxStrays ?? 0;
+      const ratio = cfg.purge.minKeeperRatio ?? 0.5;
+
+      // FIRST, because it is the failure that looks like success: a gate satisfied by ONE
+      // keeper passes every "the surface renders" check while the complement hides the rest
+      // — measured at 38 of 39 units gone [F-ELIMINATION-GATE-ONE-CARD].
+      if (probe.units > 2) {
+        const kept = probe.units === 0 ? 1 : probe.unitsVisible / probe.units;
+        t(`keep gate kept at least ${Math.round(ratio * 100)}% of the container`, kept >= ratio, {
+          visible: probe.unitsVisible,
+          total: probe.units,
+          kept: +kept.toFixed(3),
+          next:
+            kept < ratio
+              ? 'the gate passed on a handful of keepers and the complement hid the rest. Gate ' +
+                'on a fraction of the container\'s children, not on >= 1, and render stock below it'
+              : undefined,
+        });
+      }
+
+      // Counted, not checked off a list — because purging is LAYERED: removing the chrome
+      // you can see exposes chrome you could not, and a suite that verified a list of
+      // selectors would pass while the second layer is still on the page
+      // [F-PURGE-IS-LAYERED].
+      const expr = strayExpr(cfg);
+      if (expr !== null) {
+        const s = await lab.ev(expr);
+        t('nothing outside the keep-list renders', s.count <= max, {
+          strays: s.count,
+          allowed: max,
+          largest: s.top,
+          next:
+            s.count > max
+              ? 'each of these is a rendered block that is neither a keeper, an ancestor of ' +
+                'one, nor ours — the purge missed it, or it is a keeper you forgot to declare'
+              : undefined,
+        });
+      }
+
+      // The strays strayExpr STRUCTURALLY cannot see: children of the surface container
+      // itself. It skips anything a keeper contains, which is right for the grid's ancestors
+      // and wrong for its children [F-INSIDE-THE-GRID-IS-NOT-A-CARD].
+      const gExpr = gridStrayExpr(cfg);
+      if (gExpr !== null) {
+        const gs = await lab.ev(gExpr);
+        t('every rendered child of the surface is a unit', gs.count === 0, {
+          strays: gs.count,
+          largest: gs.top,
+          next:
+            gs.count > 0
+              ? 'these are laid out as grid ITEMS beside the cards — headings, prose, float ' +
+                'clearers. Hide non-unit children, GATED on the container actually holding a ' +
+                'unit, so a renamed unit selector fails the gate rather than blanking the grid'
+              : undefined,
+        });
+      }
+
+      const gone = Array.isArray(cfg.purge.gone) ? cfg.purge.gone : [];
+      if (gone.length) {
+        // RENDERING matches, not DOM matches: the keep-list HIDES chrome rather than removing
+        // it, so counting nodes would fail a working build.
+        const n = await lab.ev(`[...document.querySelectorAll(${j(gone.join(','))})]
+          .filter(e=>{const cs=getComputedStyle(e);
+            return cs.display!=='none'&&cs.visibility!=='hidden'&&e.getBoundingClientRect().height>0}).length`);
+        t('named chrome does not render', n === 0, { rendering: n, selectors: gone });
+      }
+    },
+  },
+
+  topbar: {
+    scope: 'shape',
+    needs: ['topbar.selector'],
+    why: 'the bar autohides: hidden at rest, revealed by the pointer at the top edge AND by keyboard focus, never by scroll',
+    async run({ lab, cfg, probe, t }) {
+      const b = cfg.topbar;
+      const sel = j(b.selector);
+      const band = b.band ?? 6;
+      const cx = Math.round((probe.innerW || 1280) / 2);
+      const cy = Math.round((probe.innerH || 900) / 2);
+      const park = () => lab.movePointer(cx, cy);
+      const toEdge = () => lab.movePointer(cx, Math.max(1, Math.round(band / 2)));
+
+      const read = () =>
+        lab.ev(`(()=>{const e=document.querySelector(${sel});
+          if(!e)return null;const cs=getComputedStyle(e);const r=e.getBoundingClientRect();
+          return {shown:cs.display!=='none'&&cs.visibility!=='hidden'&&cs.opacity!=='0'
+              &&r.height>2&&r.bottom>0,
+            top:Math.round(r.top),h:Math.round(r.height),
+            pe:cs.pointerEvents,display:cs.display,visibility:cs.visibility}})()`);
+
+      const present = await read();
+      t('top bar present in the DOM', present !== null, {
+        next: present === null ? `nothing matched ${b.selector} on this shape` : undefined,
+      });
+      if (present === null) return;
+
+      // 1. At rest. The pointer is parked at the CENTRE, not at (1,1): (1,1) is inside the
+      //    reveal band, so parking there reads the revealed state as the rest state.
+      await park();
+      const rest = await settle(read, { tries: 20, gap: 120, stableFor: 3 });
+      t('hidden at rest', rest?.shown === false, {
+        ...rest,
+        next: rest?.shown ? 'the bar never hides — it is spending the top band at rest' : undefined,
+      });
+      if (rest?.shown === false) {
+        const atTop = await lab.ev(`(()=>{const e=document.elementFromPoint(${cx},1);
+          return e?{tag:e.tagName,inBar:!!e.closest(${sel})}:null})()`);
+        t('a hidden bar does not eat clicks at the top edge', atTop !== null && !atTop.inBar, {
+          ...atTop,
+          pointerEvents: rest?.pe,
+          next: atTop?.inBar ? 'add `pointer-events: none` to the hidden state' : undefined,
+        });
+      }
+
+      // 2. The pointer route.
+      await toEdge();
+      const shown = await settle(read, { tries: 25, gap: 120, stableFor: 2, accept: (v) => v?.shown });
+      t(`revealed with the pointer within ${band}px of the top edge`, shown?.shown === true, {
+        ...shown,
+        next: shown?.shown ? undefined : 'the pointer route is dead — an off-canvas bar cannot ' +
+          'be hovered, so the trigger must read the pointer position, not the bar\'s :hover',
+      });
+
+      // 3. And hides again — a bar that latches open is a bar that does not autohide.
+      await park();
+      const again = await settle(read, { tries: 25, gap: 120, stableFor: 2, accept: (v) => !v?.shown });
+      t('hides again when the pointer leaves the band', again?.shown === false, again);
+
+      // 4. The keyboard route, which is the one that has actually been dead
+      //    [F-FOCUS-WITHIN-NOT-A-REVEAL]. Read whether focus LANDED first: a bar hidden with
+      //    visibility/display is out of the tab order, so nothing inside can ever be focused
+      //    and `:focus-within` can never match, however right the rule looks.
+      //
+      //    A TRUSTED Tab comes first, and it is not ceremony. A correct autohiding bar may
+      //    gate its focus reveal on the reader having ACTED, because a site that autofocuses
+      //    a control inside the bar produces focus at load with no user behind it — and a
+      //    `:focus-within` rule then pins the bar open forever. That gate is opened by a real
+      //    keydown, which `el.focus()` does not produce. Driving this check with a bare
+      //    programmatic focus reported "keyboard path is dead" on a script whose keyboard path
+      //    works for every actual Tab press [F-PROGRAMMATIC-FOCUS-IS-NOT-A-KEYBOARD-USER] —
+      //    the suite's own "trusted events only" rule, broken inside the suite.
+      if (b.focusable) {
+        await lab.key('Tab');
+        //    Try every match, and require the element to BECOME activeElement — not merely
+        //    that activeElement is inside the bar. Both halves are load-bearing. A bar's
+        //    first links are routinely ZERO-SIZE (icon toggles collapsed at desktop), and
+        //    `el.focus()` on a zero-size element does not move focus; reading only
+        //    `bar.contains(activeElement)` then reports whatever focus already was — which on
+        //    a site that autofocuses its own search box is a trivial pass, and one element
+        //    later a confident false failure [F-ZERO-SIZE-CONTROL-DOES-NOT-TAKE-FOCUS].
+        const f = await lab.ev(`(()=>{const bar=document.querySelector(${sel});
+          const els=[...document.querySelectorAll(${j(b.focusable)})];
+          if(!bar||!els.length)return null;
+          let tried=0;
+          for(const el of els){tried++;el.focus();
+            if(document.activeElement===el&&bar.contains(el))
+              return {inBar:true,tried,active:el.tagName+(el.id?'#'+el.id:'')};}
+          const a=document.activeElement;
+          return {inBar:false,tried,active:a?a.tagName:null}})()`);
+        t('a control inside the bar can take focus', f !== null && f.inBar, {
+          ...f,
+          next:
+            f && !f.inBar
+              ? 'focus never landed: the hidden state takes the subtree out of the tab order ' +
+                '(visibility/display). Hide with `translate` instead [F-FOCUS-WITHIN-NOT-A-REVEAL]'
+              : undefined,
+        });
+        const byFocus = await settle(read, { tries: 25, gap: 120, stableFor: 2, accept: (v) => v?.shown });
+        t('revealed by keyboard focus', byFocus?.shown === true, {
+          ...byFocus,
+          next: byFocus?.shown ? undefined : 'pointer path works, keyboard path is dead even after ' +
+            'a trusted Tab — drive the reveal from a `focusin` listener rather than assuming ' +
+            '`:focus-within` fires',
+        });
+        await lab.ev('document.activeElement&&document.activeElement.blur();true');
+        await park();
+        await settle(read, { tries: 20, gap: 120, stableFor: 2, accept: (v) => !v?.shown });
+      }
+
+      // 5. NOT scroll-driven. Pointer parked away from the edge, scroll down, bar stays hidden.
+      const to = b.scrollTo ?? 900;
+      await lab.ev(`scrollTo(0,${to});true`);
+      const scrolled = await settle(read, { tries: 20, gap: 120, stableFor: 3 });
+      t('scrolling does not reveal it', scrolled?.shown === false, {
+        ...scrolled,
+        scrolledTo: to,
+        next: scrolled?.shown
+          ? 'a scroll-driven reveal fires on direction, not on intent — it appears while the ' +
+            'reader is reading and hides while they hunt'
+          : undefined,
+      });
+      await lab.ev('scrollTo(0,0);true');
+
+      // 6. A transformed ancestor silently re-anchors a fixed descendant
+      //    [F-TRANSFORM-CONTAINING-BLOCK] — caught structurally, before it presents as
+      //    "position: fixed is not fixed".
+      const anc = await lab.ev(`(()=>{const e=document.querySelector(${sel});if(!e)return null;
+        const fixed=getComputedStyle(e).position==='fixed'||
+          [...e.querySelectorAll('*')].slice(0,300).some(x=>getComputedStyle(x).position==='fixed');
+        const bad=[];
+        for(let n=e.parentElement;n&&n!==document.documentElement;n=n.parentElement){
+          const c=getComputedStyle(n);
+          if(c.transform!=='none'||c.filter!=='none'||c.perspective!=='none'||
+             (c.backdropFilter&&c.backdropFilter!=='none')||/paint/.test(c.contain||''))
+            bad.push(n.tagName.toLowerCase()+(n.id?'#'+n.id:''));}
+        return {fixed,bad}})()`);
+      t('no transformed ancestor above a fixed bar', !(anc?.fixed && anc.bad.length), {
+        ...anc,
+        next: anc?.fixed && anc.bad.length
+          ? 'a transformed ancestor becomes the containing block for fixed descendants, so ' +
+            'the bar rides it instead of the viewport [F-TRANSFORM-CONTAINING-BLOCK]'
+          : undefined,
+      });
+      await park();
     },
   },
 
@@ -265,7 +630,9 @@ export const GROUPS = {
           worst: a.worst,
           next: a.lowContrast
             ? 'near-black ink on a new black ground is the usual cause — a hue-preserving ' +
-              'channel scale cannot lift black [F-HUE-SCALE-CANNOT-LIFT-BLACK]'
+              'channel scale cannot lift black [F-HUE-SCALE-CANNOT-LIFT-BLACK]. If the pair ' +
+              'is one YOUR sheet painted, it is the sheet fighting the repaint ' +
+              '[F-SHEET-VS-REPAINT-FIGHT], not a surface the theme missed'
             : undefined,
         },
       );
@@ -311,20 +678,35 @@ export const GROUPS = {
       if (Array.isArray(c.banned) && c.banned.length) {
         // RENDERING matches, not DOM matches: a redesign normally hides unit chrome rather
         // than removing it, and counting nodes would fail a working build.
-        const n = await lab.ev(`[...document.querySelectorAll(${JSON.stringify(c.banned.join(','))})]
+        const n = await lab.ev(`[...document.querySelectorAll(${j(c.banned.join(','))})]
           .filter(e=>{const cs=getComputedStyle(e);
             return cs.display!=='none'&&cs.visibility!=='hidden'&&e.getBoundingClientRect().height>0}).length`);
         t('banned unit chrome does not render', n === 0, { rendering: n, selectors: c.banned });
       }
       if (c.overlay) {
-        // The pointer is parked where the last trusted click left it. A hover overlay read
-        // with the pointer still on a card reports the HOVER state as the rest state.
+        // The pointer is parked where the last trusted click left it, and on a full-bleed
+        // wall the park point is ITSELF over a card — so read the rest state from a card
+        // that is demonstrably neither hovered nor focused, or the hover state is measured
+        // as the rest state. Ask the page which card that is: `elementFromPoint` is NOT a
+        // substitute, because an autohiding bar reveals after the hit-test that set :hover
+        // and the two then disagree [F-HOVER-STICKS-UNDER-REVEAL].
         await lab.parkPointer();
-        const o = await lab.ev(`(()=>{const card=document.querySelector(${JSON.stringify(cfg.grid.card)});
-          if(!card)return null;const el=card.querySelector(${JSON.stringify(c.overlay.selector)});
+        const o = await settle(() => lab.ev(`(()=>{
+          const all=[...document.querySelectorAll(${j(cfg.grid.card)})];
+          const card=all.find(e=>!e.matches(':hover')&&!e.matches(':focus-within'))||all[0];
+          if(!card)return null;const el=card.querySelector(${j(c.overlay.selector)});
           if(!el)return null;const cs=getComputedStyle(el);const cr=card.getBoundingClientRect();
-          return {opacity:cs.opacity,bottom:cs.bottom,top:cs.top,clamp:cs.webkitLineClamp,
-            h:Math.round(el.getBoundingClientRect().height),cardH:Math.round(cr.height)}})()`);
+          /* The clamp is read from the overlay OR a descendant. The common shape is a
+             gradient WRAPPER that is the positioned, faded overlay with the text — and the
+             clamp — in a child, so reading only the overlay node reports "none" on a build
+             whose clamp works [F-CLAMP-LIVES-ON-THE-TEXT-NODE]. */
+          let clamp=cs.webkitLineClamp;
+          if(clamp==='none'){for(const k of el.querySelectorAll('*')){
+            const kc=getComputedStyle(k).webkitLineClamp;
+            if(kc&&kc!=='none'){clamp=kc;break}}}
+          return {opacity:cs.opacity,bottom:cs.bottom,top:cs.top,clamp,
+            h:Math.round(el.getBoundingClientRect().height),cardH:Math.round(cr.height)}})()`),
+          { tries: 15, gap: 100, stableFor: 2, accept: (v) => v !== null });
         t('overlay present', o !== null, { next: `nothing matched ${c.overlay.selector} inside a card` });
         if (o) {
           if (c.overlay.hiddenAtRest) {
@@ -352,163 +734,156 @@ export const GROUPS = {
 
   pagination: {
     scope: 'shape',
-    needs: ['pagination'],
-    why: 'at most one pager renders, and it sits after the surface rather than inside our own panel',
-    async run({ lab, cfg, t }) {
-      const g = JSON.stringify(cfg.grid.selector);
+    needs: ['pagination.selector'],
+    why: 'pagination SURVIVES the purge: it renders where a shape has one, sits after the surface, and still navigates',
+    async run({ lab, cfg, shape, t }) {
+      const g = j(cfg.grid?.selector ?? 'body');
       const s = await lab.ev(`(()=>{const all=[...document.querySelectorAll(${g})];
         const grid=all.find(e=>{const r=e.getBoundingClientRect();return r.width>0&&r.height>0})||all[0];
-        return [...document.querySelectorAll(${JSON.stringify(cfg.pagination.selector)})].map(p=>({
+        return [...document.querySelectorAll(${j(cfg.pagination.selector)})].map(p=>({
           visible:getComputedStyle(p).display!=='none'&&p.getBoundingClientRect().height>2,
           afterSurface:!!(grid&&(grid.compareDocumentPosition(p)&Node.DOCUMENT_POSITION_FOLLOWING)),
-          inOwnUi:${cfg.ownUiSelector ? `!!p.closest(${JSON.stringify(cfg.ownUiSelector)})` : 'false'}}))})()`);
+          inOwnUi:${cfg.ownUiSelector ? `!!p.closest(${j(cfg.ownUiSelector)})` : 'false'}}))})()`);
       const vis = s.filter((p) => p.visible);
-      // A shape that ships no pagination at all is correct, not a failure.
+
+      // A shape that ships no pagination at all is correct, not a failure — unless the config
+      // says this shape has one, which is how "the purge ate the pager" gets caught.
+      const required = cfg.pagination.requiredOn;
+      const mustHave = required === true || (Array.isArray(required) && required.includes(shape.label));
+      if (mustHave) {
+        t('pagination survived the purge', vis.length >= 1, {
+          rendering: vis.length,
+          inDom: s.length,
+          next:
+            vis.length === 0
+              ? s.length === 0
+                ? 'the pager is not even in the DOM on this shape — selector rotted, or the ' +
+                  'shape genuinely has one page'
+                : 'the pager is in the DOM and hidden: the complement rule swallowed a KEEPER. ' +
+                  'It is not on a marked path [F-KEEPER-INSIDE-CHROME]'
+              : undefined,
+        });
+      }
       t('at most one pager renders', vis.length <= 1, { visible: vis.length, total: s.length });
       t(
         'any rendered pager is after the surface, outside our own UI',
         vis.every((v) => v.afterSurface && !v.inOwnUi),
         vis.length ? vis : 'none — this shape ships no pagination',
       );
+
+      // Present, sized and hit-testable proves nothing [F-PRESENT-NOT-WORKING]: the pager is
+      // the one control the keep-list keeps, so it is the one that gets exercised.
+      if (cfg.pagination.next && vis.length) {
+        const before = await lab.ev('location.href');
+        const boxRect = await lab.clickStable(cfg.pagination.next);
+        if (boxRect === null) {
+          t('pager "next" is present', false, { next: `nothing matched ${cfg.pagination.next}` });
+        } else {
+          if (boxRect.covered) {
+            t('pager "next" is not covered', false, {
+              at: boxRect,
+              onTop: boxRect.covered,
+              next: 'something is on top at the click point — a covered control is a real defect',
+            });
+          }
+          const after = await settle(() => lab.ev('location.href'), {
+            tries: 25,
+            gap: 160,
+            stableFor: 2,
+            accept: (v) => v !== before,
+          });
+          t('pager "next" still navigates under a trusted click', after !== before, {
+            before: String(before).slice(0, 90),
+            after: String(after).slice(0, 90),
+            next:
+              after === before
+                ? 'present, sized, hit-testable and inert — exactly the defect shape this ' +
+                  'runner exists for [F-PRESENT-NOT-WORKING]. Confirm the rig passed first.'
+                : undefined,
+          });
+          if (after !== before) await lab.navigate(shape.url ?? String(before));
+        }
+      }
     },
   },
 
-  drawer: {
+  'stock-identity': {
     scope: 'once',
-    needs: ['drawer.control', 'drawer.panel'],
-    why: 'opens by control, closes by Escape AND by trusted click-outside; focus trapped then restored; background inert',
-    async run({ lab, cfg, t }) {
-      const d = cfg.drawer;
-      const openRead = () =>
-        lab.ev(`(()=>{const p=document.querySelector(${JSON.stringify(d.panel)});
-          if(!p)return null;const cs=getComputedStyle(p);const r=p.getBoundingClientRect();
-          return {display:cs.display,visibility:cs.visibility,opacity:cs.opacity,
-            hidden:p.getAttribute('aria-hidden'),x:Math.round(r.x),w:Math.round(r.width),
-            onScreen:r.width>0&&r.height>0&&r.right>0&&r.x<innerWidth}})()`);
-      const expandedRead = d.expandedOn
-        ? () => lab.ev(`(()=>{const c=document.querySelector(${JSON.stringify(d.expandedOn)});
-            return c?c.getAttribute('aria-expanded'):null})()`)
-        : null;
-
-      const closed0 = await settle(openRead, { stableFor: 3 });
-      t('drawer starts closed', closed0 !== null && !closed0.onScreen, closed0);
-
-      await lab.clickStable(d.control);
-      const opened = await settle(openRead, { stableFor: 3, accept: (v) => v && v.onScreen });
-      t('opens under a trusted click on its control', Boolean(opened?.onScreen), {
-        ...opened,
-        next: opened?.onScreen ? undefined : 'control rendered but did nothing — re-check the rig first',
-      });
-      if (expandedRead) t('aria-expanded tracks open', (await expandedRead()) === 'true', await expandedRead());
-
-      if (d.focusFirst) {
-        const f = await lab.ev(`(()=>{const a=document.activeElement;
-          return {tag:a?a.tagName:null,inPanel:!!(a&&a.closest(${JSON.stringify(d.panel)}))}})()`);
-        t('focus moved into the drawer', f.inPanel, f);
-        // Tab from the last focusable must not escape the panel.
-        for (let i = 0; i < (d.trapTabs ?? 12); i += 1) await lab.key('Tab');
-        const after = await lab.ev(`!!(document.activeElement&&
-          document.activeElement.closest(${JSON.stringify(d.panel)}))`);
-        t(`focus still trapped after ${d.trapTabs ?? 12} Tabs`, after, {
-          next: after ? undefined : 'a keyboard user can tab out of an open drawer into an inert page',
-        });
-      }
-      if (d.inertTarget) {
-        const inert = await lab.ev(`(()=>{const e=document.querySelector(${JSON.stringify(d.inertTarget)});
-          return e?{inert:e.hasAttribute('inert')}:null})()`);
-        t('background is inert while open', inert?.inert === true, inert);
-      }
-
-      await lab.key('Escape');
-      const byEsc = await settle(openRead, { stableFor: 3, accept: (v) => v && !v.onScreen });
-      t('closes on Escape', byEsc !== null && !byEsc.onScreen, byEsc);
-      if (d.restoreFocus) {
-        const back = await lab.ev(`!!(document.activeElement&&
-          document.activeElement.matches(${JSON.stringify(d.control)}))`);
-        t('focus restored to the control', back, {
-          next: back ? undefined : 'focus was left on <body>: a screen-reader user loses their place',
-        });
-      }
-
-      // Re-open so the click-outside assertion establishes its own precondition rather than
-      // inheriting the Escape one — a dismissal check run against an already-closed drawer
-      // passes for the wrong reason.
-      await lab.clickStable(d.control);
-      const reopened = await settle(openRead, { stableFor: 3, accept: (v) => v && v.onScreen });
-      t('re-opens after Escape', Boolean(reopened?.onScreen), reopened);
-      // Without this guard the click-outside check runs against an ALREADY-CLOSED drawer and
-      // passes for the wrong reason — the ordering lie the acceptance notes warn about.
-      if (!reopened?.onScreen) {
-        t('closes on a TRUSTED click outside', false, {
-          next: 'not measured: the drawer never re-opened, so this assertion had no precondition',
-        });
+    needs: ['stockShapes'],
+    /** It visits OTHER shapes, so it labels its own assertions rather than borrowing one. */
+    labelled: false,
+    why: 'an out-of-scope page is byte-identical to a stock load — no sheet, no marker, no node of ours, same <html> attributes and body colours',
+    async run({ lab, cfg, t, script }) {
+      if (!script?.injected) {
+        t('stock identity (nothing was injected)', true, 'skipped — this is a --stock run');
         return;
       }
-      const [ox, oy] = d.outsidePoint ?? [6, 6];
-      const landed = await lab.ev(`(()=>{const e=document.elementFromPoint(${ox},${oy});
-        return {tag:e?e.tagName:null,inPanel:!!(e&&e.closest(${JSON.stringify(d.panel)}))}})()`);
-      t('click-outside point really is outside', landed.inPanel === false, {
-        ...landed,
-        next: landed.inPanel ? 'move drawer.outsidePoint — it lands inside the panel' : undefined,
-      });
-      await lab.click(ox, oy);
-      const byOutside = await settle(openRead, { stableFor: 3, accept: (v) => v && !v.onScreen });
-      t('closes on a TRUSTED click outside', byOutside !== null && !byOutside.onScreen, byOutside);
-    },
-  },
-
-  actions: {
-    scope: 'once',
-    needs: ['actions'],
-    why: 'each relocated control still PERFORMS its action under a trusted event — no sampling',
-    async run({ lab, cfg, t }) {
-      for (const a of cfg.actions) {
-        // Open the container FIRST and let it finish moving: a control read the instant its
-        // drawer starts sliding is clicked where it was, not where it is [F-TRANSITION-RACE].
-        if (a.opens) {
-          await lab.clickStable(a.opens);
-          await settle(() => lab.renderedRect(a.selector), { tries: 25, gap: 120, stableFor: 2 });
-        }
-        const before = await lab.ev(
-          a.expect === 'navigate'
-            ? 'location.href'
-            : `document.querySelectorAll(${JSON.stringify(a.observe ?? 'body *')}).length`,
-        );
-        const box = await lab.clickStable(a.selector);
-        if (box === null) {
-          t(`action "${a.name}" is present`, false, { next: `nothing matched ${a.selector}` });
+      for (const shape of stockShapes(cfg)) {
+        if (shape.url === null) {
+          t(`[${shape.label}] stock shape is reachable`, false, 'no `path` or `url`');
           continue;
         }
-        if (box.covered) {
-          t(`action "${a.name}" is not covered`, false, {
-            at: box,
-            onTop: box.covered,
-            next: 'something else is on top at the click point — a covered control is a real ' +
-              'defect, and a different one from a dead control',
-          });
-        }
-        const after = await settle(
-          () =>
-            lab.ev(
-              a.expect === 'navigate'
-                ? 'location.href'
-                : `document.querySelectorAll(${JSON.stringify(a.observe ?? 'body *')}).length`,
-            ),
-          { tries: a.tries ?? 25, gap: 160, stableFor: 2, accept: (v) => v !== before },
-        );
-        t(`action "${a.name}" still performs`, after !== before, {
-          expect: a.expect ?? 'change',
-          before: String(before).slice(0, 90),
-          after: String(after).slice(0, 90),
-          next:
-            after === before
-              ? 'present, sized, hit-testable and inert — exactly the shape of the defect this ' +
-                'runner exists for [F-PRESENT-NOT-WORKING]. Confirm the rig passed first.'
-              : undefined,
+        await lab.navigate(shape.url);
+        const withScript = await settle(() => lab.ev(identityExpr(cfg)), {
+          tries: cfg.settle?.tries ?? 30,
+          gap: cfg.settle?.gap ?? 200,
+          stableFor: 2,
         });
-        if (a.expect === 'navigate' && after !== before && a.back !== false) {
-          await lab.navigate(String(before));
+
+        // The absolute half: these are OUR markers, so the correct count is zero whatever
+        // the site does.
+        t(`[${shape.label}] out of scope: root flag absent`, withScript.rootFlag === false, {
+          flag: cfg.rootFlag,
+          next: withScript.rootFlag ? 'the script applied to a page it should not touch' : undefined,
+        });
+        t(`[${shape.label}] out of scope: zero nodes of ours`, withScript.own === 0, {
+          own: withScript.own,
+          selector: cfg.ownUiSelector,
+        });
+
+        // The comparative half: re-load the SAME url with the document-start registration
+        // removed, and require the two reads to agree.
+        let stock = null;
+        try {
+          await script.detach();
+          await lab.navigate(shape.url);
+          stock = await settle(() => lab.ev(identityExpr(cfg)), {
+            tries: cfg.settle?.tries ?? 30,
+            gap: cfg.settle?.gap ?? 200,
+            stableFor: 2,
+          });
+        } finally {
+          await script.attach();
         }
+        t(
+          `[${shape.label}] adoptedStyleSheets identical to a stock load`,
+          withScript.adopted === stock.adopted,
+          {
+            scripted: withScript.adopted,
+            stock: stock.adopted,
+            next:
+              withScript.adopted !== stock.adopted
+                ? 'the theme sheet was adopted on a page the redesign does not own'
+                : undefined,
+          },
+        );
+        t(
+          `[${shape.label}] <html> attributes identical to a stock load`,
+          withScript.htmlAttrs === stock.htmlAttrs,
+          { scripted: withScript.htmlAttrs, stock: stock.htmlAttrs },
+        );
+        t(
+          `[${shape.label}] body colours identical to a stock load`,
+          withScript.bodyBg === stock.bodyBg && withScript.bodyColor === stock.bodyColor,
+          {
+            scripted: [withScript.bodyBg, withScript.bodyColor],
+            stock: [stock.bodyBg, stock.bodyColor],
+            next:
+              withScript.bodyBg === stock.bodyBg
+                ? undefined
+                : 'a theme reached a page that was declared out of scope — check the gate, not the palette',
+          },
+        );
       }
     },
   },
@@ -516,47 +891,76 @@ export const GROUPS = {
   lifecycle: {
     scope: 'once',
     needs: ['controls'],
-    why: 'a SECOND copy injected into a live document does not double the UI — the livelock test',
-    async run({ lab, cfg, t, source }) {
-      const before = await lab.ev(probeExpr(cfg));
-      await lab.ev(`(0,eval)(${JSON.stringify(source)}); true`);
-      const after = await settle(() => lab.ev(probeExpr(cfg)), { tries: 25, gap: 160, stableFor: 3 });
-      for (const [name, n] of Object.entries(after.controls)) {
-        t(`double-inject leaves exactly one "${name}"`, n === 1, {
-          before: before.controls[name],
-          after: n,
-          next:
-            n > 1
-              ? 'the second run did not call the previous teardown at entry — two copies now ' +
-                'fight over the same nodes'
-              : undefined,
-        });
+    why: 'N document-start copies leave exactly one of everything — and the last copy still APPLIES',
+    async run({ lab, cfg, shape, t, source, script }) {
+      if (!script?.injected) {
+        t('lifecycle (nothing was injected)', true, 'skipped — this is a --stock run');
+        return;
       }
-      t('double-inject leaves the surface rendering', after.unitsVisible > 0 || after.units === 0, {
-        visible: after.unitsVisible,
-        total: after.units,
-      });
+      // THREE copies, not two. If a bug's symptom is linear in copy count, a two-copy test
+      // looks exactly like the bug it is meant to catch: 1 copy gave 1 control, 2 gave 2, 3
+      // gave 3 [F-BOOT-LISTENER-SURVIVES-TEARDOWN]. And this is done by REGISTERING the body
+      // again at document-start, not by eval-ing it into a loaded page — the copies must race
+      // each other in the world the installed script runs in [F-INJECT-IS-NOT-INSTALL].
+      const copies = cfg.copies ?? 3;
+      const extra = [];
+      try {
+        for (let i = 1; i < copies; i += 1) extra.push(await lab.addDocStart(source));
+        await lab.navigate(shape.url);
+        const after = await settle(() => lab.ev(probeExpr(cfg)), { tries: 30, gap: 200, stableFor: 3 });
+        for (const [name, n] of Object.entries(after.controls)) {
+          t(`${copies} document-start copies leave exactly one "${name}"`, n === 1, {
+            copies,
+            count: n,
+            next:
+              n > 1
+                ? 'a later copy did not stop the earlier one at entry. If the count RISES with ' +
+                  'the copy count, the teardown returned before cancelling a pending bootstrap ' +
+                  'listener [F-BOOT-LISTENER-SURVIVES-TEARDOWN]'
+                : n === 0
+                  ? 'no copy built the control at all — the copies deadlocked each other'
+                  : undefined,
+          });
+        }
+        t(`${copies} copies leave the surface rendering`, after.unitsVisible > 0 || after.units === 0, {
+          visible: after.unitsVisible,
+          total: after.units,
+        });
+        if (cfg.rootFlag) {
+          // A re-run must still APPLY. A teardown contract traded for an "already init" flag
+          // makes the last copy a silent no-op, which also produces exactly one of everything.
+          t('the last copy still applied (a re-run is not a silent no-op)', after.themed === true, {
+            flag: cfg.rootFlag,
+            next: after.themed ? undefined : 'every copy tore the previous one down and none re-applied',
+          });
+        }
+      } finally {
+        for (const id of extra) await lab.removeDocStart(id);
+      }
     },
   },
 
   teardown: {
     scope: 'once',
     needs: ['teardownGlobal'],
-    why: 'teardown restores stock — own UI gone, relocated nodes back at parent AND next sibling',
+    why: 'teardown restores stock — own UI gone, root flag gone, the purged page back, nothing left adopted',
     async run({ lab, cfg, t }) {
+      // `teardownFingerprint` is the RELOCATION case and is optional under the keep-list: a
+      // redesign that moves nothing has nothing to put back, and teardown is "stop hiding".
       const fp = cfg.teardownFingerprint;
       const fingerprint = fp
-        ? () => lab.ev(`(()=>{const e=document.querySelector(${JSON.stringify(fp.selector)});
+        ? () => lab.ev(`(()=>{const e=document.querySelector(${j(fp.selector)});
             if(!e)return null;return {parent:e.parentElement?e.parentElement.tagName+'#'+
               (e.parentElement.id||'')+'.'+String(e.parentElement.className||'').split(' ')[0]:null,
               next:e.nextElementSibling?e.nextElementSibling.tagName:'(none)'}})()`)
         : null;
       const stock = fingerprint ? await fingerprint() : null;
+      const before = await lab.ev(probeExpr(cfg));
 
-      t('teardown global is a function', (await lab.ev(`typeof window[${JSON.stringify(cfg.teardownGlobal)}]`)) === 'function', {
+      t('teardown global is a function', (await lab.ev(`typeof window[${j(cfg.teardownGlobal)}]`)) === 'function', {
         next: 'no teardown contract registered — a re-run cannot be made a no-op safely',
       });
-      await lab.ev(`(()=>{const f=window[${JSON.stringify(cfg.teardownGlobal)}];
+      await lab.ev(`(()=>{const f=window[${j(cfg.teardownGlobal)}];
         if(typeof f==='function')f();return true})()`);
       const after = await settle(() => lab.ev(probeExpr(cfg)), { tries: 25, gap: 160, stableFor: 3 });
 
@@ -564,6 +968,15 @@ export const GROUPS = {
       for (const [name, n] of Object.entries(after.controls)) {
         t(`own UI "${name}" removed`, n === 0, { remaining: n });
       }
+      t('our stylesheet is no longer adopted', after.adopted < before.adopted || before.adopted === 0, {
+        before: before.adopted,
+        after: after.adopted,
+        next:
+          after.adopted >= before.adopted && before.adopted > 0
+            ? 'the constructable sheet is still in document.adoptedStyleSheets — teardown ' +
+              'removed the nodes but left the paint'
+            : undefined,
+      });
       t('stock surface renders after teardown', after.unitsVisible > 0 || after.units === 0, {
         visible: after.unitsVisible,
         total: after.units,
@@ -572,6 +985,18 @@ export const GROUPS = {
             ? 'teardown left the page BLANK — worse than not running at all'
             : undefined,
       });
+      if (after.strays !== null && before.strays !== null) {
+        // The purge HIDES chrome; teardown has to stop hiding it, or the page is left
+        // half-stripped with no script running to explain why.
+        t('purged chrome comes back', after.strays >= before.strays, {
+          strays: { before: before.strays, after: after.strays },
+          next:
+            after.strays < before.strays
+              ? 'teardown left chrome hidden: it must revert the elimination rules, not just ' +
+                'remove our own nodes'
+              : undefined,
+        });
+      }
       if (fingerprint) {
         const back = await fingerprint();
         t('relocated node is back at its original parent and next sibling', JSON.stringify(back) === JSON.stringify(stock), {
@@ -584,16 +1009,24 @@ export const GROUPS = {
 
   degradation: {
     scope: 'once',
-    needs: ['degrade.breakAttr', 'degrade.breakValue'],
+    needs: ['degrade.selector'],
     why: 'break the anchor by hand and assert the page renders STOCK, not mangled — the failure-mode test',
     async run({ lab, cfg, shape, t }) {
       const d = cfg.degrade;
       // Breaking it at document-start, BEFORE the script runs, is what makes this a real
       // rehearsal of a site rename: the script must find nothing, not find it and mangle it.
+      // ADDING an attribute cannot break every anchor, and assuming it can produces a
+      // degradation group that silently never runs. An anchor written as `[data-id]` matches
+      // on PRESENCE, so setting it to "" leaves it matching; the honest break there is
+      // removal. `removeAttr` is the other half of the mechanism, not an option
+      // [F-A-BREAK-THAT-ADDS-CANNOT-BREAK-A-PRESENCE-TEST].
+      const mutate = d.removeAttr
+        ? `e.removeAttribute(${j(d.removeAttr)});`
+        : `e.setAttribute(${j(d.breakAttr)},${j(d.breakValue ?? '')});`;
       const id = await lab.addDocStart(
         `document.addEventListener('readystatechange',function(){
-           for(const e of document.querySelectorAll(${JSON.stringify(d.selector)})){
-             e.setAttribute(${JSON.stringify(d.breakAttr)},${JSON.stringify(d.breakValue)});}},true);`,
+           for(const e of document.querySelectorAll(${j(d.selector)})){
+             ${mutate}}},true);`,
         { wrap: false },
       );
       await lab.navigate(shape.url);
@@ -608,23 +1041,57 @@ export const GROUPS = {
               'it matched less. Scope it so a failed match renders stock.'
             : undefined,
       });
+      if (cfg.purge && p.strays !== null) {
+        // Only meaningful if the break really did break the anchor. A break that the script
+        // shrugs off makes every assertion below pass for the wrong reason, so say so instead.
+        const broke = p.gridOn === null || p.themed === false;
+        if (!broke) {
+          t('the break actually broke the anchor', false, {
+            gridOn: p.gridOn,
+            themed: p.themed,
+            next:
+              'the script applied anyway, so degradation was NOT exercised — pick a break the ' +
+              "script's anchor is actually sensitive to",
+          });
+        } else {
+          // Degrading means REVERTING, not abstaining: a gate that declines to run leaves
+          // whatever the last pass hid still hidden.
+          t('a broken anchor leaves the chrome alone', p.strays > 0, {
+            strays: p.strays,
+            next:
+              p.strays === 0
+                ? 'nothing outside the keep-list renders even though the script did not apply: ' +
+                  'the purge ran with no keeper found. Degrading to stock means REVERTING, not ' +
+                  'abstaining'
+                : undefined,
+          });
+        }
+      }
       t('no own UI built against a surface that is not there', Object.values(p.controls).every((n) => n <= 1), p.controls);
     },
   },
 };
+
+/**
+ * Shape groups that stay meaningful on a shape the redesign is SUPPOSED to decline
+ * (`expect: 'stock'`). Everything else asserts that the redesign applied, and would turn a
+ * correct refusal into a wall of failures.
+ */
+export const STOCK_SAFE_GROUPS = new Set(['promo-gate', 'pagination']);
 
 /** Group names in the order a suite should run them — rig first, because it invalidates the rest. */
 export const GROUP_ORDER = [
   'rig',
   'surface',
   'fullbleed',
+  'purge',
   'promo-gate',
   'theme',
   'controls',
   'cards',
+  'topbar',
   'pagination',
-  'drawer',
-  'actions',
+  'stock-identity',
   'lifecycle',
   'teardown',
   'degradation',

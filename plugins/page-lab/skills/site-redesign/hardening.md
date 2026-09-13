@@ -72,13 +72,16 @@ would have aborted the very callback the timeout exists to fire.
 - [ ] **Re-entry, at three copies not two.** If a bug's symptom is linear in copy count,
       a two-copy test looks exactly like the bug. Inject three times and assert **one**
       of every control, sheet and marker. Assert too that a re-run is **not a silent
-      no-op** — it must still apply.
+      no-op** — it must still apply. The runner's `lifecycle` group now does exactly this,
+      at document-start, `copies` in the config (default 3) — so the lane's job is to read
+      its failures, not to rebuild it.
 - [ ] **Bootstrap listeners.** A teardown that starts `const life = L; if (!life) return`
       cannot cancel work belonging to a copy that has not started yet. Abort a
       module-scope bootstrap controller **first**, before that return.
 - [ ] **Gates that decline rather than undo.** A keeper gate that "does nothing" when a
       keeper is missing leaves whatever the last pass applied. Degrading to stock means
-      **reverting**, not abstaining.
+      **reverting**, not abstaining. And a gate satisfied by ONE keeper is not a gate
+      [F-ELIMINATION-GATE-ONE-CARD].
 - [ ] **Stale markers between passes.** An item marked once and re-classified later stays
       marked unless each pass clears what it no longer owns.
 - [ ] **Parsers against modern serialisations.** A colour regex written for

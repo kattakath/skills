@@ -26,11 +26,18 @@ paint a selector-based theme keeps missing [F-COMPUTED-STYLE-IS-THE-REMAP]. A st
 palette can only darken what someone wrote a selector for, which is how one page comes
 out black and the next one stock.
 
-Two rules make rung 5 safe to layer on top of rungs 2-3:
+Three rules make rung 5 safe to layer on top of rungs 2-3:
 
 - **Make it idempotent by construction.** Phrase the test as *"is this still too
   light"*, so a surface the static sheet already darkened measures as dark and is
-  skipped. Running twice then changes nothing, and it cannot fight your own sheet.
+  skipped. Running twice then changes nothing.
+- **Do not re-measure a surface YOUR OWN sheet painted.** Idempotence stops the repaint
+  fighting *itself*; it does not stop it fighting the sheet. A sheet that painted a light
+  accent fill with dark ink, followed by a repaint that darkened the fill — correctly, by
+  its own rule — and left the ink, measured **1.21:1** and **2.29:1**, and stayed invisible
+  until an element hidden inside a closed drawer became visible
+  [F-SHEET-VS-REPAINT-FIGHT]. Either exclude your own painted surfaces, using the same one
+  own-UI exclusion list, or **paint none** and let the repaint own every colour.
 - **Cap the walk.** A few thousand nodes, so a pathological page cannot hang the tab.
   Measured cost on a real listing: 96 ms, 1445 nodes repainted.
 
@@ -53,6 +60,13 @@ A constructable sheet adopted via `adoptedStyleSheets` sorts **after** the site'
 document sheets, so it wins ties at equal specificity without `!important`
 [F-ADOPTED-SORTS-LAST]. That is ordering, not weight — higher site specificity still
 wins, and a running animation still outranks everything [F-ANIMATION-BEATS-IMPORTANT].
+
+**Assert the palette resolved before measuring anything downstream.** CSS comments do not
+nest, so a marker written inside the sheet's header comment ends it early and the parser
+eats the whole palette block — every `var(--token)` then resolves to `unset`, with no
+console error and no exception, presenting as "the theme did not apply"
+[F-CSS-COMMENT-NESTING]. After `replaceSync`, read one token back per group with
+`getComputedStyle(root).getPropertyValue('--…')` and require it non-empty.
 
 ## The remap (rung 4)
 
@@ -135,7 +149,10 @@ design; three different durations read as three different authors.
   fade was meant to remove [F-SRC-NOT-LOAD].
 - Honour the site's `loading="lazy"`; do not eagerly load a wall of media you just made
   larger.
-- Preserve true aspect ratio with `aspect-ratio`, and let `object-fit` do the fitting.
+- Preserve true aspect ratio with `aspect-ratio` — **on the grid ITEM, not on its child**:
+  in a content-sized row the child's ratio resolves against an indefinite width and the row
+  collapses, which is how a wall of 98 units renders 0 [F-ASPECT-RATIO-IN-AUTO-ROW]. Let
+  `object-fit` do the fitting.
 
 ## Layout
 

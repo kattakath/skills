@@ -103,19 +103,34 @@ export function pageVerbs(client, sessionId) {
     return {x:Math.round(b.x),y:Math.round(b.y),w:Math.round(b.width),h:Math.round(b.height)}})()`;
 
   /**
+   * Move the pointer, with no button, to an exact viewport point.
+   *
+   * The reveal trigger of an autohiding top bar is the pointer's POSITION, not a hover on
+   * the bar itself — an off-canvas bar cannot be hovered — so a spec that wants to prove the
+   * bar reveals has to be able to put the pointer a few pixels from the top edge and take it
+   * away again.
+   */
+  const movePointer = (x, y) =>
+    client.send(
+      'Input.dispatchMouseEvent',
+      { type: 'mouseMoved', x: Math.round(x), y: Math.round(y), button: 'none', buttons: 0 },
+      sessionId,
+    );
+
+  /**
    * Move the pointer somewhere harmless.
    *
    * Trusted input leaves the pointer PARKED where it last was, so a hover rule stays applied
    * across every later measurement. Reading a rest state with the pointer still sitting on
    * the element measures the hover state and calls it the rest state — a false failure that
    * reads exactly like a broken `opacity: 0`.
+   *
+   * The default `(1, 1)` is harmless for a card overlay and is NOT harmless for an
+   * autohiding top bar: it parks inside the reveal band, so the bar's revealed state gets
+   * read as its rest state. Pass a point away from the top edge for that
+   * (`skills/site-redesign/topbar.md`).
    */
-  const parkPointer = () =>
-    client.send(
-      'Input.dispatchMouseEvent',
-      { type: 'mouseMoved', x: 1, y: 1, button: 'none', buttons: 0 },
-      sessionId,
-    );
+  const parkPointer = (x = 1, y = 1) => movePointer(x, y);
 
   /**
    * Click a control once it has STOPPED MOVING and is inside the viewport.
@@ -167,6 +182,7 @@ export function pageVerbs(client, sessionId) {
     click,
     clickSelector,
     clickStable,
+    movePointer,
     parkPointer,
     type,
     key,

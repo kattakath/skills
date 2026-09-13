@@ -77,6 +77,28 @@ all. That inconsistency is the price, and on both sites the operator judged it c
 the machinery it deletes. Put the choice to them in those terms rather than assuming either
 answer.
 
+## The keep-list — the positive form, and the default
+
+Scope-first says what a redesign does *not* do. The keep-list is the same decision written
+forwards, and it is now **the default shape** rather than one site's choice:
+
+> **Keep the content grid. Keep pagination. Autohide the top bar. Remove everything else.**
+
+Read [`keep-list.md`](keep-list.md) before designing anything — it carries the whole
+pattern: how to qualify a page as *the* surface (three signals, not the word "gallery"),
+how to hide the complement by marking paths rather than naming containers, and the two
+rules that keep it from shipping a blank page:
+
+- **Gate it.** Hiding by elimination hides **more** as it matches **less**, so a rotted
+  keeper test must render the page **stock, not blank**. `keepers.length > 0` is not a gate:
+  on one site it passed on **one** organic card and the complement hid **38 of 39**
+  [F-ELIMINATION-GATE-ONE-CARD].
+- **Check what a keeper is nested INSIDE before removing its container**
+  [F-KEEPER-INSIDE-CHROME].
+
+The one thing the list actually builds is the hidden bar — [`topbar.md`](topbar.md), a
+standard component now, not a per-site invention.
+
 ## Desktop only — there is no mobile case
 
 **A userscript manager runs in a desktop browser.** Mobile Chrome has no extension support
@@ -107,16 +129,18 @@ aimed at a phone is effort spent on a case that cannot occur.
    several redesigns has usually solved the card overlay, the drawer or the
    lazy-load fade already, with its measurements in the header comment
    ([`overlays.md`](overlays.md)).
-1. **Redesign only the surface that is the point.** Everything else is stock, including
-   its theme. A rule that exists only because an earlier rule widened the scope is a rule
-   neither of them needed.
+1. **Redesign only the surface that is the point**, and qualify that surface by structure
+   rather than by a word — [`keep-list.md`](keep-list.md) § Qualifying the page. Everything
+   else is stock, including its theme. A rule that exists only because an earlier rule
+   widened the scope is a rule neither of them needed.
 2. **No selector may be written before the survey is complete.** The survey is a
    blocking phase with its own deliverable ([`survey.md`](survey.md)). "I will measure
    it when I get there" is how a redesign ships a guess.
-3. **Move the site's node; never rebuild its control.** A relocated control brings its
-   own handler. A rebuilt one is the reinvented wheel, and it silently diverges the
-   first time the site changes. Confirm the handler is on the node and not delegated to
-   an ancestor before you move it — [`relocation.md`](relocation.md).
+3. **Prefer hiding to moving — and IF a control must move, move the site's node, never
+   rebuild it.** The keep-list moves nothing, which is most of its value. Relocation is the
+   exception: a relocated control brings its own handler, a rebuilt one is the reinvented
+   wheel and diverges the first time the site changes, and a delegated handler breaks on the
+   move [`relocation.md`](relocation.md).
 4. **One palette, declared once.** A redesign that hard-codes colours at each use site
    cannot be verified or retuned. Tokens on a root data attribute; the count that
    replaced 51 literals in the reference implementation was 17.
@@ -139,7 +163,7 @@ aimed at a phone is effort spent on a case that cannot occur.
 
 ```
 Survey (blocking, one agent)
-  -> Theme | Grid/Content | Shell  (parallel)
+  -> Theme | Grid/Content | Shell (bar + purge)  (parallel)
     -> Integrator (merge, DRY, gates)
       -> Harness (acceptance, responsive, degradation)
         -> Hardening  (structure | runtime | harness, in parallel)
@@ -170,7 +194,7 @@ lands. **Two of them can delete most of a phase before it starts:**
 |---|---|---|
 | **Theme** | palette tokens, any CSSOM remap, contrast repair, the own-UI exclusion list | [`theming.md`](theming.md) |
 | **Grid / Content** | the primary surface: layout, intrinsic sizing, promo elimination, media loading | [`theming.md`](theming.md) § Media |
-| **Shell** | overlay, fixed controls, relocation, focus management, dialog dismissal, motion | [`relocation.md`](relocation.md) |
+| **Shell** | the autohiding bar, the purge of everything else, and its gate | [`keep-list.md`](keep-list.md), [`topbar.md`](topbar.md) |
 
 They share two artefacts and must not each invent their own: **the palette** and **the
 own-UI exclusion list**. Name both in the survey output so all three start from one copy.
@@ -186,12 +210,16 @@ Escalation is unchanged from `userscript-author` § I: **do not grow a bundler.*
 ### 4. Verify
 
 [`acceptance.md`](acceptance.md) — the groups, the trusted-event discipline, and the
-four ways a spec lies to you.
+five ways a spec lies to you.
 
 **Do not write this harness again.** `scripts/redesign-acceptance.mjs` takes a declarative
 config and runs the whole group set at **document-start across real navigations**; a new
-site is a config file, not a program. Start with `--diagnose`, which prints one line of
-decision-relevant facts per URL shape and what to look at next.
+site is a config file, not a program. The groups follow the keep-list — *the grid applies*,
+*everything else is gone*, *the topbar autohides*, *pagination survives and still
+navigates*, ***an out-of-scope page is byte-identical to stock***, *N document-start copies
+leave one of everything*, *teardown restores* — so a new site's config is the keepers, the
+out-of-scope shapes and the thresholds, and nothing else. Start with `--diagnose`, which
+prints one line of decision-relevant facts per URL shape and what to look at next.
 
 ### 4.5 Harden — before you call it finished
 
@@ -225,7 +253,14 @@ A refactor lane without a net is a rewrite.
 
 - **Rebuilding a control instead of moving it** (rule 2).
 - **Hiding by elimination without a gate** — `> *:not(:has(X))` hides *more* as it
-  matches *less*, so a renamed selector mangles the page instead of degrading to stock.
+  matches *less*, so a renamed selector mangles the page instead of degrading to stock. A
+  gate satisfied by ONE keeper is not a gate [F-ELIMINATION-GATE-ONE-CARD].
+- **Removing a container without checking what is nested inside it**
+  [F-KEEPER-INSIDE-CHROME].
+- **Painting a surface and then re-measuring it with your own repaint** — the two are each
+  right by their own rule and the pair is unreadable [F-SHEET-VS-REPAINT-FIGHT].
+- **Assuming `:focus-within` reveals a hidden bar.** Measure it; on one site the pointer
+  path worked and the keyboard path was dead [F-FOCUS-WITHIN-NOT-A-REVEAL].
 - **Deciding neutrality on HSL saturation** — it misclassifies near-white and near-black
   [F-CHROMA-NOT-HSL].
 - **Skipping a colour to preserve it** — `:not()` carries its most specific argument's
@@ -259,9 +294,12 @@ Do not re-litigate these without a new measurement that contradicts the recorded
 
 ## Where to read next
 
-- [`survey.md`](survey.md) — **the blocking phase.** M1-M12, re-usable verbatim.
+- [`keep-list.md`](keep-list.md) — **the default shape**, and how to qualify the surface.
+- [`topbar.md`](topbar.md) — the autohiding bar, measured. The one thing the list builds.
+- [`survey.md`](survey.md) — **the blocking phase.** M1-M13, re-usable verbatim.
 - [`theming.md`](theming.md) — dark mode, the remap, contrast repair, motion, media.
-- [`relocation.md`](relocation.md) — moving live controls without breaking them.
+- [`relocation.md`](relocation.md) — **the exception**: moving live controls without
+  breaking them, for the site that genuinely needs it.
 - [`overlays.md`](overlays.md) — the hover-title card overlay, measured; and the
   reminder to check your OWN sibling scripts before building any affordance.
 - [`hardening.md`](hardening.md) — the final pass: three lanes, what each hunts, and
