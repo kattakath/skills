@@ -8,6 +8,7 @@ A [Claude Code](https://code.claude.com/docs) plugin marketplace.
 /plugin marketplace add kattakath/claude-plugins
 /plugin install page-lab@kattakath
 /plugin install llmstxt@kattakath
+/plugin install foundation-audit@kattakath
 ```
 
 ## Plugins
@@ -16,6 +17,7 @@ A [Claude Code](https://code.claude.com/docs) plugin marketplace.
 |---|---|
 | [`page-lab`](plugins/page-lab) | Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, performance/network/console diagnosis, and a Greasy Fork readiness linter. |
 | [`llmstxt`](plugins/llmstxt) | Author spec-compliant [`llms.txt`](https://llmstxt.org) (and the de-facto `llms-full.txt`) from any body of written work — docs, a site, a repo, or a developer accomplishment document. |
+| [`foundation-audit`](plugins/foundation-audit) | *Is this repo solid enough to build on?* Four parallel lane-scoped agents — architecture and the boundary violations structural gates cannot see, duplication judged by purpose, activation failure modes classified by **how** they fail, and dead surface including guardrails that match nothing — then an orchestrator that re-verifies the top findings itself. |
 
 Each plugin's own `README.md` carries its commands, skills and design notes.
 

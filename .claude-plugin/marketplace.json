@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kattakath",
-  "description": "Ismail Kattakath's Claude Code plugins: hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, and llms.txt authoring.",
+  "description": "Ismail Kattakath's Claude Code plugins: hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, and a four-dimension repo foundation audit.",
   "owner": {
     "name": "Ismail Kattakath",
     "url": "https://github.com/kattakath"
@@ -25,6 +25,29 @@
       "homepage": "https://github.com/kattakath/claude-plugins",
       "license": "MIT",
       "source": "./plugins/claude-code-nix"
+    },
+    {
+      "name": "foundation-audit",
+      "description": "Four-dimension foundation audit of a config monorepo \u2014 architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "audit",
+        "architecture",
+        "nix",
+        "monorepo",
+        "review",
+        "multi-agent",
+        "activation",
+        "dead-code",
+        "doc-drift"
+      ],
+      "homepage": "https://github.com/kattakath/ai/tree/main/plugins/foundation-audit",
+      "license": "MIT",
+      "source": "./plugins/foundation-audit"
     },
     {
       "name": "llmstxt",

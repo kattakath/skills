@@ -1,0 +1,23 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "foundation-audit",
+  "version": "0.1.0",
+  "description": "Four-dimension foundation audit of a config monorepo — architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/ai/tree/main/plugins/foundation-audit",
+  "repository": "https://github.com/kattakath/ai",
+  "license": "MIT",
+  "keywords": [
+    "audit",
+    "architecture",
+    "nix",
+    "monorepo",
+    "review",
+    "multi-agent",
+    "activation",
+    "dead-code",
+    "doc-drift"
+  ]
+}
