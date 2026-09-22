@@ -18,6 +18,21 @@ Mac-app task for want of a dedicated MCP. Two things make it fail: the file choo
 separate process your app grant cannot touch, and typing a multi-line message fires it off
 one line at a time.
 
+## Tools in this plugin — use them instead of deriving
+
+```bash
+# bundle id, install path, running state — one shot, pure metadata, no grant needed
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/mac-app-doctor.sh" "WhatsApp"
+
+# bytes, KB as the app will display it, and page count — the facts a send is verified against
+bash "${CLAUDE_PLUGIN_ROOT}/scripts/file-manifest.sh" <file>...
+```
+
+A **PreToolUse guard** also ships here. It blocks an `osascript`/`cliclick` workaround, a
+multi-line `app_type` without `element_index`, and `request_access` on the panel service —
+each with the working alternative in the refusal. If you see one of those blocks, the message
+is the instruction; do not try to satisfy it another way.
+
 ## 0. Tier check first
 
 | Tier | When | Why |

@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|app_type|request_access",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/mac-send-guard.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

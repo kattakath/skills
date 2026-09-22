@@ -28,7 +28,7 @@
     },
     {
       "name": "foundation-audit",
-      "description": "Four-dimension foundation audit of a config monorepo \u2014 architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
+      "description": "Four-dimension foundation audit of a config monorepo — architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
       "version": "0.1.0",
       "author": {
         "name": "Ismail Kattakath"
@@ -51,7 +51,7 @@
     },
     {
       "name": "llmstxt",
-      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work \u2014 docs, a site, a repo, or a developer accomplishment document.",
+      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
       "version": "0.1.0",
       "author": {
         "name": "Ismail Kattakath"
@@ -70,7 +70,7 @@
     },
     {
       "name": "page-lab",
-      "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
+      "description": "Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
       "version": "0.23.0",
       "author": {
         "name": "Ismail Kattakath"
@@ -109,6 +109,26 @@
       "homepage": "https://github.com/kattakath/claude-plugins",
       "license": "MIT",
       "source": "./plugins/superhook"
+    },
+    {
+      "name": "mac-app-send",
+      "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files. Ships the method skill, a preflight doctor that resolves bundle id and running state in one shot, a file manifest that gives the exact bytes/KB/page counts a send is verified against, and a PreToolUse guard blocking the three moves that cannot work: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service.",
+      "version": "0.1.0",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "macos",
+        "computer-use",
+        "automation",
+        "whatsapp",
+        "accessibility",
+        "attachments"
+      ],
+      "homepage": "https://github.com/kattakath/ai/tree/main/plugins/mac-app-send",
+      "license": "MIT",
+      "source": "./plugins/mac-app-send"
     }
   ]
 }
