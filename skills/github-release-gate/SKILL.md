@@ -1,7 +1,7 @@
 ---
 name: github-release-gate
 description: This skill should be used when a GitHub repo's main branch is (or is becoming) the release, and merges should happen on their own once CI passes — the user says "set up auto-merge", "auto-merge PRs that aren't from forks", "require CI before merging", "add a ruleset", "make validate required", "delete branches on merge", "every merge to main ships", or reports that "gh pr merge --auto merged immediately" or "Resource not accessible by integration" on a repo setting. Sets up the gate in the one order that is safe, with off-the-shelf parts, and verifies each step against GitHub rather than trusting it.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # GitHub release gate — required check first, auto-merge second
@@ -21,6 +21,17 @@ and the auto-merge workflow ships unvalidated code the moment a PR opens.
 ```
 
 ## 0. Credentials — which token can do what
+
+Two different credentials, for two different jobs:
+
+- **Arming auto-merge (step 4) — a GitHub App installation token**, minted in the workflow
+  by `actions/create-github-app-token`. Not `GITHUB_TOKEN`: auto-merge attributes the merge
+  to whoever armed it, and events produced by `GITHUB_TOKEN` start no workflow runs, so every
+  auto-merge would land on `main` silently — no `push: main` CI, no deploy (measured 2026-09:
+  two auto-merged PRs, zero `push: main` runs). Needs the App installed on the repo, its
+  client id in `vars.CI_BOT_CLIENT_ID` and a private key in `secrets.CI_BOT_APP_PRIVATE_KEY`.
+  For a fleet, put both at org level so a new repo inherits them.
+- **Setting the gate up (steps 2–3) — the repo owner's own login.**
 
 Steps 2 and 3 are **repo admin** actions. The token a Codespace or an Actions runner injects
 as `GITHUB_TOKEN` cannot do them, and cannot re-run workflow jobs either: all three return
@@ -80,14 +91,21 @@ Check: both print `true`. If `-q` prints nothing, read it back with a plain
 
 ## 4. Arm auto-merge on same-repo PRs
 
-Copy `assets/auto-merge.yml` to `.github/workflows/`. It uses
-`peter-evans/enable-pull-request-automerge` (pinned by SHA), skips drafts, and skips any PR
-whose head repo is not this repo, so fork PRs wait for a human merge. It runs on
-`pull_request`, not `pull_request_target`: a fork's run gets a read-only token anyway, and
-nothing checks out PR code.
+Copy `assets/auto-merge.yml` to `.github/workflows/`. It mints the App token (step 0),
+then arms squash auto-merge with `peter-evans/enable-pull-request-automerge`, both pinned by
+SHA. It skips drafts and any PR whose head repo is not this repo, so fork PRs wait for a
+human merge and a fork's run never reaches the step that needs the App's secret. It runs on
+`pull_request`, not `pull_request_target`: nothing checks out PR code. It re-fires on
+`synchronize`, re-arming a PR GitHub disarmed (a conflict, a failed check) once the fix is
+pushed.
+
+To gate on the PR's author instead of on forks, as a solo maintainer might, swap the `if:` for
+`github.event.pull_request.user.login == '<login>'`. Not `github.repository_owner`, which is
+the org when the repo lives in one.
 
 Open it as a PR. Check: on that PR, the `arm` job passes, `gh pr view <n> --json
-autoMergeRequest` shows `SQUASH`, and the PR merges only **after** the required check passes.
+autoMergeRequest` shows `SQUASH`, the PR merges only **after** the required check passes,
+and `gh run list --workflow <ci>.yml --event push` then shows a run for the merge commit.
 
 ## Pitfalls
 
@@ -98,8 +116,12 @@ autoMergeRequest` shows `SQUASH`, and the PR merges only **after** the required 
   finished. That is why step 2 comes before step 4.
 - **Auto-merge off + a required check pending** makes the arm job fail with `Auto merge is not
   allowed for this repository`. Safe (nothing merges), and it means step 3 was skipped.
-- **A merge made by `GITHUB_TOKEN` triggers no other workflows**, so the CI's `push: main` run
-  does not fire after an auto-merge. The PR run is the gate.
+- **Armed with `GITHUB_TOKEN`, auto-merges are silent**: no `push: main` workflow runs, and
+  (measured 2026-09, with `delete_branch_on_merge` on) the head branch was not deleted
+  either. Use the App token (step 0).
+- **Auto-merge fires the moment the required checks go green**, even if commits are still
+  being pushed: a PR can merge with its later commits left behind. Open work in progress as a
+  **draft**; arming survives the draft state and releases on `ready_for_review`.
 - **A PR opened before the arm workflow existed** is not armed until its branch gets a new
   push. Arm it by hand: `gh pr merge <n> --auto --squash`.
 - **Squash merges hide merged branches from `git branch --merged`.** To clean up branches
@@ -107,6 +129,12 @@ autoMergeRequest` shows `SQUASH`, and the PR merges only **after** the required 
   (`gh pr list --state merged --head <branch> --json headRefOid`); a tip that moved after the
   merge needs a look before deleting. For local branches whose remote is gone, the official
   `commit-commands` plugin's `/clean_gone` does it.
+
+## Merge queue
+
+Not by default. It re-runs the whole gate once more per PR and only pays off with concurrent
+contributors. Read `references/merge-queue.md` before adopting one: it lists the costs,
+and the three traps (org-only, `merge_group:` triggers, the queue app not being able to bypass rules).
 
 ## Declarative alternative
 
@@ -122,4 +150,6 @@ after every sync.
 - GitHub: [Triggering a workflow from a workflow](https://docs.github.com/en/actions/using-workflows/triggering-a-workflow#triggering-a-workflow-from-a-workflow) (the `GITHUB_TOKEN` rule)
 - [peter-evans/enable-pull-request-automerge](https://github.com/peter-evans/enable-pull-request-automerge)
 - [repository-settings/app](https://github.com/repository-settings/app) — `docs/plugins/rulesets.md`
-- Source session: kattakath/skills #5 (the self-merge), #6, ruleset 23878103, 2026-09-23
+- [actions/create-github-app-token](https://github.com/actions/create-github-app-token)
+- kattakath/nix-config `docs/auto-merge-and-merge-queue.md` — the App-token pattern and the merge-queue record
+- Source session: kattakath/skills #5 (the self-merge), #6, #7, ruleset 23878103, 2026-09-23

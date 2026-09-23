@@ -7,16 +7,28 @@ name: auto-merge
 # so this relies on `validate` being a required check on main. Without that,
 # an armed PR merges immediately and skips the gate in front of every release.
 #
-# `pull_request`, not `pull_request_target`: a fork's run gets a read-only
-# token anyway, and nothing here checks out or runs PR code.
+# WHY AN APP TOKEN, NOT `GITHUB_TOKEN`. Auto-merge attributes the merge to
+# whoever armed it, and events produced by `GITHUB_TOKEN` start no workflow runs,
+# so `validate`'s `push: main` leg never fired after the auto-merges of #5 and #7.
+# The CI bot App's installation token carries no such suppression. Same App and
+# org-wide `vars.CI_BOT_CLIENT_ID` + `secrets.CI_BOT_APP_PRIVATE_KEY` as
+# kattakath/nix-config's auto-merge.yml; see its docs/auto-merge-and-merge-queue.md.
+#
+# `pull_request`, not `pull_request_target`: the job never checks out or runs PR
+# code, and the fork guard means a fork's run never reaches the App-token step,
+# which needs a secret a fork cannot read.
 
 on:
   pull_request:
     types: [opened, reopened, ready_for_review, synchronize]
 
+concurrency:
+  group: auto-merge-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+# The App token carries the merge rights; the default token needs none.
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   arm:
@@ -24,7 +36,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
+      - id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          client-id: ${{ vars.CI_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+
+      # Idempotent: re-arming an armed PR is a no-op, so `synchronize` re-arms a PR
+      # GitHub disarmed (a conflict, a failed required check) once the fix lands.
       - uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3.0.0
         with:
+          token: ${{ steps.app-token.outputs.token }}
           pull-request-number: ${{ github.event.pull_request.number }}
           merge-method: squash
