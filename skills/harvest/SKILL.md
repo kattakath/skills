@@ -1,7 +1,7 @@
 ---
 name: harvest
 description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo — not as a loose file in ~/.claude.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Harvest — turn a session's discovery into a pinned, reusable artifact
@@ -25,8 +25,19 @@ harness may delete on the next activation.
   used monthly)? One-off answers are not skills.
 - **Hard-won:** did it take measurement, failed attempts or reading that the next
   session would repeat? Common knowledge is not worth the context it costs.
-- **Not already covered:** search existing skills (the listing in context, the content
-  repo, `find-skills`). Extending an existing skill beats adding a sibling.
+- **Not already covered:** search where this knowledge may already be written, not just
+  where skills live:
+  - existing skills: the listing in context, the content repo, `find-skills`;
+  - **the harness and sibling repos' own docs, ADRs, runbooks and workflow comments** —
+    an operator often solved the same problem in another repo and wrote it down there
+    (`gh search code --owner <owner> '<key term>'`, or `grep -ril` over a checkout's
+    `docs/` and `.github/`);
+  - official and community marketplaces, for an off-the-shelf equivalent.
+
+  Found it written down? Cite and adapt it; don't rediscover it. (Missed 2026-09-23: a
+  harvested skill armed auto-merge with `GITHUB_TOKEN` while the harness repo's
+  `docs/auto-merge-and-merge-queue.md` already recorded why an App token is required,
+  so it needed a follow-up PR.) Extending an existing skill beats adding a sibling.
 
 If any answer is no, say so and stop. Declining to harvest is a valid outcome.
 
@@ -98,6 +109,7 @@ symlink into a version-controlled directory so it is not the only copy.
 |---|---|
 | Content repo | `github:kattakath/skills` (`skills/`, `plugins/`, `.claude-plugin/marketplace.json`) |
 | Harness repo | `github:kattakath/nix-config` |
+| Prior art to search | nix-config `docs/` (ADRs, runbooks), `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
 | Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships, no pin |
 | New skill | `skills/<name>/` plus a marketplace entry (`"source": "./"`, `"strict": false`, `"skills": ["./skills/<name>"]`) |
 | Enable | append the plugin name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
