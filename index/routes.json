@@ -3,83 +3,132 @@
   "routes": [
     {
       "goal": "Find a capability before building or installing one",
-      "steps": ["capability-broker", "@community", "@skills-sh", "@mcp-registry"],
+      "steps": [
+        "capability-broker",
+        "@community",
+        "@skills-sh",
+        "@mcp-registry"
+      ],
       "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config."
     },
     {
       "goal": "Capture what a session figured out, so no session rediscovers it",
-      "steps": ["harvest", "skill-creator@official", "github-release-gate"],
+      "steps": [
+        "harvest",
+        "skill-creator@official",
+        "github-release-gate"
+      ],
       "note": "harvest triages and lands via PR; skill-creator tests; the gate validates before it ships.",
       "gap": true
     },
     {
+      "goal": "Keep the skill library from only growing: find unused skills and retire them",
+      "steps": [
+        "skill-curator"
+      ],
+      "note": "Ported from Hermes Agent's curator; retires from the harness via PR, never deletes.",
+      "gap": true
+    },
+    {
       "goal": "Make a repo's default branch a safe, auto-merging release",
-      "steps": ["github-release-gate"],
+      "steps": [
+        "github-release-gate"
+      ],
       "note": "Required check first, App-token auto-merge second.",
       "gap": true
     },
     {
       "goal": "Turn a repo's review history into agent instructions",
-      "steps": ["ai-ready@ai-ready"],
+      "steps": [
+        "ai-ready@ai-ready"
+      ],
       "note": "Candidate; not declared in nix-config yet."
     },
     {
       "goal": "Work on a Nix flake repo with Claude Code",
-      "steps": ["nix-dev-toolkit", "claude-code-nix"],
+      "steps": [
+        "nix-dev-toolkit",
+        "claude-code-nix"
+      ],
       "gap": true
     },
     {
       "goal": "Audit a config monorepo's foundation",
-      "steps": ["foundation-audit"],
+      "steps": [
+        "foundation-audit"
+      ],
       "gap": true
     },
     {
       "goal": "Security-review code or a dependency",
-      "steps": ["security-guidance@official", "@trailofbits"]
+      "steps": [
+        "security-guidance@official",
+        "@trailofbits"
+      ]
     },
     {
       "goal": "Debug a failure methodically",
-      "steps": ["@superpowers"],
+      "steps": [
+        "@superpowers"
+      ],
       "note": "systematic-debugging is the adopted skill."
     },
     {
       "goal": "Author a userscript or diagnose a live web page",
-      "steps": ["page-lab"],
+      "steps": [
+        "page-lab"
+      ],
       "gap": true
     },
     {
       "goal": "Operate a physical Android phone over ADB",
-      "steps": ["android-phone"],
+      "steps": [
+        "android-phone"
+      ],
       "gap": true
     },
     {
       "goal": "Send a formatted message with attachments from a native macOS app",
-      "steps": ["mac-app-send"],
+      "steps": [
+        "mac-app-send"
+      ],
       "gap": true
     },
     {
       "goal": "Answer questions from a local document corpus",
-      "steps": ["rag"]
+      "steps": [
+        "rag"
+      ]
     },
     {
       "goal": "Tailor a resume to a job posting",
-      "steps": ["jsonresume-tailor"]
+      "steps": [
+        "jsonresume-tailor"
+      ]
     },
     {
       "goal": "Supervise Claude Code hooks so one bad hook cannot wedge a session",
-      "steps": ["superhook"]
+      "steps": [
+        "superhook"
+      ]
     },
     {
       "goal": "Author an llms.txt",
-      "steps": ["llmstxt"]
+      "steps": [
+        "llmstxt"
+      ]
     },
     {
       "goal": "Get scannable, verdict-first answers and architecture maps",
-      "steps": ["brain-signals"]
+      "steps": [
+        "brain-signals"
+      ]
     },
     {
       "goal": "General language- or domain-specific engineering agents",
-      "steps": ["@wshobson"],
+      "steps": [
+        "@wshobson"
+      ],
       "note": "Candidate; pick single plugins, not the whole collection."
     }
   ]

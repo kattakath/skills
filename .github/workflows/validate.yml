@@ -48,6 +48,9 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
+      - name: skill-curator usage cases
+        run: bash skills/skill-curator/tests/usage-cases.sh
+
       # INDEX.md is generated; a route step that points at nothing, an entry no
       # route reaches, or a hand edit all fail here.
       - name: Index up to date

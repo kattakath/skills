@@ -35,6 +35,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`harvest`](skills/harvest) | At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format. |
 | [`jsonresume-tailor`](skills/jsonresume-tailor) | Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF. |
 | [`github-release-gate`](skills/github-release-gate) | Make the default branch a safe release: require the CI check with a ruleset first, then allow auto-merge and arm it on same-repo PRs only, verifying each step against GitHub. |
+| [`skill-curator`](skills/skill-curator) | Keep a skill library from only growing: count real usage from transcripts, mark skills stale or archive-candidate, and propose retirements as a reviewable PR. Ported from the Hermes Agent curator. |
 | [`brain-signals`](plugins/brain-signals) | An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution. |
 
 Each plugin's own `README.md` covers its commands, skills and design notes.

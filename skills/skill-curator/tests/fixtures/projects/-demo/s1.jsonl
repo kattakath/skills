@@ -1,0 +1,7 @@
+{"type":"user","timestamp":"2026-09-15T10:00:00Z","message":{"role":"user","content":"start of the evidence window"}}
+{"type":"assistant","timestamp":"2026-11-25T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"rag"}}]}}
+{"type":"user","timestamp":"2026-11-10T09:00:00Z","message":{"role":"user","content":"<command-name>/brain-signals:tldr</command-name>"}}
+{"type":"assistant","timestamp":"2026-10-20T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"llmstxt"}}]}}
+{"type":"assistant","timestamp":"2026-11-30T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"Skill","input":{"skill":"someone-else:thing"}}]}}
+{"type":"assistant","timestamp":"2026-11-30T10:00:00Z","message":{"role":"assistant","content":[{"type":"tool_use","name":"Bash","input":{"command":"echo Skill"}}]}}
+not json at all "Skill"

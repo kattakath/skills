@@ -1,0 +1,6 @@
+{
+  "_comment": "skill-curator settings (ported from Hermes Agent's curator defaults). Pinned entries are never proposed for retirement: the map's own machinery.",
+  "stale_after_days": 14,
+  "archive_after_days": 30,
+  "pinned": ["capability-broker", "harvest", "skill-curator"]
+}

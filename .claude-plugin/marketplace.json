@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kattakath",
-  "description": "Ismail Kattakath's agent skills and Claude Code plugins: an answer-shape kit, hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, a repo foundation audit, macOS app automation, and standalone skills for local RAG, Android over ADB, Nix dev toolkits, capability discovery, skill harvesting, JSON Resume tailoring and GitHub release gating.",
+  "description": "Ismail Kattakath's agent skills and Claude Code plugins: an answer-shape kit, hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, a repo foundation audit, macOS app automation, and standalone skills for local RAG, Android over ADB, Nix dev toolkits, capability discovery, skill harvesting and curation, JSON Resume tailoring and GitHub release gating.",
   "owner": {
     "name": "Ismail Kattakath",
     "url": "https://github.com/kattakath"
@@ -246,6 +246,21 @@
       "strict": false,
       "skills": [
         "./skills/github-release-gate"
+      ]
+    },
+    {
+      "name": "skill-curator",
+      "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "homepage": "https://github.com/kattakath/skills/tree/main/skills/skill-curator",
+      "license": "MIT",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/skill-curator"
       ]
     }
   ]

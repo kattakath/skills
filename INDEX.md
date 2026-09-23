@@ -14,6 +14,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | ● Audit a config monorepo's foundation | [`foundation-audit`](plugins/foundation-audit) |  |
 | ● Author a userscript or diagnose a live web page | [`page-lab`](plugins/page-lab) |  |
 | ● Capture what a session figured out, so no session rediscovers it | [`harvest`](skills/harvest) → `skill-creator` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [`github-release-gate`](skills/github-release-gate) | harvest triages and lands via PR; skill-creator tests; the gate validates before it ships. |
+| ● Keep the skill library from only growing: find unused skills and retire them | [`skill-curator`](skills/skill-curator) | Ported from Hermes Agent's curator; retires from the harness via PR, never deletes. |
 | ● Make a repo's default branch a safe, auto-merging release | [`github-release-gate`](skills/github-release-gate) | Required check first, App-token auto-merge second. |
 | ● Operate a physical Android phone over ADB | [`android-phone`](skills/android-phone) |  |
 | ● Send a formatted message with attachments from a native macOS app | [`mac-app-send`](plugins/mac-app-send) |  |
