@@ -1,7 +1,7 @@
 ---
 name: harvest
 description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo — not as a loose file in ~/.claude.
-version: 0.4.0
+version: 0.5.0
 ---
 
 # Harvest — turn a session's discovery into a pinned, reusable artifact
@@ -19,7 +19,24 @@ harness may delete on the next activation.
 └──────────┘   └──────────┘   └──────────┘   └──────────┘   └──────────┘
 ```
 
-## 1. Worth keeping? — all three must be yes
+## 1. Worth keeping? — extract candidates, then all three must be yes
+
+**Extract first, in this order** (from Letta Code's `reflection-v2`, Apache-2.0): what a
+session teaches is usually not the procedure it set out to do.
+
+1. **Mistakes and corrections** — what went wrong, what the user corrected, failed retries.
+2. **Preferences and patterns** — conventions and workflow decisions the user made.
+3. **New facts** — project, team and environment details, architectural decisions.
+4. **Contradictions** — anything that conflicts with what a skill or memory already says.
+5. **Reusable procedures** — multi-step workflows that may belong in a skill.
+
+Drop anything **ephemeral** before judging it: line numbers, exact error strings, temp paths,
+ports, commit hashes, one-off values. Distil the pattern, not the event ("merges armed by
+`GITHUB_TOKEN` start no workflows", not "PR #7's push run was missing"); the event can go in
+as the evidence for the pattern. Write relative dates as absolute ones. Across several
+sessions, prefer patterns that recur, and let the latest evidence win a contradiction.
+
+Then, for each candidate:
 
 - **Repeats:** will this come up again (a yearly filing, a recurring migration, a tool
   used monthly)? One-off answers are not skills.
@@ -40,11 +57,16 @@ harness may delete on the next activation.
   Found it written down? Cite and adapt it; don't rediscover it. (Missed 2026-09-23: a
   harvested skill armed auto-merge with `GITHUB_TOKEN` while the harness repo's
   `docs/auto-merge-and-merge-queue.md` already recorded why an App token is required,
-  so it needed a follow-up PR.) Extending an existing skill beats adding a sibling.
+  so it needed a follow-up PR.) Found it partly covered? That is an `update` or `extend`
+  of the existing skill (§ 2), not a new one.
 
 If any answer is no, say so and stop. Declining to harvest is a valid outcome.
 
 ## 2. Type — pick the artifact by what the knowledge IS
+
+**Skills are not the default.** A fact, a preference or a correction is memory (or a hook
+rule); a one-off task state belongs nowhere. Reach for a skill only for a repeatable,
+multi-step procedure that clearly generalizes beyond this session.
 
 | Knowledge is… | Artifact | Lives in |
 |---|---|---|
@@ -56,8 +78,24 @@ If any answer is no, say so and stop. Declining to harvest is a valid outcome.
 | A correction that should block an action next time | **Hook rule** | `hookify` (if installed) writes it from the conversation; else a plugin hook |
 | Specific to one repo | **Project config** | That repo's `.claude/`, never the global set |
 
-Most harvests are skills. Choose a plugin only when there is a hook or command that must
-travel with the skill.
+Choose a plugin only when there is a hook or command that must travel with the skill.
+
+**For a procedure, pick exactly one operation**, preferring to modify over creating:
+
+| Operation | When |
+|---|---|
+| `update` | An existing skill covers it, but a step is wrong, dangerous or outdated. Fix that step in place; keep the rest. |
+| `extend` | An existing skill covers a similar workflow; this is a new variant or edge case. Add a section, don't duplicate. |
+| `deprecate` | An existing skill is obsolete, harmful or replaced. Add `deprecated: true` (and `replaced_by: <name>`) to its frontmatter with a note at the top; `skill-curator` retires it from the harness. |
+| `split` | One skill has drifted into two distinct procedures and that hurt this session. Rarely. |
+| `create` | Genuinely novel, with concrete commands and values, and nothing covers it even partly. |
+| `none` | One-off, trivial, informational, already covered, or better as memory. |
+
+Tie-breakers: unsure between `create` and `none` → `none`. Unsure between `create` and a
+modify operation → the modify operation.
+
+**Contradictions are fixed at the source.** When a learning contradicts a skill or memory,
+correct the stale text where it lives; never append the new version alongside the old.
 
 ## 3. Clean — make it portable before writing a line
 
@@ -84,6 +122,16 @@ Body, kept under ~500 lines with detail pushed into `references/`:
 - **References** — official docs and the source that supplied each non-obvious claim.
 
 Re-read the description against the original request: would this session have triggered it?
+
+Before landing, check:
+
+- **No near-duplicate:** for a `create`, scan the skill list once more; a partial overlap
+  you missed means `extend` instead.
+- **Companion files exist:** every `scripts/`, `references/` or `assets/` path the
+  `SKILL.md` names is really there.
+- **No stale references:** after a `deprecate` or `split`, nothing (other skills,
+  `index/routes.json`) still points at the old name or path.
+- **Nothing ephemeral leaked:** no timestamps, hashes, ports, usernames or one-off paths.
 
 **Drafting and testing — hand off to `skill-creator`** (`claude-plugins-official`) when it is
 installed, rather than hand-rolling the checks. Harvest decides *whether*, *what type*,
@@ -138,7 +186,9 @@ symlink into a version-controlled directory so it is not the only copy.
 
 ```
 Harvested:  <name> (<artifact type>)
+Operation:  <create | update | extend | deprecate | split | none>
 Why:        <repeats / hard-won / not covered — one line each>
+Skipped:    <candidates considered and dropped, and why>
 Cleaned:    <what was removed or generalised>
 PR 1:       <content repo branch or URL>
 PR 2:       <harness branch or URL, or "after PR 1 merges">

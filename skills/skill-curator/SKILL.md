@@ -1,7 +1,7 @@
 ---
 name: skill-curator
 description: This skill should be used to keep a skill library from only growing — the user says "curate my skills", "which skills are unused", "prune stale skills", "clean up the skill library", "are there duplicate skills", "what should I retire", or a periodic maintenance run is due (weekly, or before adding many skills). Counts real usage from Claude Code transcripts, classifies each skill active / stale / archive-candidate with pinned and depended-on skills exempt, optionally proposes merges, and lands every change as a reviewable PR — never deletes, never retires on an LLM's judgement alone.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Skill curator — retire on evidence, through a PR
@@ -41,6 +41,7 @@ repo's `.claude-plugin/marketplace.json`:
 | `active` | Used within `stale_after_days` (14), **or** never used but younger than 14 days: zero uses is absence of evidence, not proof. |
 | `stale` | Idle ≥ 14 days. Report only. |
 | `archive-candidate` | Idle ≥ `archive_after_days` (30). Propose retirement. |
+| `deprecated` | Its `SKILL.md` frontmatter has `deprecated: true` (harvest's `deprecate` operation). Propose retirement whatever the usage. |
 
 Third-party skills that were used are listed, report only: this curator never edits content it
 does not own (Hermes treats hub-installed skills the same way).
@@ -62,6 +63,7 @@ Two limits of the signal, stated in the PR every time:
 
 ## 3. Decide — per state
 
+- **deprecated** → propose retiring it the same way, naming its `replaced_by`.
 - **archive-candidate** → propose retiring it from the **harness**, not the repo: remove its
   name from the enabled list (for the kattakath fleet, `local.claudePlugins.marketplaces.kattakath.plugins`
   in nix-config `modules/shared/home.nix`). The skill stays published and one line restores

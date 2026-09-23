@@ -3,7 +3,7 @@
 
 Reads every transcript under the projects dir (default ~/.claude/projects), counts each
 skill use (a model `Skill` tool call, or a user typing `/<name>`), and classifies the
-content repo's own entries as active / stale / archive-candidate / pinned / exempt.
+content repo's own entries as active / stale / archive-candidate / deprecated / pinned / exempt.
 No LLM, no writes: it prints a report, and the curator turns it into a PR.
 
     skill-usage.py --repo <content-repo> [--projects DIR] [--now YYYY-MM-DD] [--json]
@@ -78,6 +78,15 @@ def git_added(repo, rel):
     return date.fromisoformat(out[-1]) if out else None
 
 
+def deprecated(repo, p):
+    """True when the entry's SKILL.md frontmatter says `deprecated: true` (harvest's marker)."""
+    for f in (repo / entry_dir(p)).rglob("SKILL.md"):
+        head = f.read_text(errors="replace").split("---")
+        if len(head) > 2 and re.search(r"^deprecated:\s*true\s*$", head[1], re.M):
+            return True
+    return False
+
+
 def entry_dir(p):
     return (p["skills"][0] if p.get("source") == "./" else p["source"]).removeprefix("./")
 
@@ -124,6 +133,8 @@ def main():
         refs = sorted(o for o, t in texts.items() if o != n and re.search(rf"`{re.escape(n)}`", t))
         if n in pinned:
             state = "pinned"
+        elif deprecated(repo, p):
+            state = "deprecated"  # marked by harvest; retire regardless of usage
         elif refs:
             state = "exempt"
         elif not mine and (age is None or age < stale_after):
@@ -163,7 +174,7 @@ def main():
         print(f"NOTE: window < {archive_after} days, so no skill can reach archive-candidate on absence alone.")
     print(f"(stale >= {stale_after}d idle, archive-candidate >= {archive_after}d idle)\n")
     print(f"{'state':18} {'uses':>4}  {'last used':10}  {'added':10}  name")
-    order = {"archive-candidate": 0, "stale": 1, "active": 2, "exempt": 3, "pinned": 4}
+    order = {"deprecated": 0, "archive-candidate": 1, "stale": 2, "active": 3, "exempt": 4, "pinned": 5}
     for r in sorted(rows, key=lambda r: (order[r["state"]], -r["idle_days"])):
         extra = f"  (used by {', '.join(r['referenced_by'])})" if r["referenced_by"] else ""
         print(f"{r['state']:18} {r['uses']:>4}  {r['last_used'] or '-':10}  {r['added'] or '-':10}  {r['name']}{extra}")

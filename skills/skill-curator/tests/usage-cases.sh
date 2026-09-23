@@ -7,6 +7,8 @@ src=$(cd "$here/../../.." && pwd)
 # into a scratch repo whose single commit is dated 2026-09-01: every entry is 91 days old.
 repo=$(mktemp -d); trap 'rm -rf "$repo"' EXIT
 (cd "$src" && git ls-files '.claude-plugin/*' 'index/*' '*.md' | tar -cf - -T -) | tar -xf - -C "$repo"
+# jsonresume-tailor gets harvest's deprecation marker, as a `deprecate` operation would add.
+sed -i '0,/^name: jsonresume-tailor$/s//name: jsonresume-tailor\ndeprecated: true\nreplaced_by: rag/' "$repo/skills/jsonresume-tailor/SKILL.md"
 git -C "$repo" init -q && git -C "$repo" add -A
 GIT_AUTHOR_DATE=2026-09-01T00:00:00Z GIT_COMMITTER_DATE=2026-09-01T00:00:00Z \
   git -C "$repo" -c user.name=t -c user.email=t@t commit -qm fixture
@@ -19,6 +21,7 @@ expect brain-signals stale          # user /brain-signals:tldr 21 days ago
 expect llmstxt archive-candidate    # last use 42 days ago
 expect android-phone archive-candidate  # never used across a 77-day window, old enough
 expect harvest pinned
+expect jsonresume-tailor deprecated  # frontmatter marker wins over usage and age
 expect superhook exempt             # another entry refers to it
 third=$(printf '%s' "$out" | python3 -c "import json,sys;print(','.join(json.load(sys.stdin)['third_party']))")
 [ "$third" = "someone-else:thing" ] && echo "ok   third-party reported" || { echo "FAIL third-party: $third"; fail=1; }
