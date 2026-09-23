@@ -1,0 +1,115 @@
+{
+  "_comment": "Outside sources this map routes to. One entry per source. `adopted` = declared in kattakath/nix-config today; a candidate is vetted but not declared. Checked is the date the stars/activity/claims were last verified. INDEX.md is generated from this file: edit here, then run scripts/build-index.py.",
+  "sources": [
+    {
+      "id": "official",
+      "name": "claude-plugins-official",
+      "repo": "anthropics/claude-plugins-official",
+      "kind": "collection + index",
+      "consume": "marketplace (default)",
+      "adopted": true,
+      "use_for": "First-party and partner plugins: skill-creator, claude-md-management, hookify, security-guidance, frontend-design.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "community",
+      "name": "claude-plugins-community",
+      "repo": "anthropics/claude-plugins-community",
+      "kind": "index",
+      "consume": "search its .claude-plugin/marketplace.json (2,282 entries, each pinned to a commit and security-scanned); declare picked plugins only",
+      "adopted": false,
+      "use_for": "The widest vetted plugin search. Query before building anything.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "skills-sh",
+      "name": "skills.sh + find-skills",
+      "repo": "vercel-labs/skills",
+      "kind": "index",
+      "consume": "find-skills skill; `curl https://skills.sh/api/search?q=<term>`; `npx skills find` (never `add` under a harness)",
+      "adopted": true,
+      "use_for": "Skill search ranked by install count. Bar: 1K+ installs, repo 100+ stars.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "mcp-registry",
+      "name": "Official MCP Registry",
+      "repo": "modelcontextprotocol/registry",
+      "kind": "index",
+      "consume": "`https://registry.modelcontextprotocol.io/v0/servers?search=<term>`, then Smithery `https://registry.smithery.ai/servers?q=<term>`",
+      "adopted": true,
+      "use_for": "MCP server search. Adoption goes through nix-config's mcp-scout, never `claude mcp add`.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "anthropic-skills",
+      "name": "anthropics/skills",
+      "repo": "anthropics/skills",
+      "kind": "collection",
+      "consume": "marketplace",
+      "adopted": false,
+      "use_for": "Anthropic's reference skills (documents, design, skill-creator).",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "trailofbits",
+      "name": "trailofbits/skills",
+      "repo": "trailofbits/skills",
+      "kind": "collection",
+      "consume": "marketplace, or cherry-pick skill dirs from the pinned flake input (as nix-config does)",
+      "adopted": true,
+      "use_for": "Security and GitHub-CLI skills, heavily tested. CC-BY-SA-4.0.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "superpowers",
+      "name": "obra/superpowers",
+      "repo": "obra/superpowers",
+      "kind": "collection",
+      "consume": "cherry-pick skill dirs from the pinned flake input",
+      "adopted": true,
+      "use_for": "Engineering discipline skills (systematic-debugging adopted; writing-skills overlaps skill-creator).",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "wshobson",
+      "name": "wshobson/agents",
+      "repo": "wshobson/agents",
+      "kind": "collection",
+      "consume": "marketplace `claude-code-workflows`: 94 small plugins, declare one at a time",
+      "adopted": false,
+      "use_for": "General engineering agents and skills by language and domain. Finest-grained large collection.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "compound",
+      "name": "EveryInc/compound-engineering-plugin",
+      "repo": "EveryInc/compound-engineering-plugin",
+      "kind": "collection",
+      "consume": "marketplace",
+      "adopted": false,
+      "use_for": "Plan, work, review, compound workflow; the most eval-tested collection. ce-compound's keep-or-drop test is already borrowed by harvest.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "ai-ready",
+      "name": "johnpapa/ai-ready",
+      "repo": "johnpapa/ai-ready",
+      "kind": "collection",
+      "consume": "marketplace",
+      "adopted": false,
+      "use_for": "Mine a repo's PR review comments into AGENTS.md, weighting recent ones and flagging superseded conventions.",
+      "checked": "2026-09-23"
+    },
+    {
+      "id": "awesome-claude-code",
+      "name": "awesome-claude-code",
+      "repo": "hesreallyhim/awesome-claude-code",
+      "kind": "index",
+      "consume": "THE_RESOURCES_TABLE_NEW.csv (with Active / Last Checked / Stale columns)",
+      "adopted": false,
+      "use_for": "Tools, hooks and workflows that are not packaged as plugins.",
+      "checked": "2026-09-23"
+    }
+  ]
+}

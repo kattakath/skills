@@ -17,6 +17,9 @@ To pick up new commits on your next session, open `/plugin` → Marketplaces →
 
 ## Contents
 
+Looking for a way to do something? Start at [INDEX.md](INDEX.md): goal → route, pointing to
+outside sources first and to what's here only where nobody else has charted it.
+
 | Name | What it does |
 |---|---|
 | [`claude-code-nix`](plugins/claude-code-nix) | Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. |

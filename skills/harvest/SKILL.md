@@ -1,7 +1,7 @@
 ---
 name: harvest
 description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo — not as a loose file in ~/.claude.
-version: 0.3.0
+version: 0.4.0
 ---
 
 # Harvest — turn a session's discovery into a pinned, reusable artifact
@@ -129,6 +129,7 @@ symlink into a version-controlled directory so it is not the only copy.
 | Prior art to search | nix-config `docs/` (ADRs, runbooks), `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
 | Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships, no pin |
 | New skill | `skills/<name>/` plus a marketplace entry (`"source": "./"`, `"strict": false`, `"skills": ["./skills/<name>"]`) |
+| Index | a route in `index/routes.json` (goal → steps; `gap: true` if no outside source covers it), then `python3 scripts/build-index.py`. CI fails if a skill has no route. An outside source that did the job goes in `index/sources.json` instead of a new skill. |
 | Enable | append the plugin name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |
 | MCP servers | never harvested here — adopted only through nix-config's `mcp-scout` |

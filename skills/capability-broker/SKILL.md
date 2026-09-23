@@ -1,7 +1,7 @@
 ---
 name: capability-broker
 description: This skill should be used when a goal needs a capability the session may not have — the user asks "is there an MCP / skill / plugin / tool for X", "find me a way to automate X", "install <server or plugin>", "connect Claude to <service>", "can you do X on <site/app>", or any time the next step would be installing something. Takes stock of what is already here, finds and vets what is not, picks the least powerful thing that works, and adopts it through the environment's own rail (a declarative harness if one exists), with a human at every auth, money or irreversible step.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Capability broker — have → find → vet → adopt
@@ -54,6 +54,10 @@ two sessions: one to adopt, one to execute. Say so up front.
 
 ## 3. Find — search in this order
 
+0. **The map first:** the operator's `INDEX.md` routes goals to skills here and to outside
+   sources already vetted (for the kattakath fleet:
+   https://github.com/kattakath/skills/blob/main/INDEX.md). A charted route beats a search.
+   A goal that took a search to reach is a route to add there once it works (see `harvest`).
 1. **Skills:** the `find-skills` skill, or its API directly:
    `curl -s 'https://skills.sh/api/search?q=<term>'` (JSON with install counts; no key).
    Its bar, kept here: prefer 1K+ installs (be wary under 100), a known source, and a
