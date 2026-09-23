@@ -1,7 +1,7 @@
 ---
 name: capability-broker
 description: This skill should be used when a goal needs a capability the session may not have — the user asks "is there an MCP / skill / plugin / tool for X", "find me a way to automate X", "install <server or plugin>", "connect Claude to <service>", "can you do X on <site/app>", or any time the next step would be installing something. Takes stock of what is already here, finds and vets what is not, picks the least powerful thing that works, and adopts it through the environment's own rail (a declarative harness if one exists), with a human at every auth, money or irreversible step.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Capability broker — have → find → vet → adopt
@@ -54,12 +54,20 @@ two sessions: one to adopt, one to execute. Say so up front.
 
 ## 3. Find — search in this order
 
-1. **Skills:** the `find-skills` skill (skills.sh), then GitHub for `SKILL.md` repos.
+1. **Skills:** the `find-skills` skill, or its API directly:
+   `curl -s 'https://skills.sh/api/search?q=<term>'` (JSON with install counts; no key).
+   Its bar, kept here: prefer 1K+ installs (be wary under 100), a known source, and a
+   source repo with 100+ stars.
+   Use `npx skills find` to search only, never `npx skills add` under a harness: it writes
+   straight into the agent's skills folder, around the declared set. Then GitHub for
+   `SKILL.md` repos (`gh search code 'filename:SKILL.md <term>'`).
 2. **Plugins:** `/plugin` → Discover across added marketplaces; the official marketplace
    (`claude-plugins-official`) before the community one (`claude-plugins-community`).
 3. **MCP servers:** a registry search tool if one is wired (e.g. `mcpfinder`'s
    `search_mcp_servers`), else the Official MCP Registry
-   (`https://registry.modelcontextprotocol.io/v0/servers?search=<term>`).
+   (`https://registry.modelcontextprotocol.io/v0/servers?search=<term>`), then Smithery
+   (`https://registry.smithery.ai/servers?q=<term>`). Both answer without a key as of
+   2026-09; Glama's API needs one.
 4. **Vendor docs:** does the vendor ship an official CLI, MCP server or plugin? Official
    beats community at equal fit.
 

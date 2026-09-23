@@ -1,7 +1,7 @@
 ---
 name: harvest
 description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo — not as a loose file in ~/.claude.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Harvest — turn a session's discovery into a pinned, reusable artifact
@@ -24,7 +24,10 @@ harness may delete on the next activation.
 - **Repeats:** will this come up again (a yearly filing, a recurring migration, a tool
   used monthly)? One-off answers are not skills.
 - **Hard-won:** did it take measurement, failed attempts or reading that the next
-  session would repeat? Common knowledge is not worth the context it costs.
+  session would repeat? Common knowledge is not worth the context it costs. The
+  counterfactual test (from EveryInc's `ce-compound`): *if this were never written down,
+  would the next session make the same mistake or redo the same digging?* No → drop it.
+  One learning per harvest; a session with three gets three decisions.
 - **Not already covered:** search where this knowledge may already be written, not just
   where skills live:
   - existing skills: the listing in context, the content repo, `find-skills`;
@@ -49,7 +52,8 @@ If any answer is no, say so and stop. Declining to harvest is a valid outcome.
 | A role with a restricted tool set | **Subagent** (`agents/<name>.md`) | Content repo, or a plugin |
 | A fan-out orchestration that worked | **Workflow** — save from `/workflows` with `s` | Project or `~/.claude/workflows/`, then the content repo |
 | Hooks, commands and skills that ship together | **Plugin** | Content repo `plugins/<name>/` + marketplace entry |
-| A fact about the user or a project | **Memory**, not an artifact | The memory system / project `CLAUDE.md` |
+| A fact about the user or a project | **Memory**, not an artifact | The memory system / project `CLAUDE.md` (`claude-md-management`'s `/revise-claude-md` drafts that diff, if installed) |
+| A correction that should block an action next time | **Hook rule** | `hookify` (if installed) writes it from the conversation; else a plugin hook |
 | Specific to one repo | **Project config** | That repo's `.claude/`, never the global set |
 
 Most harvests are skills. Choose a plugin only when there is a hook or command that must
@@ -80,6 +84,19 @@ Body, kept under ~500 lines with detail pushed into `references/`:
 - **References** — official docs and the source that supplied each non-obvious claim.
 
 Re-read the description against the original request: would this session have triggered it?
+
+**Drafting and testing — hand off to `skill-creator`** (`claude-plugins-official`) when it is
+installed, rather than hand-rolling the checks. Harvest decides *whether*, *what type*,
+*what to strip* and *where it lands*; skill-creator owns *does it work*:
+
+- write 2–3 realistic test prompts from this session (the request that started it is the
+  first) and run its with-skill / without-skill evals;
+- run its description optimization, so the skill triggers on the phrases users actually
+  say, not the ones the author guessed;
+- its `quick_validate.py` checks the frontmatter.
+
+Its evals and optimization loop call `claude -p` repeatedly and cost tokens: worth it for a
+new skill, skip for a one-paragraph pitfall added to an existing one.
 
 ## 5. Land — through the operator's rail
 
