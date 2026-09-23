@@ -34,7 +34,7 @@ one real anti-pattern here.
 ## Install
 
 ```bash
-/plugin marketplace add kattakath/claude-plugins
+/plugin marketplace add kattakath/skills
 /plugin install claude-code-nix@kattakath
 ```
 

@@ -1,11 +1,18 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "claude-code-nix",
-  "version": "1.0.0",
   "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values.",
-  "author": { "name": "Ismail Kattakath" },
-  "homepage": "https://github.com/kattakath/ai",
-  "repository": "https://github.com/kattakath/ai",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills",
+  "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
-  "keywords": ["nix", "flakes", "hooks", "home-manager", "claude-code"]
+  "keywords": [
+    "nix",
+    "flakes",
+    "hooks",
+    "home-manager",
+    "claude-code"
+  ]
 }

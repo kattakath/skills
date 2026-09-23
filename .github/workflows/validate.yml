@@ -1,0 +1,49 @@
+name: validate
+
+# Every commit on main is a release: plugins here carry no `version`, so Claude
+# Code treats each commit SHA as a new version and auto-update ships it. This is
+# the gate in front of that.
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Validate marketplace and every plugin
+        run: |
+          npx -y @anthropic-ai/claude-code plugin validate .
+          for p in plugins/*/; do npx -y @anthropic-ai/claude-code plugin validate "$p"; done
+
+      # A plugin script never runs at install time, so a syntax error would ship
+      # silently and only surface mid-session.
+      - name: Scripts parse
+        run: |
+          rc=0
+          for f in $(find plugins -path '*/scripts/*' \( -name '*.js' -o -name '*.mjs' \)); do
+            node --check "$f" || { echo "::error file=$f::does not parse"; rc=1; }
+          done
+          for f in $(find plugins -name '*.sh'); do
+            bash -n "$f" || { echo "::error file=$f::bad shell syntax"; rc=1; }
+          done
+          exit $rc
+
+      # The negative fixtures matter most: a validator that cannot reject anything
+      # is decoration.
+      - name: page-lab envelope self-test
+        run: node plugins/page-lab/scripts/pick-validate.mjs --self-test plugins/page-lab/scripts/fixtures
+
+      - name: mac-app-send guard cases
+        run: bash plugins/mac-app-send/tests/guard-cases.sh

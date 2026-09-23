@@ -97,8 +97,8 @@ are reverted on the next activation. Instead hand off:
 - **MCP server** → the harness repo's adoption pipeline (e.g. `/mcp-scout` in the config
   repo): open an issue or PR there with the vetted record from § Vet (`gh issue create` /
   `gh pr create`), or tell the operator to run it there.
-- **Skill** → the operator's content repo plus a pin bump in the harness (see the
-  `harvest` skill, which owns that two-PR flow).
+- **Skill** → the operator's content repo, plus an enable line in the harness for a new
+  one (see the `harvest` skill, which owns that flow).
 - **Plugin** → the harness's declared marketplace list, same PR shape.
 
 **If no harness exists:** skills go to `~/.claude/skills/<name>/`; plugins via

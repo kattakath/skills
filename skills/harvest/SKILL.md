@@ -1,6 +1,6 @@
 ---
 name: harvest
-description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo and pin — not as a loose file in ~/.claude.
+description: This skill should be used at the end of a task that produced something worth repeating — the user says "save this as a skill", "remember how to do this", "make this reusable", "turn this into an agent/workflow", "harvest this session", or a capability-broker run found a procedure, site flow or tool combination that should not be rediscovered next time. Decides the right artifact type, strips anything machine- or secret-specific, writes it in the standard format, and lands it through the operator's content repo — not as a loose file in ~/.claude.
 version: 0.1.0
 ---
 
@@ -79,11 +79,13 @@ resolves into a store, skills are declared, not dropped into `~/.claude/skills`.
 
 1. **Content repo PR** — add `skills/<name>/` (or the plugin and its marketplace entry) on a
    branch; one PR per artifact; title and commit style follow that repo.
-2. **Harness PR, after (1) merges** — bump the content input's pin and declare the new
-   entry. For a Nix harness that is `nix flake update <content-input>` plus one attribute
-   in the skills (or plugins) set; run the harness's own checks before opening it.
+2. **Harness PR, after (1) merges, for a NEW artifact only** — enable it. If the harness
+   registers the content repo as a git marketplace with auto-update, that is one line (the
+   plugin's name in the enabled list) and no pin bump; run the harness's own checks before
+   opening it. A change to an artifact that is already enabled needs no harness PR at all:
+   the marketplace's auto-update delivers it.
 
-Until (2) activates, the new skill is not loaded globally. For immediate use in the
+Until (2) activates, a new skill is not loaded globally. For immediate use in the
 current project only, a copy under that project's `.claude/skills/` is acceptable if it is
 deleted before the harness PR lands (two copies of one skill shadow each other).
 
@@ -94,11 +96,11 @@ symlink into a version-controlled directory so it is not the only copy.
 
 | Piece | Value |
 |---|---|
-| Content repo | `github:kattakath/ai` (`skills/`, `plugins/`, `.claude-plugin/marketplace.json`) |
+| Content repo | `github:kattakath/skills` (`skills/`, `plugins/`, `.claude-plugin/marketplace.json`) |
 | Harness repo | `github:kattakath/nix-config` |
-| Pin | flake input `kattakath-ai` |
-| Skill declaration | `programs.claude-code.skills.<name> = "${kattakath-ai}/skills/<name>";` in `modules/shared/home.nix` |
-| Plugin declaration | append the bare name to `local.claudePlugins.marketplaces.kattakath.plugins` |
+| Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships, no pin |
+| New skill | `skills/<name>/` plus a marketplace entry (`"source": "./"`, `"strict": false`, `"skills": ["./skills/<name>"]`) |
+| Enable | append the plugin name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |
 | MCP servers | never harvested here — adopted only through nix-config's `mcp-scout` |
 

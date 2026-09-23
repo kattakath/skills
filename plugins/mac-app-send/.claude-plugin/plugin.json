@@ -1,13 +1,12 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "mac-app-send",
-  "version": "0.1.0",
   "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files — the method skill, a preflight doctor that resolves the bundle id and grant state in one shot, a deterministic file manifest for verifying a send against disk, and a PreToolUse guard that blocks the three known-wrong moves before they cost a turn: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service that can never be granted.",
   "author": {
     "name": "Ismail Kattakath"
   },
-  "homepage": "https://github.com/kattakath/ai/tree/main/plugins/mac-app-send",
-  "repository": "https://github.com/kattakath/ai",
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mac-app-send",
+  "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [
     "macos",
