@@ -1,0 +1,30 @@
+name: auto-merge
+
+# Arms squash auto-merge on every PR whose branch lives in this repo. A fork's
+# PR is never armed: it waits for a human merge.
+#
+# Arming is not merging. GitHub merges once the branch's required checks pass,
+# so this relies on `validate` being a required check on main. Without that,
+# an armed PR merges immediately and skips the gate in front of every release.
+#
+# `pull_request`, not `pull_request_target`: a fork's run gets a read-only
+# token anyway, and nothing here checks out or runs PR code.
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review, synchronize]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  arm:
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3.0.0
+        with:
+          pull-request-number: ${{ github.event.pull_request.number }}
+          merge-method: squash
