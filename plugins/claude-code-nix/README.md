@@ -7,7 +7,7 @@ globally is safe.
 | Hook | What it does |
 |---|---|
 | `autostage-nix.js` | `git add`s a `.nix` file as soon as it is written or edited. |
-| `nix-home-path-lint.js` | Flags a hardcoded per-user home directory (`/Users/<name>/`, `/home/<name>/`) in a `.nix` **value**. |
+| `nix-home-path-lint.js` | Flags a hardcoded per-user home directory (`/Users/<name>`, `/home/<name>`) in a `.nix` **value** — except the line that *declares* one, `users.users.<name>.home = "/Users/<name>";`. |
 
 ## Why auto-staging is not a convenience
 
@@ -30,6 +30,28 @@ The hook flags only the second: a literal per-user home directory in a `.nix`
 *value* (not in a comment). `$HOME` is undefined at eval time and a runtime home
 path is neither reproducible nor store-addressable, so the hardcoded form is the
 one real anti-pattern here.
+
+The one exception is the line that *declares* a home:
+`users.users.<name>.home = "/Users/<name>";`. `$HOME` is undefined at eval and
+`config.users.users.<n>.home` there would be a self-reference, so the literal is
+required. The hook exempts it by **shape** (the string is the direct value of a
+`…home =` binding on the same line), not by account name, so it survives a
+rename — every other use of a home path stays flagged.
+
+The hook is the advisory half of a pair. The gate half is
+[`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s
+`ast-grep/rules/nix-hardcoded-home-path.yml`, which runs in CI on every commit;
+the two carry the same regex and exemptions and must change together (last
+synced 2026-09-16, nix-config PR #532).
+
+## Tests
+
+```bash
+node --test plugins/claude-code-nix/tests/nix-home-path-lint.test.js
+```
+
+The fixtures mirror the ast-grep rule's own `valid:`/`invalid:` test file, so
+both halves are proven against the same inputs.
 
 ## Install
 
