@@ -1,7 +1,8 @@
 # CLAUDE.md
 
-This is `kattakath/skills` — Ismail Kattakath's standalone Claude Code plugin marketplace
-and skill library. This file, plus `.claude/`, exist so this repo can be opened and worked
+This is `kattakath/skills` — Ismail Kattakath's general library of agent resources: Claude
+Code skills and plugins, plus portable data catalogs external harnesses consume directly.
+This file, plus `.claude/`, exist so this repo can be opened and worked
 on with **zero outside context**: no `~/.claude` personal config, no other repo's
 `CLAUDE.md` to inherit conventions from. If you're in a fresh Codespace or a clean
 container, everything needed to maintain this repo is in this tree.
