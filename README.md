@@ -1,4 +1,14 @@
-# kattakath/skills
+<p align="center">
+  <a href="https://kattakath.github.io">
+    <img src="https://raw.githubusercontent.com/kattakath/kattakath.github.io/refs/heads/main/logo.svg" width="280" alt="kattakath">
+  </a>
+</p>
+
+<h1 align="center">kattakath/skills</h1>
+
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+</p>
 
 Agent skills and [Claude Code](https://code.claude.com/docs) plugins by Ismail Kattakath.
 
