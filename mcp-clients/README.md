@@ -16,6 +16,14 @@ given host would supply.
 - `catalog.mcp.json` is data, not code: adding or updating an entry is a plain edit, validated
   by nothing more than being well-formed JSON.
 
+## Fidelity, not hardening
+
+This catalog mirrors nix-config's current production config verbatim, entry for entry — it
+is not a hardened template. Any tradeoff already made on the production side (an unpinned
+`@latest` npm tag, an access-mode flag) is inherited here as-is; see nix-config's own
+`modules/shared/mcp.nix` for the reasoning behind each one. Fixing a tradeoff here without
+also fixing the source it mirrors would just make the two diverge.
+
 ## Consumers
 
 `nix-config`'s MCP gateway reads this file as its declarative data source (the "adapter"
