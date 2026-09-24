@@ -1,7 +1,7 @@
 ---
 name: logo-construction-geometry
 description: This skill should be used when a logo exists only as a raster or as a noisy auto-traced SVG and needs a clean vector built from real geometry — the user says "rebuild this logo as proper SVG", "the trace is lumpy / hundreds of nodes", "convert this PNG logo to real circles and lines", "find the geometry behind this logo", "make the logo parametric", or "write a prompt so Claude Design rebuilds it cleanly". It measures the construction (centres, radii, angles, stroke, nodes), infers the rule that ties them together, regenerates the mark from a handful of named parameters, and scores the result against the source.
-version: 0.2.0
+version: 0.3.0
 ---
 
 # Logo construction geometry — measure the rule, don't trace the pixels
@@ -28,6 +28,8 @@ pip install numpy scipy scikit-image pillow cairosvg   # once
 python3 scripts/measure.py logo.png --color 39C5F3 [--crop x0,y0,x1,y1] > geometry.json
 ```
 
+All coordinates are **SVG coordinates**: pixel *i* spans [i, i+1], so the script adds 0.5 to pixel indices. `--index-coords` gives the raw indices. Output is deterministic: the RANSAC and Hough seeds are fixed.
+
 Run it once per ink colour and per region (icon vs. wordmark). It skeletonises the ink to
 centre-lines and reports:
 
@@ -35,7 +37,7 @@ centre-lines and reports:
 |---|---|---|
 | `circles` | iterative RANSAC + algebraic least-squares refit on the skeleton | several circles sharing a centre = concentric tracks; `rms` < 0.5 px = a true arc |
 | `angle_hist` | probabilistic Hough transform, length per 7.5° bin | a spike at 45°/135°/90° = a design angle; scattered short bins = arc chords (noise) |
-| `stroke_width` | ink area ÷ centre-line length | includes about 0.5 px of anti-aliasing: round it **down** |
+| `stroke_width` | ink area ÷ centre-line length | **an upper bound**: the synthetic benchmark measured it +0.6 to +2.2 px too wide (anti-aliased edges, node dots). Sweep downward and let the § 4 score decide |
 | `solid_nodes` / `hollow_nodes` | distance-transform peaks / small enclosed holes | terminals and on-track markers |
 | `graph` | skeleton pixel degree: endpoints (1), junctions (≥3) | **topology**: where tracks end, T-join, form a cusp, or merge into each other |
 
@@ -140,6 +142,9 @@ construction.
 
 ## Pitfalls
 
+- **The half-pixel convention.** Before v0.3, measure.py reported pixel indices. SVG coordinates are +0.5 px from those. Every fitted centre came out (−0.5, −0.5) off, which cost a real case study 0.06 IoU on the icon (0.696 → 0.754 after the fix). Found by a synthetic benchmark as a constant (−0.60, −0.63) px bias; fixed 2026-09-24.
+- **Ellipses are not circles.** measure.py fits circles only, so a stretched ring breaks into partial circles. In the benchmark, recall was 0.25–0.30 once sx > 1. Measure the stretch first (row vs column extents), divide x by it, then fit.
+- **A tracer will beat you on raw IoU.** potrace scored IoU 0.94 on the same raster, because it copies the raster's own drift. The construction keeps the rule. Report both numbers, plus how compact each SVG is (110 stored numbers vs 1,040), and say why.
 - **Scoring against the trace:** the traced SVG is not the reference. Score against the raster.
 - **A plausible rule borrowed from a sibling part.** "The 8 is the ∞ turned upright" looked
   right and scored fine overall. It was wrong: the 8 is two woven ring loops. Every

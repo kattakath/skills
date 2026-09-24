@@ -80,6 +80,8 @@ def main():
     ap.add_argument('--min-radius', type=float, default=8)
     ap.add_argument('--max-hole', type=float, default=200)
     ap.add_argument('--min-line', type=int, default=20)
+    ap.add_argument('--index-coords', action='store_true',
+                    help='report raw pixel indices instead of SVG coordinates (pixel i spans [i, i+1], so SVG = index + 0.5)')
     a = ap.parse_args()
 
     img = np.array(Image.open(a.png).convert('RGBA')).astype(int)
@@ -98,7 +100,7 @@ def main():
 
     # straight segments
     lines = []
-    for (x0, y0), (x1, y1) in probabilistic_hough_line(sk, threshold=10, line_length=a.min_line, line_gap=3):
+    for (x0, y0), (x1, y1) in probabilistic_hough_line(sk, threshold=10, line_length=a.min_line, line_gap=3, rng=0):
         ang = math.degrees(math.atan2(-(y1 - y0), x1 - x0)) % 180
         lines.append(dict(p0=[int(x0), int(y0)], p1=[int(x1), int(y1)], angle=round(ang, 1),
                           length=round(math.hypot(x1 - x0, y1 - y0), 1)))
@@ -145,9 +147,24 @@ def main():
                 for yy, xx in (np.where(lab == i) for i in range(1, n + 1))]
     graph = dict(endpoints=pts_of(sk & (deg == 1)), junctions=pts_of(sk & (deg >= 3)))
 
-    print(json.dumps(dict(size=[w, h], ink=a.color, stroke_width=round(stroke, 2), graph=graph,
-                          angle_hist=dict(sorted(hist.items(), key=lambda kv: -kv[1])),
-                          lines=lines, circles=circles, solid_nodes=solid, hollow_nodes=hollow), indent=1))
+    out = dict(size=[w, h], ink=a.color, coords='index' if a.index_coords else 'svg',
+               stroke_width=round(stroke, 2), graph=graph,
+               angle_hist=dict(sorted(hist.items(), key=lambda kv: -kv[1])),
+               lines=lines, circles=circles, solid_nodes=solid, hollow_nodes=hollow)
+    if not a.index_coords:
+        # Everything above is computed on pixel INDICES; SVG/cairo pixel i spans [i, i+1].
+        # Found by the synthetic benchmark (2026-09-24): a constant (-0.60, -0.63) px centre bias.
+        def shift(o):
+            if isinstance(o, dict):
+                return {k: (round(v + 0.5, 2) if k in ('cx', 'cy', 'x', 'y') and isinstance(v, (int, float))
+                            else [round(c + 0.5, 2) for c in v] if k in ('p0', 'p1') else shift(v))
+                        for k, v in o.items()}
+            if isinstance(o, list):
+                return [shift(v) for v in o]
+            return o
+        out = {k: (shift(v) if k in ('lines', 'circles', 'solid_nodes', 'hollow_nodes', 'graph') else v)
+               for k, v in out.items()}
+    print(json.dumps(out, indent=1))
 
 
 if __name__ == '__main__':
