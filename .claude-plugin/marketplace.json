@@ -1,7 +1,7 @@
 {
   "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
   "name": "kattakath",
-  "description": "Ismail Kattakath's agent skills and Claude Code plugins: an answer-shape kit, hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, a repo foundation audit, macOS app automation, and standalone skills for local RAG, Android over ADB, Nix dev toolkits, capability discovery, skill harvesting and curation, JSON Resume tailoring and GitHub release gating.",
+  "description": "Ismail Kattakath's agent skills and Claude Code plugins: an answer-shape kit, hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, a repo foundation audit, macOS app automation, and standalone skills for local RAG, Android over ADB, Nix dev toolkits, capability discovery, skill harvesting and curation, discovery write-ups, JSON Resume tailoring and GitHub release gating.",
   "owner": {
     "name": "Ismail Kattakath",
     "url": "https://github.com/kattakath"
@@ -261,6 +261,21 @@
       "strict": false,
       "skills": [
         "./skills/skill-curator"
+      ]
+    },
+    {
+      "name": "brag-dossier",
+      "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "documentation",
+      "homepage": "https://github.com/kattakath/skills/tree/main/skills/brag-dossier",
+      "license": "MIT",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/brag-dossier"
       ]
     }
   ]

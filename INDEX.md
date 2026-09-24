@@ -19,6 +19,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | ● Operate a physical Android phone over ADB | [`android-phone`](skills/android-phone) |  |
 | ● Send a formatted message with attachments from a native macOS app | [`mac-app-send`](plugins/mac-app-send) |  |
 | ● Work on a Nix flake repo with Claude Code | [`nix-dev-toolkit`](skills/nix-dev-toolkit) → [`claude-code-nix`](plugins/claude-code-nix) |  |
+| ● Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from | [`brag-dossier`](skills/brag-dossier) | Channel formatting is inherited: search the map and indexes for a repurposing skill. |
 | Answer questions from a local document corpus | [`rag`](skills/rag) |  |
 | Author an llms.txt | [`llmstxt`](plugins/llmstxt) |  |
 | Debug a failure methodically | [obra/superpowers](https://github.com/obra/superpowers) | systematic-debugging is the adopted skill. |

@@ -30,6 +30,14 @@
       "gap": true
     },
     {
+      "goal": "Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from",
+      "steps": [
+        "brag-dossier"
+      ],
+      "note": "Channel formatting is inherited: search the map and indexes for a repurposing skill.",
+      "gap": true
+    },
+    {
       "goal": "Make a repo's default branch a safe, auto-merging release",
       "steps": [
         "github-release-gate"
