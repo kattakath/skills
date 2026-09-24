@@ -1,0 +1,20 @@
+# Dependabot version updates.
+#
+# Scope: GitHub Actions only. Every action here is SHA-pinned (a `# vX` comment
+# for readability, but the `uses:` line takes the SHA) — including
+# anthropics/claude-plugins-community's validate-plugins action, which its own
+# RELEASING.md requires pinning to a commit for exactly this reason: a mutable
+# ref would let anyone who can push to that repo run arbitrary code in this
+# repo's CI. Left alone, pins rot silently; Dependabot bumps them automatically
+# and opens a PR that this repo's own `validate` + ruleset gate before it merges.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directories:
+      - "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
