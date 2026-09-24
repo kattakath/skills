@@ -9,6 +9,8 @@ Emits JSON (stdout) with evidence you can reason about, instead of traced outlin
                  centre, radius, inlier count, residual RMS, angular coverage
   solid_nodes    filled dots (distance-transform peaks wider than the stroke)
   hollow_nodes   small ring nodes (enclosed holes below --max-hole px^2)
+  graph          skeleton topology: endpoints (degree 1) and junctions (degree >= 3),
+                 clustered. Read it BEFORE fitting: where tracks end, T-join, cusp or merge.
 
 Usage:
   measure.py logo.png --color 39C5F3 [--tol 60] [--crop x0,y0,x1,y1] [--min-radius 8]
@@ -135,7 +137,15 @@ def main():
             hollow.append(dict(x=round(xx.mean(), 1), y=round(yy.mean(), 1),
                                hole_r=round(math.sqrt(len(yy) / math.pi), 1)))
 
-    print(json.dumps(dict(size=[w, h], ink=a.color, stroke_width=round(stroke, 2),
+    # topology: degree of each skeleton pixel (8-neighbourhood), clustered into points
+    deg = ndi.convolve(sk.astype(int), np.ones((3, 3), int), mode='constant') - 1
+    def pts_of(mask):
+        lab, n = ndi.label(ndi.binary_dilation(mask, iterations=1))
+        return [dict(x=round(float(xx.mean()), 1), y=round(float(yy.mean()), 1))
+                for yy, xx in (np.where(lab == i) for i in range(1, n + 1))]
+    graph = dict(endpoints=pts_of(sk & (deg == 1)), junctions=pts_of(sk & (deg >= 3)))
+
+    print(json.dumps(dict(size=[w, h], ink=a.color, stroke_width=round(stroke, 2), graph=graph,
                           angle_hist=dict(sorted(hist.items(), key=lambda kv: -kv[1])),
                           lines=lines, circles=circles, solid_nodes=solid, hollow_nodes=hollow), indent=1))
 

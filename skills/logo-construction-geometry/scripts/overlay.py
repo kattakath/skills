@@ -7,7 +7,8 @@ Rasterises the SVG at the reference's pixel size, then reports:
   off_px         pixels more than --tol px from the other mask (true shape error)
 and writes a diff PNG: yellow = both, red = reference only, green = SVG only.
 
-Usage: overlay.py reference.png rebuilt.svg [--diff diff.png] [--scale 3] [--tol 1.5]
+Usage: overlay.py reference.png rebuilt.svg [--diff diff.png] [--scale 3] [--tol 1.5] [--crop x0,y0,x1,y1]
+Score EACH component with --crop too: a whole-logo IoU hides a wrong small part.
 Needs: numpy, scipy, pillow, cairosvg (masks/filters: prefer --chromium for exact browser rendering).
 """
 import argparse, io, json
@@ -37,10 +38,14 @@ def main():
     ap.add_argument('--scale', type=int, default=3)
     ap.add_argument('--tol', type=float, default=1.5)
     ap.add_argument('--chromium', action='store_true')
+    ap.add_argument('--crop', help='x0,y0,x1,y1: score one component only')
     a = ap.parse_args()
     ref = Image.open(a.ref).convert('RGBA'); w, h = ref.size
     new = render(a.svg, w, h, a.chromium)
     ra = np.array(ref)[..., 3] > 100; na = np.array(new)[..., 3] > 100
+    if a.crop:
+        x0, y0, x1, y1 = map(int, a.crop.split(','))
+        ra, na = ra[y0:y1, x0:x1], na[y0:y1, x0:x1]; h, w = ra.shape
     iou = (ra & na).sum() / max((ra | na).sum(), 1)
     k = ndi.generate_binary_structure(2, 1)
     rd, nd = ndi.binary_dilation(ra, k), ndi.binary_dilation(na, k)

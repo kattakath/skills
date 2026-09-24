@@ -1,7 +1,7 @@
 ---
 name: logo-construction-geometry
 description: This skill should be used when a logo exists only as a raster or as a noisy auto-traced SVG and needs a clean vector built from real geometry — the user says "rebuild this logo as proper SVG", "the trace is lumpy / hundreds of nodes", "convert this PNG logo to real circles and lines", "find the geometry behind this logo", "make the logo parametric", or "write a prompt so Claude Design rebuilds it cleanly". It measures the construction (centres, radii, angles, stroke, nodes), infers the rule that ties them together, regenerates the mark from a handful of named parameters, and scores the result against the source.
-version: 0.1.0
+version: 0.2.0
 ---
 
 # Logo construction geometry — measure the rule, don't trace the pixels
@@ -37,6 +37,15 @@ centre-lines and reports:
 | `angle_hist` | probabilistic Hough transform, length per 7.5° bin | a spike at 45°/135°/90° = a design angle; scattered short bins = arc chords (noise) |
 | `stroke_width` | ink area ÷ centre-line length | includes about 0.5 px of anti-aliasing: round it **down** |
 | `solid_nodes` / `hollow_nodes` | distance-transform peaks / small enclosed holes | terminals and on-track markers |
+| `graph` | skeleton pixel degree: endpoints (1), junctions (≥3) | **topology**: where tracks end, T-join, form a cusp, or merge into each other |
+
+**Topology before geometry.** Read `graph` and look at a 10× crop of every place where
+lines come close. Circle fits say *which* curves exist. They don't say *where each one stops*
+or *what it joins*. A clean-looking model with the wrong topology fails there.
+- An endpoint just beyond a junction, sitting on a short spur, is a **sharp cusp tip**:
+  the skeleton of an acute corner leaves a spur.
+- Two junctions joined by a short arc usually mean one ring **continues into another**. The
+  union outline of two discs does this.
 
 Check: the circles found match what you see; nothing important is missing from the lists.
 For letterforms, sample row and column runs across stems, arches and bars (stem width,
@@ -55,6 +64,15 @@ Look for **relations**, not values. Common ones:
 - **Parallel offsets swap radius at a crossing:** a track at r_mid + δ on one lobe comes out
   at r_mid − δ on the other. Check it: each line's distances to the two centres add up to
   the same constant.
+- **Weaving / merging:** where rings of neighbouring loops meet, test each junction against
+  three candidates, and let the per-component score decide:
+  - **full rings** (plain overlap);
+  - **the outline of two discs combined** (one ring vanishes at a cusp and remerges as the
+    other);
+  - **an open arc that stops on another ring** (a T-junction).
+  In circle space, two circles r₁ at c₁ and r₂ at c₂ (distance d) meet at
+  `y = (c₁+c₂)/2 + (r₁²−r₂²)/(2d)`, `x = ±√(r₁²−(y−c₁)²)`. Those two points are the arc
+  endpoints, so a merge stays pure `A` commands, with no clipPath.
 - **Symmetry:** point symmetry or mirror symmetry. Test it by transforming the measured
   nodes; don't assume it.
 - **Type:** stem = dot diameter = bar extension; arches are concentric semicircles
@@ -88,6 +106,10 @@ python3 scripts/overlay.py logo.png rebuilt.svg --diff diff.png --chromium # mas
   edges are mostly anti-aliasing.
 - `iou_tolerant` — with a 1 px tolerance. Aim for **≥ 0.9**.
 - `off_px` — ink more than 1.5 px from the other mask. This is the real shape error.
+- **Score every component with `--crop`**, not just the whole logo. A small part's error
+  disappears in the average. Measured 2026-09-24: a wrong topology for one glyph moved the
+  **whole-logo** tolerant IoU by only 0.003 (0.905 → 0.908). The **glyph's own** crop
+  showed it plainly: off-px 73 → 3, IoU 0.68 → 0.83.
 - **Look at `diff.png`** (yellow = both, red = source only, green = rebuild only). A
   consistent red/green offset along one ring means a wrong radius or centre. Scattered
   fringes are anti-aliasing.
@@ -119,6 +141,12 @@ construction.
 ## Pitfalls
 
 - **Scoring against the trace:** the traced SVG is not the reference. Score against the raster.
+- **A plausible rule borrowed from a sibling part.** "The 8 is the ∞ turned upright" looked
+  right and scored fine overall. It was wrong: the 8 is two woven ring loops. Every
+  component earns its own rule from its own measurements.
+- **Unequal pitch can be real.** Snap to equal spacing only if the component score survives
+  it. The same 8 lost 1.7 IoU points when snapped to equal pitch, so the unequal pitch
+  stayed.
 - **Filled outlines for strokes:** they double the node count and break stroke-width edits.
 - **Reading EDT × 2 as stroke width:** on diagonals the distance transform reads low; use
   area ÷ length.
