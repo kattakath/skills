@@ -10,11 +10,12 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
-Agent skills and [Claude Code](https://code.claude.com/docs) plugins by Ismail Kattakath.
+Agent resources by Ismail Kattakath — Claude Code skills and plugins, plus portable data catalogs (like MCP server configs) that external harnesses read and consume.
 
 - `skills/` holds standalone [Agent Skills](https://agentskills.io): one folder per skill, each with a `SKILL.md`.
 - `plugins/` holds Claude Code plugins that bundle skills with commands, agents, hooks or output styles.
 - `.claude-plugin/marketplace.json` publishes both as the `kattakath` marketplace.
+- `mcp-clients/` and `mcp/` hold portable MCP data — a client-config catalog and (eventually) registry declarations — consumed by external harnesses like nix-config, not installed as plugins.
 
 ## Install
 

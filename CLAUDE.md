@@ -8,6 +8,11 @@ container, everything needed to maintain this repo is in this tree.
 
 ## What this repo is
 
+This repo is broader than "plugin marketplace" — it's the operator's general library of
+agent resources; some of it (skills, plugins) installs via Claude Code's marketplace
+mechanism, some (`mcp-clients/`, `mcp/`) is portable data external harnesses consume
+directly.
+
 - Published as `github:kattakath/skills`. Consumers run `/plugin marketplace add
   kattakath/skills` then `/plugin install <name>@kattakath`.
 - Two shapes of content, one catalog:
@@ -22,6 +27,9 @@ container, everything needed to maintain this repo is in this tree.
   rerun the script. CI's `Index up to date` check fails a PR where they've drifted.
 - `mcp/` holds MCP server declarations (one `server.json` per the MCP registry schema) —
   documented, none declared yet.
+- `mcp-clients/` holds a portable MCP *client*-config catalog (the plain `mcpServers` shape
+  every server's own README shows) — data, not a plugin; nix-config's gateway reads it
+  directly.
 - **Plugins here carry no `version` field: every commit on `main` is a new release**,
   shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
   on what merges to `main` — see § Shipping a change.
