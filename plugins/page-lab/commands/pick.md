@@ -1,6 +1,6 @@
 ---
 description: Point at an element in the browser and get a dated, verified selector back — the operator clicks, the agent measures the exact node that was clicked.
-argument-hint: [what you are about to point at]
+argument-hint: "[what you are about to point at]"
 ---
 
 Take a pick for: `$ARGUMENTS`

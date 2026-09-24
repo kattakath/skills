@@ -1,7 +1,7 @@
 ---
 name: compare
 description: Compare/contrast two or more options as a decision table. Use when I ask to compare, contrast, or choose between alternatives.
-argument-hint: [A] vs [B]
+argument-hint: "[A] vs [B]"
 ---
 Compare $ARGUMENTS.
 Lead with a 1-line recommendation.
