@@ -277,6 +277,21 @@
       "skills": [
         "./skills/brag-dossier"
       ]
+    },
+    {
+      "name": "logo-construction-geometry",
+      "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "design",
+      "homepage": "https://github.com/kattakath/skills/tree/main/skills/logo-construction-geometry",
+      "license": "MIT",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/logo-construction-geometry"
+      ]
     }
   ]
 }

@@ -26,6 +26,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | Find a capability before building or installing one | [`capability-broker`](skills/capability-broker) → [claude-plugins-community](https://github.com/anthropics/claude-plugins-community) → [skills.sh + find-skills](https://github.com/vercel-labs/skills) → [Official MCP Registry](https://github.com/modelcontextprotocol/registry) | Inventory first; the lightest capability that works wins; adoption goes through nix-config. |
 | General language- or domain-specific engineering agents | [wshobson/agents](https://github.com/wshobson/agents) | Candidate; pick single plugins, not the whole collection. |
 | Get scannable, verdict-first answers and architecture maps | [`brain-signals`](plugins/brain-signals) |  |
+| Rebuild a raster or auto-traced logo as clean, parametric SVG | [`logo-construction-geometry`](skills/logo-construction-geometry) | Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90). |
 | Security-review code or a dependency | `security-guidance` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [trailofbits/skills](https://github.com/trailofbits/skills) |  |
 | Supervise Claude Code hooks so one bad hook cannot wedge a session | [`superhook`](plugins/superhook) |  |
 | Tailor a resume to a job posting | [`jsonresume-tailor`](skills/jsonresume-tailor) |  |

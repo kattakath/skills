@@ -138,6 +138,13 @@
         "@wshobson"
       ],
       "note": "Candidate; pick single plugins, not the whole collection."
+    },
+    {
+      "goal": "Rebuild a raster or auto-traced logo as clean, parametric SVG",
+      "steps": [
+        "logo-construction-geometry"
+      ],
+      "note": "Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90)."
     }
   ]
 }
