@@ -145,6 +145,14 @@
         "logo-construction-geometry"
       ],
       "note": "Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90)."
+    },
+    {
+      "goal": "Reach, or be reached by, another Claude session running concurrently",
+      "steps": [
+        "session-relay"
+      ],
+      "note": "Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation.",
+      "gap": true
     }
   ]
 }
