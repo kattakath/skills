@@ -292,6 +292,21 @@
       "skills": [
         "./skills/logo-construction-geometry"
       ]
+    },
+    {
+      "name": "session-relay",
+      "description": "Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "homepage": "https://github.com/kattakath/skills/tree/main/skills/session-relay",
+      "license": "MIT",
+      "source": "./",
+      "strict": false,
+      "skills": [
+        "./skills/session-relay"
+      ]
     }
   ]
 }

@@ -17,6 +17,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | ● Keep the skill library from only growing: find unused skills and retire them | [`skill-curator`](skills/skill-curator) | Ported from Hermes Agent's curator; retires from the harness via PR, never deletes. |
 | ● Make a repo's default branch a safe, auto-merging release | [`github-release-gate`](skills/github-release-gate) | Required check first, App-token auto-merge second. |
 | ● Operate a physical Android phone over ADB | [`android-phone`](skills/android-phone) |  |
+| ● Reach, or be reached by, another Claude session running concurrently | [`session-relay`](skills/session-relay) | Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation. |
 | ● Send a formatted message with attachments from a native macOS app | [`mac-app-send`](plugins/mac-app-send) |  |
 | ● Work on a Nix flake repo with Claude Code | [`nix-dev-toolkit`](skills/nix-dev-toolkit) → [`claude-code-nix`](plugins/claude-code-nix) |  |
 | ● Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from | [`brag-dossier`](skills/brag-dossier) | Channel formatting is inherited: search the map and indexes for a repurposing skill. |
