@@ -12,6 +12,12 @@ session through the chart, prune what nobody uses, and inherit other people's ch
 > decision records, every reference, and the content kit for posts, slides and video, read
 > the full edition.
 
+> **Paths are as of 2026-09-23.** On 2026-09-30 the marketplace was restructured to an
+> all-`plugins/` layout ([PR #40](https://github.com/kattakath/skills/pull/40)), so each
+> `skills/<name>` locator below reads `plugins/<name>/skills/<name>`. Nothing else here was
+> edited: this is a dated field guide, and its value is that it records what was true on the
+> date in its header.
+
 **Contents:** [1. The short version](#1-the-short-version) ·
 [2. The problem](#2-the-problem) · [3. The idea](#3-the-idea) ·
 [4. What happened](#4-what-happened) · [5. How it works](#5-how-it-works) ·

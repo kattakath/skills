@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "nix-dev-toolkit",
+  "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/nix-dev-toolkit",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "nix",
+    "flakes",
+    "devshell",
+    "postgres",
+    "pgvector",
+    "self-hosted-runner"
+  ]
+}

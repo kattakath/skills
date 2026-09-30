@@ -172,11 +172,11 @@ symlink into a version-controlled directory so it is not the only copy.
 
 | Piece | Value |
 |---|---|
-| Content repo | `github:kattakath/skills` (`skills/`, `plugins/`, `.claude-plugin/marketplace.json`) |
+| Content repo | `github:kattakath/skills` (`plugins/<name>/`, `.claude-plugin/marketplace.json`) |
 | Harness repo | `github:kattakath/nix-config` |
 | Prior art to search | nix-config `docs/` (ADRs, runbooks), `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
 | Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships, no pin |
-| New skill | `skills/<name>/` plus a marketplace entry (`"source": "./"`, `"strict": false`, `"skills": ["./skills/<name>"]`) |
+| New skill | a **one-skill plugin**: `plugins/<name>/.claude-plugin/plugin.json` + `plugins/<name>/skills/<name>/SKILL.md`, plus a marketplace entry with `"source": "./plugins/<name>"` (never `"./"` + `strict`/`skills` — that shim is for foreign repos; see its `CLAUDE.md`). Keep the list alpha-sorted by `name`. |
 | Index | a route in `index/routes.json` (goal → steps; `gap: true` if no outside source covers it), then `python3 scripts/build-index.py`. CI fails if a skill has no route. An outside source that did the job goes in `index/sources.json` instead of a new skill. |
 | Enable | append the plugin name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "capability-broker",
+  "description": "When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/capability-broker",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "capability",
+    "mcp",
+    "discovery",
+    "least-privilege",
+    "adoption",
+    "plugins"
+  ]
+}

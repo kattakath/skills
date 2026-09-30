@@ -1,0 +1,18 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "session-relay",
+  "description": "Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/session-relay",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "sessions",
+    "agents",
+    "messaging",
+    "concurrency",
+    "claude-code"
+  ]
+}

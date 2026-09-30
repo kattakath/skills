@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "logo-construction-geometry",
+  "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/logo-construction-geometry",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "logo",
+    "svg",
+    "vector",
+    "geometry",
+    "design",
+    "tracing"
+  ]
+}

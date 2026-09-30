@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "harvest",
+  "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/harvest",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "reuse",
+    "knowledge-capture",
+    "authoring",
+    "agents",
+    "workflows"
+  ]
+}

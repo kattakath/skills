@@ -88,7 +88,8 @@ def deprecated(repo, p):
 
 
 def entry_dir(p):
-    return (p["skills"][0] if p.get("source") == "./" else p["source"]).removeprefix("./")
+    """Every marketplace entry is a real plugin dir: `source` is the only locator."""
+    return p["source"].removeprefix("./")
 
 
 def main():

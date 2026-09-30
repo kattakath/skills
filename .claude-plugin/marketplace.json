@@ -8,6 +8,82 @@
   },
   "plugins": [
     {
+      "name": "android-phone",
+      "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "android",
+        "adb",
+        "scrcpy",
+        "device",
+        "mirroring",
+        "wireless-debugging"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/android-phone",
+      "license": "MIT",
+      "source": "./plugins/android-phone"
+    },
+    {
+      "name": "brag-dossier",
+      "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "documentation",
+      "keywords": [
+        "writing",
+        "documentation",
+        "fact-check",
+        "multi-agent",
+        "brag-doc",
+        "case-study"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/brag-dossier",
+      "license": "MIT",
+      "source": "./plugins/brag-dossier"
+    },
+    {
+      "name": "brain-signals",
+      "description": "An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "output-style",
+        "explain",
+        "accessibility",
+        "adhd",
+        "diagrams",
+        "architecture"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/brain-signals",
+      "license": "MIT",
+      "source": "./plugins/brain-signals"
+    },
+    {
+      "name": "capability-broker",
+      "description": "When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "capability",
+        "mcp",
+        "discovery",
+        "least-privilege",
+        "adoption",
+        "plugins"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/capability-broker",
+      "license": "MIT",
+      "source": "./plugins/capability-broker"
+    },
+    {
       "name": "claude-code-nix",
       "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values.",
       "author": {
@@ -48,6 +124,63 @@
       "source": "./plugins/foundation-audit"
     },
     {
+      "name": "github-release-gate",
+      "description": "Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "github",
+        "auto-merge",
+        "ruleset",
+        "ci",
+        "release",
+        "branch-protection"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/github-release-gate",
+      "license": "MIT",
+      "source": "./plugins/github-release-gate"
+    },
+    {
+      "name": "harvest",
+      "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "skills",
+        "reuse",
+        "knowledge-capture",
+        "authoring",
+        "agents",
+        "workflows"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/harvest",
+      "license": "MIT",
+      "source": "./plugins/harvest"
+    },
+    {
+      "name": "jsonresume-tailor",
+      "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "resume",
+        "jsonresume",
+        "ats",
+        "job-search",
+        "pdf",
+        "tailoring"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/jsonresume-tailor",
+      "license": "MIT",
+      "source": "./plugins/jsonresume-tailor"
+    },
+    {
       "name": "llmstxt",
       "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
       "author": {
@@ -64,6 +197,63 @@
       "homepage": "https://llmstxt.org",
       "license": "MIT",
       "source": "./plugins/llmstxt"
+    },
+    {
+      "name": "logo-construction-geometry",
+      "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "design",
+      "keywords": [
+        "logo",
+        "svg",
+        "vector",
+        "geometry",
+        "design",
+        "tracing"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/logo-construction-geometry",
+      "license": "MIT",
+      "source": "./plugins/logo-construction-geometry"
+    },
+    {
+      "name": "mac-app-send",
+      "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files. Ships the method skill, a preflight doctor that resolves bundle id and running state in one shot, a file manifest that gives the exact bytes/KB/page counts a send is verified against, and a PreToolUse guard blocking the three moves that cannot work: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "macos",
+        "computer-use",
+        "automation",
+        "whatsapp",
+        "accessibility",
+        "attachments"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mac-app-send",
+      "license": "MIT",
+      "source": "./plugins/mac-app-send"
+    },
+    {
+      "name": "nix-dev-toolkit",
+      "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "nix",
+        "flakes",
+        "devshell",
+        "postgres",
+        "pgvector",
+        "self-hosted-runner"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/nix-dev-toolkit",
+      "license": "MIT",
+      "source": "./plugins/nix-dev-toolkit"
     },
     {
       "name": "page-lab",
@@ -88,6 +278,62 @@
       "source": "./plugins/page-lab"
     },
     {
+      "name": "rag",
+      "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "rag",
+        "pgvector",
+        "postgres",
+        "embeddings",
+        "ollama",
+        "local"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/rag",
+      "license": "MIT",
+      "source": "./plugins/rag"
+    },
+    {
+      "name": "session-relay",
+      "description": "Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "sessions",
+        "agents",
+        "messaging",
+        "concurrency",
+        "claude-code"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/session-relay",
+      "license": "MIT",
+      "source": "./plugins/session-relay"
+    },
+    {
+      "name": "skill-curator",
+      "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "skills",
+        "curation",
+        "usage",
+        "pruning",
+        "maintenance",
+        "transcripts"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/skill-curator",
+      "license": "MIT",
+      "source": "./plugins/skill-curator"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {
@@ -104,209 +350,6 @@
       "homepage": "https://github.com/kattakath/skills",
       "license": "MIT",
       "source": "./plugins/superhook"
-    },
-    {
-      "name": "mac-app-send",
-      "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files. Ships the method skill, a preflight doctor that resolves bundle id and running state in one shot, a file manifest that gives the exact bytes/KB/page counts a send is verified against, and a PreToolUse guard blocking the three moves that cannot work: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "macos",
-        "computer-use",
-        "automation",
-        "whatsapp",
-        "accessibility",
-        "attachments"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mac-app-send",
-      "license": "MIT",
-      "source": "./plugins/mac-app-send"
-    },
-    {
-      "name": "rag",
-      "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/rag",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/rag"
-      ]
-    },
-    {
-      "name": "android-phone",
-      "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "development",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/android-phone",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/android-phone"
-      ]
-    },
-    {
-      "name": "nix-dev-toolkit",
-      "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "development",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/nix-dev-toolkit",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/nix-dev-toolkit"
-      ]
-    },
-    {
-      "name": "capability-broker",
-      "description": "When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/capability-broker",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/capability-broker"
-      ]
-    },
-    {
-      "name": "harvest",
-      "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/harvest",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/harvest"
-      ]
-    },
-    {
-      "name": "jsonresume-tailor",
-      "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/jsonresume-tailor",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/jsonresume-tailor"
-      ]
-    },
-    {
-      "name": "brain-signals",
-      "description": "An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "output-style",
-        "explain",
-        "accessibility",
-        "adhd",
-        "diagrams",
-        "architecture"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/brain-signals",
-      "license": "MIT",
-      "source": "./plugins/brain-signals"
-    },
-    {
-      "name": "github-release-gate",
-      "description": "Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "development",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/github-release-gate",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/github-release-gate"
-      ]
-    },
-    {
-      "name": "skill-curator",
-      "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/skill-curator",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/skill-curator"
-      ]
-    },
-    {
-      "name": "brag-dossier",
-      "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "documentation",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/brag-dossier",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/brag-dossier"
-      ]
-    },
-    {
-      "name": "logo-construction-geometry",
-      "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "design",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/logo-construction-geometry",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/logo-construction-geometry"
-      ]
-    },
-    {
-      "name": "session-relay",
-      "description": "Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "homepage": "https://github.com/kattakath/skills/tree/main/skills/session-relay",
-      "license": "MIT",
-      "source": "./",
-      "strict": false,
-      "skills": [
-        "./skills/session-relay"
-      ]
     }
   ]
 }

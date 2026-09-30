@@ -53,6 +53,13 @@ license: "Suggested: content CC BY 4.0 (https://creativecommons.org/licenses/by/
 
 > **Short on time?** Read the [reader's edition](agent-map-reader.md): the same story and lessons in about 2,900 words, with the full evidence left here.
 
+> **Paths are as of 2026-09-23.** On 2026-09-30 the marketplace was restructured to an
+> all-`plugins/` layout ([PR #40](https://github.com/kattakath/skills/pull/40)): every entry is
+> now a real plugin, so each `skills/<name>` locator below reads `plugins/<name>/skills/<name>`,
+> and the `"source": "./"` entry shape recorded in § 7 was removed rather than kept. Nothing
+> else here was edited — this is a dated field guide, and its value is that it records what was
+> true on the date in its header. [measured]
+
 ## 1. TL;DR
 
 *Chart what an agent figures out once, route every later session through that chart, prune what nobody uses, and inherit other people's charts before drawing your own.*
@@ -1419,6 +1426,10 @@ enable line after its content PR merges, and retiring removes that line. [measur
   comment]
 - **New marketplace entry shape** for a standalone skill: `"source": "./"`,
   `"strict": false`, `"skills": ["./skills/<name>"]`. [source: harvest adapter]
+  **SUPERSEDED 2026-09-30 — do not follow this bullet.** That shape is upstream's shim for
+  foreign repos that cannot carry a `plugin.json`; this repo owns its plugins, so every entry
+  is now `"source": "./plugins/<name>"` with no `strict` and no `skills`. Live instructions:
+  `CLAUDE.md` § Adding a plugin, `.claude/skills/marketplace-entry/SKILL.md`.
 - **Harness checks before an enable PR:** `git add -A && nix flake check`; PR title per its
   `pr-title` rule. [source: harvest adapter]
 

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "android-phone",
+  "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/android-phone",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "android",
+    "adb",
+    "scrcpy",
+    "device",
+    "mirroring",
+    "wireless-debugging"
+  ]
+}

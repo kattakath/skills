@@ -2,13 +2,13 @@
 # skill-usage.py against fixture transcripts and a copy of this repo, at a fixed date.
 set -euo pipefail
 here=$(cd "$(dirname "$0")" && pwd)
-src=$(cd "$here/../../.." && pwd)
+src=$(cd "$here/../../../../.." && pwd)   # tests -> skill -> skills/ -> plugin -> plugins/ -> repo root
 # Ages come from git history, and CI checks out one commit. So copy this repo's entries
 # into a scratch repo whose single commit is dated 2026-09-01: every entry is 91 days old.
 repo=$(mktemp -d); trap 'rm -rf "$repo"' EXIT
 (cd "$src" && git ls-files '.claude-plugin/*' 'index/*' '*.md' | tar -cf - -T -) | tar -xf - -C "$repo"
 # jsonresume-tailor gets harvest's deprecation marker, as a `deprecate` operation would add.
-sed -i '0,/^name: jsonresume-tailor$/s//name: jsonresume-tailor\ndeprecated: true\nreplaced_by: rag/' "$repo/skills/jsonresume-tailor/SKILL.md"
+sed -i '0,/^name: jsonresume-tailor$/s//name: jsonresume-tailor\ndeprecated: true\nreplaced_by: rag/' "$repo/plugins/jsonresume-tailor/skills/jsonresume-tailor/SKILL.md"
 git -C "$repo" init -q && git -C "$repo" add -A
 GIT_AUTHOR_DATE=2026-09-01T00:00:00Z GIT_COMMITTER_DATE=2026-09-01T00:00:00Z \
   git -C "$repo" -c user.name=t -c user.email=t@t commit -qm fixture

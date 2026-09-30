@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "skill-curator",
+  "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/skill-curator",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "curation",
+    "usage",
+    "pruning",
+    "maintenance",
+    "transcripts"
+  ]
+}

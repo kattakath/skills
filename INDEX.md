@@ -13,24 +13,24 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 |---|---|---|
 | ● Audit a config monorepo's foundation | [`foundation-audit`](plugins/foundation-audit) |  |
 | ● Author a userscript or diagnose a live web page | [`page-lab`](plugins/page-lab) |  |
-| ● Capture what a session figured out, so no session rediscovers it | [`harvest`](skills/harvest) → `skill-creator` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [`github-release-gate`](skills/github-release-gate) | harvest triages and lands via PR; skill-creator tests; the gate validates before it ships. |
-| ● Keep the skill library from only growing: find unused skills and retire them | [`skill-curator`](skills/skill-curator) | Ported from Hermes Agent's curator; retires from the harness via PR, never deletes. |
-| ● Make a repo's default branch a safe, auto-merging release | [`github-release-gate`](skills/github-release-gate) | Required check first, App-token auto-merge second. |
-| ● Operate a physical Android phone over ADB | [`android-phone`](skills/android-phone) |  |
-| ● Reach, or be reached by, another Claude session running concurrently | [`session-relay`](skills/session-relay) | Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation. |
+| ● Capture what a session figured out, so no session rediscovers it | [`harvest`](plugins/harvest) → `skill-creator` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [`github-release-gate`](plugins/github-release-gate) | harvest triages and lands via PR; skill-creator tests; the gate validates before it ships. |
+| ● Keep the skill library from only growing: find unused skills and retire them | [`skill-curator`](plugins/skill-curator) | Ported from Hermes Agent's curator; retires from the harness via PR, never deletes. |
+| ● Make a repo's default branch a safe, auto-merging release | [`github-release-gate`](plugins/github-release-gate) | Required check first, App-token auto-merge second. |
+| ● Operate a physical Android phone over ADB | [`android-phone`](plugins/android-phone) |  |
+| ● Reach, or be reached by, another Claude session running concurrently | [`session-relay`](plugins/session-relay) | Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation. |
 | ● Send a formatted message with attachments from a native macOS app | [`mac-app-send`](plugins/mac-app-send) |  |
-| ● Work on a Nix flake repo with Claude Code | [`nix-dev-toolkit`](skills/nix-dev-toolkit) → [`claude-code-nix`](plugins/claude-code-nix) |  |
-| ● Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from | [`brag-dossier`](skills/brag-dossier) | Channel formatting is inherited: search the map and indexes for a repurposing skill. |
-| Answer questions from a local document corpus | [`rag`](skills/rag) |  |
+| ● Work on a Nix flake repo with Claude Code | [`nix-dev-toolkit`](plugins/nix-dev-toolkit) → [`claude-code-nix`](plugins/claude-code-nix) |  |
+| ● Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from | [`brag-dossier`](plugins/brag-dossier) | Channel formatting is inherited: search the map and indexes for a repurposing skill. |
+| Answer questions from a local document corpus | [`rag`](plugins/rag) |  |
 | Author an llms.txt | [`llmstxt`](plugins/llmstxt) |  |
 | Debug a failure methodically | [obra/superpowers](https://github.com/obra/superpowers) | systematic-debugging is the adopted skill. |
-| Find a capability before building or installing one | [`capability-broker`](skills/capability-broker) → [claude-plugins-community](https://github.com/anthropics/claude-plugins-community) → [skills.sh + find-skills](https://github.com/vercel-labs/skills) → [Official MCP Registry](https://github.com/modelcontextprotocol/registry) | Inventory first; the lightest capability that works wins; adoption goes through nix-config. |
+| Find a capability before building or installing one | [`capability-broker`](plugins/capability-broker) → [claude-plugins-community](https://github.com/anthropics/claude-plugins-community) → [skills.sh + find-skills](https://github.com/vercel-labs/skills) → [Official MCP Registry](https://github.com/modelcontextprotocol/registry) | Inventory first; the lightest capability that works wins; adoption goes through nix-config. |
 | General language- or domain-specific engineering agents | [wshobson/agents](https://github.com/wshobson/agents) | Candidate; pick single plugins, not the whole collection. |
 | Get scannable, verdict-first answers and architecture maps | [`brain-signals`](plugins/brain-signals) |  |
-| Rebuild a raster or auto-traced logo as clean, parametric SVG | [`logo-construction-geometry`](skills/logo-construction-geometry) | Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90). |
+| Rebuild a raster or auto-traced logo as clean, parametric SVG | [`logo-construction-geometry`](plugins/logo-construction-geometry) | Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90). |
 | Security-review code or a dependency | `security-guidance` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [trailofbits/skills](https://github.com/trailofbits/skills) |  |
 | Supervise Claude Code hooks so one bad hook cannot wedge a session | [`superhook`](plugins/superhook) |  |
-| Tailor a resume to a job posting | [`jsonresume-tailor`](skills/jsonresume-tailor) |  |
+| Tailor a resume to a job posting | [`jsonresume-tailor`](plugins/jsonresume-tailor) |  |
 | Turn a repo's review history into agent instructions | `ai-ready` from [johnpapa/ai-ready](https://github.com/johnpapa/ai-ready) | Candidate; not declared in nix-config yet. |
 
 ## Sources

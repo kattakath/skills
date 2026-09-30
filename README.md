@@ -13,9 +13,8 @@
 
 Agent resources by Ismail Kattakath — Claude Code skills and plugins, plus portable data catalogs (like MCP server configs) that external harnesses read and consume.
 
-- `skills/` holds standalone [Agent Skills](https://agentskills.io): one folder per skill, each with a `SKILL.md`.
-- `plugins/` holds Claude Code plugins that bundle skills with commands, agents, hooks or output styles.
-- `.claude-plugin/marketplace.json` publishes both as the `kattakath` marketplace.
+- `plugins/` holds every plugin: one folder each, carrying its own `.claude-plugin/plugin.json` and bundling [Agent Skills](https://agentskills.io) (`skills/<name>/SKILL.md`) with commands, agents, hooks or output styles. A lone skill ships as a one-skill plugin, so there is no separate `skills/` tree.
+- `.claude-plugin/marketplace.json` publishes them all as the `kattakath` marketplace.
 - `mcp-clients/` and `mcp/` hold portable MCP data — a client-config catalog and (eventually) registry declarations — consumed by external harnesses like nix-config, not installed as plugins.
 
 ## Install
@@ -41,25 +40,26 @@ outside sources first and to what's here only where nobody else has charted it.
 
 | Name | What it does |
 |---|---|
+| [`android-phone`](plugins/android-phone) | Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring. |
+| [`brag-dossier`](plugins/brag-dossier) | Turn a session's discovery into one organized, fact-checked source document (brief → facts from records → parallel writers → adversarial fact-check → assembly → critic), ready for agents to derive posts, articles and slides from. |
+| [`brain-signals`](plugins/brain-signals) | An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution. |
+| [`capability-broker`](plugins/capability-broker) | When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works. |
 | [`claude-code-nix`](plugins/claude-code-nix) | Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. |
 | [`foundation-audit`](plugins/foundation-audit) | Four-dimension foundation audit of a config monorepo — architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. |
+| [`github-release-gate`](plugins/github-release-gate) | Make the default branch a safe release: require the CI check with a ruleset first, then allow auto-merge and arm it on same-repo PRs only, verifying each step against GitHub. |
+| [`harvest`](plugins/harvest) | At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format. |
+| [`jsonresume-tailor`](plugins/jsonresume-tailor) | Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF. |
 | [`llmstxt`](plugins/llmstxt) | Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document. |
-| [`page-lab`](plugins/page-lab) | Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site. |
-| [`superhook`](plugins/superhook) | Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever. |
+| [`logo-construction-geometry`](plugins/logo-construction-geometry) | Rebuild a raster or noisy auto-traced logo as a clean parametric SVG: measure centres, radii, angles and joins, infer the construction rule and test it on held-out points, regenerate from named parameters, score overlap per component. |
 | [`mac-app-send`](plugins/mac-app-send) | Drive a native macOS app with the computer-use MCP to send a formatted message and attach files. |
-| [`rag`](skills/rag) | Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. |
-| [`android-phone`](skills/android-phone) | Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring. |
-| [`nix-dev-toolkit`](skills/nix-dev-toolkit) | Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue. |
-| [`capability-broker`](skills/capability-broker) | When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works. |
-| [`harvest`](skills/harvest) | At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format. |
-| [`jsonresume-tailor`](skills/jsonresume-tailor) | Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF. |
-| [`github-release-gate`](skills/github-release-gate) | Make the default branch a safe release: require the CI check with a ruleset first, then allow auto-merge and arm it on same-repo PRs only, verifying each step against GitHub. |
-| [`skill-curator`](skills/skill-curator) | Keep a skill library from only growing: count real usage from transcripts, mark skills stale or archive-candidate, and propose retirements as a reviewable PR. Ported from the Hermes Agent curator. |
-| [`logo-construction-geometry`](skills/logo-construction-geometry) | Rebuild a raster or noisy auto-traced logo as a clean parametric SVG: measure centres, radii, angles and joins, infer the construction rule and test it on held-out points, regenerate from named parameters, score overlap per component. |
-| [`brag-dossier`](skills/brag-dossier) | Turn a session's discovery into one organized, fact-checked source document (brief → facts from records → parallel writers → adversarial fact-check → assembly → critic), ready for agents to derive posts, articles and slides from. |
-| [`brain-signals`](plugins/brain-signals) | An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution. |
+| [`nix-dev-toolkit`](plugins/nix-dev-toolkit) | Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue. |
+| [`page-lab`](plugins/page-lab) | Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site. |
+| [`rag`](plugins/rag) | Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. |
+| [`session-relay`](plugins/session-relay) | Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision. |
+| [`skill-curator`](plugins/skill-curator) | Keep a skill library from only growing: count real usage from transcripts, mark skills stale or archive-candidate, and propose retirements as a reviewable PR. Ported from the Hermes Agent curator. |
+| [`superhook`](plugins/superhook) | Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever. |
 
-Each plugin's own `README.md` covers its commands, skills and design notes.
+Where a plugin has its own `README.md`, it covers that plugin's commands, skills and design notes.
 
 ## Scripts are the source of truth for rules
 
