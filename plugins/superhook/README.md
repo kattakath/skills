@@ -20,38 +20,80 @@ changing what the hook decides when it is working.
 4. **Log + recommend** — every invocation is appended to `superhook.log` as a JSON
    line (rotating, 5 MB × 3 backups). The wrapper never edits hook files itself.
 
-## Wiring
+## Wiring — the plugin ships the hooks
 
-`superhook` is a **wrapper**, not a hook. It goes in front of the hook you
-already run, in your project's `.claude/settings.json`:
+Installing this plugin is the whole wiring. `hooks/hooks.json` declares three
+entries that auto-merge into your effective hook set; **nothing goes in your
+`settings.json`**:
 
-```json
-{
-  "hooks": {
-    "Stop": [{
-      "hooks": [{
-        "type": "command",
-        "command": "node /path/to/superhook.js Stop -- node \"${CLAUDE_PROJECT_DIR}/.claude/hooks/my-gate.js\""
-      }]
-    }]
-  }
-}
+| Event | Matcher | Wraps |
+|---|---|---|
+| `Stop` | — | `<repo>/.claude/hooks/stop-gate.js` |
+| `PreToolUse` | `Bash` | `<repo>/.claude/hooks/pretooluse-bash-guard.js` |
+| `SessionStart` | — | `scripts/superhook-digest.js` (reads `superhook.log`) |
+
+### The path convention
+
+The supervisor is a **wrapper**, so it has to be told which script to supervise.
+Rather than make that a per-project setting, the plugin fixes it by convention:
+each entry looks for **one specific filename** under the repo's own
+`.claude/hooks/`. Put your gate at that path and it is supervised; put it
+anywhere else and the plugin ignores it.
+
+Each command does three things, in order:
+
+1. **Resolves the repo root itself.** `CLAUDE_PROJECT_DIR` is the session's
+   *launch CWD*, **not** the git root — a session started in `<repo>/sub` gets
+   `CLAUDE_PROJECT_DIR=<repo>/sub` (measured, Claude Code 2.1.268). So every
+   command runs `git rev-parse --show-toplevel` and falls back to
+   `CLAUDE_PROJECT_DIR` outside a repo. A naive
+   `${CLAUDE_PROJECT_DIR}/.claude/hooks/…` would silently miss the gate for
+   anyone who starts sessions in subdirectories or worktrees.
+2. **Exits 0 silently when the target is absent.** No gate at the conventional
+   path (or, for the digest, no `superhook.log`) means the hook does nothing and
+   emits nothing. That one test is also what keeps the plugin **inert in every
+   unrelated repo** — install it globally, and it only wakes up where a gate
+   exists.
+3. **Re-exports `CLAUDE_PROJECT_DIR` as the resolved root** before `exec`ing the
+   supervisor, so `superhook.log` and `.superhook-state.json` land in the repo
+   root's `.claude/hooks/` — one log per repo, not one per subdirectory you
+   happened to launch from.
+
+### Correction: this used to say it was impossible
+
+Earlier versions of this README claimed `${CLAUDE_PLUGIN_ROOT}` does not expand
+outside a plugin's own hook context and that a *wrapper* therefore could not be
+declared in `hooks.json` at all — so the author's fleet consumed the scripts as a
+Nix-packaged `superhook` binary on `PATH` instead. **Measured on Claude Code
+2.1.268, both halves were wrong.** Inside a plugin hook command, both
+`${CLAUDE_PLUGIN_ROOT}` and `${CLAUDE_PROJECT_DIR}` expand — as inline
+substitution into the command string *and* as exported process environment
+variables:
+
+```
+EVENT=SessionStart INLINE_PLUGIN=[…/plugin] INLINE_PROJECT=[…/proj] \
+                   ENV_PLUGIN=[…/plugin]    ENV_PROJECT=[…/proj]
 ```
 
-⚠ **Known constraint.** Project `settings.json` cannot expand
-`${CLAUDE_PLUGIN_ROOT}` — that variable only exists inside a plugin's *own* hook
-context — and a wrapper must be named by the consumer, so it cannot be declared
-in this plugin's `hooks.json` either. You therefore need a stable path to
-`scripts/superhook.js`. Pick one:
+A plugin hook can therefore name the supervisor by absolute path and pass the
+inner command as arguments — which is exactly what wrapping means. Expansion was
+proven for `SessionStart`; `Stop` and `PreToolUse` are **inferred** (an isolated
+`CLAUDE_CONFIG_DIR` cannot authenticate, so those events never fired in the
+probe). Step 2's existence test is the defensive answer to that: if the
+expansion ever failed, the resolved path would not exist and the hook would
+no-op rather than crash.
 
-- **Put it on `PATH`** (what the author's fleet does — Nix packages this script
-  as a `superhook` binary, and `settings.json` just calls `superhook Stop -- …`).
-- Vendor `scripts/superhook.js` into your repo's `.claude/hooks/`.
-- Reference the installed plugin path directly, accepting that it moves on
-  upgrade.
+### If you need the wrapper elsewhere
 
-The plugin still earns its place: it ships the scripts, the `/superhook-review`
-command, and this contract in one installable unit.
+The conventional paths cover the common case. For a gate at some other path, call
+`scripts/superhook.js` directly from your own `settings.json`:
+
+```
+node /path/to/superhook.js Stop -- node "$root/.claude/hooks/my-gate.js"
+```
+
+⚠ Do **not** do this for a gate the plugin already covers. A `settings.json`
+entry and a plugin entry both fire, so the gate would run **twice**.
 
 ## Why the digest reads the log, not the native counters
 
