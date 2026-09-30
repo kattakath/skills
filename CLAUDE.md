@@ -16,13 +16,14 @@ directly.
 
 - Published as `github:kattakath/skills`. Consumers run `/plugin marketplace add
   kattakath/skills` then `/plugin install <name>@kattakath`.
-- Two shapes of content, one catalog:
-  - `skills/<name>/SKILL.md` — bare Agent Skills, no bundling.
-  - `plugins/<name>/` — bundles skills with commands/agents/hooks/output-styles under its
-    own `.claude-plugin/plugin.json`.
-- `.claude-plugin/marketplace.json` is the catalog, and it lists **both** kinds: a plugin
-  bundle (`source: "./plugins/<name>"`) and a standalone skill (`source: "./"`, `skills:
-  ["./skills/<name>"]`). Adding either means adding an entry here too.
+- **One shape: every unit of content is a plugin.** `plugins/<name>/` carries its own
+  `.claude-plugin/plugin.json` and bundles one or more skills
+  (`plugins/<name>/skills/<skill>/SKILL.md`) plus whatever commands, agents, hooks or
+  output-styles it needs. A lone skill is a plugin with one skill in it — there is **no root
+  `skills/` tree** and no `source: "./"` entry anywhere (see § Never use `source: "./"`).
+- `.claude-plugin/marketplace.json` is the catalog: one entry per plugin, always
+  `source: "./plugins/<name>"`, the list kept **alpha-sorted by `name`**. Adding a plugin
+  means adding an entry here too.
 - `INDEX.md` is **generated** (`scripts/build-index.py`) from `index/{routes,sources,
   curation}.json` plus `marketplace.json` — never hand-edit `INDEX.md`; edit the JSON and
   rerun the script. CI's `Index up to date` check fails a PR where they've drifted.
@@ -35,23 +36,41 @@ directly.
   shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
   on what merges to `main` — see § Shipping a change.
 
-## Adding a skill
+## Adding a plugin — a single skill is a plugin too
 
-1. `mkdir -p skills/<name>` (or `plugins/<name>/skills/<name>` if it belongs to a bundle).
-2. Write `SKILL.md` with YAML frontmatter — `description` is what Claude Code matches
-   against to auto-invoke it, so make it specific.
-3. Add an entry to `.claude-plugin/marketplace.json`: standalone skills use `"source":
-   "./"`, `"skills": ["./skills/<name>"]`.
-4. If it fills a goal, add a route to `index/routes.json` (and a `sources.json` entry if it
+1. `mkdir -p plugins/<name>/.claude-plugin plugins/<name>/skills/<name>`, plus whichever of
+   `agents/`, `commands/`, `hooks/`, `output-styles/` it needs. **The skill directory name is
+   half the invocation string** `<plugin>:<skill>`, so for a one-skill plugin keep the two
+   names identical (`rag:rag`) — renaming either breaks every caller.
+2. Write `skills/<name>/SKILL.md` with YAML frontmatter — `description` is what Claude Code
+   matches against to auto-invoke it, so make it specific. A skill's own `scripts/`,
+   `references/`, `assets/` and `tests/` sit **next to its `SKILL.md`**, because SKILL.md
+   refers to them by skill-relative path (`assets/foo.yml`, not `<plugin>/assets/foo.yml`).
+3. Write `.claude-plugin/plugin.json` — `$schema`, `name`, `description`, `author`,
+   `homepage`, `repository`, `license`, `keywords`. **An extra key fails validation**, and
+   there is no `version` (see § Never add a `version`).
+4. Write `README.md` — **every plugin has one** (all 18, since #40). It is the page a reader
+   lands on from the marketplace: what the plugin ships, the non-obvious facts and
+   measurements it exists to carry, and what it requires. Source it from the `SKILL.md`;
+   do not restate the frontmatter.
+   One consequence to know: `skill-usage.py` treats a backticked entry name **anywhere** in
+   another plugin's markdown as a dependency, so naming a sibling in a README marks that
+   sibling `exempt` from curation.
+5. Add the entry to `.claude-plugin/marketplace.json`, `source: "./plugins/<name>"`, keeping
+   the list alpha-sorted by `name` — the validate action's I1 invariant checks the order.
+6. If it fills a goal, add a route to `index/routes.json` (and a `sources.json` entry if it
    points outward), then run `python3 scripts/build-index.py` to regenerate `INDEX.md`.
 
-## Adding a plugin
+### Never use `source: "./"`
 
-1. `mkdir -p plugins/<name>/.claude-plugin`, plus whichever of `skills/`, `agents/`,
-   `commands/`, `hooks/` it needs.
-2. Write `plugin.json` (`$schema`, `name`, `description`, `author`, `license`, `keywords`).
-3. Add its entry to `.claude-plugin/marketplace.json`, `source: "./plugins/<name>"`.
-4. Same `INDEX.md` step as above if it fills a goal.
+Upstream's `"source": "./"` + `"strict": false` + `"skills": [...]` entry is a **shim for
+FOREIGN repos** that cannot be made to carry a `plugin.json` — all three uses in
+`anthropics/claude-plugins-official` are third-party. This repo owns its own tree, so the
+correct fix for "this is just a skill" is to write the manifest, not to borrow the shim. The
+shim also costs real things: no `plugin.json` means no `keywords` and no per-plugin
+`homepage`, the entry is the only place a version could ever live, and each such entry copies
+the **whole repo** on install instead of one `plugins/<name>` subtree. 11 of 18 entries used
+it until it was removed wholesale (#31); do not reintroduce it.
 
 ## Validating before you push
 
@@ -72,7 +91,7 @@ sufficient for those.
   (never forks) the moment they leave draft; `validate` is the required check that actually
   gates the merge.
 - Because there's no `version` field, a merge to `main` **is** the release — treat `main`
-  accordingly. This is what [`github-release-gate`](skills/github-release-gate) generalizes.
+  accordingly. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
 - Fork PRs land un-armed on purpose — a human merges those after review.
 
 ### Never add a `version` to fix the validate warnings
@@ -84,15 +103,14 @@ two release models Anthropic documents, and it is the one this repo chose delibe
 
 - With no `version`, the version Claude Code computes is the **repo HEAD commit SHA**, so
   every merge to `main` is a new version that reaches users. Measured 2026-09-30: a hosted
-  install of `harvest` (a `source: "./"` entry) and `page-lab` (a `./plugins/*` entry) both
-  resolved to `908b76075a61`, exactly `origin/main`.
+  install of `harvest` (then still a `source: "./"` entry) and `page-lab` (a `./plugins/*`
+  entry) both resolved to `908b76075a61`, exactly `origin/main`.
 - With a `version` set, users stay on their cached copy **until the string changes**. Push
   content without bumping and `claude plugin update` reports
   `<name> is already at the latest version (1.0.0)` and `"updateOutcome":"up_to_date"` while
   serving stale files. Measured the same day: two generations of drift, reported as success.
   There is no drift signal — the failure is silent and unbounded.
-- The cost is per entry, and 11 of the 18 entries are `source: "./"` with **no `plugin.json`
-  at all**, so their only possible version is the marketplace entry — 11 strings to bump on
+- The cost is per entry, and there are 18 of them — 18 `plugin.json` strings to bump on
   every commit that touches a shared file, each miss a silent freeze.
 - If a version is ever set, set it in **one** place. `plugin.json` wins over the marketplace
   entry at install time (`calculatePluginVersion` precedence) and the entry value is ignored
@@ -100,11 +118,12 @@ two release models Anthropic documents, and it is the one this repo chose delibe
   refuses to tag until they agree.
 
 Upstream precedent for versionless: `anthropics/skills`, whose `source: "./"` layout this
-repo copies, sets no version on any of its entries.
+repo copied until #31, sets no version on any of its entries either.
 
 One property to keep in mind rather than fix: the computed version is the **repo HEAD** SHA,
-not a per-directory one, so any commit revs all 18 entries and each `source: "./"` entry
-re-copies the whole tree (~1.7 MB). Superseded versions are swept 14 days after replacement.
+not a per-directory one, so any commit revs all 18 entries. Since #31 each entry copies only
+its own `plugins/<name>` subtree rather than the whole repo (~1.7 MB), so the re-copy is now
+proportional to the plugin. Superseded versions are swept 14 days after replacement.
 
 ## Conventions
 

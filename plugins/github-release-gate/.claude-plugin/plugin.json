@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "github-release-gate",
+  "description": "Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/github-release-gate",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "github",
+    "auto-merge",
+    "ruleset",
+    "ci",
+    "release",
+    "branch-protection"
+  ]
+}

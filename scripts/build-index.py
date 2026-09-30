@@ -41,7 +41,7 @@ def main():
             errors.append(f"'{ref}' is not an entry in .claude-plugin/marketplace.json")
             return f"`{ref}`"
         p = local[ref]
-        path = p["skills"][0].removeprefix("./") if p.get("source") == "./" else p["source"].removeprefix("./")
+        path = p["source"].removeprefix("./")
         return f"[`{ref}`]({path})"
 
     lines = [
