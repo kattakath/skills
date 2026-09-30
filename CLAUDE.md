@@ -49,9 +49,16 @@ directly.
 3. Write `.claude-plugin/plugin.json` — `$schema`, `name`, `description`, `author`,
    `homepage`, `repository`, `license`, `keywords`. **An extra key fails validation**, and
    there is no `version` (see § Never add a `version`).
-4. Add the entry to `.claude-plugin/marketplace.json`, `source: "./plugins/<name>"`, keeping
+4. Write `README.md` — **every plugin has one** (all 18, since #40). It is the page a reader
+   lands on from the marketplace: what the plugin ships, the non-obvious facts and
+   measurements it exists to carry, and what it requires. Source it from the `SKILL.md`;
+   do not restate the frontmatter.
+   One consequence to know: `skill-usage.py` treats a backticked entry name **anywhere** in
+   another plugin's markdown as a dependency, so naming a sibling in a README marks that
+   sibling `exempt` from curation.
+5. Add the entry to `.claude-plugin/marketplace.json`, `source: "./plugins/<name>"`, keeping
    the list alpha-sorted by `name` — the validate action's I1 invariant checks the order.
-5. If it fills a goal, add a route to `index/routes.json` (and a `sources.json` entry if it
+6. If it fills a goal, add a route to `index/routes.json` (and a `sources.json` entry if it
    points outward), then run `python3 scripts/build-index.py` to regenerate `INDEX.md`.
 
 ### Never use `source: "./"`

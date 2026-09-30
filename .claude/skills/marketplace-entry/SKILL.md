@@ -20,6 +20,11 @@ no root `skills/` tree, and **no `source: "./"` entry** — see `CLAUDE.md` § N
      `hooks/`, `output-styles/` it needs.
    - A skill's `scripts/`, `references/`, `assets/` and `tests/` live **beside its
      `SKILL.md`**, not at the plugin root: SKILL.md refers to them by skill-relative path.
+   - `plugins/<name>/README.md` — every plugin has one. It is the marketplace-facing page:
+     what it ships, the non-obvious facts it carries, what it requires. Written from the
+     `SKILL.md`, not a restatement of the frontmatter. Note that `skill-usage.py` reads a
+     backticked entry name anywhere in a plugin's markdown as a dependency, so naming a
+     sibling in a README marks that sibling `exempt` from curation.
 2. **The plugin manifest** — `plugin.json`, exactly these keys: `$schema`, `name`,
    `description`, `author`, `homepage`, `repository`, `license`, `keywords`. An **extra key
    fails validation**; there is deliberately no `version` (`CLAUDE.md` § Never add a

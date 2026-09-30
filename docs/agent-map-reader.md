@@ -12,6 +12,12 @@ session through the chart, prune what nobody uses, and inherit other people's ch
 > decision records, every reference, and the content kit for posts, slides and video, read
 > the full edition.
 
+> **Paths are as of 2026-09-23.** On 2026-09-30 the marketplace was restructured to an
+> all-`plugins/` layout ([PR #40](https://github.com/kattakath/skills/pull/40)), so each
+> `skills/<name>` locator below reads `plugins/<name>/skills/<name>`. Nothing else here was
+> edited: this is a dated field guide, and its value is that it records what was true on the
+> date in its header.
+
 **Contents:** [1. The short version](#1-the-short-version) ·
 [2. The problem](#2-the-problem) · [3. The idea](#3-the-idea) ·
 [4. What happened](#4-what-happened) · [5. How it works](#5-how-it-works) ·
@@ -198,11 +204,11 @@ one after the required `validate` check passed. [measured]
 
 | Piece | Role | Where |
 |---|---|---|
-| `capability-broker` | Route: inventory, then the map, then outside indexes; adopt the lightest thing through the harness | `plugins/capability-broker/skills/capability-broker/` |
-| `harvest` | Chart: extract, triage, choose one operation, clean, test with `skill-creator`, land by PR, add a route | `plugins/harvest/skills/harvest/` |
-| `skill-curator` | Prune: count use from transcripts, propose retirements by PR | `plugins/skill-curator/skills/skill-curator/` |
+| `capability-broker` | Route: inventory, then the map, then outside indexes; adopt the lightest thing through the harness | `skills/capability-broker/` |
+| `harvest` | Chart: extract, triage, choose one operation, clean, test with `skill-creator`, land by PR, add a route | `skills/harvest/` |
+| `skill-curator` | Prune: count use from transcripts, propose retirements by PR | `skills/skill-curator/` |
 | `INDEX.md` | The map: goal → route, generated from `index/*.json` and `marketplace.json`, checked in CI | repo root |
-| `github-release-gate` | The safety layer: required check, then auto-merge, then App-token arming | `plugins/github-release-gate/skills/github-release-gate/` |
+| `github-release-gate` | The safety layer: required check, then auto-merge, then App-token arming | `skills/github-release-gate/` |
 | `kattakath/nix-config` | The harness: declares which marketplaces and skills each machine gets | its `modules/shared/home.nix` |
 
 **Delivery.** A merge to the content repo ships through the auto-updating marketplace. A
@@ -350,7 +356,7 @@ python3 scripts/build-index.py --check  # what CI runs
 
 **Month 1: prune on evidence.**
 ```
-python3 plugins/skill-curator/skills/skill-curator/scripts/skill-usage.py \
+python3 skills/skill-curator/scripts/skill-usage.py \
   --repo <content-repo-checkout>
 ```
 Read the header first: it says how many days of transcripts it saw. Retire by PR, never by
