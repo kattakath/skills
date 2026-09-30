@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "foundation-audit",
   "description": "Four-dimension foundation audit of a config monorepo — architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
   "author": {

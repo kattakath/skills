@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "logo-construction-geometry",
   "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
   "author": {

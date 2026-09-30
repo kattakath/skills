@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "skill-curator",
   "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
   "author": {
