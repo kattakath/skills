@@ -4,9 +4,10 @@
   </a>
 </p>
 
-<h1 align="center">kattakath/skills</h1>
+<h1 align="center">Agent Skills &amp; Plugin Marketplace</h1>
 
 <p align="center">
+  <a href="https://github.com/kattakath/skills/actions/workflows/validate.yml"><img src="https://github.com/kattakath/skills/actions/workflows/validate.yml/badge.svg" alt="validate"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
