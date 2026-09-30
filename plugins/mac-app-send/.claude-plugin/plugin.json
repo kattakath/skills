@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "mac-app-send",
   "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files — the method skill, a preflight doctor that resolves the bundle id and grant state in one shot, a deterministic file manifest for verifying a send against disk, and a PreToolUse guard that blocks the three known-wrong moves before they cost a turn: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service that can never be granted.",
   "author": {

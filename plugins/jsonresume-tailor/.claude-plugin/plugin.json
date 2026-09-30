@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "jsonresume-tailor",
   "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
   "author": {

@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "nix-dev-toolkit",
   "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
   "author": {
