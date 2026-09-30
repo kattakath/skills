@@ -8,6 +8,7 @@
 
 <p align="center">
   <a href="https://github.com/kattakath/skills/actions/workflows/validate.yml"><img src="https://github.com/kattakath/skills/actions/workflows/validate.yml/badge.svg" alt="validate"></a>
+  <a href="https://github.com/kattakath/skills/commits/main"><img src="https://img.shields.io/github/last-commit/kattakath/skills/main?label=version%20%28HEAD%29&color=blue&logo=git&logoColor=white" alt="version: the HEAD commit on main"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
