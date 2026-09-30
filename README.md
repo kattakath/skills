@@ -1,6 +1,6 @@
 <p align="center">
   <a href="https://kattakath.github.io">
-    <img src="https://raw.githubusercontent.com/kattakath/kattakath.github.io/refs/heads/main/logo.svg" width="280" alt="kattakath">
+    <img src="assets/banner.jpg" alt="Agent 1 and Agent 2 sharing one bicycle">
   </a>
 </p>
 
