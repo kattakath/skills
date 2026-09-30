@@ -1426,6 +1426,10 @@ enable line after its content PR merges, and retiring removes that line. [measur
   comment]
 - **New marketplace entry shape** for a standalone skill: `"source": "./"`,
   `"strict": false`, `"skills": ["./skills/<name>"]`. [source: harvest adapter]
+  **SUPERSEDED 2026-09-30 — do not follow this bullet.** That shape is upstream's shim for
+  foreign repos that cannot carry a `plugin.json`; this repo owns its plugins, so every entry
+  is now `"source": "./plugins/<name>"` with no `strict` and no `skills`. Live instructions:
+  `CLAUDE.md` § Adding a plugin, `.claude/skills/marketplace-entry/SKILL.md`.
 - **Harness checks before an enable PR:** `git add -A && nix flake check`; PR title per its
   `pr-title` rule. [source: harvest adapter]
 
