@@ -1,0 +1,38 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel 2>/dev/null || printf '%s' \"${CLAUDE_PROJECT_DIR:-$PWD}\"); [ -f \"$root/.claude/hooks/stop-gate.js\" ] || exit 0; CLAUDE_PROJECT_DIR=\"$root\" exec node \"${CLAUDE_PLUGIN_ROOT}/scripts/superhook.js\" Stop -- node \"$root/.claude/hooks/stop-gate.js\"",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel 2>/dev/null || printf '%s' \"${CLAUDE_PROJECT_DIR:-$PWD}\"); [ -f \"$root/.claude/hooks/pretooluse-bash-guard.js\" ] || exit 0; CLAUDE_PROJECT_DIR=\"$root\" exec node \"${CLAUDE_PLUGIN_ROOT}/scripts/superhook.js\" PreToolUse -- node \"$root/.claude/hooks/pretooluse-bash-guard.js\"",
+            "timeout": 20
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "root=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel 2>/dev/null || printf '%s' \"${CLAUDE_PROJECT_DIR:-$PWD}\"); [ -f \"$root/.claude/hooks/superhook.log\" ] || exit 0; CLAUDE_PROJECT_DIR=\"$root\" exec node \"${CLAUDE_PLUGIN_ROOT}/scripts/superhook-digest.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
