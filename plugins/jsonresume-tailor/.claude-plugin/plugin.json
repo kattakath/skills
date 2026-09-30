@@ -1,0 +1,19 @@
+{
+  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "name": "jsonresume-tailor",
+  "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/jsonresume-tailor",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "resume",
+    "jsonresume",
+    "ats",
+    "job-search",
+    "pdf",
+    "tailoring"
+  ]
+}
