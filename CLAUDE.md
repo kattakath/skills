@@ -75,6 +75,37 @@ sufficient for those.
   accordingly. This is what [`github-release-gate`](skills/github-release-gate) generalizes.
 - Fork PRs land un-armed on purpose — a human merges those after review.
 
+### Never add a `version` to fix the validate warnings
+
+`claude plugin validate .` reports a warning per plugin for the missing `version`. **That
+warning is advisory and the answer is to leave it alone.** Omitting `version` is one of the
+two release models Anthropic documents, and it is the one this repo chose deliberately
+(`6dd2083`). Adding a version silently disables shipping:
+
+- With no `version`, the version Claude Code computes is the **repo HEAD commit SHA**, so
+  every merge to `main` is a new version that reaches users. Measured 2026-09-30: a hosted
+  install of `harvest` (a `source: "./"` entry) and `page-lab` (a `./plugins/*` entry) both
+  resolved to `908b76075a61`, exactly `origin/main`.
+- With a `version` set, users stay on their cached copy **until the string changes**. Push
+  content without bumping and `claude plugin update` reports
+  `<name> is already at the latest version (1.0.0)` and `"updateOutcome":"up_to_date"` while
+  serving stale files. Measured the same day: two generations of drift, reported as success.
+  There is no drift signal — the failure is silent and unbounded.
+- The cost is per entry, and 11 of the 18 entries are `source: "./"` with **no `plugin.json`
+  at all**, so their only possible version is the marketplace entry — 11 strings to bump on
+  every commit that touches a shared file, each miss a silent freeze.
+- If a version is ever set, set it in **one** place. `plugin.json` wins over the marketplace
+  entry at install time (`calculatePluginVersion` precedence) and the entry value is ignored
+  without warning; `claude plugin validate` reports the mismatch, and `claude plugin tag`
+  refuses to tag until they agree.
+
+Upstream precedent for versionless: `anthropics/skills`, whose `source: "./"` layout this
+repo copies, sets no version on any of its entries.
+
+One property to keep in mind rather than fix: the computed version is the **repo HEAD** SHA,
+not a per-directory one, so any commit revs all 18 entries and each `source: "./"` entry
+re-copies the whole tree (~1.7 MB). Superseded versions are swept 14 days after replacement.
+
 ## Conventions
 
 - MIT license on every plugin/skill (`LICENSE` at repo root).

@@ -26,6 +26,13 @@ Agent resources by Ismail Kattakath — Claude Code skills and plugins, plus por
 
 To pick up new commits on your next session, open `/plugin` → Marketplaces → `kattakath` → **Enable auto-update**. Plugins here carry no `version`, so each commit on `main` is a new version.
 
+Auto-update is **off by default** for every marketplace but Anthropic's own, and a marketplace cannot turn it on for you — so until you enable it, nothing here updates on its own. To pull changes once without enabling it:
+
+```bash
+/plugin marketplace update kattakath   # refresh the catalog
+/plugin update <name>@kattakath        # then update a plugin
+```
+
 ## Contents
 
 Looking for a way to do something? Start at [INDEX.md](INDEX.md): goal → route, pointing to
