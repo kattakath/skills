@@ -1,9 +1,3 @@
-<p align="center">
-  <a href="https://kattakath.github.io">
-    <img src="https://raw.githubusercontent.com/kattakath/kattakath.github.io/refs/heads/main/logo.svg" width="280" alt="kattakath">
-  </a>
-</p>
-
 <h1 align="center">kattakath/skills</h1>
 
 <p align="center">
