@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "capability-broker",
   "description": "When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works.",
   "author": {

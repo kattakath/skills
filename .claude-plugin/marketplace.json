@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-marketplace.json",
   "name": "kattakath",
   "description": "Ismail Kattakath's agent skills and Claude Code plugins: an answer-shape kit, hook supervision, Nix-flake hooks, userscript authoring with live-page diagnosis, llms.txt authoring, a repo foundation audit, macOS app automation, and standalone skills for local RAG, Android over ADB, Nix dev toolkits, capability discovery, skill harvesting and curation, discovery write-ups, JSON Resume tailoring and GitHub release gating.",
   "owner": {

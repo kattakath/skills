@@ -1,5 +1,5 @@
 {
-  "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "rag",
   "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
   "author": {
