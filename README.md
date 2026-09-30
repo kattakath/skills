@@ -1,12 +1,13 @@
 <p align="center">
   <a href="https://kattakath.github.io">
-    <img src="https://raw.githubusercontent.com/kattakath/kattakath.github.io/refs/heads/main/logo.svg" width="280" alt="kattakath">
+    <img src="assets/banner.jpg" alt="Agent 1 and Agent 2 sharing one bicycle">
   </a>
 </p>
 
-<h1 align="center">kattakath/skills</h1>
+<h1 align="center">Agent Skills &amp; Plugin Marketplace</h1>
 
 <p align="center">
+  <a href="https://github.com/kattakath/skills/actions/workflows/validate.yml"><img src="https://github.com/kattakath/skills/actions/workflows/validate.yml/badge.svg" alt="validate"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
 </p>
 
