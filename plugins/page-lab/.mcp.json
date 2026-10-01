@@ -3,6 +3,12 @@
     "kapture": {
       "command": "npx",
       "args": ["-y", "kapture-mcp@latest", "bridge"]
+    },
+    "chrome-devtools": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/chrome-devtools-attach.sh",
+      "env": {
+        "CDP_CATEGORY_EXTENSIONS": "1"
+      }
     }
   }
 }
