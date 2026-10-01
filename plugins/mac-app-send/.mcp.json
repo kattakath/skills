@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "macos-automator": {
+      "command": "npx",
+      "args": ["-y", "--package", "@steipete/macos-automator-mcp", "macos-automator-mcp"]
+    }
+  }
+}
