@@ -3,6 +3,14 @@
     "kapture": {
       "command": "npx",
       "args": ["-y", "kapture-mcp@latest", "bridge"]
+    },
+    "chrome-devtools": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/chrome-devtools-attach.sh",
+      "env": {
+        "CDP_PORT": "${CDP_PORT:-9222}",
+        "CDP_USER_DATA_DIR": "${CDP_USER_DATA_DIR:-${HOME}/Library/Application Support/Chromium}",
+        "CDP_CATEGORY_EXTENSIONS": "${CDP_CATEGORY_EXTENSIONS:-1}"
+      }
     }
   }
 }
