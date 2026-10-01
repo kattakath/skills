@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "mcpfinder": {
+      "command": "npx",
+      "args": ["-y", "@mcpfinder/server@1.1.0"]
+    }
+  }
+}
