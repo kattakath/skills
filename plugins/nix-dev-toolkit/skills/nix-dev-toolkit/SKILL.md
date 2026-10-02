@@ -80,11 +80,32 @@ three named checks sit beside it, each able to fail for a distinct reason:
   absence is auditable rather than invisible.
 - `{ command; packages; }` — the real gate.
 
-**`nix flake check` has no network.** Where the project's command exists but needs one, vendor its
-dependencies — `buildNpmPackage` with a vendored hash, or the equivalent for the ecosystem — so
-the gate genuinely runs in the sandbox. `{ absent = … }` is for a repo that has **no such command
-at all**; it is never an escape from a network-dependent one. Say that out loud when wiring it,
-because the easy misreading makes the escape swallow the standard.
+**The gate must run offline.** Where the project's command exists but needs a network, vendor its
+dependencies — `buildNpmPackage` with a vendored hash, or the equivalent for the ecosystem.
+`{ absent = … }` is for a repo that has **no such command at all**; it is never an escape from a
+network-dependent one. Say that out loud when wiring it, because the easy misreading makes the
+escape swallow the standard.
+
+**A green gate on a Mac is not evidence of that**, and this is the trap, not a footnote.
+`sandbox` is **`false` by default on darwin** — nixpkgs' own default, not a local
+misconfiguration — so a build there has **full network access**. Measured 2026-10-02, same
+derivation shape both ways:
+
+| Setting | `curl http://registry.npmjs.org/` inside the build |
+|---|---|
+| `sandbox = false` (darwin default) | `http_code=301` — **reached** |
+| `--option sandbox true` | `curl: (6) Could not resolve host` — **denied** |
+
+Linux defaults the other way, so a network-dependent gate goes green on the author's machine and
+red in CI. Prove it:
+
+```bash
+nix config show sandbox     # false, on darwin
+nix build --rebuild --option sandbox true .#checks.<system>.project-gate
+```
+
+`--rebuild` is **not optional** — without it Nix returns the cached store path and the flag
+changes nothing.
 
 Guidance on writing the shell bodies is in **`references/local-stack.md`**; the traps that make
 these programs fail in non-obvious ways are in **`references/gotchas.md`**.

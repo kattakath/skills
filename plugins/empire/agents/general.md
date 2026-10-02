@@ -65,12 +65,38 @@ sibling that goes with it.
   do not invent one. Record `project-gate: absent` in your report so a two-check repo is
   never later mistaken for a three-check one.
 
-## `nix flake check` has NO NETWORK — vendor the dependencies
+## The gate must run OFFLINE — and on a Mac nothing will tell you it doesn't
 
-This is the rule that decides whether `project-gate` is real or theatre, and it is the one
-that surprises people. `nix flake check` builds in a **sandbox with no network access**. A
-gate that shells out to `npm test` fails there — not because the project is broken, but
-because `node_modules` does not exist and nothing may fetch it.
+This is the rule that decides whether `project-gate` is real or theatre, and the trap is the
+opposite of what you expect.
+
+A gate that shells out to `npm test` fails in a **sandboxed** build: `node_modules` does not
+exist and nothing may fetch it. So vendor the dependencies.
+
+**But `sandbox` is `false` by DEFAULT on macOS, and that is nixpkgs' own default — not a local
+misconfiguration.** So on the machine you are working on, a build has **full network access**,
+your network-dependent gate goes **green**, and you ship a flake that fails the moment CI runs
+it on Linux, where `sandbox` defaults to **true**.
+
+Measured 2026-10-02, same derivation shape, both directions:
+
+| Setting | `curl http://registry.npmjs.org/` inside the build |
+|---|---|
+| `sandbox = false` (darwin default) | `http_code=301` — **network reached** |
+| `--option sandbox true` | `curl: (6) Could not resolve host` — **denied** |
+
+**So a green `project-gate` on a Mac is not evidence.** Prove it the only way that holds:
+
+```bash
+nix config show sandbox                                   # expect: false, on darwin
+nix build --rebuild --option sandbox true .#checks.<system>.project-gate
+```
+
+`--rebuild` is not optional — without it Nix hands you the already-built store path and the
+flag changes nothing. A fresh derivation name works too; a cached one proves nothing.
+
+Report which of the two you ran. "It passed `nix flake check`" on a Mac is the claim this
+section exists to reject.
 
 **Vendor the dependencies so the gate can run. Do not record `project-gate: absent` to dodge
 this.** `absent` means *the repo has no test/lint/build command* — it never means *the
@@ -137,7 +163,9 @@ State, in this order:
 3. **Which of the three checks exist**, and the reasoning that each one can actually fail.
 4. **How the dependencies were vendored** — which helper and which lockfile, or why the gate
    could not be made to run offline. Never silently.
-5. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
+5. **The forced-sandbox result** — the `--option sandbox true --rebuild` command and what it
+   returned. On darwin a plain green is not evidence that the gate runs offline.
+6. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
    check you could not prove falsifiable.
 
 **Never report success on an unverified artefact.** If `nix flake check` did not pass,
