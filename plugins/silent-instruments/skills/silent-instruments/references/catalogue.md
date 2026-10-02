@@ -5,10 +5,12 @@ measured nothing or the wrong thing.** A loud error is out of scope — an agent
 confidently wrong about a `fatal:`. The danger is the clean-looking answer.
 
 **Evidence markers.** `MEASURED` = reproduced on a real machine (bash 5.3, zsh 5.9, git 2.55,
-jq 1.7.1, gh 2.100, Darwin 27). `DOC` = primary source quoted. Entries carrying only `DOC` are
-marked, and the weakest are flagged at the end. `tests/trap-cases.sh` turns the shell and git
-entries into runnable assertions, so a toolchain upgrade that changes one is caught rather than
-silently believed.
+jq 1.7.1, gh 2.100, Determinate Nix 3.22.5, Darwin 27). `DOC` = primary source quoted. Entries
+carrying only `DOC` are marked, and the weakest are flagged at the end. `tests/trap-cases.sh`
+turns the shell and git entries into runnable assertions, so a toolchain upgrade that changes one
+is caught rather than silently believed. Sections **C** and **D** are documented but not asserted:
+C needs a network and an authenticated `gh`, and D needs a Nix daemon plus one specific fleet's
+option schema — CI must stay credential-free and portable.
 
 ---
 
@@ -368,6 +370,70 @@ only where `false` is not a legal value.
 
 ---
 
+## D. Nix, and declarations that are never read
+
+### D1 · A list that reads like the enablement list — and nothing reads it
+In `kattakath/nix-config`, `local.claudePlugins.marketplaces.<mp>.plugins` reads exactly like
+"the plugins that are enabled". It is not. It has exactly two consumers, both in
+`modules/shared/claude-plugins.nix`: `idsOf`/`allIds` (`:66`) and a per-name assertion (`:186`).
+The settings key is `enabledPlugins = lib.genAttrs alwaysOnIds (_: true)` (`:289`), and
+`alwaysOnIds` is `allIds` **filtered to three hardcoded names** (`alwaysOnNames`, `:70`). So
+adding any other name is a no-op that evaluates, formats, builds, passes CI and merges.
+
+Nothing reports it, and every surface agrees with you: the PR is green, activation succeeds, the
+name is visibly present in the file you edited — complete with the comment you wrote explaining
+what it now does — and the plugin is simply absent at runtime. Measured on the live file,
+`~/.claude/settings.json` holds **42** `enabledPlugins` ids of which **11 are `false`**, a value
+that `genAttrs … (_: true)` cannot emit. So the file is written by the CLI and merely *seeded* by
+Nix: "my line is in the `.nix`" says nothing about what the runtime holds. nix-config **#751**
+added `empire` this way under a comment asserting it changed how every session starts; nothing
+happened, and **#754** reverted it. **#753** added `silent-instruments` the same way, and
+`silent-instruments@kattakath` is absent from `enabledPlugins` today.
+
+**Correct:** read the consumer, not the declaration —
+`jq '.enabledPlugins | has("<plugin>@<mp>")' ~/.claude/settings.json` (`has`, not a value read:
+`false` and absent are different findings, per C12), then confirm in a live session's skill
+listing. **The general rule, and the point of this entry: a declaration is not an effect.** When
+two lists could plausibly be the authority, do not reason about which one *should* be — `grep`
+the key's name and count the places that read it. Nothing about this shape is Nix's: a config key
+that is parsed, schema-validated and never consumed behaves identically in a Terraform variable,
+a Kubernetes annotation, a `package.json` field, a CI matrix entry or an `.ini` section, and in
+every one of them the parser's silence reads as approval.
+`MEASURED` 2026-10-02
+
+### D2 · `--option sandbox true` changes nothing on an already-built derivation
+Nix's own `nix config show --json sandbox` reports `defaultValue: false` on this platform and
+documents *"The default is `true` on Linux and `false` on all other platforms."* So a
+network-dependent check is green on macOS and red in Linux CI — and the obvious remedy, re-running
+it with the sandbox forced on, is itself the silent instrument: **Nix hands back the cached store
+path, so the flag changes nothing.** Measured on aarch64-darwin, Determinate Nix 3.22.5, with one
+`runCommand` that curls `http://registry.npmjs.org/` into `$out`:
+
+| Run | Result |
+|---|---|
+| fresh build, darwin default (`sandbox = false`) | exit 0, `http_code=301` — **network reached** |
+| **same drv, `--option sandbox true`, no `--rebuild`** | exit **0**, **the same store path**, `http_code=301`, and **0 bytes on stderr** |
+| fresh drv, `--option sandbox true` | exit 1, builder exit code **6**, `http_code=000` — denied |
+
+Row 2 is the entry. The flag was accepted, nothing was built, the answer handed back is the one
+the **unsandboxed** build produced, and no diagnostic anywhere says the sandbox was never applied.
+
+`--rebuild` is the fix, and it has two sharp edges of its own — both **loud**, so neither is a
+catalogue entry (see the rejected table), but both read as a broken check rather than a misused
+flag. On a derivation that was never built: *"some outputs of '…drv' are not valid, so checking is
+not possible"*, exit 1. On a built one whose builder *tolerates* losing the network: *"may not be
+deterministic: output … differs"*, exit 1 — naming nondeterminism, not the sandbox.
+
+**Correct:** force the sandbox on something that must actually build — `nix build --rebuild
+--option sandbox true .#checks.<system>.<name>`, or change the derivation so its name is fresh —
+and read `nix config show sandbox` first so you know which default you are fighting. State which
+of the two you ran: on darwin a green `nix flake check` is not evidence that anything ran offline.
+`MEASURED` 2026-10-02 — all three rows, plus both `--rebuild` errors, on this machine ·
+`DOC` Nix `sandbox` option, quoted above. Origin: `kattakath/skills#60`, which measured the darwin
+default and the cached no-op; the two `--rebuild` failure modes were measured here.
+
+---
+
 ## Rejected for being too loud
 
 Tested and **excluded**, because an agent cannot be confidently wrong about an error:
@@ -382,6 +448,7 @@ Tested and **excluded**, because an agent cannot be confidently wrong about an e
 | `[ -n $W ]` with a two-word value | `unary operator expected` |
 | Stale index → false "dirty" from `diff-index --quiet` | **did not reproduce** on git 2.55 — dropped rather than asserted |
 | `git describe` ignoring lightweight tags | **did not reproduce** cleanly — dropped rather than asserted |
+| `nix build --rebuild` on a derivation that was never built | `error: some outputs … are not valid, so checking is not possible`, exit 1 — loud. Kept **inside D2** rather than dropped, because it is the flag you reach for to escape a false green, and its message reads as a broken check rather than a misused flag. Same for `--rebuild`'s *"may not be deterministic"* on a builder that tolerates the network loss |
 
 Two entries were dropped for failing to reproduce rather than for being loud. That is the
 correct outcome for a catalogue meant to be trusted: an entry that cannot be demonstrated does
@@ -397,3 +464,7 @@ not belong in it.
 - **A19 (xargs on empty input)** — the BSD half is measured, the GNU half is documentation only,
   and the divergence between them is the entire point, so the entry is half-verified by
   construction.
+- **D2's Linux half** — every row of D2's table was measured on aarch64-darwin. That `sandbox`
+  defaults to **`true`** on Linux, and therefore that the same check goes red in CI, rests on
+  Nix's own documented default and on `kattakath/skills#60`; no Linux build was run here. The
+  darwin half — which is the silent one, and the whole entry — is fully measured.

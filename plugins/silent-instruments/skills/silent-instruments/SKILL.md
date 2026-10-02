@@ -4,7 +4,8 @@ description: >-
   Use when about to state a finding that rests on a command's output — "did that actually
   work", "are you sure", "prove it", "verify that", "double-check", "that exit code looks
   wrong", "why did CI pass when nothing ran", "the branch looks unmerged", "the list came
-  back empty", "it printed nothing so there is nothing there" — or when an exit 0, an empty
+  back empty", "it printed nothing so there is nothing there", "I declared it so it must be
+  on", "why did my config change do nothing" — or when an exit 0, an empty
   result or a green status is about to become a claim. Covers the instruments that fail
   SILENTLY, the ones that exit 0 having measured nothing, so the output looks like evidence
   and is not.
@@ -55,7 +56,7 @@ together.
 
 ## The reflex list
 
-Nine shapes cover most of it. The full set, with measurements and primary sources, is in
+Eleven shapes cover most of it. The full set, with measurements and primary sources, is in
 [`references/catalogue.md`](references/catalogue.md).
 
 | If you are about to say… | The silent instrument | Cross-check with |
@@ -69,6 +70,8 @@ Nine shapes cover most of it. The full set, with measurements and primary source
 | "the tree is clean" | `git diff --quiet` is **blind to untracked files** — and flakes ignore untracked files | `[ -z "$(git status --porcelain)" ]` |
 | "the loop checked every item" | in **zsh** an unquoted `$list` is not field-split, so `for f in $list` iterates **once** over one blob and exits 0 | `while IFS= read -r x; do … done < <(…)`; compare the loop's count against an independent count |
 | "the field is absent" | a wrong `jq` path is `null`, not an error, and `--jq` passes it through as exit 0 | `jq -e`, or `has("key")` |
+| "I declared it, so it is on" | **a declaration is not an effect** — a config list can be parsed, validated, asserted over and never consumed, so the line merges green and does nothing | read the **consumer**: `grep` the key and count what reads it, then query the runtime state it was supposed to change |
+| "I re-ran it with the stricter flag" | `nix build --option sandbox true` on an **already-built** derivation returns the cached path — exit 0, 0 bytes on stderr, carrying the result the *unsandboxed* build produced | `--rebuild` (or a fresh derivation name), and `nix config show sandbox` to know which default you are fighting |
 
 ## Human gates
 

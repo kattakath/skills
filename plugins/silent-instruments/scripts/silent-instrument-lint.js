@@ -103,7 +103,23 @@ const RULES = [
     test: (c) => /\bgh\b[^|]*--jq\b/.test(c) || /\|\s*jq\s+(?!-e\b)-r\b/.test(c),
     say: "A wrong or renamed `jq` path yields `null`, not an error, and passes through as exit 0 — absent, null and 'my path was wrong' are indistinguishable. Use `jq -e` for scalars, or assert the shape with `has(\"field\")`.",
   },
+  {
+    id: "D2",
+    // Forcing the sandbox on without forcing a rebuild. On an already-built
+    // derivation Nix returns the cached store path, so the flag changes nothing and
+    // the answer handed back is the one the UNSANDBOXED build produced — exit 0, zero
+    // bytes on stderr. Narrow by construction: nobody types this flag by accident,
+    // and `--option sandbox false` (the darwin default) is deliberately not matched.
+    test: (c) => /--option\s+sandbox\s+(?:true|relaxed)\b/.test(c) && !/--rebuild\b|--check\b/.test(c),
+    say: "`--option sandbox true` changes NOTHING on an already-built derivation — Nix returns the cached store path: exit 0, 0 bytes on stderr, carrying the result the UNSANDBOXED build produced (`sandbox` defaults to false on darwin, true on Linux). Add `--rebuild`, or change the derivation so its name is fresh. Expect `--rebuild` to be loud in two ways of its own, neither of which means your check is broken: 'are not valid, so checking is not possible' on a never-built drv, and 'may not be deterministic' when the builder tolerates losing the network.",
+  },
 ];
+
+// NO RULE FOR D1 (a declared-but-never-consumed config list), deliberately. Its trap
+// lives in an Edit to a `.nix` file, and this hook gates on `tool_name === "Bash"`;
+// widening that gate would make a globally-enabled hook inspect every file edit in
+// every repo in order to catch one repo's option schema. Noise is worse than a gap —
+// D1 stays prose in the catalogue.
 
 function main() {
   let raw = "";

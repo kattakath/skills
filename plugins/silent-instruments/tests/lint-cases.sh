@@ -59,6 +59,8 @@ flag B5  "git diff --quiet"             'git diff --quiet && echo clean'
 flag B1  "git checkout -- path"         'git checkout -- src/app.js'
 flag C5  "gh api without --paginate"    'gh api repos/o/r/issues --jq ".[].number"'
 flag C11 "jq -r without -e"             'gh pr view 1 --json title | jq -r .title'
+flag D2  "forced sandbox, no --rebuild" 'nix build --option sandbox true .#checks.aarch64-darwin.project-gate'
+flag D2  "flake check, forced sandbox"  'nix flake check --option sandbox true'
 
 echo "== must stay QUIET — the corrected forms, and ordinary work =="
 quiet "quoted expansion in for"          'for f in "$file"; do echo "$f"; done'
@@ -82,6 +84,11 @@ quiet "plain ls"                         'ls -la /tmp'
 quiet "nix build"                        'nix build --no-link .#checks.aarch64-darwin.formatting'
 quiet "git commit"                       'git commit -m "a message with for in it"'
 quiet "a pipeline with no status read"   'cat f.txt | sort | uniq'
+quiet "forced sandbox WITH --rebuild"    'nix build --rebuild --option sandbox true .#checks.aarch64-darwin.project-gate'
+quiet "forced sandbox with --check"      'nix-build --check --option sandbox true ./default.nix'
+quiet "sandbox false is the default"     'nix build --option sandbox false .#checks.aarch64-darwin.project-gate'
+quiet "reading the sandbox setting"      'nix config show sandbox'
+quiet "plain flake check"                'nix flake check --all-systems --no-build'
 
 echo "== must never throw, and must ignore non-Bash tools =="
 for j in \
