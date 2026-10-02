@@ -155,7 +155,7 @@
       "gap": true
     },
     {
-      "goal": "Run a fleet of repos from one session \u2014 dispatch, conquer, implement",
+      "goal": "Run a fleet of repos from one session — dispatch, conquer, implement",
       "steps": [
         "empire",
         "nix-dev-toolkit",
@@ -171,7 +171,15 @@
         "@community",
         "@mcp-registry"
       ],
-      "note": "Kill-first. A gap can be real and still wrong to fill \u2014 direction, doctrine, alternative, or an artifact of your own design."
+      "note": "Kill-first. A gap can be real and still wrong to fill — direction, doctrine, alternative, or an artifact of your own design."
+    },
+    {
+      "goal": "Check whether a command actually measured what you are about to claim",
+      "steps": [
+        "@superpowers",
+        "silent-instruments"
+      ],
+      "note": "The discipline is off the shelf — obra/superpowers' verification-before-completion skill, cherry-picked by subpath. This covers the instruments its 'check exit code' step assumes are truthful. ShellCheck catches none of them and refuses zsh outright."
     }
   ]
 }
