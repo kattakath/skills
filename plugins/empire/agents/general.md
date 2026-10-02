@@ -41,8 +41,9 @@ own. Reuse the sibling that already does this.
 
 ## Get the flake from `nix-dev-toolkit`, never from memory
 
-Invoke the **`nix-dev-toolkit`** skill — *"create a flake.nix for this project"*. It owns a
-370-line template with the devShell, formatter and check scaffolding already worked out.
+Invoke the **`nix-dev-toolkit`** skill — *"create a flake.nix for this project"*. It owns the
+template — devShell, formatter and check scaffolding already worked out, and the `treefmt.nix`
+sibling that goes with it.
 
 - **Empire owns the invocation and the verification. The template lives in exactly one
   place.** A flake you hand-roll from memory is a second source of truth that drifts
@@ -63,6 +64,43 @@ Invoke the **`nix-dev-toolkit`** skill — *"create a flake.nix for this project
 - `project-gate` is **required only where such a command exists.** Where the repo has none,
   do not invent one. Record `project-gate: absent` in your report so a two-check repo is
   never later mistaken for a three-check one.
+
+## `nix flake check` has NO NETWORK — vendor the dependencies
+
+This is the rule that decides whether `project-gate` is real or theatre, and it is the one
+that surprises people. `nix flake check` builds in a **sandbox with no network access**. A
+gate that shells out to `npm test` fails there — not because the project is broken, but
+because `node_modules` does not exist and nothing may fetch it.
+
+**Vendor the dependencies so the gate can run. Do not record `project-gate: absent` to dodge
+this.** `absent` means *the repo has no test/lint/build command* — it never means *the
+command exists but I could not make it work offline*. Conflating the two is how a repo ends
+up with a green two-check flake while its own test suite was never wired in.
+
+Reach for the ecosystem's own fixed-output derivation — nixpkgs already ships one per
+language, and each takes a hash derived from the lockfile the repo already has:
+
+| Lockfile in the repo | Vendor with |
+|---|---|
+| `package-lock.json` | `buildNpmPackage` + `npmDepsHash` |
+| `pnpm-lock.yaml` | `pnpm.fetchDeps` |
+| `yarn.lock` | `yarn-berry.fetchYarnBerryDeps` (or `fetchYarnDeps` for classic) |
+| `Cargo.lock` | `rustPlatform.fetchCargoVendor` + `cargoHash` |
+| `go.sum` | `buildGoModule` + `vendorHash` |
+| `poetry.lock` / `uv.lock` | `poetry2nix` / `uv2nix`, or `buildPythonPackage` per dep |
+| `Gemfile.lock` | `bundlerEnv` |
+
+Three things to get right:
+
+- **The hash is a commitment, not a formality.** `lib.fakeHash` first, read the real one out
+  of the failure, paste it in. A hash copied from another repo fails the build; a hash left
+  fake fails every time the lockfile moves — which is the point.
+- **No lockfile, no vendoring.** A repo with unpinned dependencies cannot have a reproducible
+  gate at all. Say that in your report rather than generating a lockfile the project never
+  agreed to.
+- **Where vendoring genuinely cannot be done** — a private registry, a build that fetches at
+  runtime, a toolchain nixpkgs has no vendor helper for — that is a **recorded limitation
+  with its reason**, not an `absent`. Name the blocker so the next session knows what to fix.
 
 ## A check that cannot fail is not a check
 
@@ -97,7 +135,9 @@ State, in this order:
 2. **The exact `nix flake check` result** — the command you ran and what it returned. Not
    "verified"; the result.
 3. **Which of the three checks exist**, and the reasoning that each one can actually fail.
-4. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
+4. **How the dependencies were vendored** — which helper and which lockfile, or why the gate
+   could not be made to run offline. Never silently.
+5. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
    check you could not prove falsifiable.
 
 **Never report success on an unverified artefact.** If `nix flake check` did not pass,

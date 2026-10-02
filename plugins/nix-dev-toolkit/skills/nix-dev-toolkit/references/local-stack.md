@@ -176,7 +176,11 @@ rather than provisioning every runner identically.
 
 A stack is only proven when it has done the real work:
 
-1. `nix flake check` — builds and shellchecks every command.
+1. `nix flake check` — the `checks`-aliases-`packages` line builds and shellchecks every command
+   (evaluating `packages` would not), and the three named checks run beside it: `formatting`
+   (treefmt), `toolchain-complete` (every binary the dev shell promises resolves) and
+   `project-gate` (the project's own command). Building a command proves it compiles, not that the
+   stack has a property — that is what the named three are for.
 2. `nix run .#stack-up`, then `nix run .#stack-status` — confirm the extension version prints.
 3. Apply the project's **real** migrations against `pg-url`, including any `CREATE EXTENSION`.
 4. `nix run .#stack-down` / `pg-destroy`, then confirm no other cluster on the machine changed.
