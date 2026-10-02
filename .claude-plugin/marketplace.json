@@ -122,7 +122,7 @@
     },
     {
       "name": "foundation-audit",
-      "description": "Four-dimension foundation audit of a config monorepo \u2014 architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
+      "description": "Four-dimension foundation audit of a config monorepo — architecture and the boundary violations structural gates structurally cannot see, duplication judged by purpose, activation failure modes classified by how they fail, and dead surface including guardrails that match nothing. Fans out four lane-scoped agents in parallel, each returning findings, a CONFIRMED-SOUND list and mandatory UNKNOWNS; the orchestrator re-verifies the top findings itself before relaying.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -201,7 +201,7 @@
     },
     {
       "name": "llmstxt",
-      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work \u2014 docs, a site, a repo, or a developer accomplishment document.",
+      "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -276,7 +276,7 @@
     },
     {
       "name": "page-lab",
-      "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
+      "description": "Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -351,6 +351,26 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/session-relay",
       "license": "MIT",
       "source": "./plugins/session-relay"
+    },
+    {
+      "name": "silent-instruments",
+      "description": "The instrument layer under a verification gate: a measured catalogue of commands that exit 0 having measured nothing — a stale PIPESTATUS, a CI run green because its only job skipped, ancestry after a squash, a truncated API page, a zsh loop that iterates once — plus a PostToolUse advisory that names the cross-check. No linter covers these; ShellCheck catches none of them and refuses zsh outright.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "verification",
+        "silent-failure",
+        "shell",
+        "git",
+        "exit-status",
+        "ci",
+        "zsh"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/silent-instruments",
+      "license": "MIT",
+      "source": "./plugins/silent-instruments"
     },
     {
       "name": "skill-curator",

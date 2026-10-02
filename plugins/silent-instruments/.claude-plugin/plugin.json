@@ -1,0 +1,20 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "silent-instruments",
+  "description": "The instrument layer under a verification gate: a measured catalogue of commands that exit 0 having measured nothing — a stale PIPESTATUS, a CI run green because its only job skipped, ancestry after a squash, a truncated API page, a zsh loop that iterates once — plus a PostToolUse advisory that names the cross-check. No linter covers these; ShellCheck catches none of them and refuses zsh outright.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/silent-instruments",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "verification",
+    "silent-failure",
+    "shell",
+    "git",
+    "exit-status",
+    "ci",
+    "zsh"
+  ]
+}
