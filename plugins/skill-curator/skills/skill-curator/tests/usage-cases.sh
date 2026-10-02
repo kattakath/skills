@@ -8,7 +8,28 @@ src=$(cd "$here/../../../../.." && pwd)   # tests -> skill -> skills/ -> plugin 
 repo=$(mktemp -d); trap 'rm -rf "$repo"' EXIT
 (cd "$src" && git ls-files '.claude-plugin/*' 'index/*' '*.md' | tar -cf - -T -) | tar -xf - -C "$repo"
 # jsonresume-tailor gets harvest's deprecation marker, as a `deprecate` operation would add.
-sed -i '0,/^name: jsonresume-tailor$/s//name: jsonresume-tailor\ndeprecated: true\nreplaced_by: rag/' "$repo/plugins/jsonresume-tailor/skills/jsonresume-tailor/SKILL.md"
+# Injected with python3, not sed, and the reason is this suite's own subject. The line
+# here used to be `sed -i '0,/re/s//.../'`, which needs THREE GNU-only behaviours: `-i`
+# with no backup suffix (BSD requires `-i ''`), the `0,/re/` address range, and `\n` as a
+# newline in the replacement. CI runs ubuntu, so it was green there and died on macOS with
+# `sed: invalid command code f` — a suite that passed in CI while being broken on the
+# machine the operator actually runs it on. python3 is already this file's workhorse
+# (every assertion below parses JSON with it), so sed was the odd one out.
+#
+# It also no longer no-ops silently: a missing anchor now exits non-zero HERE, rather than
+# surfacing three assertions later as a confusing `want deprecated, got active`.
+python3 - "$repo/plugins/jsonresume-tailor/skills/jsonresume-tailor/SKILL.md" <<'INJECT'
+import io, sys
+p = sys.argv[1]
+lines = io.open(p, encoding="utf-8").readlines()
+for i, l in enumerate(lines):
+    if l.rstrip("\n") == "name: jsonresume-tailor":
+        lines[i:i + 1] = [l, "deprecated: true\n", "replaced_by: rag\n"]
+        break
+else:
+    sys.exit("fixture: anchor 'name: jsonresume-tailor' not found in " + p)
+io.open(p, "w", encoding="utf-8").writelines(lines)
+INJECT
 git -C "$repo" init -q && git -C "$repo" add -A
 GIT_AUTHOR_DATE=2026-09-01T00:00:00Z GIT_COMMITTER_DATE=2026-09-01T00:00:00Z \
   git -C "$repo" -c user.name=t -c user.email=t@t commit -qm fixture
