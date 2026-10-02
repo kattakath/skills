@@ -434,6 +434,29 @@ default and the cached no-op; the two `--rebuild` failure modes were measured he
 
 ---
 
+### D3 · `nix flake check --no-build` prints a GREEN TICK for a check it never built
+The tool renders `✅ checks.<system>.<name>` and exits 0 for a derivation whose builder fails.
+`--no-build` is an EVALUATION gate: it proves the check's expression evaluates, nothing about
+whether it passes.
+
+Measured on one tree, one attribute, two invocations:
+
+```
+nix flake check --no-build   ->  ✅ checks.aarch64-darwin.will-fail     exit 0
+nix flake check              ->  ❌ builder failed / "this builder always fails"   exit 1
+```
+
+**Why it is the sharpest entry here:** every other instrument merely returns a benign value.
+This one prints a tick. "I ran the suite and it passed" is true, and the suite ran nothing.
+
+**Correct instrument:** both lines, in order — `--no-build` first for a fast two-system
+evaluation, then a bare `nix flake check` (or `nix build .#checks.<system>.<name>` for the
+specific gate) to realise it. Reporting an exit code from the first and calling the check passed
+is the failure. A repo that documents this and still gets caught is the normal case: nix-config's
+own CLAUDE.md says *"The --no-build line RUNS no check; run BOTH lines"*, and the trap still cost
+half a day because the green tick is more persuasive than the sentence.
+`MEASURED` — reproduced in a throwaway flake whose only check is `exit 1`.
+
 ## Rejected for being too loud
 
 Tested and **excluded**, because an agent cannot be confidently wrong about an error:
