@@ -126,6 +126,22 @@ jobs:
       - name: skill-curator usage cases
         run: bash plugins/skill-curator/skills/skill-curator/tests/usage-cases.sh
 
+      # Both halves of silent-instruments, and they test different things. The lint
+      # cases pin the hook's behaviour — including the must-stay-QUIET half, which
+      # matters more than the flags: this hook is enabled in every repo, so a rule that
+      # fires on ordinary work trains the reader to ignore the channel.
+      - name: silent-instruments lint cases
+        run: bash plugins/silent-instruments/tests/lint-cases.sh
+
+      # The trap cases assert the CATALOGUE, not the code: that each documented
+      # instrument really does exit 0 having measured nothing, and that the named
+      # replacement really does answer correctly. A trap that stops reproducing is an
+      # entry to correct, not a test to delete — this suite already caught a wrong
+      # mechanism in the catalogue's first draft. No network, no credentials; zsh cases
+      # skip when zsh is absent.
+      - name: silent-instruments trap cases
+        run: bash plugins/silent-instruments/skills/silent-instruments/tests/trap-cases.sh
+
       # INDEX.md is generated; a route step that points at nothing, an entry no
       # route reaches, or a hand edit all fail here.
       - name: Index up to date
