@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "memory": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/memory-server.sh"
+    },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "terraform": {
+      "command": "terraform-mcp-server"
+    },
+    "mcpfinder": {
+      "command": "nix-mcp-mcpfinder"
+    }
+  }
+}
