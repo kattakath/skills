@@ -554,8 +554,19 @@
                       # The fileset arrives read-only out of the store, and most build tools want
                       # to write beside their inputs — so copy it and restore write permission
                       # rather than running in the store path.
-                      cp -R ${gateSrc}/. .
-                      chmod -R u+w .
+                      #
+                      # INTO A SUBDIRECTORY, and `chmod` THAT — never the build cwd itself. Under
+                      # structured attrs `runCommandLocal`'s cwd also holds Nix's OWN
+                      # `builder.json` and `.attr-*` files, and the LINUX sandbox refuses to let
+                      # the builder re-mode them:
+                      #   chmod: changing permissions of './builder.json': Operation not permitted
+                      # It builds fine on darwin, which is exactly how the broken version shipped
+                      # — that revision was verified by building `checks.aarch64-darwin.*` only.
+                      # Measured on aarch64-linux 2026-10-02.
+                      mkdir gate
+                      cp -R ${gateSrc}/. gate/
+                      chmod -R u+w gate
+                      cd gate
                       ${projectGate.command}
                       touch "$out"
                     '';
