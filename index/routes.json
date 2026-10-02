@@ -5,11 +5,12 @@
       "goal": "Find a capability before building or installing one",
       "steps": [
         "capability-broker",
+        "mcp-utilities",
         "@community",
         "@skills-sh",
         "@mcp-registry"
       ],
-      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config."
+      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config. mcp-utilities' `mcpfinder` server searches the registries from inside the session, so the registry step below is reachable without leaving it."
     },
     {
       "goal": "Capture what a session figured out, so no session rediscovers it",
@@ -202,6 +203,13 @@
         "gmail"
       ],
       "note": "Four accounts, four separate per-session MCP servers — no proxy and nothing shared. Each needs its launcher on PATH from kattakath/nix-config (local.gmailMcp.accounts), because the OAuth client secret is read from the macOS Keychain at launch and must not live in this repo. Replaces the central gateway retired 2026-10-01; Claude Desktop loads no plugins, so it gains nothing here."
+    },
+    {
+      "goal": "Get the keyless utility MCP servers: knowledge graph, step-by-step reasoning, Terraform registry docs, MCP discovery",
+      "steps": [
+        "mcp-utilities"
+      ],
+      "note": "Four upstream servers, no credentials, one plugin because all four were enabled together on the gateway this replaces. `terraform-mcp-server` and `nix-mcp-mcpfinder` must be on PATH from kattakath/nix-config — a plugin cannot carry a /nix/store path, and mcpfinder needs a Node newer than the fleet default. `memory` gets a wrapper so its graph lives under XDG instead of inside the npx cache."
     }
   ]
 }

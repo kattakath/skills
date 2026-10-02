@@ -293,6 +293,25 @@
       "source": "./plugins/mac-app-send"
     },
     {
+      "name": "mcp-utilities",
+      "description": "The four keyless, domain-free MCP servers the retired fleet gateway carried: a persistent knowledge graph, a sequential-reasoning scaffold, Terraform registry lookup, and cross-registry MCP server discovery. No credentials, no account, nothing to configure.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "mcp",
+        "memory",
+        "knowledge-graph",
+        "reasoning",
+        "terraform",
+        "discovery"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mcp-utilities",
+      "license": "MIT",
+      "source": "./plugins/mcp-utilities"
+    },
+    {
       "name": "nix-dev-toolkit",
       "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
       "author": {
