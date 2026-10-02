@@ -101,11 +101,21 @@ red in CI. Prove it:
 
 ```bash
 nix config show sandbox     # false, on darwin
-nix build --rebuild --option sandbox true .#checks.<system>.project-gate
+nix build --option sandbox true .#checks.<system>.project-gate            # fresh/changed drv
+nix build --rebuild --option sandbox true .#checks.<system>.project-gate  # already-built drv
 ```
 
-`--rebuild` is **not optional** — without it Nix returns the cached store path and the flag
-changes nothing.
+**Both forms are needed, and each prevents the other's failure.** Without `--rebuild` on an
+already-built derivation you get the cached path and a **false green**. With `--rebuild` on one
+that was never built you get a **false red**:
+
+```
+error: some outputs of '…project-gate.drv' are not valid, so checking is not possible
+       Hint: --rebuild and --check error if the derivation was not previously built
+```
+
+The false red is the likely one — you reach for the flag right after fixing something, which
+changes the hash. Measured 2026-10-02.
 
 Guidance on writing the shell bodies is in **`references/local-stack.md`**; the traps that make
 these programs fail in non-obvious ways are in **`references/gotchas.md`**.
