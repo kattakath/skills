@@ -16,8 +16,9 @@
 # this file exists.
 #
 # Scope: shell and git only. The GitHub and API entries (section C) need a network and
-# an authenticated gh, so they are documented but not asserted here — CI must stay
-# credential-free.
+# an authenticated gh, and the Nix entries (section D) need a Nix daemon plus one
+# specific fleet's option schema — so both are documented but not asserted here. CI must
+# stay credential-free and portable.
 #
 # Run:  bash plugins/silent-instruments/skills/silent-instruments/tests/trap-cases.sh
 set -uo pipefail
