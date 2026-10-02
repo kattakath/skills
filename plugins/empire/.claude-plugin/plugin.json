@@ -1,0 +1,26 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "empire",
+  "description": "Run a fleet of repos from one session: a controller agent that reads, decides and dispatches but writes nothing; an isolated agent that brings an unflaked repo up to a verified standard; a per-repo implementer; and read-only research lanes that can return NO.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/empire",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "orchestration",
+    "multi-repo",
+    "agents",
+    "delegation",
+    "nix",
+    "flake"
+  ],
+  "defaultEnabled": false,
+  "dependencies": [
+    "nix-dev-toolkit"
+  ],
+  "settings": {
+    "agent": "empire:queen"
+  }
+}

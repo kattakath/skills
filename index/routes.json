@@ -153,6 +153,16 @@
       ],
       "note": "Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation.",
       "gap": true
+    },
+    {
+      "goal": "Run a fleet of repos from one session \u2014 dispatch, conquer, implement",
+      "steps": [
+        "empire",
+        "nix-dev-toolkit",
+        "foundation-audit",
+        "capability-broker"
+      ],
+      "note": "empire dispatches and sets the standard; it owns none of the tools. Conquest on first write, never on read."
     }
   ]
 }
