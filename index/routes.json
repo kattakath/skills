@@ -106,7 +106,8 @@
       "goal": "Answer questions from a local document corpus",
       "steps": [
         "rag"
-      ]
+      ],
+      "note": "Declares the `postgres` MCP server itself since 2026-10-02 (it used to come from nix-config's purged gateway). Needs `nix-mcp-postgres` on PATH from kattakath/nix-config (local.pluginMcp.servers) — the launcher knows the loopback URI and the version pins; no secret, the store is trust auth scoped to one database."
     },
     {
       "goal": "Tailor a resume to a job posting",
@@ -180,6 +181,20 @@
         "silent-instruments"
       ],
       "note": "The discipline is off the shelf — obra/superpowers' verification-before-completion skill, cherry-picked by subpath. This covers the instruments its 'check exit code' step assumes are truthful. ShellCheck catches none of them and refuses zsh outright."
+    },
+    {
+      "goal": "Administer a live WordPress site over its REST API",
+      "steps": [
+        "wordpress"
+      ],
+      "note": "~59 tools against PRODUCTION — update/delete/settings included, no staging behind it. Needs `nix-mcp-wordpress` on PATH from kattakath/nix-config (local.pluginMcp.servers), which reads the site URL, username and application password from the macOS Keychain at launch; a plugin .mcp.json cannot. NOT the WordPress MCP Adapter: that is a different endpoint (/wp-json/mcp/...) and it is dead — 404 rest_no_route. The core REST path (/wp-json/wp/v2) was verified live 2026-10-02."
+    },
+    {
+      "goal": "Scrape or extract from a page a plain fetch cannot get",
+      "steps": [
+        "apify"
+      ],
+      "note": "Apify Store Actors, including rag-web-browser and web-fetch, for JavaScript-rendered or bot-gated pages. Needs `nix-mcp-apify` on PATH from kattakath/nix-config (local.pluginMcp.servers), which reads APIFY_TOKEN from the macOS Keychain at launch — local token, not the hosted mcp.apify.com OAuth bridge, whose browser redirect a spawned stdio server cannot complete. Actors bill real compute units."
     }
   ]
 }

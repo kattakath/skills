@@ -27,6 +27,25 @@
       "source": "./plugins/android-phone"
     },
     {
+      "name": "apify",
+      "description": "Apify Store Actors as tools — web scraping, crawling and extraction, including the rag-web-browser and web-fetch lane. Runs locally against an API token read from the macOS login Keychain by a Nix-installed launcher, not through a hosted OAuth bridge.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "apify",
+        "mcp",
+        "scraping",
+        "web-fetch",
+        "keychain",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/apify",
+      "license": "MIT",
+      "source": "./plugins/apify"
+    },
+    {
       "name": "brag-dossier",
       "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
       "author": {
@@ -408,6 +427,25 @@
       "homepage": "https://github.com/kattakath/skills",
       "license": "MIT",
       "source": "./plugins/superhook"
+    },
+    {
+      "name": "wordpress",
+      "description": "WordPress site administration over the REST API — posts, pages, media, taxonomies, comments, users and SEO — against a PRODUCTION site. Credentials come from the macOS login Keychain via a Nix-installed launcher, never from this repo.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "wordpress",
+        "mcp",
+        "rest-api",
+        "cms",
+        "keychain",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
+      "license": "MIT",
+      "source": "./plugins/wordpress"
     }
   ]
 }
