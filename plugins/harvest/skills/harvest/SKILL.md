@@ -70,7 +70,7 @@ multi-step procedure that clearly generalizes beyond this session.
 
 | Knowledge is… | Artifact | Lives in |
 |---|---|---|
-| A procedure with steps, checks and pitfalls | **Skill** (`SKILL.md` + optional `references/`, `scripts/`) | Content repo `skills/<name>/` |
+| A procedure with steps, checks and pitfalls | **Skill** (`SKILL.md` + optional `references/`, `scripts/`, `tests/`) | Content repo, as a **one-skill plugin** — see § Adapter. There is no top-level `skills/` tree |
 | A role with a restricted tool set | **Subagent** (`agents/<name>.md`) | Content repo, or a plugin |
 | A fan-out orchestration that worked | **Workflow** — save from `/workflows` with `s` | Project or `~/.claude/workflows/`, then the content repo |
 | Hooks, commands and skills that ship together | **Plugin** | Content repo `plugins/<name>/` + marketplace entry |
@@ -153,13 +153,23 @@ resolves into a store, skills are declared, not dropped into `~/.claude/skills`.
 
 **With a declarative harness — two PRs, in order:**
 
-1. **Content repo PR** — add `skills/<name>/` (or the plugin and its marketplace entry) on a
-   branch; one PR per artifact; title and commit style follow that repo.
+1. **Content repo PR** — add the plugin and its marketplace entry on a branch; one PR per
+   artifact; title and commit style follow that repo. A lone skill is still a plugin: there
+   is no top-level `skills/` tree to drop one into.
 2. **Harness PR, after (1) merges, for a NEW artifact only** — enable it. If the harness
    registers the content repo as a git marketplace with auto-update, that is one line (the
    plugin's name in the enabled list) and no pin bump; run the harness's own checks before
    opening it. A change to an artifact that is already enabled needs no harness PR at all:
    the marketplace's auto-update delivers it.
+
+**(2) IS THE STEP THAT GETS SKIPPED.** Measured on this fleet 2026-10-02: **five** plugins
+were merged into the content repo and enabled nowhere — `prior-art-recon`,
+`foundation-audit`, `mac-app-send`, `empire`, `brag-dossier`. The cost is not cosmetic: a
+session that session went to use `prior-art-recon` and could not load it, because a plugin
+absent from the harness list does not reach a session however green its own repo is. So
+finish (2), or the artifact is shelf-ware. Check it landed by name, not by assuming:
+the plugin must appear in the harness's enabled list AND in a live session's skill
+listing — "declared" and "loaded" are different facts.
 
 Until (2) activates, a new skill is not loaded globally. For immediate use in the
 current project only, a copy under that project's `.claude/skills/` is acceptable if it is
