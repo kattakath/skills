@@ -16,7 +16,7 @@ Embeddings are generated **inside Postgres** by `embed(text)`, which calls a loc
 | Function `embed(text) -> vector` | Local Ollama `nomic-embed-text`, 768-dim. Call it inline in SQL; it is the whole interface. |
 | Index | HNSW cosine on `embedding` — always order by `<=>` so the index is used |
 
-The skill does **not** create any of it. `services.pgvectorLocal` in
+The skill does **not** create any of it. `local.rag.pgvector` in
 [`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s `modules/features/local-rag/`
 capsule owns the schema declaratively.
 
@@ -35,6 +35,25 @@ corpus re-ingested cleanly.
 
 ## Requires
 
-The **`postgres` MCP server** pointed at `ragdb`, and Ollama serving `nomic-embed-text`. On this
-fleet both are declared — MCP servers are adopted through nix-config's gateway, never a plugin
-`.mcp.json`, and this plugin ships neither.
+Ollama serving `nomic-embed-text`, the provisioned store above, and the **`postgres` MCP
+server** — which **this plugin now declares itself**, in its own `.mcp.json`:
+
+```json
+{ "postgres": { "command": "nix-mcp-postgres" } }
+```
+
+That changed on 2026-10-02. The server used to arrive through nix-config's central MCP
+gateway; the gateway and its Cloudflare portal were purged, so the capability moved to the
+plugin that was already built on it. This README said the opposite until then — "MCP servers
+are adopted through nix-config's gateway, never a plugin `.mcp.json`" — which is now false.
+
+It names a **binary**, not a package. `nix-mcp-postgres` comes from
+[`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s
+`modules/shared/plugin-mcp.nix` (`local.pluginMcp.servers` includes `"postgres"`), the same
+arrangement `claude-code-nix` has with `mcp-nixos`. The launcher is what knows the loopback
+connection URI and the version pins the server needs; the plugin cannot, and should not,
+hardcode a machine's database coordinates. Without it on PATH the server fails to start.
+
+Unlike the sibling `wordpress` and `apify` launchers, this one reads **no secret**: the
+store is loopback-only with `trust` auth and a role scoped to `ragdb` alone, so there is
+nothing to fetch from a Keychain — the blast radius is that one database.

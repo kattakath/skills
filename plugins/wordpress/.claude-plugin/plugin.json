@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "wordpress",
+  "description": "WordPress site administration over the REST API — posts, pages, media, taxonomies, comments, users and SEO — against a PRODUCTION site. Credentials come from the macOS login Keychain via a Nix-installed launcher, never from this repo.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "wordpress",
+    "mcp",
+    "rest-api",
+    "cms",
+    "keychain",
+    "nix"
+  ]
+}
