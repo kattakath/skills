@@ -163,6 +163,15 @@
         "capability-broker"
       ],
       "note": "empire dispatches and sets the standard; it owns none of the tools. Conquest on first write, never on read."
+    },
+    {
+      "goal": "Decide whether a perceived gap is worth filling",
+      "steps": [
+        "prior-art-recon",
+        "@community",
+        "@mcp-registry"
+      ],
+      "note": "Kill-first. A gap can be real and still wrong to fill \u2014 direction, doctrine, alternative, or an artifact of your own design."
     }
   ]
 }

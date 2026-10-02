@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "prior-art-recon",
+  "description": "Before building, standardising or publishing anything meant to fill a perceived gap: find out whether it already exists, whether anyone wants it, whether the ecosystem is moving away from it, and whether the gap is an artifact of your own design.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/prior-art-recon",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "prior-art",
+    "research",
+    "standards",
+    "due-diligence",
+    "gap-analysis",
+    "architecture"
+  ]
+}
