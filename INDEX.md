@@ -28,6 +28,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | General language- or domain-specific engineering agents | [wshobson/agents](https://github.com/wshobson/agents) | Candidate; pick single plugins, not the whole collection. |
 | Get scannable, verdict-first answers and architecture maps | [`brain-signals`](plugins/brain-signals) |  |
 | Rebuild a raster or auto-traced logo as clean, parametric SVG | [`logo-construction-geometry`](plugins/logo-construction-geometry) | Measure centres/radii/angles, infer the construction rule, regenerate from parameters, score IoU vs. the source; walked 2026-09-24 on a figure-8 circuit mark (tolerant IoU 0.90). |
+| Run a fleet of repos from one session — dispatch, conquer, implement | [`empire`](plugins/empire) → [`nix-dev-toolkit`](plugins/nix-dev-toolkit) → [`foundation-audit`](plugins/foundation-audit) → [`capability-broker`](plugins/capability-broker) | empire dispatches and sets the standard; it owns none of the tools. Conquest on first write, never on read. |
 | Security-review code or a dependency | `security-guidance` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [trailofbits/skills](https://github.com/trailofbits/skills) |  |
 | Supervise Claude Code hooks so one bad hook cannot wedge a session | [`superhook`](plugins/superhook) |  |
 | Tailor a resume to a job posting | [`jsonresume-tailor`](plugins/jsonresume-tailor) |  |
