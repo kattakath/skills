@@ -52,8 +52,39 @@ mk = { name, deps ? [ ], text }:
 ```
 
 Expose commands as `apps.<system>.<name>` and keep the derivations in `packages` so
-`nix flake check` builds (and shellchecks) all of them. Add a `checks` output so `nix flake check`
-is a real gate.
+`nix flake check` builds (and shellchecks) all of them.
+
+`checks = forAll (system: _: self.packages.${system})` is how that happens, and it is **not** a
+tautology: `nix flake check` *evaluates* `packages` but *builds* `checks`, so the alias promotes
+evaluate→build, and every `writeShellApplication` has `shellcheck` run on it for real.
+`numtide/blueprint` does the same thing by design. What the alias cannot do is assert a
+*property* — and **a check that can only fail by failing to build is not a property gate.** So
+three named checks sit beside it, each able to fail for a distinct reason:
+
+- **`formatting`** — treefmt-nix's own `config.build.check`, taken off the shelf. The template's
+  `formatter` is treefmt via a `treefmt-nix` input now, not a bare `pkgs.nixfmt-rfc-style`:
+  pointed at a tree holding a `README.md`, bare nixfmt dies with `unexpected end of input`, so
+  `nix fmt` was broken in every repo this template has produced. treefmt routes each file type to
+  the tool that can read it.
+- **`toolchain-complete`** — asserts that every binary the dev shell *promises* actually resolves.
+  Hand-written, because nothing off the shelf does it (0 GitHub hits for the pattern). It reads
+  `devPackagesFor` — the one list `devShells` also reads, so the promise and the check cannot
+  drift — against `requiredBins`, the binaries that must be on `PATH`.
+- **`project-gate`** — the project's own test / lint / build command.
+
+`projectGate` is a single knob with three shapes:
+
+- `"unwired"` — what a fresh copy ships with, and it **fails `nix flake check` by design**. The
+  failure message names the other two shapes.
+- `{ absent = "reason"; }` — passes, and surfaces as a check named `project-gate-absent`, so the
+  absence is auditable rather than invisible.
+- `{ command; packages; }` — the real gate.
+
+**`nix flake check` has no network.** Where the project's command exists but needs one, vendor its
+dependencies — `buildNpmPackage` with a vendored hash, or the equivalent for the ecosystem — so
+the gate genuinely runs in the sandbox. `{ absent = … }` is for a repo that has **no such command
+at all**; it is never an escape from a network-dependent one. Say that out loud when wiring it,
+because the easy misreading makes the escape swallow the standard.
 
 Guidance on writing the shell bodies is in **`references/local-stack.md`**; the traps that make
 these programs fail in non-obvious ways are in **`references/gotchas.md`**.
@@ -162,19 +193,28 @@ the wrong trade. Say so in a comment rather than leaving it to be rediscovered.
 ## Workflow
 
 1. Harvest env vars and CLIs from the source (commands above).
-2. Copy **`assets/flake-template.nix`** to the repo root as `flake.nix`, and
-   **`assets/envrc-template`** as `.envrc`.
+2. Copy **`assets/flake-template.nix`** to the repo root as `flake.nix`,
+   **`assets/treefmt-template.nix`** as `treefmt.nix` (the `formatter` and the `formatting` check
+   both read it — the flake does not evaluate without it), and **`assets/envrc-template`** as
+   `.envrc`.
 3. Replace the `project` binding, fill `envCatalogue` from the harvest, add the project's CLIs to
-   `devTools`, and delete any stack service the project does not use.
+   `devPackagesFor` (the one list the dev shell and `toolchain-complete` both read) and the
+   binaries they must put on `PATH` to `requiredBins`, and delete any stack service the project
+   does not use.
 4. Add the state dir to `.gitignore`, plus `!.envrc` (an existing `.env*` line ignores it),
    `.envrc.local` and `/.direnv/`. Then `direnv allow`.
-5. Validate: `nix flake check` (builds and shellchecks every command), then
+5. Wire or declare `projectGate` — **a fresh copy is RED until you do**, by design, and the
+   failure message names the two shapes. Then validate: `nix flake check` (the package alias plus
+   `formatting`, `toolchain-complete` and `project-gate`), then
    `nix develop --command <cli> --version` for each CLI the project relies on.
-6. Smoke-test the stack end to end: `nix run .#stack-up`, apply the project's real migrations,
+6. Perturb each check once and watch it go red: drop a package from `devPackagesFor` while leaving
+   its binary in `requiredBins`, unformat a file, break the project's command. Put each back.
+   A check nobody has seen fail is not known to work.
+7. Smoke-test the stack end to end: `nix run .#stack-up`, apply the project's real migrations,
    confirm the extension loaded, `nix run .#stack-down`, and verify no other database was touched.
    Smoke-test the env too: a fixture with the same name in all three dotenv files plus one ambient
    `export`, asserting ambient wins and `env-doctor` flips `MISSING` → `set`.
-7. Commit `flake.nix`, `flake.lock`, `.envrc`, and the `.gitignore` change together.
+8. Commit `flake.nix`, `flake.lock`, `treefmt.nix`, `.envrc`, and the `.gitignore` change together.
 
 Prefer adding a command to the flake over documenting a manual procedure in a README — a
 `writeShellApplication` is checked at build time; a README is not.
@@ -193,8 +233,10 @@ Prefer adding a command to the flake over documenting a manual procedure in a RE
 ### Assets
 
 - **`assets/flake-template.nix`** — a working, genericised starting point with the dev shell, env
-  catalogue, Postgres+pgvector stack and lifecycle apps already wired. Copy and adapt; the
-  `# ADAPT:` markers show what must change per project.
+  catalogue, Postgres+pgvector stack, lifecycle apps and the three named checks already wired.
+  Copy and adapt; the `# ADAPT:` markers show what must change per project.
+- **`assets/treefmt-template.nix`** — the `treefmt.nix` the template's `formatter` and `formatting`
+  check both consume, with a tool per file type. Copied alongside `flake.nix`, not optional.
 - **`assets/envrc-template`** — the committed `.envrc`: `use flake`, the three dotenv files in
   precedence order, and `.envrc.local` for per-operator overrides that compute rather than store a
   secret. Holds no values, so it is safe in git.

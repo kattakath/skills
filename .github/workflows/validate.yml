@@ -77,6 +77,34 @@ jobs:
           done
           exit $rc
 
+      # SAME REASONING AS "Scripts parse", for the one language that step cannot see.
+      # `nix-dev-toolkit`'s flake template is ~400 lines of Nix that nothing in this
+      # repo ever evaluated: the step above globs *.js/*.mjs/*.sh, and the Anthropic
+      # validator checks manifest schemas, not asset contents. So a stray quote would
+      # have shipped on merge — the marketplace auto-updates with no pin — and been
+      # discovered mid-conquest, in someone else's repo, by an agent that had just
+      # copied it in. The file's OWN comments warn about the `''` hazard three times
+      # and record having hit it once.
+      #
+      # Parse, not evaluate. These are TEMPLATES: they carry `# ADAPT` markers and
+      # reference a sibling that only exists once copied, so `nix flake check` cannot
+      # work here. `nix-instantiate --parse` is the strongest gate the artefact shape
+      # allows, and it is the one that catches the failure that actually happened.
+      #
+      # ubuntu-24.04 ships no Nix, so the parse step needs an installer. Pinned to the
+      # same SHA nix-config's own CI uses, so the two repos cannot drift onto different
+      # installers.
+      - uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31
+
+      - name: Nix assets parse
+        run: |
+          rc=0
+          while IFS= read -r -d '' f; do
+            nix-instantiate --parse "$f" >/dev/null \
+              || { echo "::error file=$f::does not parse"; rc=1; }
+          done < <(find plugins -name '*.nix' -print0)
+          exit $rc
+
       # The negative fixtures matter most: a validator that cannot reject anything
       # is decoration.
       - name: page-lab envelope self-test
