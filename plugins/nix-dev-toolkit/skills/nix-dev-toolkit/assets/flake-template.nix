@@ -1,11 +1,20 @@
 # A self-sufficient dev / deploy / maintenance toolkit.
 #
 #   nix develop            → shell with every CLI this project needs
+#   nix fmt                → treefmt over the whole tree (per file type, not per formatter)
+#   nix flake check        → formatting + toolchain-complete + project-gate, and shellcheck on
+#                            every command below
 #   nix run .#toolkit      → list every command
 #   nix run .#env-doctor   → which catalogued env vars are set (NAMES only, never values)
 #   nix run .#stack-up     → project-local Postgres+pgvector (socket-only) + job runner
 #
-# ADAPT markers show what must change per project. Everything else is portable.
+# ADAPT markers show what must change per project. Everything else is portable. ONE of them —
+# `projectGate` — makes `nix flake check` FAIL until it is edited. That is deliberate; its own
+# comment says why, and how to record "this repo has no such command" without lying about it.
+#
+# SHIPS WITH A SIBLING: `treefmt.nix` beside this file (the skill's
+# `assets/treefmt-template.nix`). Both `formatter` and the `formatting` check evaluate it, so
+# dropping this flake in on its own leaves a dangling `./treefmt.nix` reference.
 #
 # Two rules encoded here that are easy to "simplify" into a broken state:
 #   1. Postgres is invoked through the `withPackages` UNION prefix (`${pg}/bin/...`) and never
@@ -14,10 +23,24 @@
 {
   description = "project toolkit"; # ADAPT
 
-  inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+
+    # The one non-nixpkgs input, and it is here because it DELETES hand-written code rather than
+    # adding a framework: `formatter` and the `formatting` check are both its output. Its only
+    # dependency is nixpkgs, so the `follows` collapses it to a SINGLE extra lock node.
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs =
-    { self, nixpkgs }:
+    {
+      self,
+      nixpkgs,
+      treefmt-nix,
+    }:
     let
       project = "app"; # ADAPT: used for state dirs and the default database name
 
@@ -64,18 +87,34 @@
         }
       '';
 
+      # `x86_64-darwin` is DELIBERATELY ABSENT, and re-adding it turns `nix flake check
+      # --all-systems` red before you have written a line: nixpkgs-unstable now THROWS on that
+      # platform rather than evaluating, so `forAll` dies the moment it touches
+      # `legacyPackages.x86_64-darwin`. Measured 2026-10-02 against nixpkgs-unstable; upstream
+      # directs x86_64 Macs to the `nixpkgs-26.05-darwin` branch instead.
+      #   https://nixos.org/manual/nixpkgs/unstable/release-notes#x86_64-darwin-26.11
+      # ADAPT: trim this further to the platforms the project is actually developed on — a
+      # system listed here is a system every check must be green on.
       systems = [
         "aarch64-darwin"
-        "x86_64-darwin"
         "aarch64-linux"
         "x86_64-linux"
       ];
       # Hand-rolled fold ON PURPOSE, and NOT the ADR-002 debt that a `forAllSystems` in
       # nix-config's own engine would be: this is a starter template handed to unrelated
-      # projects, and flake-parts would add an input to every one of them. Single-input is
-      # the feature. Do not "migrate" it.
+      # projects, and flake-parts would add an input to every one of them. Do not "migrate" it.
+      #
+      # NEAR-single-input is the feature, not zero-input purity — the earlier "single-input"
+      # claim here outlived the facts. `treefmt-nix` earns the exception on a different test:
+      # it REMOVES code (the formatter and the `formatting` check are both its output) and costs
+      # one lock node. flake-parts would buy nothing comparable, so the bar stays high.
       forAll = f: nixpkgs.lib.genAttrs systems (system: f system nixpkgs.legacyPackages.${system});
       inherit (nixpkgs) lib;
+
+      # ONE treefmt evaluation per system, reused by `formatter` and by the `formatting` check,
+      # so `nix fmt` and CI can never run a different tool set. `./treefmt.nix` is the sibling
+      # file named in the header — it must exist beside this flake.
+      treefmtEval = forAll (_: pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
 
       # ── Env catalogue: the single source of truth. ────────────────────────────────────────────
       # need   : required | optional | ci | local
@@ -125,9 +164,74 @@
           (e.note or "")
         ]
       ) envNames;
+
+      # ── What the dev shell promises. ──────────────────────────────────────────────────────────
+      # ONE list: `devShells` AND the `toolchain-complete` check both read it, so they can never
+      # disagree about what "the dev shell" contains. Inlining it in `devShells` (where it used to
+      # live) would make the check assert against a second copy, i.e. against nothing.
+      #
+      # ADAPT: the CLIs this project actually shells out to. Check availability first with
+      # `nix search nixpkgs <name>`; some (e.g. vercel, inngest-cli) are not packaged and should
+      # stay on `npx --yes` with the version pinned in one place.
+      devPackagesFor =
+        pkgs:
+        [
+          # The UNION prefix package, same as the commands use. A plain `postgresql_16` here would
+          # put a psql on PATH that cannot see pgvector — see header rule 1.
+          (pkgs.postgresql_16.withPackages (p: [ p.pgvector ]))
+        ]
+        ++ (with pkgs; [
+          nodejs_22
+          gh
+          git
+          jq
+          yq-go
+          curl
+          openssl
+        ]);
+
+      # Binaries this project's scripts / CI / hooks shell out to and that MUST resolve inside the
+      # dev shell. ADAPT. Writing them down is the whole of what turns `toolchain-complete` from a
+      # tautology into a gate, because a PACKAGE name is not a BINARY name: `pkgs.yq-go` ships
+      # `yq`, `pkgs.nodejs_22` ships `node` AND `npx`, postgresql ships `psql`. That map is
+      # exactly what a reader editing the list above gets wrong, and nothing else here notices.
+      requiredBins = [
+        "node"
+        "npx"
+        "psql"
+        "gh"
+        "git"
+        "jq"
+        "yq"
+        "curl"
+        "openssl"
+      ];
+
+      # ── The project's own test/build command. ─────────────────────────────────────────────────
+      # ADAPT — THIS LINE MUST BE EDITED. `nix flake check` FAILS until it is, by design:
+      #   { command = "npm test"; packages = p: [ p.nodejs_22 ]; }  → the real gate
+      #   { absent  = "<why this repo has none>"; }                 → recorded absent, with reason
+      #
+      # Required-with-a-name is the proven shape: Terraform's `variable` with no `default` fails
+      # the plan and NAMES the variable; NixOS' `mkOption` with no `default` fails eval and names
+      # the option. Optional-with-a-comment is the shape that rots: this template's `checks =
+      # packages` line sat unexamined until someone finally measured it. It turned out CORRECT —
+      # but nothing could have told you either way, because a line that never goes red never
+      # gets read. A knob that fails until it is answered does not have that failure mode.
+      #
+      # `absent` is for a repo with NO such command AT ALL. It is NOT the escape hatch for a
+      # command that needs the network: there, VENDOR the dependencies (`buildNpmPackage` with a
+      # pinned `npmDepsHash`, or the ecosystem's equivalent) so the gate genuinely runs inside the
+      # sandbox. Reading `absent` as "my tests need npm install" lets the escape swallow the
+      # standard, which is the one misreading that makes this knob worthless.
+      projectGate = "unwired";
     in
     {
-      formatter = forAll (_: pkgs: pkgs.nixfmt-rfc-style);
+      # treefmt's own wrapper, NOT a bare `pkgs.nixfmt-rfc-style`. `nix fmt` hands the formatter
+      # the WHOLE tree, so a bare nixfmt dies `unexpected end of input` on the first `README.md`
+      # — measured, and it meant `nix fmt` was broken in every repo this template produced.
+      # treefmt dispatches per file type, which is the whole job. Config: ./treefmt.nix.
+      formatter = forAll (system: _: treefmtEval.${system}.config.build.wrapper);
 
       packages = forAll (
         system: pkgs:
@@ -334,25 +438,12 @@
       );
 
       devShells = forAll (
-        _system: pkgs:
-        let
-          pg = pkgs.postgresql_16.withPackages (p: [ p.pgvector ]);
-        in
-        {
+        _system: pkgs: {
           default = pkgs.mkShell {
-            # ADAPT: add the CLIs this project actually shells out to. Check availability first
-            # with `nix search nixpkgs <name>`; some (e.g. vercel, inngest-cli) are not packaged
-            # and should stay on `npx --yes` with the version pinned in one place above.
-            packages = [
-              pkgs.nodejs_22
-              pg
-              pkgs.gh
-              pkgs.git
-              pkgs.jq
-              pkgs.yq-go
-              pkgs.curl
-              pkgs.openssl
-            ];
+            # The list itself lives in `devPackagesFor` up in the `let`, because the
+            # `toolchain-complete` check reads the SAME binding. ADAPT it there, not here — a
+            # second list here is what the check exists to make impossible.
+            packages = devPackagesFor pkgs;
             shellHook = dotenvLoader + ''
               # Same loader the commands use: a bare `nix develop` with no direnv should still see
               # the project's env. A no-op when direnv has already exported it.
@@ -365,6 +456,111 @@
         }
       );
 
-      checks = forAll (system: _: self.packages.${system});
+      # Three named checks, each able to go red for a DIFFERENT reason — plus the packages alias.
+      checks = forAll (
+        system: pkgs:
+        let
+          # Narrow fileset for the checks that read the tree. A bare `./.` copies the whole
+          # working tree into the store on every edit, so touching `node_modules` or `.next`
+          # rebuilds a check that cannot even see them.
+          #
+          # ADAPT: the narrowest set the gate actually reads. `maybeMissing` is here only so the
+          # template evaluates before these paths exist — DELETE it once they do, so a typo'd
+          # path fails loudly instead of silently narrowing the gate to nothing.
+          gateSrc = lib.fileset.toSource {
+            root = ./.;
+            fileset = lib.fileset.unions [
+              (lib.fileset.maybeMissing ./package.json)
+              (lib.fileset.maybeMissing ./package-lock.json)
+              (lib.fileset.maybeMissing ./src)
+            ];
+          };
+        in
+        # Aliasing `packages` into `checks` is DELIBERATE and measured on two Nix versions:
+        # `nix flake check` only EVALUATES packages but BUILDS checks, so the alias promotes
+        # evaluate→build. Every command above is a `writeShellApplication`, which runs shellcheck
+        # at BUILD time — so this one line is a live shell-lint gate over every script in this
+        # file, not a no-op. Prior art: `numtide/blueprint` does it by design, and
+        # `NixOS/templates`' haskell-hello ships the identical line. Do not "clean it up".
+        self.packages.${system}
+        // {
+          # OFF THE SHELF, not hand-written: `config.build.check` is treefmt-nix's own
+          # `runCommandLocal` that copies the tree, `git init && add && commit`s it, runs
+          # `treefmt --no-cache`, then `git diff --exit-code`. Upstream names it `formatting`
+          # already, so the attribute name below is theirs, not an invention.
+          # GOES RED WHEN: a tracked file is not formatted as ./treefmt.nix says it should be.
+          formatting = treefmtEval.${system}.config.build.check self;
+
+          # Hand-written, because nothing off the shelf does this — searched before building:
+          # `mkShell` validates nothing, `devshell`'s `commands` asserts option SHAPE only,
+          # `devenv`'s test lands in `packages` not `checks`, and a GitHub code search for
+          # "toolchain-complete" returns 0 hits. So it uses the conventional property-assertion
+          # idiom instead: `runCommandLocal` + `nativeBuildInputs`, asserting over a list.
+          # GOES RED WHEN: a name in `requiredBins` resolves to no binary in `devPackagesFor` —
+          # i.e. the dev shell silently stopped providing something a script depends on.
+          toolchain-complete =
+            pkgs.runCommandLocal "toolchain-complete" { nativeBuildInputs = devPackagesFor pkgs; }
+              ''
+                missing=""
+                for bin in ${lib.escapeShellArgs requiredBins}; do
+                  command -v "$bin" >/dev/null 2>&1 || missing="$missing $bin"
+                done
+                if [ -n "$missing" ]; then
+                  echo "dev shell is missing:$missing" >&2
+                  echo "add the package that SHIPS each one to devPackagesFor — a package name" >&2
+                  echo "is not a binary name (yq-go ships yq, nodejs_22 ships node and npx)." >&2
+                  exit 1
+                fi
+                echo "all ${toString (builtins.length requiredBins)} required binaries resolve." > "$out"
+              '';
+        }
+        //
+          # A loud sentinel with a NAMED escape. Three shapes, and the attribute NAME differs
+          # between them on purpose: `nix flake show` then records which one this repo chose,
+          # rather than leaving "no gate" as a silently absent attribute nobody can audit.
+          (
+            if !(projectGate ? command) && !(projectGate ? absent) then
+              {
+                # GOES RED WHEN: nobody has looked yet. Never a build failure — the message is
+                # the whole point, so it must be unmistakably "edit this line", not "your code
+                # is broken".
+                project-gate = pkgs.runCommandLocal "project-gate-unwired" { } ''
+                  echo "project-gate is UNWIRED (projectGate is a ${builtins.typeOf projectGate})" >&2
+                  echo "— this is not a build failure." >&2
+                  echo >&2
+                  echo "Edit the 'projectGate' binding in flake.nix to ONE of:" >&2
+                  echo "  projectGate = { command = \"npm test\"; packages = p: [ p.nodejs_22 ]; };" >&2
+                  echo "  projectGate = { absent = \"<why this repo has no such command>\"; };" >&2
+                  echo >&2
+                  echo "'absent' means NO such command exists. A command that needs the network" >&2
+                  echo "is not absent — vendor its dependencies so it runs in the sandbox." >&2
+                  exit 1
+                '';
+              }
+            else if projectGate ? absent then
+              {
+                # PASSES, and prints the reason into its own build log + output, so "this repo
+                # has no gate" is a recorded decision with an author's reason attached.
+                project-gate-absent = pkgs.runCommandLocal "project-gate-absent" { } ''
+                  echo "no project gate, on purpose: ${projectGate.absent}" | tee "$out"
+                '';
+              }
+            else
+              {
+                # GOES RED WHEN: the project's own command fails. The real gate.
+                project-gate =
+                  pkgs.runCommandLocal "project-gate" { nativeBuildInputs = projectGate.packages pkgs; }
+                    ''
+                      # The fileset arrives read-only out of the store, and most build tools want
+                      # to write beside their inputs — so copy it and restore write permission
+                      # rather than running in the store path.
+                      cp -R ${gateSrc}/. .
+                      chmod -R u+w .
+                      ${projectGate.command}
+                      touch "$out"
+                    '';
+              }
+          )
+      );
     };
 }
