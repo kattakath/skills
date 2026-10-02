@@ -24,6 +24,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | Answer questions from a local document corpus | [`rag`](plugins/rag) |  |
 | Author an llms.txt | [`llmstxt`](plugins/llmstxt) |  |
 | Debug a failure methodically | [obra/superpowers](https://github.com/obra/superpowers) | systematic-debugging is the adopted skill. |
+| Decide whether a perceived gap is worth filling | [`prior-art-recon`](plugins/prior-art-recon) → [claude-plugins-community](https://github.com/anthropics/claude-plugins-community) → [Official MCP Registry](https://github.com/modelcontextprotocol/registry) | Kill-first. A gap can be real and still wrong to fill — direction, doctrine, alternative, or an artifact of your own design. |
 | Find a capability before building or installing one | [`capability-broker`](plugins/capability-broker) → [claude-plugins-community](https://github.com/anthropics/claude-plugins-community) → [skills.sh + find-skills](https://github.com/vercel-labs/skills) → [Official MCP Registry](https://github.com/modelcontextprotocol/registry) | Inventory first; the lightest capability that works wins; adoption goes through nix-config. |
 | General language- or domain-specific engineering agents | [wshobson/agents](https://github.com/wshobson/agents) | Candidate; pick single plugins, not the whole collection. |
 | Get scannable, verdict-first answers and architecture maps | [`brain-signals`](plugins/brain-signals) |  |
