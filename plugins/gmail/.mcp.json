@@ -1,0 +1,16 @@
+{
+  "mcpServers": {
+    "kattakath": {
+      "command": "nix-mcp-gmail-ismail_kattakath_com"
+    },
+    "personal": {
+      "command": "nix-mcp-gmail-ismailkattakath_gmail_com"
+    },
+    "silvercreek": {
+      "command": "nix-mcp-gmail-izzy_silvercreek_ai"
+    },
+    "aloshy": {
+      "command": "nix-mcp-gmail-aloshyakasoto_gmail_com"
+    }
+  }
+}
