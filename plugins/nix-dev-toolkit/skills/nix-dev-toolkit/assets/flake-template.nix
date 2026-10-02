@@ -221,9 +221,20 @@
       #
       # `absent` is for a repo with NO such command AT ALL. It is NOT the escape hatch for a
       # command that needs the network: there, VENDOR the dependencies (`buildNpmPackage` with a
-      # pinned `npmDepsHash`, or the ecosystem's equivalent) so the gate genuinely runs inside the
-      # sandbox. Reading `absent` as "my tests need npm install" lets the escape swallow the
-      # standard, which is the one misreading that makes this knob worthless.
+      # pinned `npmDepsHash`, or the ecosystem's equivalent) so the gate genuinely runs offline.
+      # Reading `absent` as "my tests need npm install" lets the escape swallow the standard,
+      # which is the one misreading that makes this knob worthless.
+      #
+      # AND DO NOT TRUST A GREEN GATE ON A MAC. `sandbox` is `false` by DEFAULT on darwin —
+      # nixpkgs' own default, not a local misconfiguration — so a build there has FULL NETWORK
+      # ACCESS. Measured 2026-10-02, same derivation shape both ways:
+      #   sandbox = false (darwin default) -> curl http://registry.npmjs.org/ => http_code=301
+      #   --option sandbox true            -> curl: (6) Could not resolve host
+      # Linux defaults the other way, so a network-dependent gate is green on the author's Mac
+      # and red in CI. Prove it offline before believing it:
+      #   nix build --rebuild --option sandbox true .#checks.<system>.project-gate
+      # `--rebuild` is NOT optional: without it Nix hands back the cached store path and the
+      # flag changes nothing at all.
       projectGate = "unwired";
     in
     {
@@ -533,7 +544,9 @@
                   echo "  projectGate = { absent = \"<why this repo has no such command>\"; };" >&2
                   echo >&2
                   echo "'absent' means NO such command exists. A command that needs the network" >&2
-                  echo "is not absent — vendor its dependencies so it runs in the sandbox." >&2
+                  echo "is not absent — vendor its dependencies so it runs offline. And note" >&2
+                  echo "that sandbox=false is the DARWIN DEFAULT, so a green gate on a Mac is" >&2
+                  echo "not evidence: re-check with --rebuild --option sandbox true." >&2
                   exit 1
                 '';
               }
