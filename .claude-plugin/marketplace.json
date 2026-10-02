@@ -297,6 +297,25 @@
       "source": "./plugins/page-lab"
     },
     {
+      "name": "prior-art-recon",
+      "description": "Before building, standardising or publishing anything meant to fill a perceived gap: find out whether it already exists, whether anyone wants it, whether the ecosystem is moving away from it, and whether the gap is an artifact of your own design.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "prior-art",
+        "research",
+        "standards",
+        "due-diligence",
+        "gap-analysis",
+        "architecture"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/prior-art-recon",
+      "license": "MIT",
+      "source": "./plugins/prior-art-recon"
+    },
+    {
       "name": "rag",
       "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
       "author": {
