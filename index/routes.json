@@ -10,7 +10,7 @@
         "@skills-sh",
         "@mcp-registry"
       ],
-      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config. mcp-utilities' `mcpfinder` server searches the registries from inside the session, so the registry step below is reachable without leaving it."
+      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config. mcp-utilities' `mcpfinder` server searches the registries from inside the session, so the Official MCP Registry step is reachable without leaving it."
     },
     {
       "goal": "Capture what a session figured out, so no session rediscovers it",
