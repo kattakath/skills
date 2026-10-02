@@ -11,10 +11,10 @@ cross-check, and two test suites that keep both honest.
 | Piece | What it is |
 |---|---|
 | `skills/silent-instruments/SKILL.md` | the protocol, and a nine-row reflex table keyed by the claim you are about to make |
-| `skills/silent-instruments/references/catalogue.md` | 28 entries across shell, git and the GitHub API — trap, why it is silent, the correct instrument, and whether it was measured or documented |
+| `skills/silent-instruments/references/catalogue.md` | 44 entries across shell, git, the GitHub API and Nix — trap, why it is silent, the correct instrument, and whether it was measured or documented |
 | `skills/silent-instruments/tests/trap-cases.sh` | **55 assertions** proving the catalogue's shell and git entries, both halves: the naive instrument returns the wrong answer, the named replacement returns the right one |
-| `scripts/silent-instrument-lint.js` + `hooks/hooks.json` | a `PostToolUse:Bash` advisory, 13 rules, each naming its catalogue entry |
-| `tests/lint-cases.sh` | **48 assertions** for the hook: must-FLAG, must-stay-QUIET, never-throw |
+| `scripts/silent-instrument-lint.js` + `hooks/hooks.json` | a `PostToolUse:Bash` advisory, 14 rules, each naming its catalogue entry |
+| `tests/lint-cases.sh` | **55 assertions** for the hook: must-FLAG, must-stay-QUIET, never-throw |
 
 ## What it deliberately does NOT ship
 
@@ -75,7 +75,7 @@ diversity, so two instruments do not fail together.
 ## The catalogue earns its keep, and can be checked
 
 Two entries were **dropped** for failing to reproduce rather than for being wrong in principle
-(a stale-index false "dirty", and `git describe` on lightweight tags), and eight more were
+(a stale-index false "dirty", and `git describe` on lightweight tags), and nine more were
 rejected for being too *loud* to qualify — an agent cannot be confidently wrong about a
 `fatal:`.
 
