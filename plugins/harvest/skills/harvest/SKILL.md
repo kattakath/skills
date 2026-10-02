@@ -189,9 +189,16 @@ symlink into a version-controlled directory so it is not the only copy.
 | Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships the CONTENT of an already-enabled plugin, no pin. It does not enable one — see Enable. |
 | New skill | a **one-skill plugin**: `plugins/<name>/.claude-plugin/plugin.json` + `plugins/<name>/skills/<name>/SKILL.md`, plus a marketplace entry with `"source": "./plugins/<name>"` (never `"./"` + `strict`/`skills` — that shim is for foreign repos; see its `CLAUDE.md`). Keep the list alpha-sorted by `name`. |
 | Index | a route in `index/routes.json` (goal → steps; `gap: true` if no outside source covers it), then `python3 scripts/build-index.py`. CI fails if a skill has no route. An outside source that did the job goes in `index/sources.json` instead of a new skill. |
-| Enable | **Not the Nix list.** Appending to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` makes the plugin KNOWN only: `claude-plugins.nix` feeds that list to an id set plus one assertion, `extraKnownMarketplaces` reads just `source`/`autoUpdate`, and `enabledPlugins` is `genAttrs` over THREE hardcoded names (`claude-code-nix`, `superhook`, `brain-signals`). For every other name `/plugin` is the only writer. Measured 2026-10-02: nix-config #751 added `empire` to that list expecting it to go live — nothing happened, reverted in #754; #753 added `silent-instruments`, which is still absent from `enabledPlugins` and still does not load. nix-config `docs/declarative-plugin-floor-adr.md` (ADR-008) proposes a declarative lane — **Proposed, not implemented**; do not write guidance that assumes it. |
+| Enable | **Not the Nix `plugins` list** — that is a catalogue and enables nothing (`claude-plugins.nix` feeds it to an id set plus one assertion; `extraKnownMarketplaces` reads only `source`/`autoUpdate`). Measured 2026-10-02: nix-config #751 added a name there expecting it to go live, nothing happened, reverted in #754. **Two lanes actually enable:** `local.claudePlugins.declared` (an `attrsOf bool` of `<plugin>@<marketplace>` ids — ADR-008's declarative lane, landed in nix-config #758) and `/plugin` at runtime, which overrides per machine. The always-on floor is a small hardcoded set — read the names in `claude-plugins.nix`, do not copy them into prose (see the note below). |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |
 | MCP servers | never harvested here — adopted only through nix-config's `mcp-scout` |
+
+**Do not name sibling plugins in prose.** `skill-curator`'s reference detector counts a
+backticked plugin name **anywhere** in another plugin's markdown as a dependency, so citing one as
+an *example* silently reclassifies it from `stale` to `exempt` and exempts it from curation. An
+earlier revision of this file named the three always-on plugins in the Enable row; the only signal
+was a `want stale, got exempt` failure naming one of them, in a test whose name mentions neither prose nor
+harvest. Cite a count and a file, not a name.
 
 ## Output
 
