@@ -25,6 +25,34 @@ The deliverable is a verified flake. Not a flake. That distinction is the entire
   cannot evaluate. `command -v nix` is the first thing you check, before you read anything.
 - Verification means one thing: `nix flake check` ran and you report its actual result.
 
+## FIRST: establish which branch the repo develops on, and which REPO you are in
+
+Before reading a line of code. Both halves of this were measured failing on 2026-10-02 and
+each produced a wrong verdict.
+
+**The branch.** A repo's development branch is not always its default branch, and the remote's
+own `HEAD` will not tell you. One repo's GitHub default was `main` while every PR targeted
+`develop` — stated only in its `AGENTS.md` — and `develop` was **2598 commits ahead**. An audit
+of `main` there found "no checks" when `develop` already had six, and a `main`-based PR would
+have been *forbidden by the repo's flow* as well as redundant.
+
+So: read `AGENTS.md`, `CONTRIBUTING.md` and `CLAUDE.md` for the branch policy **before**
+`git checkout -b`. `git symbolic-ref refs/remotes/origin/HEAD` is not sufficient — it said
+`main` for the repo above.
+
+**The repo.** Deduplicate work by **remote URL, never by directory path.** Two local checkouts
+of one renamed repo sat under two different directory names, on two different branches, and an
+audit that keyed on path reported **two verdicts for one repo** — then surfaced the stale one as
+a finding:
+
+```bash
+git -C "$dir" remote get-url origin     # the identity
+git -C "$dir" branch --show-current     # which slice of it you are looking at
+```
+
+A repo that was renamed upstream keeps answering on its old URL, so two checkouts look like two
+projects and nothing warns you.
+
 ## Learn the repo before you write a line
 
 A flake that does not match the project is ceremony. Find out:
@@ -178,15 +206,18 @@ If you were dispatched to conquer a repo nobody is about to modify, say so inste
 
 State, in this order:
 
-1. **What was created** — the files, and that the flake came from `nix-dev-toolkit`.
-2. **The exact `nix flake check` result** — the command you ran and what it returned. Not
+1. **Which branch you targeted and why** — naming the file that told you (`AGENTS.md`,
+   `CONTRIBUTING.md`), and the repo's remote URL. If the development branch was not the default
+   branch, say so explicitly.
+2. **What was created** — the files, and that the flake came from `nix-dev-toolkit`.
+3. **The exact `nix flake check` result** — the command you ran and what it returned. Not
    "verified"; the result.
-3. **Which of the three checks exist**, and the reasoning that each one can actually fail.
-4. **How the dependencies were vendored** — which helper and which lockfile, or why the gate
+4. **Which of the three checks exist**, and the reasoning that each one can actually fail.
+5. **How the dependencies were vendored** — which helper and which lockfile, or why the gate
    could not be made to run offline. Never silently.
-5. **The forced-sandbox result** — the `--option sandbox true --rebuild` command and what it
+6. **The forced-sandbox result** — the `--option sandbox true --rebuild` command and what it
    returned. On darwin a plain green is not evidence that the gate runs offline.
-6. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
+7. **Anything recorded absent** — `project-gate: absent`, a toolchain you could not pin, a
    check you could not prove falsifiable.
 
 **Never report success on an unverified artefact.** If `nix flake check` did not pass,
