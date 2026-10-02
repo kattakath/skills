@@ -151,29 +151,30 @@ new skill, skip for a one-paragraph pitfall added to an existing one.
 **Detect the harness first** (as in `capability-broker`): if `~/.claude/settings.json`
 resolves into a store, skills are declared, not dropped into `~/.claude/skills`.
 
-**With a declarative harness — two PRs, in order:**
+**With a declarative harness — three steps, and only the last one delivers:**
 
 1. **Content repo PR** — add the plugin and its marketplace entry on a branch; one PR per
    artifact; title and commit style follow that repo. A lone skill is still a plugin: there
    is no top-level `skills/` tree to drop one into.
-2. **Harness PR, after (1) merges, for a NEW artifact only** — enable it. If the harness
-   registers the content repo as a git marketplace with auto-update, that is one line (the
-   plugin's name in the enabled list) and no pin bump; run the harness's own checks before
-   opening it. A change to an artifact that is already enabled needs no harness PR at all:
-   the marketplace's auto-update delivers it.
+2. **A harness declaration makes the plugin KNOWN, not enabled.** Registering the
+   marketplace (and listing the plugin's name in it) is worth doing — it is how a fresh
+   machine finds the plugin at all — but read what the harness's own code does with that
+   list before believing it enables anything. A list that feeds only an id set and an
+   assertion is a declared catalogue and a comment.
+3. **Enable it — this is the step that gets skipped.** What loads a plugin is an
+   `enabledPlugins` entry keyed `<plugin>@<marketplace>` in the client's settings, and
+   nothing else. Where the harness cannot write that key, `/plugin` is the only lane and the
+   write is machine-local. A change to an artifact that is ALREADY enabled needs none of
+   this — the marketplace's auto-update delivers it.
 
-**(2) IS THE STEP THAT GETS SKIPPED.** Measured on this fleet 2026-10-02: **five** plugins
-were merged into the content repo and enabled nowhere — `prior-art-recon`,
-`foundation-audit`, `mac-app-send`, `empire`, `brag-dossier`. The cost is not cosmetic: a
-session that session went to use `prior-art-recon` and could not load it, because a plugin
-absent from the harness list does not reach a session however green its own repo is. So
-finish (2), or the artifact is shelf-ware. Check it landed by name, not by assuming:
-the plugin must appear in the harness's enabled list AND in a live session's skill
-listing — "declared" and "loaded" are different facts.
+**VERIFY BY NAME — not by the merge, and not by the harness's list.** The plugin must appear
+in `enabledPlugins` AND in a live session's skill listing; "declared" and "loaded" are
+different facts. The cost is not cosmetic: `prior-art-recon` merged green, was enabled
+nowhere, and a later session went to use it and could not load it.
 
-Until (2) activates, a new skill is not loaded globally. For immediate use in the
-current project only, a copy under that project's `.claude/skills/` is acceptable if it is
-deleted before the harness PR lands (two copies of one skill shadow each other).
+For immediate use in the current project only, a copy under that project's
+`.claude/skills/` is acceptable if it is deleted once the plugin is enabled (two copies of
+one skill shadow each other).
 
 **Without a harness:** a personal skill goes to `~/.claude/skills/<name>/`, ideally a
 symlink into a version-controlled directory so it is not the only copy.
@@ -185,10 +186,10 @@ symlink into a version-controlled directory so it is not the only copy.
 | Content repo | `github:kattakath/skills` (`plugins/<name>/`, `.claude-plugin/marketplace.json`) |
 | Harness repo | `github:kattakath/nix-config` |
 | Prior art to search | nix-config `docs/` (ADRs, runbooks), `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
-| Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships, no pin |
+| Delivery | git marketplace `kattakath` with auto-update: a merge to `main` ships the CONTENT of an already-enabled plugin, no pin. It does not enable one — see Enable. |
 | New skill | a **one-skill plugin**: `plugins/<name>/.claude-plugin/plugin.json` + `plugins/<name>/skills/<name>/SKILL.md`, plus a marketplace entry with `"source": "./plugins/<name>"` (never `"./"` + `strict`/`skills` — that shim is for foreign repos; see its `CLAUDE.md`). Keep the list alpha-sorted by `name`. |
 | Index | a route in `index/routes.json` (goal → steps; `gap: true` if no outside source covers it), then `python3 scripts/build-index.py`. CI fails if a skill has no route. An outside source that did the job goes in `index/sources.json` instead of a new skill. |
-| Enable | append the plugin name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
+| Enable | **Not the Nix list.** Appending to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` makes the plugin KNOWN only: `claude-plugins.nix` feeds that list to an id set plus one assertion, `extraKnownMarketplaces` reads just `source`/`autoUpdate`, and `enabledPlugins` is `genAttrs` over THREE hardcoded names (`claude-code-nix`, `superhook`, `brain-signals`). For every other name `/plugin` is the only writer. Measured 2026-10-02: nix-config #751 added `empire` to that list expecting it to go live — nothing happened, reverted in #754; #753 added `silent-instruments`, which is still absent from `enabledPlugins` and still does not load. nix-config `docs/declarative-plugin-floor-adr.md` (ADR-008) proposes a declarative lane — **Proposed, not implemented**; do not write guidance that assumes it. |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |
 | MCP servers | never harvested here — adopted only through nix-config's `mcp-scout` |
 
@@ -202,5 +203,5 @@ Skipped:    <candidates considered and dropped, and why>
 Cleaned:    <what was removed or generalised>
 PR 1:       <content repo branch or URL>
 PR 2:       <harness branch or URL, or "after PR 1 merges">
-Loaded:     <now in this project only | globally after activation>
+Loaded:     <enabledPlugins entry + skill listing confirmed | project copy only | NOT yet enabled>
 ```
