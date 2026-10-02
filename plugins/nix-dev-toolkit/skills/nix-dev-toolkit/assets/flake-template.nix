@@ -232,9 +232,13 @@
       #   --option sandbox true            -> curl: (6) Could not resolve host
       # Linux defaults the other way, so a network-dependent gate is green on the author's Mac
       # and red in CI. Prove it offline before believing it:
-      #   nix build --rebuild --option sandbox true .#checks.<system>.project-gate
-      # `--rebuild` is NOT optional: without it Nix hands back the cached store path and the
-      # flag changes nothing at all.
+      #   nix build --option sandbox true .#checks.<system>.project-gate            # fresh drv
+      #   nix build --rebuild --option sandbox true .#checks.<system>.project-gate  # built drv
+      # BOTH forms exist because each prevents the other's failure. Omit `--rebuild` on an
+      # already-built derivation and Nix returns the cached path: a FALSE GREEN. Pass it on one
+      # never built and Nix refuses — "some outputs are not valid, so checking is not possible"
+      # — a FALSE RED, and the likely one, since you reach for this right after fixing
+      # something, which changes the hash. Measured 2026-10-02, both directions.
       projectGate = "unwired";
     in
     {

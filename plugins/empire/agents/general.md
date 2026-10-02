@@ -89,11 +89,32 @@ Measured 2026-10-02, same derivation shape, both directions:
 
 ```bash
 nix config show sandbox                                   # expect: false, on darwin
+
+# A derivation you have NOT built yet (or just changed, which changes its hash):
+nix build --option sandbox true .#checks.<system>.project-gate
+
+# One you HAVE already built — the cache would otherwise answer for it:
 nix build --rebuild --option sandbox true .#checks.<system>.project-gate
 ```
 
-`--rebuild` is not optional — without it Nix hands you the already-built store path and the
-flag changes nothing. A fresh derivation name works too; a cached one proves nothing.
+**Pick the right one of those two, because each has a failure mode the other prevents.**
+
+- Without `--rebuild` on an already-built derivation, Nix hands back the store path, the flag
+  changes nothing, and you get a **false green**.
+- With `--rebuild` on a derivation that was never built, Nix refuses outright:
+
+  ```
+  error: some outputs of '…project-gate.drv' are not valid, so checking is not possible
+         Hint: --rebuild and --check error if the derivation was not previously built
+  ```
+
+  That is a **false red** — and it is the likely one, because you reach for this flag right
+  after FIXING something, which changes the hash and makes the derivation new. Measured
+  2026-10-02: the fix landed, the forced-sandbox check errored, and the error reads like a
+  broken gate rather than a misused flag.
+
+So the flag that exists to prevent a false green has its own false red. Read the error text
+before concluding anything about your gate.
 
 Report which of the two you ran. "It passed `nix flake check`" on a Mac is the claim this
 section exists to reject.
