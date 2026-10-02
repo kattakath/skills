@@ -11,10 +11,27 @@ name: validate
 # PLUS security/policy invariants I1-I11 this repo never checked on its own:
 # alpha-sorted entries, no duplicate names, https-only sources, a required
 # SHA-pin on any externally-sourced plugin, no shell metacharacters or hidden
-# Unicode in names/descriptions. `claude-cli-version` is left at its "latest"
-# default on purpose — that's what Anthropic's own claude-plugins-official repo
-# does in its own equivalent workflow, since step 20 is the canonical upstream
-# schema check and is meant to track it. This repo has no externally-sourced
+# Unicode in names/descriptions.
+#
+# `claude-cli-version` IS PINNED, 2026-10-02, and it was NOT before. Leaving it at
+# "latest" imported an upstream policy change unannounced and broke EVERY open PR at
+# once: the CLI grew a reserved-name rule and now rejects
+#   plugins[].name "claude-code-nix" is reserved: it passes as one of Anthropic's own
+# Last green `main`: 2026-10-01T04:02Z. #48, #49, #50 and #51 then failed identically,
+# none of them having touched that plugin. CLI 2.1.268 accepts the marketplace; the
+# newer one does not.
+#
+# THIS PIN IS A TOURNIQUET, NOT A FIX. The rule is correct — the name does read as
+# Anthropic's — and the real repair is renaming `claude-code-nix`, which is a
+# cross-repo change (nix-config's `alwaysOnNames` assertion, its guardrails'
+# `mcp__plugin_claude-code-nix_nixos__nix` allow-rule, superhook's hook-by-convention
+# resolution) and reinstallation for anyone holding it, since the plugin cache is keyed
+# by name. Raising this pin before that rename re-breaks the repo.
+#
+# The argument for "latest" was that Anthropic's own claude-plugins-official repo does
+# it. That argument is sound for THEIR repo and was wrong here: they own the reserved
+# namespace, so a rule about impersonating it can never fire against them. We inherit
+# their CI policy and their adversary at once. This repo has no externally-sourced
 # plugins today, so the clone-and-validate-external step is a no-op; leaving it
 # enabled costs nothing and future-proofs the day one is added.
 
@@ -39,6 +56,9 @@ jobs:
         uses: anthropics/claude-plugins-community/.github/actions/validate-plugins@a727be1c7bd6064419b6f60d71993a19198adc17
         with:
           marketplace-path: .claude-plugin/marketplace.json
+          # See the header: pinned to the last version that accepts this marketplace.
+          # Raise it only together with the `claude-code-nix` rename.
+          claude-cli-version: 2.1.268
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
