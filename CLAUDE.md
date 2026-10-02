@@ -30,8 +30,13 @@ directly.
 - `mcp/` holds MCP server declarations (one `server.json` per the MCP registry schema) —
   documented, none declared yet.
 - `mcp-clients/` holds a portable MCP *client*-config catalog (the plain `mcpServers` shape
-  every server's own README shows) — data, not a plugin; nix-config's gateway reads it
-  directly.
+  every server's own README shows) — data, not a plugin. nix-config's gateway read it
+  directly until that gateway was purged on 2026-10-02; it is now a **reference catalog**
+  of real invocations, and the servers themselves live in the owning plugin's `.mcp.json`
+  (`page-lab`, `claude-code-nix`, `mac-app-send`, `android-phone`, `rag`, `apify`,
+  `wordpress`). A server needing a credential names a launcher BINARY there, because
+  `.mcp.json` `env` takes literals and passthroughs only and cannot run a Keychain read —
+  that half is a PATH package in nix-config (`local.gmailMcp`, `local.pluginMcp`).
 - **Plugins here carry no `version` field: every commit on `main` is a new release**,
   shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
   on what merges to `main` — see § Shipping a change.

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "apify",
+  "description": "Apify Store Actors as tools — web scraping, crawling and extraction, including the rag-web-browser and web-fetch lane. Runs locally against an API token read from the macOS login Keychain by a Nix-installed launcher, not through a hosted OAuth bridge.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/apify",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "apify",
+    "mcp",
+    "scraping",
+    "web-fetch",
+    "keychain",
+    "nix"
+  ]
+}
