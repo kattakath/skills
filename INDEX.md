@@ -37,6 +37,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | Supervise Claude Code hooks so one bad hook cannot wedge a session | [`superhook`](plugins/superhook) |  |
 | Tailor a resume to a job posting | [`jsonresume-tailor`](plugins/jsonresume-tailor) |  |
 | Turn a repo's review history into agent instructions | `ai-ready` from [johnpapa/ai-ready](https://github.com/johnpapa/ai-ready) | Candidate; not declared in nix-config yet. |
+| Work across several Gmail accounts in one session without them colliding | [`gmail`](plugins/gmail) | Four accounts, four separate per-session MCP servers — no proxy and nothing shared. Each needs its launcher on PATH from kattakath/nix-config (local.gmailMcp.accounts), because the OAuth client secret is read from the macOS Keychain at launch and must not live in this repo. Replaces the central gateway retired 2026-10-01; Claude Desktop loads no plugins, so it gains nothing here. |
 
 ## Sources
 

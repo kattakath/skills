@@ -181,6 +181,24 @@
       "source": "./plugins/github-release-gate"
     },
     {
+      "name": "gmail",
+      "description": "Four Gmail accounts as separate per-session MCP servers, each launched by a Nix-installed wrapper that reads the OAuth client credentials from the macOS login Keychain so nothing secret lives in this repo.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "gmail",
+        "mcp",
+        "email",
+        "keychain",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/gmail",
+      "license": "MIT",
+      "source": "./plugins/gmail"
+    },
+    {
       "name": "harvest",
       "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
       "author": {
