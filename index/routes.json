@@ -164,7 +164,7 @@
         "foundation-audit",
         "capability-broker"
       ],
-      "note": "empire dispatches and sets the standard; it owns none of the tools. Conquest on first write, never on read."
+      "note": "empire sets the conquest standard and owns none of the tools. There is no controller agent: the session's main agent dispatches. The Senate is a deterministic workflow, and conquest happens on first write, never on read."
     },
     {
       "goal": "Decide whether a perceived gap is worth filling",
