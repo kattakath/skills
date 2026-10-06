@@ -68,6 +68,16 @@ Write, no Edit, no Bash and no network, and the prompt fences the payload betwee
 and restates the boundary **after** it, because injected text aims at the tail of a prompt. The
 prose is defence in depth; the tool list is the defence.
 
+**The fence is unforgeable by construction, and was not at first.** `JSON.stringify` escapes quotes
+and newlines but **not** arbitrary ASCII, so the original wrapper let a lane report emit the END
+marker verbatim — everything after it then read as though the script had written it. A fence a
+forger can close is worse than no fence: it manufactures trust rather than merely failing to add
+any. Now every run of four or more `=` in the payload collapses to `[=]` and the markers require
+five, so the data cannot reproduce them. No nonce is used, because `Math.random()` and `Date.now()`
+**throw** inside a workflow script and a nonce derived from the payload would be derived from
+attacker-controlled bytes. `tests/senate-fence-cases.mjs` gates it in CI, reading the fence out of
+`senate.js` rather than keeping a second copy.
+
 **Residual risk, stated rather than hidden:** the Senators themselves hold `Bash` — needed for
 their measurement role when invoked directly — while also fetching the web. Their confinement is
 prose ("measurement only", "never mutate state"), not a tool boundary. A lane is therefore the
