@@ -52,9 +52,12 @@ directly.
    `references/`, `assets/` and `tests/` sit **next to its `SKILL.md`**, because SKILL.md
    refers to them by skill-relative path (`assets/foo.yml`, not `<plugin>/assets/foo.yml`).
 3. Write `.claude-plugin/plugin.json` — `$schema`, `name`, `description`, `author`,
-   `homepage`, `repository`, `license`, `keywords`. **An extra key fails validation**, and
-   there is no `version` (see § Never add a `version`).
-4. Write `README.md` — **every plugin has one** (all 18, since #40). It is the page a reader
+   `homepage`, `repository`, `license`, `keywords`. **An unknown key does NOT fail validation** —
+   measured 2026-10-06, it is a **warning with exit 0**, and the validator even suggests the field
+   you probably meant ("did you mean 'workflows'?"). Claude Code ignores unrecognised fields at load
+   time. So do not avoid a legitimate new manifest field out of fear of the gate — but equally, do
+   not trust the gate to catch a typo'd one. And there is no `version` (see § Never add a `version`).
+4. Write `README.md` — **every plugin has one** (all 25, since #40). It is the page a reader
    lands on from the marketplace: what the plugin ships, the non-obvious facts and
    measurements it exists to carry, and what it requires. Source it from the `SKILL.md`;
    do not restate the frontmatter.
@@ -74,21 +77,29 @@ FOREIGN repos** that cannot be made to carry a `plugin.json` — all three uses 
 correct fix for "this is just a skill" is to write the manifest, not to borrow the shim. The
 shim also costs real things: no `plugin.json` means no `keywords` and no per-plugin
 `homepage`, the entry is the only place a version could ever live, and each such entry copies
-the **whole repo** on install instead of one `plugins/<name>` subtree. 11 of 18 entries used
+the **whole repo** on install instead of one `plugins/<name>` subtree. 11 of the then-18 entries used
 it until it was removed wholesale (#31); do not reintroduce it.
 
 ## Validating before you push
 
 ```bash
-npx -y @anthropic-ai/claude-code plugin validate .
-for p in plugins/*/; do npx -y @anthropic-ai/claude-code plugin validate "$p"; done
+npx -y @anthropic-ai/claude-code@2.1.268 plugin validate .
+for p in plugins/*/; do npx -y @anthropic-ai/claude-code@2.1.268 plugin validate "$p"; done
 python3 scripts/build-index.py --check
 ```
 
-This is exactly what `.github/workflows/validate.yml` runs — matching it locally means CI
-tells you nothing new. Plugins with test suites (`page-lab`, `mac-app-send`, `skill-curator`)
-have their own commands in that workflow; check it before assuming "validate passes" is
-sufficient for those.
+**The `@2.1.268` pin is load-bearing — do not drop it back to bare `npx`.** Measured 2026-10-06 on
+this machine: bare `npx -y @anthropic-ai/claude-code --version` resolves to a **cached 2.1.197**,
+the local `claude` is **2.1.278**, and CI pins **2.1.268**. Three different CLIs, and the
+unpinned command is none of them — so "matching it locally" was false while this said `npx` alone.
+Raise the pin here only together with the one in `validate.yml`.
+
+This is otherwise exactly what `.github/workflows/validate.yml` runs. Plugins with test suites
+(`page-lab`, `mac-app-send`, `skill-curator`) have their own commands in that workflow; check it
+before assuming "validate passes" is sufficient for those. Two steps there cover assets the
+manifest validator never reads: `Nix assets parse`, and `Plugin workflows load-shape` — the latter
+exists because a workflow script whose `export const meta` literal is not the **first** statement
+is valid JavaScript that loads as **zero workflows, with no error emitted**.
 
 ## Shipping a change
 
@@ -115,7 +126,7 @@ two release models Anthropic documents, and it is the one this repo chose delibe
   `<name> is already at the latest version (1.0.0)` and `"updateOutcome":"up_to_date"` while
   serving stale files. Measured the same day: two generations of drift, reported as success.
   There is no drift signal — the failure is silent and unbounded.
-- The cost is per entry, and there are 18 of them — 18 `plugin.json` strings to bump on
+- The cost is per entry, and there are 25 of them — 25 `plugin.json` strings to bump on
   every commit that touches a shared file, each miss a silent freeze.
 - If a version is ever set, set it in **one** place. `plugin.json` wins over the marketplace
   entry at install time (`calculatePluginVersion` precedence) and the entry value is ignored
@@ -126,7 +137,7 @@ Upstream precedent for versionless: `anthropics/skills`, whose `source: "./"` la
 repo copied until #31, sets no version on any of its entries either.
 
 One property to keep in mind rather than fix: the computed version is the **repo HEAD** SHA,
-not a per-directory one, so any commit revs all 18 entries. Since #31 each entry copies only
+not a per-directory one, so any commit revs all 25 entries. Since #31 each entry copies only
 its own `plugins/<name>` subtree rather than the whole repo (~1.7 MB), so the re-copy is now
 proportional to the plugin. Superseded versions are swept 14 days after replacement.
 
