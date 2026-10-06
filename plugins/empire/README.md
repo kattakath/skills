@@ -54,6 +54,24 @@ lane concurrently, and hands every report to one synthesis stage.
   instrument named in a brief is a **hypothesis, not an instruction**.
 - `agentType: "empire:senator"` means `agents/senator.md` remains the lane discipline. The script
   contributes the fan-out and the schema, and reimplements none of the Senator's rules.
+- The synthesis stage runs as `empire:consul` — **`Read, Grep, Glob` only.**
+
+### Why the Consul holds nothing dangerous
+
+The lanes hold `WebSearch` and `WebFetch`, so a lane report can contain **arbitrary text from a
+page someone else controls**. That report is then handed to the synthesis stage. If synthesis ran
+unconfined — which is what happens when an `agent()` call names no `agentType` — fetched web text
+would sit one sentence away from `Write`, `Edit` and `Bash`.
+
+`agent()` has **no `tools` option**, so the agentType *is* the boundary. `agents/consul.md` has no
+Write, no Edit, no Bash and no network, and the prompt fences the payload between explicit markers
+and restates the boundary **after** it, because injected text aims at the tail of a prompt. The
+prose is defence in depth; the tool list is the defence.
+
+**Residual risk, stated rather than hidden:** the Senators themselves hold `Bash` — needed for
+their measurement role when invoked directly — while also fetching the web. Their confinement is
+prose ("measurement only", "never mutate state"), not a tool boundary. A lane is therefore the
+weaker link, and a Senate pointed at hostile sources should be read with that in mind.
 
 **It appears only after the plugin is enabled.** `defaultEnabled: false`, and a disabled plugin
 loads **no components at all** — no agents, no workflow. Worse, an `enabledPlugins` entry already
