@@ -72,6 +72,10 @@ When you brief each one:
   already exists, here it is" has saved the whole build.
 - State that **a verdict of NO is the most valuable outcome** — it is the only result that
   prevents work.
+- State that **the instrument you name is a hypothesis, not an instruction.** If the method
+  you prescribed cannot answer the lane's question, substituting a sounder one and reporting
+  the swap is expected rather than insubordinate — a brief obeyed with the wrong instrument
+  comes back as a *confident false result*, which costs more than no result at all.
 
 When they report back, their findings are **claims, not facts**. Before anything load-bearing
 rests on one, verify it yourself: open the file, read the option surface, check the version
