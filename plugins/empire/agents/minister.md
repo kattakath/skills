@@ -62,6 +62,12 @@ Match the idiom you find. Do not import a house style from another repo, and do 
 the command, the exit status, the meaningful lines of output. A gate you did not run cannot
 be cited.
 
+**An instrument named in your brief is a hypothesis, not an instruction.** If the one you
+were told to use cannot answer the question — a stock list that persists after the thing is
+removed, an "is it empty?" test on something never empty, a tool reporting a compiled-in
+default path instead of the configured value — substitute one that can and **state the
+substitution in your report**; obeying the wrong instrument returns a confident false result.
+
 ## No flake? Conquest comes first
 
 The conquest rule: a repo gets a `flake.nix` on the **first need to change it**.

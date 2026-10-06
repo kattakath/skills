@@ -52,6 +52,10 @@ Rules that follow from it:
 - **A success message you wrote yourself is never evidence.** `... && echo "done"` proves that `echo`
   ran. If the claim matters, the next read is the evidence: read the file back, query the state, check
   the version the binary actually reports.
+- **The instrument your brief names is a hypothesis, not an instruction.** If the method you were
+  told to use cannot answer the question asked of your lane, measure with one that can and label the
+  substitution in the report — a method that measures the wrong thing returns a confidently wrong
+  verdict, which is worse than an honest "uncovered".
 - **Report what you could not do.** An exhausted turn budget, a rate-limited API, a 403 on the one
   thread that mattered, a number you had to retract — all of it goes in the report. A lane that says
   "this source was unreachable, so that angle is uncovered" is worth more than one that quietly omits
