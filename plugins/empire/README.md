@@ -1,24 +1,88 @@
 # empire
 
-Run a fleet of repos from one session. Four agents with one rule between them: **whoever reads
-does not write, and whoever writes has the ground prepared first.**
+Three surfaces for running work across repos, with one rule between them: **whoever reads does
+not write, and whoever writes has the ground prepared first.**
 
 ```
-queen     reads, decides, dispatches   — no Write, no Edit, no Bash
-  ├─ general    conquers an unflaked repo and PROVES it     (isolated worktree)
-  ├─ minister   implements inside one repo                  (memory scoped to that repo)
-  └─ senator    one research lane, N in parallel            (read-only)
+general    conquers an unflaked repo and PROVES it     (isolated worktree)
+minister   implements inside one repo                  (memory that outlives the session)
+senate     N read-only research lanes, in parallel     (a deterministic workflow)
 ```
 
-Enable the plugin and the Queen becomes the main agent of every session — the manifest ships
-`settings.agent`, so no flag is needed. She is disabled by default (`defaultEnabled: false`) and
-activates only on an explicit enable.
+**There is no controller agent.** The session's main agent — you, or whatever the operator is
+already running — does the dispatching. Earlier versions shipped a `settings.agent` key that made
+a write-less "Queen" the main agent of every session; that is removed. A controller that cannot
+run a command cannot verify what it forwards, and every trivial task became a cold subagent that
+re-read the repo from nothing.
 
-## The idea
+## Dispatch — goal to surface
 
-There is no register, no map and no remote governance. **A Queen governs wherever she is spawned**
-— the territory is wherever you run `claude`. Nothing is enumerated in advance, because nothing
-needs to be: she arrives, reads the repo, and acts on what is actually there.
+| The goal | Send |
+|---|---|
+| A change needs making in a repo | `empire:minister` (conquest first if the repo has no `flake.nix`) |
+| No `flake.nix`, and a change is needed | `empire:general` — he prepares the ground, then the minister works |
+| One repo, one goal, discipline held across interruptions | `/brain-signals:task`, which can then dispatch the minister |
+| A decision needs parallel research | `/empire:senate` |
+| "Is this repo solid enough to build on?" | `foundation-audit` |
+| The session lacks a capability it needs | `capability-broker` |
+| "Has someone already solved this?" | `prior-art-recon` |
+
+Two standing rules behind that table:
+
+- **Conquest is triggered by writing, never by reading.** A repo earns its `flake.nix` on the
+  first need to *change* it. Research and audits read freely in unconquered ground.
+- **Delegate, never reimplement.** The flake template lives in `nix-dev-toolkit`. The audit
+  dimensions live in `foundation-audit`. If a sibling owns a job, calling it is the only correct
+  move.
+
+## The Senate is a workflow, not a prompt
+
+`/empire:senate` is `workflows/senate.js` — a deterministic script, not an agent deciding how
+many helpers to spawn. It takes a question and a lane list, dispatches one `empire:senator` per
+lane concurrently, and hands every report to one synthesis stage.
+
+```
+/empire:senate   args: {"question":"<the decision>",
+                        "lanes":[{"name":"...","question":"...","instrument":"..."}, ...]}
+```
+
+- **Fewer than two lanes and it refuses**, telling you what to run instead. One lane is a lookup.
+- Each lane returns a **validated object** — `verdict`, `measured[]`, `cited[]`, `assumed[]`,
+  `negative_searches[]`, `weakest_assumption` — so the labelling discipline is machine-checked
+  rather than hoped for.
+- The lane prompt states that **a verdict of NO is the most valuable outcome**, and that the
+  instrument named in a brief is a **hypothesis, not an instruction**.
+- `agentType: "empire:senator"` means `agents/senator.md` remains the lane discipline. The script
+  contributes the fan-out and the schema, and reimplements none of the Senator's rules.
+
+**It appears only after the plugin is enabled.** `defaultEnabled: false`, and a disabled plugin
+loads **no components at all** — no agents, no workflow. Worse, an `enabledPlugins` entry already
+written to settings persists across updates, so the manifest key cannot re-enable it. `/empire:senate`
+missing from autocomplete is therefore not evidence of a broken workflow; check that the plugin is
+enabled first.
+
+If workflows are switched off entirely (`disableWorkflows: true`, or
+`CLAUDE_CODE_DISABLE_WORKFLOWS=1`), the command disappears and `empire:senator` is still there to
+invoke directly — one lane at a time, prose report.
+
+## Where the durable record lives
+
+**The Minister's `memory: project`, at `.claude/agent-memory/empire-minister/` inside the repo
+being worked on.** It is version-controlled: committed with the change, or it is a local file and
+not a handover. Only the first 200 lines or 25KB of its `MEMORY.md` is injected automatically, so
+that file is an index with links and the detail sits in siblings.
+
+Two things that are **not** the record, and why neither makes the other redundant:
+
+- **The workflow's resume cache is session-scoped.** It stops a completed lane re-running inside
+  one session. It does not survive the session, so it is not a ledger.
+- **Agent Teams' shared task list was the rejected alternative.** It lives at
+  `~/.claude/tasks/{session-XXXXXXXX}/` — outside the repo, named from the session id, swept by
+  `cleanupPeriodDays`, one team per session and not shareable across sessions. A within-session
+  coordination surface, not a project record.
+
+The General deliberately has no `memory:` key: `isolation: worktree` means its files would land in
+a worktree that is removed when unchanged, so the memory would appear to work and then vanish.
 
 ## Conquest
 
@@ -63,6 +127,6 @@ No agent here uses `bypassPermissions`.
 
 ## Requirements
 
-Claude Code. Nix only where a flake is involved — the Queen and the Senate never need it, the
-Minister degrades to an ordinary coding agent without it, and the General declines. Claude Desktop
-loads no plugins, so this is a Claude Code artefact.
+Claude Code. Nix only where a flake is involved — the Senate never needs it, the Minister degrades
+to an ordinary coding agent without it, and the General declines rather than writing a flake he
+cannot evaluate. Claude Desktop loads no plugins, so this is a Claude Code artefact.
