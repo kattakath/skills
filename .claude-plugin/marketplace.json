@@ -122,7 +122,7 @@
     },
     {
       "name": "empire",
-      "description": "Run a fleet of repos from one session: a controller agent that reads, decides and dispatches but writes nothing; an isolated agent that brings an unflaked repo up to a verified standard; a per-repo implementer; and read-only research lanes that can return NO.",
+      "description": "Bring an unflaked repo up to a verified standard in an isolated worktree, implement inside one repo with memory that survives the session, and research a decision across parallel read-only lanes with a deterministic Senate workflow.",
       "author": {
         "name": "Ismail Kattakath"
       },

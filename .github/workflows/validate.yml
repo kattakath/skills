@@ -71,10 +71,42 @@ jobs:
           rc=0
           while IFS= read -r -d '' f; do
             node --check "$f" || { echo "::error file=$f::does not parse"; rc=1; }
-          done < <(find plugins -path '*/scripts/*' \( -name '*.js' -o -name '*.mjs' \) -print0)
+          done < <(find plugins \( -name '*.js' -o -name '*.mjs' \) -print0)
           while IFS= read -r -d '' f; do
             bash -n "$f" || { echo "::error file=$f::bad shell syntax"; rc=1; }
           done < <(find plugins -name '*.sh' -print0)
+          exit $rc
+
+      # `node --check` CANNOT SEE THE FAILURE THAT ACTUALLY MATTERS HERE. A workflow script
+      # whose `export const meta = {...}` literal is not the FIRST statement is perfectly valid
+      # JavaScript and loads as ZERO workflows — measured: `Total plugin workflows loaded: 0`
+      # with no error line emitted at all. So a parse-only step would go green over a dead file,
+      # which is the one shape this repo's own silent-instruments catalogue exists to reject.
+      #
+      # The `n >= 1` floor is here for the same reason the Nix step's floor is (#54): rename or
+      # move workflows/ later and a floorless step iterates zero files and still exits 0.
+      #
+      # Known limitation: a workflow legitimately opening with a /* block comment */ would
+      # false-red. Anthropic's own claude-security/workflows/scan.js opens with `export const
+      # meta={` on line 1, so the convention holds; widen the check rather than dropping it.
+      - name: Plugin workflows load-shape
+        run: |
+          rc=0
+          n=0
+          while IFS= read -r -d '' f; do
+            n=$((n + 1))
+            node --check "$f" || { echo "::error file=$f::does not parse"; rc=1; }
+            first=$(sed -e 's,//.*,,' "$f" | grep -m1 -v '^[[:space:]]*$')
+            case "$first" in
+              'export const meta'*) : ;;
+              *) echo "::error file=$f::meta literal must be the FIRST statement (got: $first)"; rc=1 ;;
+            esac
+          done < <(find plugins -path '*/workflows/*' -name '*.js' -print0)
+          if [ "$n" -lt 1 ]; then
+            echo "::error::expected at least 1 plugin workflow, found $n" >&2
+            rc=1
+          fi
+          echo "checked $n workflow(s)"
           exit $rc
 
       # SAME REASONING AS "Scripts parse", for the one language that step cannot see.
