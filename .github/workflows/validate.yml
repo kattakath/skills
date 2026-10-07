@@ -155,6 +155,14 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
+      # desktop-commander runs commands OUTSIDE Claude Code's Bash tool, so the Bash
+      # PreToolUse hooks never see them. This guard is the only thing reproducing the
+      # command-text denies a filesystem sandbox cannot express, and it is registered
+      # HERE because the rule it replaces — a nudge pointing the other way — carried
+      # zero coverage and is precisely the one that silently inverted.
+      - name: desktop-commander guard cases
+        run: bash plugins/desktop-commander/tests/guard-cases.sh
+
       # The Senate hands web-derived lane reports to a synthesis agent. Two things keep that
       # safe and NEITHER is visible to any other gate: the synthesis agentType (empire:consul,
       # Read/Grep/Glob only) and a fence that makes the payload markers unforgeable.
