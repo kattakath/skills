@@ -121,6 +121,26 @@
       "source": "./plugins/claude-code-nix"
     },
     {
+      "name": "desktop-commander",
+      "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its own documentation disclaims as a boundary. Ships a PreToolUse guard that blocks the command-text denies a filesystem sandbox structurally cannot express — printing a secret, decrypting an age file, a force-push, merging a PR — and points back at Bash whenever Bash works, plus a skill for actually working a locked session.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "desktop-commander",
+        "mcp",
+        "shell",
+        "filesystem",
+        "sandbox",
+        "seatbelt",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/desktop-commander",
+      "license": "MIT",
+      "source": "./plugins/desktop-commander"
+    },
+    {
       "name": "empire",
       "description": "Bring an unflaked repo up to a verified standard in an isolated worktree, implement inside one repo with memory that survives the session, and research a decision across parallel read-only lanes with a deterministic Senate workflow.",
       "author": {
@@ -160,6 +180,29 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/foundation-audit",
       "license": "MIT",
       "source": "./plugins/foundation-audit"
+    },
+    {
+      "name": "gif-meme",
+      "description": "Make a looping GIF that fits a byte budget from a short video, then publish it to Tenor and GIPHY over the Chrome DevTools Protocol, with the measured per-site footguns (hidden file inputs, a racing tag box, the 48-hour review, the five-upload gate on GIPHY search) pre-empted.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "gif",
+        "meme",
+        "tenor",
+        "giphy",
+        "ffmpeg",
+        "gifsicle",
+        "looping",
+        "upload",
+        "chrome-devtools",
+        "media"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/gif-meme",
+      "license": "MIT",
+      "source": "./plugins/gif-meme"
     },
     {
       "name": "github-release-gate",
@@ -483,26 +526,6 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
       "license": "MIT",
       "source": "./plugins/wordpress"
-    },
-    {
-      "name": "desktop-commander",
-      "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its own documentation disclaims as a boundary. Ships a PreToolUse guard that blocks the command-text denies a filesystem sandbox structurally cannot express — printing a secret, decrypting an age file, a force-push, merging a PR — and points back at Bash whenever Bash works, plus a skill for actually working a locked session.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "development",
-      "keywords": [
-        "desktop-commander",
-        "mcp",
-        "shell",
-        "filesystem",
-        "sandbox",
-        "seatbelt",
-        "nix"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/desktop-commander",
-      "license": "MIT",
-      "source": "./plugins/desktop-commander"
     }
   ]
 }
