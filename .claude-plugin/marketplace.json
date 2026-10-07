@@ -483,6 +483,26 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
       "license": "MIT",
       "source": "./plugins/wordpress"
+    },
+    {
+      "name": "desktop-commander",
+      "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its documentation disclaims as a boundary.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "desktop-commander",
+        "mcp",
+        "shell",
+        "filesystem",
+        "sandbox",
+        "seatbelt",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/desktop-commander",
+      "license": "MIT",
+      "source": "./plugins/desktop-commander"
     }
   ]
 }

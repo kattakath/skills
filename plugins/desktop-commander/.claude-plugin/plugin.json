@@ -1,0 +1,20 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "desktop-commander",
+  "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its documentation disclaims as a boundary.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/desktop-commander",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "desktop-commander",
+    "mcp",
+    "shell",
+    "filesystem",
+    "sandbox",
+    "seatbelt",
+    "nix"
+  ]
+}
