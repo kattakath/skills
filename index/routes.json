@@ -217,6 +217,14 @@
         "desktop-commander"
       ],
       "note": "`start_process` is not the Bash tool, so a worktree-isolation lock does not see it. PROPHYLAXIS, NOT A RESCUE: MCP servers load at session start, so an already-locked session will not pick it up — and the restart that would is what unsticks it anyway. Needs `nix-mcp-desktop-commander` on PATH from kattakath/nix-config (local.pluginMcp.servers), which runs the server under a Nix-generated macOS Seatbelt profile; a plugin .mcp.json cannot run sandbox-exec. The server's OWN allowedDirectories is not a boundary — its SECURITY.md calls directory restrictions \"guardrails, not sandboxing\", and an empty list means every path is allowed. The fence covers the FILE axis only: it does NOT reproduce the Bash-text denies (secret reveal, agenix -d, git push --force, gh pr merge), because those have no filesystem component."
+    },
+    {
+      "goal": "Make a looping GIF from a video and publish it to Tenor / GIPHY so it shows up in GIF search",
+      "steps": [
+        "gif-meme"
+      ],
+      "gap": true,
+      "note": "Needs `media-gif` on PATH from kattakath/nix-config (local.mediaCli.enable) for the encode, and the chrome-devtools MCP attached to a Chromium on --remote-debugging-port=9222 for the two upload forms. Tenor is searchable after a review of up to 48 h; GIPHY never is from a plain account — search placement is an Artist/Brand channel approval, and the application form is gated behind five public uploads."
     }
   ]
 }
