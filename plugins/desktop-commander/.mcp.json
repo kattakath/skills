@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "desktop-commander": {
+      "command": "nix-mcp-desktop-commander"
+    }
+  }
+}

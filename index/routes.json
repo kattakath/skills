@@ -210,6 +210,13 @@
         "mcp-utilities"
       ],
       "note": "Four upstream servers, no credentials, one plugin because all four were enabled together on the gateway this replaces. `terraform-mcp-server` and `nix-mcp-mcpfinder` must be on PATH from kattakath/nix-config — a plugin cannot carry a /nix/store path, and mcpfinder needs a Node newer than the fleet default. `memory` gets a wrapper so its graph lives under XDG instead of inside the npx cache."
+    },
+    {
+      "goal": "Run a command when the Bash tool refuses to (deleted worktree)",
+      "steps": [
+        "desktop-commander"
+      ],
+      "note": "`start_process` is not the Bash tool, so a worktree-isolation lock does not see it. PROPHYLAXIS, NOT A RESCUE: MCP servers load at session start, so an already-locked session will not pick it up — and the restart that would is what unsticks it anyway. Needs `nix-mcp-desktop-commander` on PATH from kattakath/nix-config (local.pluginMcp.servers), which runs the server under a Nix-generated macOS Seatbelt profile; a plugin .mcp.json cannot run sandbox-exec. The server's OWN allowedDirectories is not a boundary — its SECURITY.md calls directory restrictions \"guardrails, not sandboxing\", and an empty list means every path is allowed. The fence covers the FILE axis only: it does NOT reproduce the Bash-text denies (secret reveal, agenix -d, git push --force, gh pr merge), because those have no filesystem component."
     }
   ]
 }
