@@ -79,6 +79,35 @@ The fence covers the **file** axis only: where writes may land, and which paths 
 read. Treat the rest as unguarded and keep the blast radius in mind when choosing to use
 this server rather than Bash.
 
+## The guard, and why it lives here
+
+`hooks/hooks.json` registers a `PreToolUse` gate on this server's own tools
+(`scripts/desktop-commander-guard.js`). It does two things of different strength:
+
+- **Blocks** the command-text denies a filesystem sandbox structurally cannot express
+  — printing a secret, decrypting an age file, a force-push without a lease, merging a
+  PR. Seatbelt governs *where writes land*; it has nothing to say about these, and
+  Keychain access goes through `securityd` over mach IPC where no file rule reaches.
+- **Advises**, without blocking, that this server is the fallback: if Bash works, use
+  Bash. A hard block there would be unfixable from inside a genuinely locked session,
+  which is the one case this exists for.
+
+It fails **open** on every error path. A bug in the guard costs supervision, never
+availability.
+
+**Why the plugin owns this rather than the operator's repo:** that repo's Bash guard
+is registered with matcher `"Bash"`, so it is structurally never handed an MCP tool
+call. Putting the mitigation in the plugin that introduces the capability also makes
+it work in every repo, not just one.
+
+**The inverted ancestor is worth knowing about.** The operator's repo previously
+carried the *opposite* rule — a nudge pushing a bare `ls`/`find`/`stat`/`ps`/`kill`
+*toward* this server, reasoning that tool preference was "not a safety concern". True
+while this was one server behind a gateway; false once it became the deliberate way
+around the Bash tool. It was also the only rule there with no test coverage, and it
+is the one that silently inverted. Removed 2026-10-07; this guard points the other
+way, and `tests/guard-cases.sh` is registered in CI so it cannot rot the same way.
+
 ## Two sharp edges
 
 - **`set_config_value` hangs** under the fence rather than returning an error — the write

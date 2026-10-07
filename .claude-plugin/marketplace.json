@@ -486,7 +486,7 @@
     },
     {
       "name": "desktop-commander",
-      "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its documentation disclaims as a boundary.",
+      "description": "Shell and filesystem tools that run OUTSIDE Claude Code's Bash tool — the escape hatch for a worktree-isolated session whose worktree was deleted and which therefore refuses every Bash call. Confined by a macOS Seatbelt profile from a Nix-installed launcher, not by the server's own allowedDirectories, which its own documentation disclaims as a boundary. Ships a PreToolUse guard that blocks the command-text denies a filesystem sandbox structurally cannot express — printing a secret, decrypting an age file, a force-push, merging a PR — and points back at Bash whenever Bash works, plus a skill for actually working a locked session.",
       "author": {
         "name": "Ismail Kattakath"
       },
