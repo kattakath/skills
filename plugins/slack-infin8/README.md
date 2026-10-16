@@ -51,3 +51,12 @@ Both servers use callback port 3118, so sign in to one at a time.
 Same tools as the official plugin, under the prefix `mcp__plugin_slack-infin8_slack__`.
 Which folder may use which workspace is enforced outside this repo, by a PreToolUse hook in
 the operator's nix-config.
+
+## Posting without the footer: the `post` server
+
+Slack's hosted server appends `*Sent using* <@…|Claude>` to every message it posts. The second
+server here, `post`, runs [korotovsky/slack-mcp-server](https://github.com/korotovsky/slack-mcp-server)
+with the operator's own user token (`xoxp`), so posts carry no footer. Its binary,
+`nix-mcp-slack-infin8`, comes from the operator's nix-config, which reads the token from the
+login Keychain (service `mcp:infin8-it.slack.com:xoxp`). Tools are prefixed
+`mcp__plugin_slack-infin8_post__`; posting is `conversations_add_message`.

@@ -1,0 +1,18 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "slack-silvercreek",
+  "description": "Posts to the Silver Creek Insights Slack workspace as the operator, with their own user token (korotovsky/slack-mcp-server), so messages carry no 'Sent using Claude' footer. The binary nix-mcp-slack-silvercreek is built by the operator's nix-config; reads stay on the official slack plugin.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-silvercreek",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "slack",
+    "mcp",
+    "workspace",
+    "silvercreek",
+    "user-token"
+  ]
+}
