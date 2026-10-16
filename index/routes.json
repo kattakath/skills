@@ -232,6 +232,14 @@
         "REDACTED"
       ],
       "note": "A second mcp.slack.com server with its own OAuth sign-in (Claude Code keys MCP tokens by server name plus config hash, not by URL). Signed in to REDACTED IT; the official `slack` plugin keeps the other workspace. Folder routing between the two is a PreToolUse hook in kattakath/nix-config."
+    },
+    {
+      "goal": "Post to Slack without the 'Sent using Claude' footer",
+      "steps": [
+        "REDACTED",
+        "REDACTED"
+      ],
+      "note": "Slack's hosted MCP footers every post. Each workspace plugin carries a `post` server (korotovsky/slack-mcp-server) that posts with the operator's own user token; the binaries and Keychain token reads live in kattakath/nix-config."
     }
   ]
 }
