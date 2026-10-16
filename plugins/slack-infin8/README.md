@@ -1,0 +1,45 @@
+# slack-infin8
+
+A second Slack MCP server, signed in to the **Infin8 IT** workspace (`infin8-it.slack.com`),
+next to the official `slack` plugin signed in to another workspace.
+
+## Why a second plugin works
+
+Claude Code stores an MCP server's OAuth sign-in under the **server's name plus a hash of its
+config**, not under its URL. Read at the source (Claude Code 2.1.295, the function that builds
+the `mcpOAuth` key):
+
+```js
+function zl(e, n) {
+  let r = _({ type: n.type, url: n.url, headers: n.headers || {} }),
+      s = FL("sha256").update(r).digest("hex").substring(0, 16);
+  return `${e}|${s}`;
+}
+```
+
+This plugin's server is `plugin:slack-infin8:slack`, the official one `plugin:slack:slack`, so
+they keep separate tokens even though both point at `https://mcp.slack.com/mcp` with the same
+OAuth client (`clientId` and `callbackPort` copied from the official plugin's `.mcp.json`).
+
+## Install
+
+```
+/plugin install slack-infin8 --marketplace kattakath/skills
+/plugin install slack-infin8@kattakath
+```
+
+## Sign in
+
+1. Start Claude Code in any folder, run `/mcp`, pick `plugin:slack-infin8:slack` and
+   **Authenticate**.
+2. In the browser, choose **infin8-it.slack.com** (top-right workspace switcher on Slack's
+   consent page) and approve.
+3. Check: `slack_read_user_profile` from this plugin shows the Infin8 IT organization.
+
+Both servers use callback port 3118, so sign in to one at a time.
+
+## Tools
+
+Same tools as the official plugin, under the prefix `mcp__plugin_slack-infin8_slack__`.
+Which folder may use which workspace is enforced outside this repo, by a PreToolUse hook in
+the operator's nix-config.

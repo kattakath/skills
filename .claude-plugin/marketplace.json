@@ -491,6 +491,24 @@
       "source": "./plugins/skill-curator"
     },
     {
+      "name": "slack-infin8",
+      "description": "A second Slack MCP server for the Infin8 IT workspace (infin8-it.slack.com), signed in separately from the official slack plugin so two workspaces can be used from one machine. Same hosted server (mcp.slack.com) and OAuth client as the official plugin; only the sign-in differs.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "slack",
+        "mcp",
+        "oauth",
+        "workspace",
+        "infin8"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-infin8",
+      "license": "MIT",
+      "source": "./plugins/slack-infin8"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {
