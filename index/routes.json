@@ -240,6 +240,13 @@
         "slack-silvercreek"
       ],
       "note": "Slack's hosted MCP footers every post. Each workspace plugin carries a `post` server (korotovsky/slack-mcp-server) that posts with the operator's own user token; the binaries and Keychain token reads live in kattakath/nix-config."
+    },
+    {
+      "goal": "Call AWS APIs with an Identity Center SSO profile, several accounts from one server",
+      "steps": [
+        "aws-infin8"
+      ],
+      "note": "The official aws-core plugin runs the AWS MCP Server proxy with --skip-auth, so its API calls are unsigned. aws-infin8 runs the same pinned proxy with --profile <sdlc> <prod>: the first profile is the default and every tool gains an aws_profile enum for per-call switching. Credentials come from ~/.aws/config and the CLI SSO cache, never argv. Folder routing (Infin8 only) and a SessionStart SSO freshness check are hooks in kattakath/nix-config."
     }
   ]
 }
