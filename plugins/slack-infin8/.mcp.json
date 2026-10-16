@@ -2,7 +2,7 @@
   "mcpServers": {
     "slack": {
       "type": "http",
-      "url": "https://mcp.slack.com/mcp",
+      "url": "https://mcp.slack.com/mcp?workspace=infin8-it",
       "oauth": {
         "clientId": "1601185624273.8899143856786",
         "callbackPort": 3118
