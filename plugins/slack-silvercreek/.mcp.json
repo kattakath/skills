@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "post": {
+      "command": "nix-mcp-slack-silvercreek"
+    }
+  }
+}
