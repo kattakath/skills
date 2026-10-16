@@ -509,6 +509,24 @@
       "source": "./plugins/REDACTED"
     },
     {
+      "name": "REDACTED",
+      "description": "Posts to the REDACTED Insights Slack workspace as the operator, with their own user token (korotovsky/slack-mcp-server), so messages carry no 'Sent using Claude' footer. The binary REDACTED is built by the operator's nix-config; reads stay on the official slack plugin.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "slack",
+        "mcp",
+        "workspace",
+        "REDACTED",
+        "user-token"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
+      "license": "MIT",
+      "source": "./plugins/REDACTED"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {
