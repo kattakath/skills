@@ -46,6 +46,24 @@
       "source": "./plugins/apify"
     },
     {
+      "name": "REDACTED",
+      "description": "The AWS MCP Server signed with the REDACTED IT Identity Center SSO profiles: SDLC by default, production per call via aws_profile. The official aws-core proxy, pinned, without its --skip-auth.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "aws",
+        "mcp",
+        "sso",
+        "identity-center",
+        "REDACTED"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
+      "license": "MIT",
+      "source": "./plugins/REDACTED"
+    },
+    {
       "name": "brag-dossier",
       "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
       "author": {
