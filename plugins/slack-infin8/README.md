@@ -18,8 +18,16 @@ function zl(e, n) {
 ```
 
 This plugin's server is `plugin:slack-infin8:slack`, the official one `plugin:slack:slack`, so
-they keep separate tokens even though both point at `https://mcp.slack.com/mcp` with the same
-OAuth client (`clientId` and `callbackPort` copied from the official plugin's `.mcp.json`).
+they keep separate tokens. Both use the same OAuth client (`clientId` and `callbackPort` copied
+from the official plugin's `.mcp.json`).
+
+**The URL must differ from the official plugin's.** Claude Code drops a plugin MCP server whose
+config duplicates an earlier plugin's (2.1.295: `Suppressing plugin MCP server "…": duplicates
+earlier plugin server "…"`). With the identical `https://mcp.slack.com/mcp`, `slack-infin8` never
+appeared in `/mcp` or `claude mcp list`. So the URL carries a query string Slack ignores,
+`?workspace=infin8-it`; with it, `claude mcp list` shows `plugin:slack-infin8:slack … Needs
+authentication`. Keep that exact URL: the sign-in is stored under the server name plus a hash of
+its config, so changing the URL discards it.
 
 ## Install
 
