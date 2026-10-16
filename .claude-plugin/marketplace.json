@@ -223,6 +223,23 @@
       "source": "./plugins/gif-meme"
     },
     {
+      "name": "github-gh",
+      "description": "GitHub official MCP server (all toolsets) authenticated with the gh CLI token: same user and scopes as gh, no second token. Needs the nix-mcp-github launcher from kattakath/nix-config.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "github",
+        "mcp",
+        "gh",
+        "nix"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/github-gh",
+      "license": "MIT",
+      "source": "./plugins/github-gh"
+    },
+    {
       "name": "github-release-gate",
       "description": "Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun.",
       "author": {

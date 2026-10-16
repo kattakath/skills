@@ -1,0 +1,12 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "github-gh",
+  "description": "GitHub's official MCP server (github/github-mcp-server, all toolsets) authenticated with the gh CLI's own token: same user, same scopes as gh, and no second token to store or rotate. Needs the nix-mcp-github launcher from kattakath/nix-config.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/github-gh",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": ["github", "mcp", "gh", "nix"]
+}
