@@ -47,7 +47,7 @@
     },
     {
       "name": "aws-infin8",
-      "description": "The AWS MCP Server signed with the Infin8 IT Identity Center SSO profiles: SDLC by default, production per call via aws_profile. The official aws-core proxy, pinned, without its --skip-auth.",
+      "description": "The AWS MCP Server signed with the Infin8 IT Identity Center SSO profiles: development by default, production per call via aws_profile. The official aws-core proxy, pinned, without its --skip-auth.",
       "author": {
         "name": "Ismail Kattakath"
       },

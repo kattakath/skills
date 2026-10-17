@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "aws-infin8",
-  "description": "The AWS MCP Server, signed with the Infin8 IT Identity Center SSO profiles: infin8-takeoff-sdlc (default) and infin8it-takeoff-prod (per call, via aws_profile). The same pinned proxy as the official aws-core plugin, minus its --skip-auth, so every API call is SigV4-signed with the caller's own SSO session.",
+  "description": "The AWS MCP Server, signed with the Infin8 IT Identity Center SSO profiles: infin8-takeoff-development (default) and infin8-takeoff-production (per call, via aws_profile). The same pinned proxy as the official aws-core plugin, minus its --skip-auth, so every API call is SigV4-signed with the caller's own SSO session.",
   "author": {
     "name": "Ismail Kattakath"
   },
