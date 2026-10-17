@@ -163,6 +163,13 @@ jobs:
       - name: desktop-commander guard cases
         run: bash plugins/desktop-commander/tests/guard-cases.sh
 
+      # pgp-ops' plaintext guard keeps decrypted text away from the model. Its two failure
+      # modes are both silent: a leak it stops refusing, and a false positive on a command the
+      # skill itself documents, which pushes the agent toward an unguarded workaround. The
+      # cases assert both directions, plus fail-open on a malformed payload.
+      - name: pgp-ops plaintext guard cases
+        run: bash plugins/pgp-ops/tests/guard-cases.sh
+
       # The Senate hands web-derived lane reports to a synthesis agent. Two things keep that
       # safe and NEITHER is visible to any other gate: the synthesis agentType (empire:consul,
       # Read/Grep/Glob only) and a fence that makes the payload markers unforgeable.

@@ -12,12 +12,16 @@
 #     before-space  everything before the first literal SPACE character
 #
 # Encrypt — plaintext FROM the clipboard, ciphertext back TO the clipboard:
-#   gpg-in-window.zsh encrypt-for <recipient-key.asc> <prefix>
-#     Signs with your secret key and encrypts to the recipient AND to you, so you
-#     can still read what you sent. Your key: $PGP_SELF (fingerprint), else the
-#     only secret key in the keyring. The recipient key is used without importing.
-#     Self-check before the clipboard is touched: your key decrypts the result back
-#     to the same bytes (compared by sha256), with a good signature.
+#   gpg-in-window.zsh encrypt-for <recipient-key.asc> <prefix> [sign]
+#     Encrypts to the recipient AND to you, so you can decrypt what you sent later.
+#     That is what a self-recipient does; a signature does NOT — it only proves the
+#     message came from you, so it is opt-in (`sign`). Your key: $PGP_SELF
+#     (fingerprint), else the only secret key in the keyring. The recipient key is
+#     used without importing it.
+#     Unsigned, it needs NO passphrase, so it also runs in a plain non-tty shell.
+#     Self-check before the clipboard is touched: the result's session-key packets
+#     must name BOTH your and the recipient's encryption subkeys; with `sign`, your
+#     key must also decrypt it back to the same sha256 with a Good signature.
 #
 # Files written, both plaintext-free by construction:
 #   <prefix>.status  one line: OK/FAILED, mode, lengths, flags, recipient key ids
@@ -29,7 +33,7 @@
 set -o pipefail
 mode=$1
 case $mode in
-  encrypt-for) keyfile=$2 prefix=$3 ;;
+  encrypt-for) keyfile=$2 prefix=$3 signopt=${4:-} ;;
   *) msg=$2 prefix=${3:-$2} ;;
 esac
 if [[ -z $prefix || $prefix == - ]]; then
@@ -41,8 +45,11 @@ rm -f "$st" "$diag"
 export GPG_TTY=$(tty)
 
 # A freshly opened window's pty is 0x0 until the terminal lays it out, and
-# pinentry-curses then fails with "Screen or window too small". Wait (<=5 s).
-for i in {1..50}; do s=$(stty size 2>/dev/null); [[ ${s%% *} -ge 10 ]] && break; sleep 0.1; done
+# pinentry-curses then fails with "Screen or window too small". Wait (<=5 s) —
+# only when there IS a terminal (an unsigned encrypt-for may run without one).
+if [[ -t 0 ]]; then
+  for i in {1..50}; do s=$(stty size 2>/dev/null); [[ ${s%% *} -ge 10 ]] && break; sleep 0.1; done
+fi
 # The pinentry's ncurses may lack a terminfo entry for the terminal's own TERM.
 export TERM=xterm-256color
 printf 'tty=%s size=%s\n' "$GPG_TTY" "$s" > "$diag"
@@ -99,19 +106,32 @@ case $mode in
     elif [[ ! -s $keyfile ]]; then
       report "FAILED mode=encrypt-for reason=no-recipient-key-file"
     else
-      h_in=$(pbpaste | shasum -a 256 | cut -d' ' -f1)
-      if ct=$(pbpaste | gpg --armor --sign --local-user "$self" --encrypt \
+      # The encryption subkeys that MUST appear among the result's recipients.
+      want_self=$(gpg --with-colons --list-keys "$self" 2>/dev/null | awk -F: '$1=="sub" && $12 ~ /e/ {print $5}')
+      want_rcpt=$(gpg --batch --with-colons --show-keys "$keyfile" 2>/dev/null | awk -F: '$1=="sub" && $12 ~ /e/ {print $5}')
+      signargs=()
+      [[ $signopt == sign ]] && signargs=(--sign --local-user "$self") && h_in=$(pbpaste | shasum -a 256 | cut -d' ' -f1)
+      if ct=$(pbpaste | gpg --armor "${signargs[@]}" --encrypt \
           --recipient-file "$keyfile" --recipient "$self" 2> >(tee -a "$diag" >&2)); then
-        # Self-check BEFORE replacing the clipboard: the passphrase is cached now.
-        h_out=$(printf '%s\n' "$ct" | gpg -d 2>"$prefix.verify" | shasum -a 256 | cut -d' ' -f1)
-        good=$(grep -c 'Good signature' "$prefix.verify")
-        cat "$prefix.verify" >> "$diag"; rm -f "$prefix.verify"
         rcpts=$(printf '%s\n' "$ct" | recipients)
-        if [[ $h_in == "$h_out" && $good -ge 1 ]]; then
+        names() { local k; for k in ${(f)1}; do [[ ,$rcpts, == *,$k,* ]] && return 0; done; return 1; }
+        problem="" signed=no
+        if [[ -z $want_self ]]; then problem="your-key-has-no-encryption-subkey"
+        elif ! names "$want_self"; then problem="you-are-NOT-a-recipient"
+        elif [[ -n $want_rcpt ]] && ! names "$want_rcpt"; then problem="recipient-is-NOT-a-recipient"
+        elif [[ $signopt == sign ]]; then
+          # Signed: the passphrase is cached now, so prove the round trip too.
+          h_out=$(printf '%s\n' "$ct" | gpg -d 2>"$prefix.verify" | shasum -a 256 | cut -d' ' -f1)
+          good=$(grep -c 'Good signature' "$prefix.verify")
+          cat "$prefix.verify" >> "$diag"; rm -f "$prefix.verify"
+          if [[ $h_in == "$h_out" && $good -ge 1 ]]; then signed=yes
+          else problem="sign-self-check roundtrip=$([[ $h_in == "$h_out" ]] && echo ok || echo MISMATCH) good-signature=$good"; fi
+        fi
+        if [[ -z $problem ]]; then
           printf '%s\n' "$ct" | pbcopy
-          report "OK mode=encrypt-for bytes=$(pbpaste | wc -c | tr -d ' ') recipients=$rcpts signed=yes self-roundtrip=identical"
+          report "OK mode=encrypt-for bytes=$(pbpaste | wc -c | tr -d ' ') recipients=$rcpts self-recipient=yes signed=$signed"
         else
-          report "FAILED mode=encrypt-for reason=self-check roundtrip=$([[ $h_in == "$h_out" ]] && echo ok || echo MISMATCH) good-signature=$good (clipboard untouched)"
+          report "FAILED mode=encrypt-for reason=$problem recipients=$rcpts (clipboard untouched)"
         fi
       else
         report "FAILED mode=encrypt-for exit=$? (clipboard untouched)"
@@ -120,7 +140,7 @@ case $mode in
     fi
     ;;
   *)
-    report "USAGE: gpg-in-window.zsh all|first-word|before-space <msg.asc|-> [prefix] | encrypt-for <key.asc> <prefix>"
+    report "USAGE: gpg-in-window.zsh all|first-word|before-space <msg.asc|-> [prefix] | encrypt-for <key.asc> <prefix> [sign]"
     ;;
 esac
 
