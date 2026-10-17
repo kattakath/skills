@@ -6,8 +6,8 @@
         "mcp-proxy-for-aws-cli==1.7.0",
         "https://aws-mcp.us-east-1.api.aws/mcp",
         "--profile",
-        "infin8-takeoff-sdlc",
-        "infin8it-takeoff-prod",
+        "infin8-takeoff-development",
+        "infin8-takeoff-production",
         "--region",
         "us-east-1",
         "--disable-telemetry"
