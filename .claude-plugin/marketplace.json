@@ -562,6 +562,23 @@
       "source": "./plugins/REDACTED"
     },
     {
+      "name": "REDACTED",
+      "description": "A second Stripe MCP server for the REDACTED IT Stripe accounts, signed in separately from the official stripe plugin. Same hosted server and OAuth; only the sign-in differs.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "stripe",
+        "mcp",
+        "oauth",
+        "REDACTED"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
+      "license": "MIT",
+      "source": "./plugins/REDACTED"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {
