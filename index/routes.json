@@ -246,7 +246,7 @@
       "steps": [
         "REDACTED"
       ],
-      "note": "The official aws-core plugin runs the AWS MCP Server proxy with --skip-auth, so its API calls are unsigned. REDACTED runs the same pinned proxy with --profile <sdlc> <prod>: the first profile is the default and every tool gains an aws_profile enum for per-call switching. Credentials come from ~/.aws/config and the CLI SSO cache, never argv. Folder routing (REDACTED only) and a SessionStart SSO freshness check are hooks in kattakath/nix-config."
+      "note": "The official aws-core plugin runs the AWS MCP Server proxy with --skip-auth, so its API calls are unsigned. REDACTED runs the same pinned proxy with --profile <development> <production>: the first profile is the default and every tool gains an aws_profile enum for per-call switching. Credentials come from ~/.aws/config and the CLI SSO cache, never argv. Folder routing (REDACTED only) and a SessionStart SSO freshness check are hooks in kattakath/nix-config."
     },
     {
       "goal": "Use GitHub tools over MCP with the gh CLI login",
