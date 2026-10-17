@@ -12,31 +12,34 @@ passphrase prompt can draw, and how to *prove* each answer.
 
 ## Ground rules
 
-- **Plaintext goes to the clipboard, never the transcript.** Print it only when the user says
-  "print" or "show". Report metadata instead: bytes, lines, signed or unsigned, nested or not.
-- **Plaintext never touches disk.** Hold it in shell memory (`pt=$(gpg -d …)`) or pipe it straight
-  into `pbcopy`. Ciphertext and public keys may be saved as files; they are what you compare.
+- **Decrypted text goes to the clipboard ONLY. The AI never prints it and never reads it — not even
+  when asked.** Report metadata instead: bytes, lines, signed or unsigned, nested or not. If the user
+  wants to see it, they paste it themselves. The plugin's PreToolUse hook enforces this (§ Guard).
+- **Every decrypt runs in [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh)**, never as
+  `gpg -d` in the agent's own shell — even with the passphrase cached, that would print plaintext
+  into the agent's output.
+- **Plaintext never touches disk.** It stays in the script's memory or a pipe into `pbcopy`.
+  Ciphertext and public keys may be saved as files; they are what you compare.
 - **A public key cannot decrypt anything.** "Can the holders of key K read message M?" means
   "does M carry a public-key-encrypted session key for K's *encryption subkey*?" Answer it from M's
   packets (§ 1).
-- **Every message encrypted for someone else is signed by the user AND encrypted to the user too**
-  (`encrypt-for`, § 4), so the user can always decrypt what they sent. Never silently produce a
-  copy only the recipient can read. Encrypting to the user's key alone means only the user can read it.
+- **Every message encrypted for someone else is ALSO encrypted to the user** (`encrypt-for`, § 4),
+  so the user can always decrypt what they sent. Never silently produce a copy only the recipient
+  can read. Signing is a separate, opt-in choice (§ 4).
 - **Never ask for the passphrase in chat.** It goes into pinentry, typed by the human.
 
 ## 1. Inspect first — none of this needs a passphrase
 
 | Question | Instrument |
 |---|---|
-| Who can decrypt M? | `gpg --batch --pinentry-mode error --list-packets M.asc </dev/null 2>/dev/null \| grep -oE 'keyid [0-9A-F]+'` — one line per recipient |
+| Who can decrypt M? | `gpg --homedir "$(mktemp -d)" --batch --list-packets M.asc 2>/dev/null \| grep -oE 'keyid [0-9A-F]+'` — one line per recipient. The EMPTY home holds no key, so nothing is decrypted |
 | What is in key file K? | `gpg --show-keys --with-colons --with-subkey-fingerprints K.asc` — reads without importing; `sub:…:e` is the encryption subkey whose 16-hex tail is the keyid above |
-| Is it mine? | `gpg --batch --pinentry-mode error -d M.asc` → `No secret key` (not yours) vs `No pinentry` (yours; passphrase needed, § 2) |
+| Is it mine? | Compare those keyids with `gpg --list-secret-keys --with-colons` (`ssb` lines, field 5). A match means yes. **Never probe with `gpg -d`**: with the passphrase cached it decrypts and prints |
 | Same public key? | Two instruments that could disagree: `gpg --dearmor` both and `cmp`, **and** compare fingerprints from `--show-keys`. Different armor text can be the same key |
 | What does M decrypt to, when M is encrypted to someone else? | You cannot decrypt it. If you produced it, `cmp` it against your saved ciphertext — a byte match proves the content without opening it. Say that is the evidence |
 
-`--list-packets` on an encrypted message also *tries* to decrypt; `--pinentry-mode error` and
-`</dev/null` keep it from hanging, and it exits non-zero — grep the keyid lines and ignore the
-exit status.
+Against the real keyring, `--list-packets` also *tries* to decrypt. Measured on GnuPG 2.5.24, it
+printed no plaintext even with `-vv`, but the empty home avoids the question entirely.
 
 **Armor pasted as one line** (a chat box or form collapsed the newlines) fails with
 `gpg: no valid OpenPGP data found`. Rebuild it rather than guess: strip the BEGIN/END markers,
@@ -49,18 +52,16 @@ the recipient — send a `.asc` file instead.
 The agent's shell has no terminal, so a curses or tty pinentry fails with
 `Inappropriate ioctl for device` or `No pinentry`. In order:
 
-1. **Is a GUI pinentry configured?** `gpgconf --list-options gpg-agent | grep pinentry-program`,
-   and look at what the default `pinentry` resolves to. If it is a GUI one (pinentry-mac, gnome3,
-   qt), plain `gpg -d` from the agent works and the rest of this section is skipped.
-2. **Is the passphrase still cached?** `gpg --batch --pinentry-mode error -d M.asc` succeeds inside
-   the agent's `default-cache-ttl` (600 s by default) after the human last typed it.
-3. **Otherwise, run the operation in a real terminal window** with
-   [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh):
+1. **Does the operation need the passphrase at all?** Unsigned `encrypt-for` does not: run it with
+   `zsh scripts/gpg-in-window.zsh encrypt-for …` straight in the agent's shell. Decrypting and
+   signing do.
+2. **Decrypt and sign: always in a real terminal window**, even when a GUI pinentry is configured
+   or the passphrase is cached. The window is what keeps the plaintext out of the agent's output:
    ```bash
    W='open -na Ghostty.app --args -e /bin/zsh scripts/gpg-in-window.zsh'
    $W first-word "$PWD/M.asc"          # decrypt a saved message
    $W all - "$PWD/run1"                # decrypt the message ON THE CLIPBOARD
-   $W encrypt-for "$PWD/THEIRS.asc" "$PWD/run2"   # § 4: clipboard plaintext → signed ciphertext
+   $W encrypt-for "$PWD/THEIRS.asc" "$PWD/run2" sign   # § 4, signed: needs the passphrase
    ```
    It writes `<prefix>.status` (lengths, flags, recipient keyids) and `<prefix>.diag` (gpg's
    stderr), never plaintext; the prefix defaults to the message path and is required with `-` and
@@ -81,14 +82,15 @@ filled it. The window route has no such cap.
 ## 3. Decrypt — report without revealing
 
 - **Input** is a saved file, or `-` for the message already on the clipboard. The clipboard case is
-  read into memory **before** anything writes the clipboard: `pbpaste | gpg -d | pbcopy` reads and
-  writes one clipboard in one pipeline, and a writer that clears it first races the reader.
+  read into memory (inside the script) **before** anything writes the clipboard: one pipeline that
+  both reads and writes the clipboard lets a writer that clears it first race the reader.
 - **`all`** pipes `gpg -d` into `pbcopy` under `pipefail`: byte-exact, and a failure empties the
   clipboard (documented trade-off in the script).
 - **`first-word`** stops at any whitespace; **`before-space`** stops at the first literal space, so
   a first line ending in a newline is included. Use the one the user's words name.
-- **Check the clipboard independently** of the script's own report: `pbpaste | wc -c`, and
-  `pbpaste | grep -q '[[:space:]]'` for "one word". Never `pbpaste` to the transcript.
+- **Check the clipboard independently** of the script's own report, by count or digest only:
+  `pbpaste | wc -c`, `pbpaste | shasum -a 256`. Anything else that reads the clipboard (`grep`,
+  `head`, a bare `pbpaste`, `$(pbpaste)`) is a read of the plaintext, and the guard refuses it.
 - **Nested armor:** if the plaintext is itself `-----BEGIN PGP MESSAGE-----`, the user received a
   second layer, often addressed to someone else. Run § 1 on the inner message and say whose it is.
 - **Signed or not:** read `.diag`. No `Good signature` / `Signature made` line means unsigned, so the
@@ -96,24 +98,31 @@ filled it. The window route has no such cap.
 
 ## 4. Encrypt for someone
 
-**Signing does not let you read it later — encrypting to yourself does.** A signature proves the
-message came from you; only a session key for *your* encryption subkey lets you decrypt your own
-sent copy. When the user wants both, that is two recipients plus `--sign`. Correct the user if
-they conflate the two.
+**Encrypting to yourself is what lets you read it later — signing is not.** Only a session key for
+*your* encryption subkey lets you decrypt your own sent copy. A signature proves the message came
+from you and nothing more. Users often ask for "sign it so I can read it later": that is a request
+for the self-recipient, so correct the conflation and give them that.
 
-**The default, always: `encrypt-for`** (§ 2.3) — signed, to them and to the user. Put the plaintext on the clipboard (the user copies it, or
-`pbcopy` from what they typed), save the recipient's public key as `THEIRS.asc`, run it. It signs
-with the user's key (`$PGP_SELF`, else the only secret key), encrypts to them **and** to the user,
-self-checks that the user's key decrypts it back to the same bytes with a `Good signature`, and
-only then replaces the clipboard with the armored message. On any failure the clipboard is left
-holding the plaintext, untouched.
-
-**Unsigned, to them only — ONLY when the user explicitly asks for it** (e.g. the message must not
-be attributable to them). It needs no passphrase and runs in the agent's own shell, which makes it
-tempting as a shortcut; it is not one, because the user can never read that copy again. Say so
-before using it.
+**The default, always: `encrypt-for`, unsigned, to them AND to the user.** Put the plaintext on the
+clipboard (the user copies it, or `pbcopy` from what they typed), save the recipient's public key as
+`THEIRS.asc`, then:
 ```bash
-gpg --batch --yes --armor --encrypt --recipient-file THEIRS.asc --output OUT.asc IN.txt
+zsh scripts/gpg-in-window.zsh encrypt-for "$PWD/THEIRS.asc" "$PWD/run1"
+```
+No passphrase, so no window. The user's key is `$PGP_SELF`, else the only secret key. Before the
+clipboard is replaced, the result's packets must name **both** the user's and the recipient's
+encryption subkeys, or nothing changes and the plaintext stays on the clipboard. The status line
+reports `self-recipient=yes signed=no`.
+
+**Signed, opt-in:** add `sign` when the user asks for a signature (proof of authorship). It needs
+the passphrase, so run it in the window (§ 2). It also proves the round trip: the user's key must
+decrypt the result back to the same sha256 with a `Good signature`.
+
+**Recipient-only (no copy for the user) — ONLY on an explicit request**, and say first that the
+user can never read that copy again. Use `--no-encrypt-to` too, because a GnuPG `encrypt-to` line
+in `gpg.conf` adds the user anyway (§ Adapter):
+```bash
+gpg --batch --yes --armor --encrypt --no-encrypt-to --recipient-file THEIRS.asc --output OUT.asc IN.txt
 ```
 - `--recipient-file` uses the key **without importing it** — no keyring change and no trust prompt.
 - **Verify recipients without decrypting:** list the session-key packets against an EMPTY home, which
@@ -125,6 +134,24 @@ gpg --batch --yes --armor --encrypt --recipient-file THEIRS.asc --output OUT.asc
   channel** (a call, in person). A swapped key means the swapper reads it.
 - The clipboard holds one item. Copying a second ciphertext replaces the first, so keep each one as
   a file and re-copy on request.
+
+## Guard — the mechanical floor under the clipboard-only rule
+
+The plugin ships a PreToolUse hook, `scripts/plaintext-guard.js`, on the Bash tool, a fallback
+shell server's exec tools and computer-use `read_clipboard`. It **refuses**:
+
+- `gpg`/`gpg2`/`gpgtar` that decrypt (`-d`, `--decrypt*`, a short-option cluster with `d`), and a
+  `gpg` call with **no explicit command**. Its default action on an encrypted file decrypts and
+  writes the plaintext next to it (measured: `gpg m.asc` printed nothing and created `m`).
+- `pbpaste` unless it is piped straight into a count or digest (`wc`, `shasum`/`sha*sum`, `md5`,
+  `openssl dgst`, `cmp`), into `pbcopy`, or into a gpg stage that can only encrypt, list packets,
+  show or import keys, or dearmor. After a decrypt the clipboard **is** the plaintext.
+- osascript reading the clipboard, NSPasteboard, pyperclip, xclip/xsel `-o`, wl-paste, and
+  computer-use `read_clipboard`.
+
+**Its limit:** it reads command text, so a script the agent writes and then runs is opaque to it.
+The rule above binds regardless. `tests/guard-cases.sh` asserts 68 cases, including every command
+this skill tells the agent to run, so the guard never pushes the agent toward a workaround.
 
 ## 5. Generating a key — decisions for the user, not defaults
 
@@ -164,6 +191,7 @@ The key lives in `~/.gnupg`, and GnuPG writes the **revocation certificate in th
 |---|---|
 | GnuPG | Homebrew `gnupg` + `pinentry` (curses/tty only, deliberately no second GnuPG stack), so § 2.3 applies |
 | GUI | GpgFrontend cask; restart it to see keys created from the CLI |
+| Self-recipient everywhere | `encrypt-to <own fingerprint>` in a **local, hand-placed** `~/.gnupg/gpg.conf`, so every encryption from any tool (CLI, GpgFrontend) includes the user. Never declared in a repo, because a key id in a public tree links the key to its owner. `--no-encrypt-to` opts out per command |
 | Store | `set-secret pgp:<uid>:secret-key` from stdin. A `:` in the name fails the env-var grammar, so the item is stored **unbound**; `set-secret` prints "NOT exported" |
 | Read-back | `secret exec V=pgp:<uid>:secret-key -- sh -c 'printf %s "$V" \| shasum -a 256'`. Not `secret fp`: its digest is an HMAC under a machine-local salt, so it never equals a sha256 |
 | Durable copy | `secrets-push pgp:<uid>:secret-key`, then `secrets-status` must read `in-sync`. Run both with `CLOUDSDK_CONFIG=~/.config/gcloud-nix-config`, because the global gcloud config can hold a client identity |

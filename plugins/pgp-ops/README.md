@@ -23,8 +23,9 @@ plus fingerprints. "What does this decrypt to?", for a message you produced for 
 
 | Topic | Why it is there |
 |---|---|
-| Clipboard in, clipboard out | Decrypt the message already on the clipboard (`-`), or `encrypt-for`: clipboard plaintext → signed message to the recipient **and** you, self-checked (your key decrypts it back to the same bytes, good signature) before the clipboard is replaced |
-| Signing ≠ readable later | A signature proves authorship; reading your own sent copy needs you as a second recipient |
+| Plaintext guard (PreToolUse hook) | Decrypted text reaches the clipboard ONLY: the hook refuses `gpg -d` and a command-less `gpg` in the agent's shell, any clipboard read that is not a count or digest, and computer-use `read_clipboard`. 68 cases in `tests/guard-cases.sh` |
+| Clipboard in, clipboard out | Decrypt the message already on the clipboard (`-`), or `encrypt-for`: clipboard plaintext → message to the recipient **and** you, with no passphrase and no window; your own key's presence among the recipients is checked before the clipboard is replaced. `sign` opts into a signature |
+| Signing ≠ readable later | Reading your own sent copy needs you as a second recipient; a signature only proves authorship |
 | One-line armor repair | Chat boxes strip newlines; gpg then says "no valid OpenPGP data found" |
 | Key generation choices | A PGP key built from an SSH key is linkable to the user's forge account even with no user ID |
 | Backups | Single-line base64 (the macOS Keychain returns multi-line values as hex), stored unexported, verified by hash, restore-tested with `--show-keys` (writes nothing) |

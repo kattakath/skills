@@ -1,0 +1,36 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plaintext-guard.js\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "desktop-commander__",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plaintext-guard.js\"",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "read_clipboard",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/plaintext-guard.js\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}
