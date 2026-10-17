@@ -254,6 +254,13 @@
         "github-gh"
       ],
       "note": "github/github-mcp-server, all toolsets, launched by nix-config's nix-mcp-github with the token from `gh auth token`, so MCP and gh share one credential and one scope set. The official github plugin needs a PAT in Claude Code's own environment instead."
+    },
+    {
+      "goal": "Use a second Stripe login from the same machine",
+      "steps": [
+        "stripe-infin8"
+      ],
+      "note": "A second mcp.stripe.com server with its own OAuth sign-in (Claude Code keys MCP tokens by server name plus config hash). Signed in to Infin8 IT; the official stripe plugin keeps the other login. Folder routing between the two is a PreToolUse hook in kattakath/nix-config."
     }
   ]
 }
