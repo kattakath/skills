@@ -1,6 +1,6 @@
 ---
 name: pgp-ops
-description: This skill should be used when the user pastes a "-----BEGIN PGP MESSAGE-----" or "-----BEGIN PGP PUBLIC KEY BLOCK-----", or asks to "decrypt this with my key and pipe it to clipboard", "pipe the first word / the part before the first space to my clipboard", "encrypt this address with this public key", "is it the same public key", "can this be decrypted by whoever has this key", "what does this message decrypt to", "generate a PGP key from my SSH key", or "back up my PGP key". Runs GnuPG from an agent that has no TTY — passphrase prompts go to a real terminal window, plaintext goes to the clipboard and never into the transcript, and every "who can read it / is it the same / does it round-trip" answer is proved from the packets, not assumed.
+description: This skill should be used when the user pastes a "-----BEGIN PGP MESSAGE-----" or "-----BEGIN PGP PUBLIC KEY BLOCK-----", or asks to "decrypt this with my key and pipe it to clipboard", "decrypt the PGP message on my clipboard", "pipe the first word / the part before the first space to my clipboard", "encrypt this address with this public key", "encrypt with the recipient's key and sign it with mine so I can read it later", "is it the same public key", "can this be decrypted by whoever has this key", "what does this message decrypt to", "generate a PGP key from my SSH key", or "back up my PGP key". Runs GnuPG from an agent that has no TTY — passphrase prompts go to a real terminal window, plaintext goes to the clipboard and never into the transcript, and every "who can read it / is it the same / does it round-trip" answer is proved from the packets, not assumed.
 ---
 
 # PGP ops — GnuPG from an agent: no TTY, no plaintext in the transcript
@@ -54,14 +54,17 @@ The agent's shell has no terminal, so a curses or tty pinentry fails with
 2. **Is the passphrase still cached?** `gpg --batch --pinentry-mode error -d M.asc` succeeds inside
    the agent's `default-cache-ttl` (600 s by default) after the human last typed it.
 3. **Otherwise, run the operation in a real terminal window** with
-   [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh) — modes `all`, `first-word`,
-   `before-space`:
+   [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh):
    ```bash
-   open -na Ghostty.app --args -e /bin/zsh scripts/gpg-in-window.zsh first-word "$PWD/M.asc"
+   W='open -na Ghostty.app --args -e /bin/zsh scripts/gpg-in-window.zsh'
+   $W first-word "$PWD/M.asc"          # decrypt a saved message
+   $W all - "$PWD/run1"                # decrypt the message ON THE CLIPBOARD
+   $W encrypt-for "$PWD/THEIRS.asc" "$PWD/run2"   # § 4: clipboard plaintext → signed ciphertext
    ```
-   It writes `M.asc.status` (lengths and flags) and `M.asc.diag` (gpg's stderr: recipient keyids,
-   signature lines), never plaintext. Wait for the status file with a backgrounded
-   `until [ -s M.asc.status ]` loop, then read both. Terminal.app via `osascript … do script` is the
+   It writes `<prefix>.status` (lengths, flags, recipient keyids) and `<prefix>.diag` (gpg's
+   stderr), never plaintext; the prefix defaults to the message path and is required with `-` and
+   `encrypt-for`. The script exits 0 on OK, 1 on FAILED. Wait for the status file with a
+   backgrounded `until [ -s <prefix>.status ]` loop, then read both. Terminal.app via `osascript … do script` is the
    untested alternative; the two traps below are what carries over.
 
 **Two traps, measured with Ghostty 1.3 and pinentry-curses 1.3.3 (2026-10):**
@@ -76,6 +79,9 @@ filled it. The window route has no such cap.
 
 ## 3. Decrypt — report without revealing
 
+- **Input** is a saved file, or `-` for the message already on the clipboard. The clipboard case is
+  read into memory **before** anything writes the clipboard: `pbpaste | gpg -d | pbcopy` reads and
+  writes one clipboard in one pipeline, and a writer that clears it first races the reader.
 - **`all`** pipes `gpg -d` into `pbcopy` under `pipefail`: byte-exact, and a failure empties the
   clipboard (documented trade-off in the script).
 - **`first-word`** stops at any whitespace; **`before-space`** stops at the first literal space, so
@@ -89,14 +95,28 @@ filled it. The window route has no such cap.
 
 ## 4. Encrypt for someone
 
+**Signing does not let you read it later — encrypting to yourself does.** A signature proves the
+message came from you; only a session key for *your* encryption subkey lets you decrypt your own
+sent copy. When the user wants both, that is two recipients plus `--sign`. Correct the user if
+they conflate the two.
+
+**Default: `encrypt-for`** (§ 2.3). Put the plaintext on the clipboard (the user copies it, or
+`pbcopy` from what they typed), save the recipient's public key as `THEIRS.asc`, run it. It signs
+with the user's key (`$PGP_SELF`, else the only secret key), encrypts to them **and** to the user,
+self-checks that the user's key decrypts it back to the same bytes with a `Good signature`, and
+only then replaces the clipboard with the armored message. On any failure the clipboard is left
+holding the plaintext, untouched.
+
+**Unsigned, to them only (no passphrase needed, runs in the agent's own shell):**
 ```bash
 gpg --batch --yes --armor --encrypt --recipient-file THEIRS.asc --output OUT.asc IN.txt
 ```
 - `--recipient-file` uses the key **without importing it** — no keyring change and no trust prompt.
-- **Verify:** `--list-packets` shows only their encryption-subkey keyid, and your own
-  `gpg -d OUT.asc` says `No secret key`. A round-trip test is impossible without their secret key —
-  say so. Round-trip only messages to yourself: `pbpaste | gpg -d | cmp - original`.
-- `--sign` (needs your passphrase, § 2) when the recipient must know it came from you.
+- **Verify recipients without decrypting:** list the session-key packets against an EMPTY home, which
+  holds no key to decrypt with — `gpg --homedir "$(mktemp -d)" --batch --list-packets OUT.asc`
+  → one `keyid` per recipient. (`gpg --list-only -d` printed nothing at all here; do not use it.)
+- Your own `gpg -d OUT.asc` saying `No secret key` proves you are not a recipient. A round-trip test
+  is impossible without their secret key — say so.
 - Before the user sends anything, have them **confirm the recipient fingerprint over a second
   channel** (a call, in person). A swapped key means the swapper reads it.
 - The clipboard holds one item. Copying a second ciphertext replaces the first, so keep each one as

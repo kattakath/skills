@@ -23,6 +23,8 @@ plus fingerprints. "What does this decrypt to?", for a message you produced for 
 
 | Topic | Why it is there |
 |---|---|
+| Clipboard in, clipboard out | Decrypt the message already on the clipboard (`-`), or `encrypt-for`: clipboard plaintext → signed message to the recipient **and** you, self-checked (your key decrypts it back to the same bytes, good signature) before the clipboard is replaced |
+| Signing ≠ readable later | A signature proves authorship; reading your own sent copy needs you as a second recipient |
 | One-line armor repair | Chat boxes strip newlines; gpg then says "no valid OpenPGP data found" |
 | Key generation choices | A PGP key built from an SSH key is linkable to the user's forge account even with no user ID |
 | Backups | Single-line base64 (the macOS Keychain returns multi-line values as hex), stored unexported, verified by hash, restore-tested with `--show-keys` (writes nothing) |
