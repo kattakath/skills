@@ -562,6 +562,23 @@
       "source": "./plugins/slack-silvercreek"
     },
     {
+      "name": "stripe-infin8",
+      "description": "A second Stripe MCP server for the Infin8 IT Stripe accounts, signed in separately from the official stripe plugin. Same hosted server and OAuth; only the sign-in differs.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "stripe",
+        "mcp",
+        "oauth",
+        "infin8"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/stripe-infin8",
+      "license": "MIT",
+      "source": "./plugins/stripe-infin8"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {
