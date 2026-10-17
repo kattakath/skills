@@ -1,9 +1,22 @@
 #!/bin/zsh
-# gpg-in-window.zsh — run ONE GnuPG operation inside a real terminal window, so a
-# curses/tty pinentry can draw there, with the macOS clipboard as input and output.
-# For agents whose own shell has no TTY. Launch, e.g.:
+# gpg-in-window.zsh — run ONE GnuPG operation with the macOS clipboard as input and
+# output, reporting only lengths and flags. Two ways to run it:
 #
+#   zsh gpg-in-window.zsh <mode> <args…>          # agent's own shell: needs a GUI
+#                                                  # pinentry (e.g. pinentry-mac) for
+#                                                  # anything that asks a passphrase
 #   open -na Ghostty.app --args -e /bin/zsh gpg-in-window.zsh <mode> <args…>
+#                                                  # a real terminal window: for a
+#                                                  # curses/tty pinentry
+#
+# Decrypted text is written with `pb-conceal` when it is on PATH: a CONCEALED,
+# host-only pasteboard item that clipboard managers (Maccy, Alfred, Raycast, Paste)
+# do not record and Universal Clipboard does not sync, auto-cleared after
+# $PGP_CLEAR seconds (default 90; 0 = never). Without pb-conceal it falls back to
+# pbcopy and reports `concealed=no`.
+# Measured 2026-10-17: closing the terminal WINDOW kills the delayed clear, even
+# under nohup, while a run in the agent's own shell keeps it. So in a window the
+# script stays open with a countdown until the clear has happened.
 #
 # Decrypt — ciphertext from a file, or "-" for the clipboard (then <prefix> is required):
 #   gpg-in-window.zsh all|first-word|before-space <message.asc | -> [<prefix>]
@@ -28,8 +41,8 @@
 #   <prefix>.diag    tty, terminal size, and gpg's own stderr (key ids, signatures)
 #
 # Plaintext lives only in this shell's memory or in a pipe to/from the clipboard.
-# Trade-off, accepted: in `all` mode a FAILED decrypt still runs pbcopy, so the
-# clipboard is emptied rather than left holding its previous content.
+# Trade-off, accepted: in `all` mode a FAILED decrypt still runs the clipboard
+# writer, so the clipboard is emptied rather than left holding its previous content.
 set -o pipefail
 mode=$1
 case $mode in
@@ -42,7 +55,25 @@ if [[ -z $prefix || $prefix == - ]]; then
 fi
 st="$prefix.status" diag="$prefix.diag"
 rm -f "$st" "$diag"
-export GPG_TTY=$(tty)
+# A tty pinentry needs GPG_TTY; a GUI pinentry ignores it. Without a terminal, `tty`
+# prints "not a tty" — never hand gpg-agent that as a device name.
+[[ -t 0 ]] && export GPG_TTY=$(tty)
+
+# Where decrypted text goes: concealed + auto-cleared when pb-conceal exists.
+clear_after=${PGP_CLEAR:-90}
+if command -v pb-conceal >/dev/null 2>&1; then concealed=yes; else concealed=no; fi
+secret_to_clipboard() {
+  if [[ $concealed == yes ]]; then
+    if (( clear_after > 0 )); then pb-conceal --clear "$clear_after"; else pb-conceal; fi >>"$diag" 2>&1
+  else
+    pbcopy
+  fi
+}
+clip_note() {
+  if [[ $concealed == yes ]]; then
+    printf 'concealed=yes clears-in=%s' "$( (( clear_after > 0 )) && echo "${clear_after}s" || echo never)"
+  else printf 'concealed=NO(pb-conceal-missing;clipboard-history-may-record-it)'; fi
+}
 
 # A freshly opened window's pty is 0x0 until the terminal lays it out, and
 # pinentry-curses then fails with "Screen or window too small". Wait (<=5 s) —
@@ -52,7 +83,7 @@ if [[ -t 0 ]]; then
 fi
 # The pinentry's ncurses may lack a terminfo entry for the terminal's own TERM.
 export TERM=xterm-256color
-printf 'tty=%s size=%s\n' "$GPG_TTY" "$s" > "$diag"
+printf 'tty=%s size=%s\n' "${GPG_TTY:-none}" "${s:-n/a}" > "$diag"
 
 res=1
 report() { printf '%s\n' "$1" | tee "$st"; [[ $1 == OK* ]] && res=0; }
@@ -75,8 +106,8 @@ ciphertext() { if [[ $msg == - ]]; then printf '%s\n' "$ct_in"; else cat -- "$ms
 
 case $mode in
   all)
-    if ciphertext | gpg -d 2> >(tee -a "$diag" >&2) | pbcopy; then
-      report "OK mode=all bytes=$(pbpaste | wc -c | tr -d ' ') nested-pgp=$(pbpaste | grep -c 'BEGIN PGP')"
+    if ciphertext | gpg -d 2> >(tee -a "$diag" >&2) | secret_to_clipboard; then
+      report "OK mode=all bytes=$(pbpaste | wc -c | tr -d ' ') nested-pgp=$(pbpaste | grep -c 'BEGIN PGP') $(clip_note)"
     else
       report "FAILED mode=all exit=$?"
     fi
@@ -88,8 +119,8 @@ case $mode in
       else
         out=${pt%% *}
       fi
-      printf '%s' "$out" | pbcopy
-      report "OK mode=$mode chars=${#out} nested-pgp=$(printf '%s\n' "$pt" | grep -c 'BEGIN PGP')"
+      printf '%s' "$out" | secret_to_clipboard
+      report "OK mode=$mode chars=${#out} nested-pgp=$(printf '%s\n' "$pt" | grep -c 'BEGIN PGP') $(clip_note)"
     else
       report "FAILED mode=$mode exit=$?"
     fi
@@ -145,6 +176,16 @@ case $mode in
 esac
 
 unset ct_in
-printf '\nDone. Press any key to close this window.\n'
-read -k1 -s || true
+# In a terminal WINDOW, closing it kills pb-conceal's delayed clear (measured), so
+# stay open until the clear has run. Without a terminal there is nothing to wait for.
+if [[ -t 0 && $res == 0 && $mode != encrypt-for && $concealed == yes ]] && (( clear_after > 0 )); then
+  for (( i = clear_after + 1; i > 0; i-- )); do
+    printf '\rClipboard clears in %3ds. Closing this window early CANCELS the clear. ' $i
+    read -t 1 -k1 -s && { printf '\nWindow closed early: the clipboard will NOT auto-clear.\n'; break; }
+  done
+  printf '\n'
+else
+  printf '\nDone. Press any key to close this window.\n'
+  read -k1 -s || true
+fi
 exit $res
