@@ -431,6 +431,26 @@
       "source": "./plugins/page-lab"
     },
     {
+      "name": "pgp-ops",
+      "description": "Run GnuPG from an agent with no TTY: decrypt to the clipboard without plaintext in the transcript, encrypt to a recipient's key without importing it, prove who can decrypt and whether two keys match from the packets, and back up a key with a restore test.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "gpg",
+        "gnupg",
+        "openpgp",
+        "pgp",
+        "encryption",
+        "pinentry",
+        "clipboard"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/pgp-ops",
+      "license": "MIT",
+      "source": "./plugins/pgp-ops"
+    },
+    {
       "name": "prior-art-recon",
       "description": "Before building, standardising or publishing anything meant to fill a perceived gap: find out whether it already exists, whether anyone wants it, whether the ecosystem is moving away from it, and whether the gap is an artifact of your own design.",
       "author": {

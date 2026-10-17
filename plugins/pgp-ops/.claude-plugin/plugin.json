@@ -1,0 +1,20 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "pgp-ops",
+  "description": "Run GnuPG from an agent that has no TTY: decrypt to the clipboard without the plaintext ever entering the transcript, encrypt to a recipient's key without importing it, prove who can decrypt a message and whether two keys are the same from the packets, and back up a key with a restore test that writes nothing.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/pgp-ops",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "gpg",
+    "gnupg",
+    "openpgp",
+    "pgp",
+    "encryption",
+    "pinentry",
+    "clipboard"
+  ]
+}
