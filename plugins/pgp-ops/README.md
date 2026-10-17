@@ -23,6 +23,8 @@ plus fingerprints. "What does this decrypt to?", for a message you produced for 
 
 | Topic | Why it is there |
 |---|---|
+| Concealed, auto-clearing clipboard | Decrypted text goes through `pb-conceal` when present: clipboard managers do not record it, Universal Clipboard does not sync it, and it clears after `$PGP_CLEAR` s. Plain `pbcopy` would put it in Maccy-style history on disk |
+| GUI pinentry first | With a GUI pinentry (pinentry-mac, Save-in-Keychain disabled) everything runs in the agent's own shell; the terminal-window route remains for curses-only setups |
 | Plaintext guard (PreToolUse hook) | Decrypted text reaches the clipboard ONLY: the hook refuses `gpg -d` and a command-less `gpg` in the agent's shell, any clipboard read that is not a count or digest, and computer-use `read_clipboard`. 68 cases in `tests/guard-cases.sh` |
 | Clipboard in, clipboard out | Decrypt the message already on the clipboard (`-`), or `encrypt-for`: clipboard plaintext → message to the recipient **and** you, with no passphrase and no window; your own key's presence among the recipients is checked before the clipboard is replaced. `sign` opts into a signature |
 | Signing ≠ readable later | Reading your own sent copy needs you as a second recipient; a signature only proves authorship |
