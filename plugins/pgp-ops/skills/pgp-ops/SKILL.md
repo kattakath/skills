@@ -19,8 +19,9 @@ passphrase prompt can draw, and how to *prove* each answer.
 - **A public key cannot decrypt anything.** "Can the holders of key K read message M?" means
   "does M carry a public-key-encrypted session key for K's *encryption subkey*?" Answer it from M's
   packets (§ 1).
-- **Encrypt to THEIR public key**, optionally to yours too; **sign with YOUR secret key**. Encrypting
-  to your own key means only you can read it.
+- **Every message encrypted for someone else is signed by the user AND encrypted to the user too**
+  (`encrypt-for`, § 4), so the user can always decrypt what they sent. Never silently produce a
+  copy only the recipient can read. Encrypting to the user's key alone means only the user can read it.
 - **Never ask for the passphrase in chat.** It goes into pinentry, typed by the human.
 
 ## 1. Inspect first — none of this needs a passphrase
@@ -100,14 +101,17 @@ message came from you; only a session key for *your* encryption subkey lets you 
 sent copy. When the user wants both, that is two recipients plus `--sign`. Correct the user if
 they conflate the two.
 
-**Default: `encrypt-for`** (§ 2.3). Put the plaintext on the clipboard (the user copies it, or
+**The default, always: `encrypt-for`** (§ 2.3) — signed, to them and to the user. Put the plaintext on the clipboard (the user copies it, or
 `pbcopy` from what they typed), save the recipient's public key as `THEIRS.asc`, run it. It signs
 with the user's key (`$PGP_SELF`, else the only secret key), encrypts to them **and** to the user,
 self-checks that the user's key decrypts it back to the same bytes with a `Good signature`, and
 only then replaces the clipboard with the armored message. On any failure the clipboard is left
 holding the plaintext, untouched.
 
-**Unsigned, to them only (no passphrase needed, runs in the agent's own shell):**
+**Unsigned, to them only — ONLY when the user explicitly asks for it** (e.g. the message must not
+be attributable to them). It needs no passphrase and runs in the agent's own shell, which makes it
+tempting as a shortcut; it is not one, because the user can never read that copy again. Say so
+before using it.
 ```bash
 gpg --batch --yes --armor --encrypt --recipient-file THEIRS.asc --output OUT.asc IN.txt
 ```
