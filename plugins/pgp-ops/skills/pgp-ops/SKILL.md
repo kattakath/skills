@@ -18,7 +18,8 @@ passphrase prompt can draw, and how to *prove* each answer.
 - **Every decrypt runs in [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh)**, never as
   `gpg -d` in the agent's own shell — even with the passphrase cached, that would print plaintext
   into the agent's output.
-- **Plaintext never touches disk.** It stays in the script's memory or a pipe into `pbcopy`.
+- **Plaintext never touches disk.** It stays in the script's memory or a pipe into the concealed
+  clipboard writer (§ 3) — not into a clipboard manager's history either.
   Ciphertext and public keys may be saved as files; they are what you compare.
 - **A public key cannot decrypt anything.** "Can the holders of key K read message M?" means
   "does M carry a public-key-encrypted session key for K's *encryption subkey*?" Answer it from M's
@@ -52,28 +53,42 @@ the recipient — send a `.asc` file instead.
 The agent's shell has no terminal, so a curses or tty pinentry fails with
 `Inappropriate ioctl for device` or `No pinentry`. In order:
 
-1. **Does the operation need the passphrase at all?** Unsigned `encrypt-for` does not: run it with
-   `zsh scripts/gpg-in-window.zsh encrypt-for …` straight in the agent's shell. Decrypting and
-   signing do.
-2. **Decrypt and sign: always in a real terminal window**, even when a GUI pinentry is configured
-   or the passphrase is cached. The window is what keeps the plaintext out of the agent's output:
-   ```bash
-   W='open -na Ghostty.app --args -e /bin/zsh scripts/gpg-in-window.zsh'
-   $W first-word "$PWD/M.asc"          # decrypt a saved message
-   $W all - "$PWD/run1"                # decrypt the message ON THE CLIPBOARD
-   $W encrypt-for "$PWD/THEIRS.asc" "$PWD/run2" sign   # § 4, signed: needs the passphrase
-   ```
-   It writes `<prefix>.status` (lengths, flags, recipient keyids) and `<prefix>.diag` (gpg's
-   stderr), never plaintext; the prefix defaults to the message path and is required with `-` and
-   `encrypt-for`. The script exits 0 on OK, 1 on FAILED. Wait for the status file with a
-   backgrounded `until [ -s <prefix>.status ]` loop, then read both. Terminal.app via `osascript … do script` is the
-   untested alternative; the two traps below are what carries over.
+The script never prints plaintext — its stdout is a status line — so **where** it runs only
+decides where the passphrase prompt can appear. In order:
 
-**Two traps, measured with Ghostty 1.3 and pinentry-curses 1.3.3 (2026-10):**
+1. **No passphrase needed:** unsigned `encrypt-for`. Run it in the agent's own shell.
+2. **A GUI pinentry is configured** (`gpgconf --list-options gpg-agent | grep pinentry-program`
+   names e.g. `pinentry-mac`): run the script **in the agent's own shell** too. The dialog appears
+   on the Mac's screen. This is the preferred setup — no window, no tab limits, and the clipboard's
+   auto-clear survives (it does not in a window, below). Configure it with
+   `no-allow-external-password-cache`, or pinentry-mac's **Save in Keychain** box lets every later
+   decrypt run silently, from any process, forever.
+   ```bash
+   S=scripts/gpg-in-window.zsh
+   zsh $S first-word "$PWD/M.asc"                     # decrypt a saved message
+   zsh $S all - "$PWD/run1"                           # decrypt the message ON THE CLIPBOARD
+   zsh $S encrypt-for "$PWD/THEIRS.asc" "$PWD/run2" sign   # § 4, signed
+   ```
+3. **Only a curses/tty pinentry:** run the same commands in a real terminal window,
+   `open -na Ghostty.app --args -e /bin/zsh $S …`, and wait for the status file with a
+   backgrounded `until [ -s <prefix>.status ]` loop. Terminal.app via `osascript … do script` is
+   the untested alternative; the traps below are what carries over.
+
+It writes `<prefix>.status` (lengths, flags, recipient keyids) and `<prefix>.diag` (gpg's stderr),
+never plaintext; the prefix defaults to the message path and is required with `-` and
+`encrypt-for`. Exit 0 on OK, 1 on FAILED.
+
+**Remote use (the user on a phone):** every route puts the prompt on the Mac's screen. If the
+user is not at the Mac, decrypting and signing cannot happen — say so rather than retrying.
+
+**Traps in the window route, measured with Ghostty 1.3 and pinentry-curses 1.3.3 (2026-10):**
 - A freshly opened window's pty is **0×0** when the command starts, so pinentry fails at once with
   `Screen or window too small`. The script waits until `stty size` reports ≥ 10 rows.
 - The terminal's own `TERM` (e.g. `xterm-ghostty`) may have no terminfo entry in the pinentry's
   ncurses. The script exports `TERM=xterm-256color`.
+- **Closing the window kills a delayed background job, even under `nohup`**; the agent's own shell
+  keeps it (measured with marker files). So in a window the script stays open with a countdown
+  until the clipboard has auto-cleared, and says so if the user closes it early.
 
 An in-app terminal panel is the other option, but one measured host caps a session at **6 tabs**
 and refuses to close a tab the human has typed in — and typing a passphrase counts. Six decrypts
@@ -84,8 +99,13 @@ filled it. The window route has no such cap.
 - **Input** is a saved file, or `-` for the message already on the clipboard. The clipboard case is
   read into memory (inside the script) **before** anything writes the clipboard: one pipeline that
   both reads and writes the clipboard lets a writer that clears it first race the reader.
-- **`all`** pipes `gpg -d` into `pbcopy` under `pipefail`: byte-exact, and a failure empties the
-  clipboard (documented trade-off in the script).
+- **Decrypted text is written CONCEALED with `pb-conceal`** when it is on PATH: an
+  `org.nspasteboard.ConcealedType`, host-only item that clipboard managers (Maccy, Alfred, Raycast,
+  Paste) do not record and Universal Clipboard does not sync, cleared after `$PGP_CLEAR` seconds
+  (default 90; `0` = never). **Plain `pbcopy` puts the plaintext into the clipboard manager's
+  history on disk** — without pb-conceal the status says `concealed=NO`, and you say so.
+- **`all`** pipes `gpg -d` straight into that writer under `pipefail`: byte-exact, and a failure
+  empties the clipboard (documented trade-off in the script).
 - **`first-word`** stops at any whitespace; **`before-space`** stops at the first literal space, so
   a first line ending in a newline is included. Use the one the user's words name.
 - **Check the clipboard independently** of the script's own report, by count or digest only:
@@ -189,7 +209,9 @@ The key lives in `~/.gnupg`, and GnuPG writes the **revocation certificate in th
 
 | Piece | Value |
 |---|---|
-| GnuPG | Homebrew `gnupg` + `pinentry` (curses/tty only, deliberately no second GnuPG stack), so § 2.3 applies |
+| GnuPG | Homebrew `gnupg`, deliberately no second GnuPG stack. Its own `pinentry` is curses/tty only |
+| GUI pinentry | Homebrew `pinentry-mac` (same Homebrew stack, not a second GnuPG), with `pinentry-program` + `no-allow-external-password-cache` in `~/.gnupg/gpg-agent.conf`, declared in the harness — so § 2.2 applies |
+| Concealed clipboard | `pb-conceal` (the keychain-secrets capsule) — on PATH, so decrypts are concealed and auto-cleared |
 | GUI | GpgFrontend cask; restart it to see keys created from the CLI |
 | Self-recipient everywhere | `encrypt-to <own fingerprint>` in a **local, hand-placed** `~/.gnupg/gpg.conf`, so every encryption from any tool (CLI, GpgFrontend) includes the user. Never declared in a repo, because a key id in a public tree links the key to its owner. `--no-encrypt-to` opts out per command |
 | Store | `set-secret pgp:<uid>:secret-key` from stdin. A `:` in the name fails the env-var grammar, so the item is stored **unbound**; `set-secret` prints "NOT exported" |

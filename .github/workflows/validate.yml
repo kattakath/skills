@@ -170,6 +170,13 @@ jobs:
       - name: pgp-ops plaintext guard cases
         run: bash plugins/pgp-ops/tests/guard-cases.sh
 
+      # The script's own cases run gpg against throwaway keys with a file-backed clipboard.
+      # zsh is the script's interpreter and is not on the ubuntu image; gnupg is.
+      - name: pgp-ops script cases
+        run: |
+          command -v zsh >/dev/null || sudo apt-get install -y -qq zsh >/dev/null
+          bash plugins/pgp-ops/tests/script-cases.sh
+
       # The Senate hands web-derived lane reports to a synthesis agent. Two things keep that
       # safe and NEITHER is visible to any other gate: the synthesis agentType (empire:consul,
       # Read/Grep/Glob only) and a fence that makes the payload markers unforgeable.
