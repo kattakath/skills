@@ -261,6 +261,14 @@
         "REDACTED"
       ],
       "note": "A second mcp.stripe.com server with its own OAuth sign-in (Claude Code keys MCP tokens by server name plus config hash). Signed in to REDACTED IT; the official stripe plugin keeps the other login. Folder routing between the two is a PreToolUse hook in kattakath/nix-config."
+    },
+    {
+      "goal": "Encrypt, decrypt, compare and back up OpenPGP material from an agent session",
+      "steps": [
+        "pgp-ops"
+      ],
+      "note": "Plaintext to the clipboard only; passphrase via a real terminal window when the agent has no TTY; every recipient / same-key / round-trip claim proved from the packets.",
+      "gap": true
     }
   ]
 }
