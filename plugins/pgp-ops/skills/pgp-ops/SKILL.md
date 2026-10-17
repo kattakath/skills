@@ -61,7 +61,7 @@ decides where the passphrase prompt can appear. In order:
    names e.g. `pinentry-mac`): run the script **in the agent's own shell** too. The dialog appears
    on the Mac's screen. This is the preferred setup — no window, no tab limits, and the clipboard's
    auto-clear survives (it does not in a window, below). Configure it with
-   `no-allow-external-password-cache`, or pinentry-mac's **Save in Keychain** box lets every later
+   `no-allow-external-cache`, or pinentry-mac's **Save in Keychain** box lets every later
    decrypt run silently, from any process, forever.
    ```bash
    S=scripts/gpg-in-window.zsh
@@ -210,7 +210,7 @@ The key lives in `~/.gnupg`, and GnuPG writes the **revocation certificate in th
 | Piece | Value |
 |---|---|
 | GnuPG | Homebrew `gnupg`, deliberately no second GnuPG stack. Its own `pinentry` is curses/tty only |
-| GUI pinentry | Homebrew `pinentry-mac` (same Homebrew stack, not a second GnuPG), with `pinentry-program` + `no-allow-external-password-cache` in `~/.gnupg/gpg-agent.conf`, declared in the harness — so § 2.2 applies |
+| GUI pinentry | Homebrew `pinentry-mac` (same Homebrew stack, not a second GnuPG), with `pinentry-program` + `no-allow-external-cache` in `~/.gnupg/gpg-agent.conf`, declared in the harness — so § 2.2 applies |
 | Concealed clipboard | `pb-conceal` (the keychain-secrets capsule) — on PATH, so decrypts are concealed and auto-cleared |
 | GUI | GpgFrontend cask; restart it to see keys created from the CLI |
 | Self-recipient everywhere | `encrypt-to <own fingerprint>` in a **local, hand-placed** `~/.gnupg/gpg.conf`, so every encryption from any tool (CLI, GpgFrontend) includes the user. Never declared in a repo, because a key id in a public tree links the key to its owner. `--no-encrypt-to` opts out per command |
@@ -221,6 +221,10 @@ The key lives in `~/.gnupg`, and GnuPG writes the **revocation certificate in th
 
 ## Pitfalls
 
+- **A bad `gpg-agent.conf` line stops the agent from starting — and `gpgconf --check-options`
+  passes it anyway.** Measured on GnuPG 2.5.24: `no-allow-external-password-cache` (not a real
+  option) → `invalid option`, exit 2; the real `no-allow-external-cache` → starts. Prove a config
+  change by starting `gpg-agent --daemon` on it in a throwaway `GNUPGHOME`, never by that check.
 - **`secrets-push` exiting 141 with no output** (fixed 2026-10-17): a pre-fix build pushed only the
   last item in the Keychain index; the rest died on SIGPIPE under `pipefail`. Activate a current
   build.
