@@ -1,8 +1,10 @@
 // Fixture suite for scripts/nix-home-path-lint.js — the hook half of
 // nix-config's ast-grep/rules/nix-hardcoded-home-path.yml. Every fixture below
-// mirrors one in that rule's rule-tests file (valid ⇢ exit 0, invalid ⇢ exit 2)
-// so the two halves are proven against the SAME inputs; the extra cases at the
-// end pin the line-based behaviours the rule has no equivalent of.
+// mirrors one in that rule's rule-tests file (valid ⇢ no output, invalid ⇢
+// additionalContext JSON) so the two halves are proven against the SAME inputs;
+// the extra cases at the end pin the line-based behaviours the rule has no
+// equivalent of. The hook ALWAYS exits 0, so a finding is asserted by parsing
+// stdout, and quiet by empty stdout + stderr — exit code alone tells nothing.
 //
 // Run:  node --test plugins/claude-code-nix/tests/nix-home-path-lint.test.js
 //
@@ -30,14 +32,24 @@ function lint(content, { name = `case-${++n}.nix`, write = true } = {}) {
     env: { ...process.env, CLAUDE_PROJECT_DIR: projectDir },
     encoding: "utf8",
   });
-  return { code: res.status, err: res.stderr, out: res.stdout };
+  return { code: res.status, err: res.stderr, out: res.stdout, ctx: context(res.stdout) };
+}
+
+// The additionalContext string from the hook's stdout JSON, asserting its shape.
+function context(stdout) {
+  if (stdout === "") return null;
+  const h = JSON.parse(stdout).hookSpecificOutput;
+  assert.equal(h.hookEventName, "PostToolUse");
+  assert.equal(typeof h.additionalContext, "string");
+  return h.additionalContext;
 }
 
 const flags = (label, content) =>
   test(`FLAGS  ${label}`, () => {
     const r = lint(content);
-    assert.equal(r.code, 2, `expected exit 2, got ${r.code}; stderr: ${r.err}`);
-    assert.match(r.err, /Hardcoded per-user home path/);
+    assert.equal(r.code, 0, `expected exit 0, got ${r.code}; stderr: ${r.err}`);
+    assert.equal(r.err, "");
+    assert.match(r.ctx ?? "", /Hardcoded per-user home path/);
   });
 
 const quiet = (label, content) =>
@@ -45,6 +57,7 @@ const quiet = (label, content) =>
     const r = lint(content);
     assert.equal(r.code, 0, `expected exit 0, got ${r.code}; stderr: ${r.err}`);
     assert.equal(r.err, "");
+    assert.equal(r.out, "");
   });
 
 // ---- invalid (rule-tests `invalid:`) --------------------------------------
@@ -97,8 +110,8 @@ test("QUIET  garbage stdin never throws", () => {
 });
 test("FLAGS  reports file:line for each hit", () => {
   const r = lint('{\n  a = "/Users/ismail";\n  b = "/Users/admin/x";\n  c = "/home/izzy/y";\n}');
-  assert.equal(r.code, 2);
-  assert.match(r.err, /case-\d+\.nix:2: a = "\/Users\/ismail";/);
-  assert.match(r.err, /case-\d+\.nix:4: c = "\/home\/izzy\/y";/);
-  assert.doesNotMatch(r.err, /:3:/);
+  assert.equal(r.code, 0);
+  assert.match(r.ctx, /case-\d+\.nix:2: a = "\/Users\/ismail";/);
+  assert.match(r.ctx, /case-\d+\.nix:4: c = "\/home\/izzy\/y";/);
+  assert.doesNotMatch(r.ctx, /:3:/);
 });

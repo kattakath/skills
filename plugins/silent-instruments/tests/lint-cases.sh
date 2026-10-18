@@ -7,8 +7,12 @@
 #   must-QUIET  THE important half. This hook is enabled in every repo, so a rule that
 #               fires on ordinary work trains the reader to ignore the channel, and an
 #               ignored channel protects nothing. Noise is worse than a gap here.
-#   never-throw an uncaught error exits 0, which disarms every rule above without
-#               saying so — the exact failure class this plugin is about
+#   never-throw an uncaught error exits 0 with no output, which disarms every rule
+#               above without saying so — the exact failure class this plugin is about
+#
+# The hook ALWAYS exits 0; a finding is stdout JSON (hookSpecificOutput.additionalContext).
+# So "fired" is asserted by parsing that JSON, and "quiet" by exit 0 AND empty
+# stdout AND empty stderr — exit code alone can no longer tell them apart.
 #
 # Run:  bash plugins/silent-instruments/tests/lint-cases.sh
 set -uo pipefail
@@ -16,10 +20,26 @@ set -uo pipefail
 LINT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)/scripts/silent-instrument-lint.js"
 pass=0; fail=0
 
-# rc <json> -> exit code
-rc() { printf '%s' "$1" | node "$LINT" >/dev/null 2>&1; echo $?; }
-# msg <json> -> stderr text
-msg() { printf '%s' "$1" | node "$LINT" 2>&1 >/dev/null; }
+# rc <json> -> "exit:<code> out:<bytes> err:<bytes>"
+rc() {
+  local o e c
+  o=$(mktemp); e=$(mktemp)
+  printf '%s' "$1" | node "$LINT" >"$o" 2>"$e"; c=$?
+  printf 'exit:%s out:%s err:%s' "$c" "$(wc -c <"$o" | tr -d ' ')" "$(wc -c <"$e" | tr -d ' ')"
+  rm -f "$o" "$e"
+}
+# msg <json> -> the additionalContext text, or "" if stdout is not the expected shape
+msg() {
+  printf '%s' "$1" | node "$LINT" 2>/dev/null | python3 -c '
+import json, sys
+try:
+    h = json.load(sys.stdin)["hookSpecificOutput"]
+    assert h["hookEventName"] == "PostToolUse"
+    print(h["additionalContext"])
+except Exception:
+    pass'
+}
+QUIET_RC="exit:0 out:0 err:0"
 
 bash_json() { python3 -c 'import json,sys;print(json.dumps({"tool_name":"Bash","tool_input":{"command":sys.argv[1]}}))' "$1"; }
 
@@ -28,7 +48,7 @@ flag() {
   local j; j=$(bash_json "$3")
   local got; got=$(rc "$j")
   local text; text=$(msg "$j")
-  if [ "$got" = "2" ] && printf '%s' "$text" | grep -q "\[$1\]"; then
+  if [ "${got%% *}" = "exit:0" ] && printf '%s' "$text" | grep -q "\[$1\]"; then
     printf '  ok    FLAG  %-4s %s\n' "$1" "$2"; pass=$((pass+1))
   else
     printf '  FAIL  FLAG  %-4s %s (exit=%s, matched=%s)\n' "$1" "$2" "$got" \
@@ -38,7 +58,7 @@ flag() {
 # quiet <label> <command>
 quiet() {
   local got; got=$(rc "$(bash_json "$2")")
-  if [ "$got" = "0" ]; then printf '  ok    QUIET      %s\n' "$1"; pass=$((pass+1))
+  if [ "$got" = "$QUIET_RC" ]; then printf '  ok    QUIET      %s\n' "$1"; pass=$((pass+1))
   else printf '  FAIL  QUIET      %s (exit=%s: %s)\n' "$1" "$got" \
     "$(msg "$(bash_json "$2")" | tr '\n' ' ' | cut -c1-100)"; fail=$((fail+1)); fi
 }
@@ -104,7 +124,7 @@ for j in \
 do
   got=$(rc "$j")
   label="$(printf '%s' "$j" | cut -c1-44)"; [ -z "$label" ] && label="(empty stdin)"
-  if [ "$got" = "0" ]; then printf '  ok    SAFE       %s\n' "$label"; pass=$((pass+1))
+  if [ "$got" = "$QUIET_RC" ]; then printf '  ok    SAFE       %s\n' "$label"; pass=$((pass+1))
   else printf '  FAIL  SAFE       %s (exit=%s)\n' "$label" "$got"; fail=$((fail+1)); fi
 done
 
