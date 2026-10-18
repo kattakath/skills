@@ -11,17 +11,20 @@
  * decision: the documented `permissionDecision: "allow"` means "tool call proceeds
  * WITHOUT permission prompt", so a globally-enabled plugin hook that used it would
  * bypass the user's own permission rules on every command it matched. `"deny"` blocks
- * legitimate work, `"ask"` adds a prompt to every match, and emitting
- * `additionalContext` with no decision is undocumented. PostToolUse has NO permission
- * authority at all — the tool has already run — so it cannot widen anything.
+ * legitimate work and `"ask"` adds a prompt to every match. PostToolUse has NO
+ * permission authority at all — the tool has already run — so it cannot widen anything.
  *
  * It is also the better moment on the merits. These are not dangerous commands; they
  * are outputs about to be misread. PostToolUse fires between execution and
  * interpretation, which is exactly where the misreading happens.
  *
- * EXIT DISCIPLINE, matching this repo's claude-code-nix hooks:
- *   0  nothing to say, or anything went wrong (an advisory must never wedge a turn)
- *   2  surface the advisory to Claude; reverts nothing, blocks nothing
+ * OUTPUT CHANNEL: always exit 0. A finding goes out as stdout JSON
+ * `hookSpecificOutput.additionalContext`, which the hooks reference documents as the
+ * PostToolUse way to put text "next to the tool result" as a system reminder
+ * (https://code.claude.com/docs/en/hooks). The earlier exit-2-plus-stderr form also
+ * reached Claude, but the UI labels every exit 2 "hook returned blocking error" — an
+ * alarm on what is advice, which is exactly the noise that trains a reader to ignore
+ * the channel. Anything that goes wrong also exits 0: an advisory must never wedge a turn.
  *
  * FALSE POSITIVES ARE THE REAL RISK. This hook is enabled globally, so a noisy rule
  * is worse than a missing one: advice that fires on ordinary work gets ignored, and an
@@ -170,8 +173,15 @@ function main() {
   );
   lines.push("primary sources: the skill's references/catalogue.md.");
 
-  process.stderr.write(lines.join("\n") + "\n");
-  process.exit(2); // surface to Claude; reverts nothing, blocks nothing
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PostToolUse",
+        additionalContext: lines.join("\n"),
+      },
+    }) + "\n",
+  );
+  process.exit(0); // advice, not an error: reverts nothing, blocks nothing
 }
 
 try {
