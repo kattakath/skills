@@ -50,14 +50,16 @@ failure exactly and was **closed as not planned**.
 `PreToolUse` cannot advise without taking a permission decision. Its `permissionDecision:
 "allow"` is documented as *"Tool call proceeds without permission prompt"*, so a hook enabled in
 every repo that used it would **bypass the user's own permission rules** on every command it
-matched. `"deny"` blocks legitimate work; `"ask"` adds a prompt to every match; emitting
-`additionalContext` with no decision is undocumented.
+matched. `"deny"` blocks legitimate work; `"ask"` adds a prompt to every match.
 
 `PostToolUse` has no permission authority at all, and it is the better moment on the merits:
 these are not dangerous commands, they are outputs about to be **misread**, and `PostToolUse`
-fires between execution and interpretation. Exit discipline follows this repo's
-`claude-code-nix` hooks — `2` surfaces the advisory and reverts nothing, `0` says nothing, and
-any internal error exits `0` so an advisory can never wedge a turn.
+fires between execution and interpretation. The hook **always exits `0`**: a finding goes out
+as stdout JSON `hookSpecificOutput.additionalContext`, the
+[documented](https://code.claude.com/docs/en/hooks) PostToolUse channel, which lands next to the
+tool result as a system reminder. Exit `2` also reached the model, but the UI labels every
+exit-2 hook *"hook returned blocking error"* — an alarm on advice, which is exactly the noise
+described below. Any internal error also exits `0`, so an advisory can never wedge a turn.
 
 **Noise is the real risk.** A rule that fires on ordinary work trains the reader to ignore the
 channel, and an ignored channel protects nothing — so `tests/lint-cases.sh` asserts the

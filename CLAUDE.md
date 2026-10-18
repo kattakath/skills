@@ -109,6 +109,13 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
 - Because there's no `version` field, a merge to `main` **is** the release — treat `main`
   accordingly. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
 - Fork PRs land un-armed on purpose — a human merges those after review.
+- **A merge is released, not delivered.** An installed copy moves only when Claude Code
+  refreshes the marketplace on its own schedule. `/reload-plugins` re-reads the **local cache**
+  and fetches nothing — measured 2026-10-18: after #87 merged, a reload still ran the
+  pre-merge cache dir because the marketplace clone sat on the old HEAD. To see a merged
+  change now: `claude plugin marketplace update kattakath`, then
+  `claude plugin update <name>@kattakath`, then `/reload-plugins`. Verify by behaviour (or
+  the cache dir a hook runs from), not by the merge.
 
 ### Never add a `version` to fix the validate warnings
 
@@ -148,3 +155,11 @@ proportional to the plugin. Superseded versions are swept 14 days after replacem
   everything ships from this one tree.
 - No secrets, no machine-specific paths, no dependency on any other repo's `CLAUDE.md` or
   `~/.claude` — anything here must work from a clean checkout.
+- **Hook exit codes follow what the hook IS.** A hook that *blocks* (PreToolUse guard) exits
+  `2` with the reason on stderr. A hook that *advises* — every PostToolUse lint — exits `0`
+  and prints stdout JSON `{"hookSpecificOutput":{"hookEventName":"PostToolUse",
+  "additionalContext":"…"}}` ([docs](https://code.claude.com/docs/en/hooks)). Exit `2` on an
+  advisory still reaches the model, but the UI shows *"hook returned blocking error"* on
+  every hit; two plugins shipped that way until #87. Tests for an advisory therefore assert
+  the parsed JSON for a finding and empty stdout + stderr for quiet — exit code alone can't
+  tell them apart.
