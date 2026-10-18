@@ -21,9 +21,12 @@
  * /Users//home/ strings, which are never source literals, so that axis is safe.
  *
  * Advisory, not a hard gate: comment lines are ignored, and a hardcoded home
- * path can rarely be intentional — so it surfaces the finding to Claude (exit 2,
- * message on stderr) to reconsider, without reverting the write. Never wedges a
- * turn: any unexpected error exits 0.
+ * path can rarely be intentional — so it surfaces the finding to Claude to
+ * reconsider, without reverting the write. Channel: exit 0 with stdout JSON
+ * `hookSpecificOutput.additionalContext`, the documented PostToolUse way to add
+ * context next to the tool result (https://code.claude.com/docs/en/hooks); exit 2
+ * also reached Claude but made the UI print "hook returned blocking error" for
+ * advice. Never wedges a turn: any unexpected error exits 0.
  *
  * Input: hook JSON on stdin (tool_input.file_path), same as autostage-nix.js.
  */
@@ -141,14 +144,18 @@ try {
     .join("\n");
   const more = hits.length > 5 ? `\n  …and ${hits.length - 5} more` : "";
 
-  process.stderr.write(
+  const advice =
     `Hardcoded per-user home path in a .nix value (CLAUDE.md § Conventions → "Paths — two axes"):\n` +
-      `${lines}${more}\n` +
-      `Runtime paths must be $HOME/XDG-relative — use $HOME, config.home.homeDirectory, or an XDG dir, ` +
-      `not a literal /Users/<name> or /home/<name>. (Nix SOURCE path literals like ../../foo are exempt and correct — ` +
-      `this only flags absolute home dirs.) Reconsider unless this absolute path is genuinely intentional.\n`,
+    `${lines}${more}\n` +
+    `Runtime paths must be $HOME/XDG-relative — use $HOME, config.home.homeDirectory, or an XDG dir, ` +
+    `not a literal /Users/<name> or /home/<name>. (Nix SOURCE path literals like ../../foo are exempt and correct — ` +
+    `this only flags absolute home dirs.) Reconsider unless this absolute path is genuinely intentional.`;
+  process.stdout.write(
+    JSON.stringify({
+      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: advice },
+    }) + "\n",
   );
-  process.exit(2); // surface to Claude to reconsider; does not revert the write
+  process.exit(0); // surface to Claude to reconsider; does not revert the write
 } catch {
   process.exit(0); // a PostToolUse lint must never wedge a turn
 }
