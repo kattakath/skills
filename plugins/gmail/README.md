@@ -1,12 +1,11 @@
 # gmail
 
-Several Gmail accounts, each as its **own** MCP server, started per session by Claude Code
+Gmail accounts, each as its **own** MCP server, started per session by Claude Code
 and reaped when the session ends. No proxy, no listening socket, no shared process.
 
 | server | account |
 |---|---|
 | `kattakath` | ismail@kattakath.com |
-| `personal` | ismailkattakath@gmail.com |
 
 ## It needs a companion on PATH
 

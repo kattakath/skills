@@ -5,12 +5,6 @@
       "args": [
         "ismail@kattakath.com"
       ]
-    },
-    "personal": {
-      "command": "nix-mcp-gmail",
-      "args": [
-        "ismailkattakath@gmail.com"
-      ]
     }
   }
 }

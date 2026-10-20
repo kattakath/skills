@@ -243,7 +243,7 @@
     },
     {
       "name": "gmail",
-      "description": "Several Gmail accounts as separate per-session MCP servers, each launched by a Nix-installed wrapper that reads the OAuth client credentials from the macOS login Keychain so nothing secret lives in this repo.",
+      "description": "Gmail accounts as separate per-session MCP servers, each launched by a Nix-installed wrapper that reads the OAuth client credentials from the macOS login Keychain so nothing secret lives in this repo.",
       "author": {
         "name": "Ismail Kattakath"
       },
