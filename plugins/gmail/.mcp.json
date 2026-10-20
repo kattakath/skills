@@ -1,16 +1,10 @@
 {
   "mcpServers": {
     "kattakath": {
-      "command": "nix-mcp-gmail-ismail_kattakath_com"
-    },
-    "personal": {
-      "command": "nix-mcp-gmail-REDACTED"
-    },
-    "REDACTED": {
-      "command": "nix-mcp-gmail-REDACTED"
-    },
-    "aloshy": {
-      "command": "nix-mcp-gmail-REDACTED"
+      "command": "nix-mcp-gmail",
+      "args": [
+        "ismail@kattakath.com"
+      ]
     }
   }
 }

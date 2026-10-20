@@ -227,40 +227,11 @@
       "note": "Needs `media-gif` on PATH from kattakath/nix-config (local.mediaCli.enable) for the encode, and the chrome-devtools MCP attached to a Chromium on --remote-debugging-port=9222 for the two upload forms. Tenor is searchable after a review of up to 48 h; GIPHY never is from a plain account — search placement is an Artist/Brand channel approval, and the application form is gated behind five public uploads."
     },
     {
-      "goal": "Use a second Slack workspace from the same machine",
-      "steps": [
-        "REDACTED"
-      ],
-      "note": "A second mcp.slack.com server with its own OAuth sign-in (Claude Code keys MCP tokens by server name plus config hash, not by URL). Signed in to REDACTED IT; the official `slack` plugin keeps the other workspace. Folder routing between the two is a PreToolUse hook in kattakath/nix-config."
-    },
-    {
-      "goal": "Post to Slack without the 'Sent using Claude' footer",
-      "steps": [
-        "REDACTED",
-        "REDACTED"
-      ],
-      "note": "Slack's hosted MCP footers every post. Each workspace plugin carries a `post` server (korotovsky/slack-mcp-server) that posts with the operator's own user token; the binaries and Keychain token reads live in kattakath/nix-config."
-    },
-    {
-      "goal": "Call AWS APIs with an Identity Center SSO profile, several accounts from one server",
-      "steps": [
-        "REDACTED"
-      ],
-      "note": "The official aws-core plugin runs the AWS MCP Server proxy with --skip-auth, so its API calls are unsigned. REDACTED runs the same pinned proxy with --profile <development> <production>: the first profile is the default and every tool gains an aws_profile enum for per-call switching. Credentials come from ~/.aws/config and the CLI SSO cache, never argv. Folder routing (REDACTED only) and a SessionStart SSO freshness check are hooks in kattakath/nix-config."
-    },
-    {
       "goal": "Use GitHub tools over MCP with the gh CLI login",
       "steps": [
         "github-gh"
       ],
       "note": "github/github-mcp-server, all toolsets, launched by nix-config's nix-mcp-github with the token from `gh auth token`, so MCP and gh share one credential and one scope set. The official github plugin needs a PAT in Claude Code's own environment instead."
-    },
-    {
-      "goal": "Use a second Stripe login from the same machine",
-      "steps": [
-        "REDACTED"
-      ],
-      "note": "A second mcp.stripe.com server with its own OAuth sign-in (Claude Code keys MCP tokens by server name plus config hash). Signed in to REDACTED IT; the official stripe plugin keeps the other login. Folder routing between the two is a PreToolUse hook in kattakath/nix-config."
     },
     {
       "goal": "Encrypt, decrypt, compare and back up OpenPGP material from an agent session",

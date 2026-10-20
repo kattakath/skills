@@ -6,6 +6,7 @@
     "name": "Ismail Kattakath",
     "url": "https://github.com/kattakath"
   },
+  "forceRemoveDeletedPlugins": true,
   "plugins": [
     {
       "name": "android-phone",
@@ -44,24 +45,6 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/apify",
       "license": "MIT",
       "source": "./plugins/apify"
-    },
-    {
-      "name": "REDACTED",
-      "description": "The AWS MCP Server signed with the REDACTED IT Identity Center SSO profiles: development by default, production per call via aws_profile. The official aws-core proxy, pinned, without its --skip-auth.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "development",
-      "keywords": [
-        "aws",
-        "mcp",
-        "sso",
-        "identity-center",
-        "REDACTED"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
-      "license": "MIT",
-      "source": "./plugins/REDACTED"
     },
     {
       "name": "brag-dossier",
@@ -260,7 +243,7 @@
     },
     {
       "name": "gmail",
-      "description": "Four Gmail accounts as separate per-session MCP servers, each launched by a Nix-installed wrapper that reads the OAuth client credentials from the macOS login Keychain so nothing secret lives in this repo.",
+      "description": "Gmail accounts as separate per-session MCP servers, each launched by a Nix-installed wrapper that reads the OAuth client credentials from the macOS login Keychain so nothing secret lives in this repo.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -544,59 +527,6 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/skill-curator",
       "license": "MIT",
       "source": "./plugins/skill-curator"
-    },
-    {
-      "name": "REDACTED",
-      "description": "A second Slack MCP server for the REDACTED IT workspace (REDACTED), signed in separately from the official slack plugin so two workspaces can be used from one machine. Same hosted server (mcp.slack.com) and OAuth client as the official plugin; only the sign-in differs.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "slack",
-        "mcp",
-        "oauth",
-        "workspace",
-        "REDACTED"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
-      "license": "MIT",
-      "source": "./plugins/REDACTED"
-    },
-    {
-      "name": "REDACTED",
-      "description": "Posts to the REDACTED Insights Slack workspace as the operator, with their own user token (korotovsky/slack-mcp-server), so messages carry no 'Sent using Claude' footer. The binary REDACTED is built by the operator's nix-config; reads stay on the official slack plugin.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "slack",
-        "mcp",
-        "workspace",
-        "REDACTED",
-        "user-token"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
-      "license": "MIT",
-      "source": "./plugins/REDACTED"
-    },
-    {
-      "name": "REDACTED",
-      "description": "A second Stripe MCP server for the REDACTED IT Stripe accounts, signed in separately from the official stripe plugin. Same hosted server and OAuth; only the sign-in differs.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "stripe",
-        "mcp",
-        "oauth",
-        "REDACTED"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/REDACTED",
-      "license": "MIT",
-      "source": "./plugins/REDACTED"
     },
     {
       "name": "superhook",
