@@ -1,25 +1,24 @@
 # gmail
 
-Four Gmail accounts, each as its **own** MCP server, started per session by Claude Code
+Several Gmail accounts, each as its **own** MCP server, started per session by Claude Code
 and reaped when the session ends. No proxy, no listening socket, no shared process.
 
 | server | account |
 |---|---|
 | `kattakath` | ismail@kattakath.com |
 | `personal` | ismailkattakath@gmail.com |
-| `silvercreek` | izzy@silvercreek.ai |
-| `aloshy` | aloshyakasoto@gmail.com |
 
 ## It needs a companion on PATH
 
-Each entry in `.mcp.json` names a binary, not a package:
+Each entry in `.mcp.json` names one binary, not a package, and passes the address:
 
 ```json
-{ "kattakath": { "command": "nix-mcp-gmail-ismail_kattakath_com" } }
+{ "kattakath": { "command": "nix-mcp-gmail", "args": ["ismail@kattakath.com"] } }
 ```
 
-Those launchers come from **`kattakath/nix-config`** — `modules/shared/gmail-mcp.nix`
-builds one per address listed in `local.gmailMcp.accounts`. Same arrangement as
+That launcher comes from **`kattakath/nix-config`** — `packages/gmail-mcp.nix`,
+installed by `local.gmailMcp`. It derives the per-account alias from the address at
+launch, so adding an account is an `args` entry here, not a Nix change. Same arrangement as
 `claude-code-nix` with `mcp-nixos` and `page-lab` with `page-lab-pick`: the plugin
 declares, Nix installs.
 
@@ -35,7 +34,7 @@ that; install them from nix-config.
 
 ## First run needs a browser, once per account
 
-The OAuth client id/secret are shared across all four, but each account stores its own
+The OAuth client id/secret are shared across every account, but each account stores its own
 token. The launcher prints the exact command when a token is missing:
 
 ```
@@ -48,13 +47,13 @@ GMAIL_OAUTH_PATH=~/.gmail-mcp/gcp-oauth.keys.json \
 
 The upstream server is launched with `--tool-prefix=<alias>_`, so a tool reads
 `mcp__plugin_gmail_kattakath__ismail_kattakath_com_search_emails`. The server name
-already disambiguates the four here, so the inner prefix is redundant in this lane — it
+already disambiguates the accounts here, so the inner prefix is redundant in this lane — it
 is kept because the launcher is shared with nix-config and the prefix is what keys each
 account's tools apart there. Dropping it is a change to make in nix-config, not here.
 
 ## Replaces part of a retired gateway
 
-Until 2026-10-01 these four ran inside a single `mcp-proxy` on `127.0.0.1`, published
+Until 2026-10-01 these accounts ran inside a single `mcp-proxy` on `127.0.0.1`, published
 through a Cloudflare portal. That central gateway was removed; this plugin is how the
 capability survives it. The portal also served **Claude Desktop**, which loads no plugins
 — so Desktop has no Gmail MCP and this plugin cannot give it one.
