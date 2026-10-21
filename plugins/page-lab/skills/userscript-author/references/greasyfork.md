@@ -5,7 +5,9 @@ Sharing a script is the point of writing one. Everything here is from Greasy For
 runs the same codebase and the same rule set, differing only in the site name and one
 adult-content line, so **"publishable" needs no per-site variant**.
 
-Publishing is the **operator's** move — an agent cannot drive the account.
+Publishing is the **operator's** move: the account and its sign-in are theirs. An agent can drive
+the admin pages only through a browser the operator has already signed in to. It never signs in,
+and never chooses which account a script goes to.
 
 ## The metadata contract
 
@@ -141,6 +143,59 @@ users**, because the manager has nothing new to update to.
 
 This is the one failure in the publishing path that reports success on both ends. The habit
 that defeats it is mechanical: the `@version` bump and the code change are **one commit**.
+
+### Wiring the webhook — read the repo's CI first
+
+Source of every claim below: Greasy Fork's `app/controllers/concerns/webhooks.rb`, `lib/github.rb`
+and `lib/gitlab.rb` (read 2026-10-21), plus live deliveries.
+
+1. **Read the repository's own workflows before choosing a sync branch.** A repo can already
+   publish through a **gated branch**: CI fast-forwards something like `published` to `main`
+   only when lint is green, and the sync URL is supposed to point there. Pointing it at `main`
+   instead puts every red push live (happened 2026-10-21; fixed the same day). If no gate
+   exists, propose one. Do not use releases: the release handler re-syncs **every** script
+   whose sync URL points at the repo, so each unchanged script gets a duplicate history entry.
+2. **Set each script's sync URL, and its additional-info sync URL** (`listings/<f>.md` or
+   wherever the listing copy lives), on `/scripts/<id>/admin`. Matching is **exact**: a pushed
+   file reaches a listing only if one of its raw-URL forms equals that `sync_identifier`
+   (GitLab: `…/-/raw/<branch>/<path>`). A hook with no matching URL answers 200 with
+   `"No scripts found"` — silent.
+   **Check:** `/users/webhook-info` lists every script under "already syncing" with the URL you meant.
+3. **Generate the secret on `/users/webhook-info`, only if none exists.** Regenerating breaks
+   every hook that uses the old one. The payload URL is on `api.<host>`
+   (`https://api.greasyfork.org/en/users/<id>-<slug>/webhook`; Sleazy Fork: `api.sleazyfork.org`).
+4. **Create the forge hook.** GitHub: `application/json`, *push* only (any other event gets 406),
+   HMAC in `X-Hub-Signature`. GitLab: secret token in `X-Gitlab-Token`, *push events*, and a
+   branch filter set to the sync branch.
+5. **Prove it**, knowing what each test can actually show:
+
+   | Test | Proves |
+   |---|---|
+   | GitHub `ping` → 200 *"Webhook successfully configured."* | the secret. A wrong secret gets 403 before the event type is even read |
+   | GitHub "test push" (`POST …/hooks/<id>/tests`) | **auth only**: it carries no commits, so it always answers *"No commits found in this push."* [F-GF-GH-TESTPUSH-EMPTY] |
+   | GitLab "test push" | the **whole chain**: it replays a real push, so matched scripts come back in `updated_scripts` |
+   | First real version bump | the GitHub leg end to end. A script's sync type flips from *Automatic* to *Webhook* only on its first matched delivery |
+
+**Moving the secret without it entering the transcript.** The value sits in a textarea on the
+fork's page and has to reach a form on the forge's page. **Never use the clipboard.** A
+clipboard-plaintext guard refuses `pbpaste` into anything but a digest. A browser `writeText`
+also lands in a clipboard manager's history, and clearing the pasteboard does not clear that
+history. What works: inject two buttons into the fork tab. Click the first with a real devtools
+click, so `window.open` is a trusted gesture and opens the forge's hook page. Install a
+`message` listener there that checks `ev.origin`, fills the form and submits it. Then click the
+second button, which `postMessage`s the secret to the opened window. Tool output only ever shows
+the hook id. If you snapshot the fork page, save it to a file and grep it: the snapshot contains
+the textarea.
+
+**New files never trigger it.** Both push handlers read only each commit's *modified* list,
+never *added* [F-GF-WEBHOOK-MODIFIED-ONLY]. A script's first publish stays manual: import it,
+then set its sync URLs.
+
+**GitLab specifics.** A CI job that pushes the sync branch with `$CI_REPOSITORY_URL` needs the
+project setting `ci_push_repository_for_job_token_allowed=true` (read it back after the `PUT`).
+On gitlab.com Free there are no project access tokens. So there is no bot either, and a
+GitHub-style auto-merge bot cannot be ported. `only_allow_merge_if_pipeline_succeeds` is the
+native substitute.
 
 ## The shelf check
 
