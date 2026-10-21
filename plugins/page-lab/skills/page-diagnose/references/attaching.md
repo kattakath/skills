@@ -188,6 +188,34 @@ the browser WebSocket UUID both change every launch. `modules/shared/mcp.nix` th
 configures **both** a probe port and a directory, and picks between this and 2a at spawn
 time rather than committing to either.
 
+#### Pitfall — the spawn-time pick holds for the whole session [F-ATTACH-MODE-LOCKED]
+
+The launcher (`scripts/chrome-devtools-attach.sh`) probes only once, when the MCP server
+spawns, which is normally at session start. If **no browser is listening yet**, it falls
+through to this route and stays on it. Starting a `--remote-debugging-port` browser on the
+fallback profile later does not re-run the probe. The server keeps reading
+`DevToolsActivePort`, and the new browser leaves line 2 stale
+[F-DEVTOOLSACTIVEPORT-STALE]. Every tool call then fails with `Unexpected server response:
+404`, even though `curl /json/version` on the same port answers.
+
+**How to recognise it.** Three signs together:
+- `pgrep -lf chrome-devtools-mcp` shows `--autoConnect`.
+- `/json/version` serves.
+- Its `webSocketDebuggerUrl` path differs from `sed -n 2p <dir>/DevToolsActivePort`.
+
+**Two ways out:**
+1. **Reconnect the MCP server** (`/mcp`). The probe re-runs, `/json/version` answers, and
+   the launcher takes 2a. This is the clean fix.
+2. **Workaround without a reconnect.** Write the live endpoint into the file:
+   `printf '%s\n%s' <port> <path from /json/version> > <dir>/DevToolsActivePort`. The next
+   tool call attaches. The file is only the browser's own cache, so this is safe.
+
+**Which browser to start.** The fallback `--userDataDir` names one fixed profile, so the
+browser must run on **that** profile. A browser started with any other `--user-data-dir`
+never touches the file the server reads. Google Chrome also refuses a debugging port on its
+*default* profile. So start the Chromium build that owns the fallback directory, with its
+default profile.
+
 With multiple profiles it connects to the **default** profile and can reach every open
 window in it.
 
