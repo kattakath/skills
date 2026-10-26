@@ -7,9 +7,11 @@ description: >-
   to "connect my phone", "pair my android", "adb over wifi", "wireless debugging",
   "mirror my phone screen", "scrcpy", "adb can't see my device", "Escrcpy can't
   find my phone", "Escrcpy auto discover not working", "QR pairing keeps spinning",
-  or any ADB connectivity/diagnosis task. NOT for the virtual emulator (that is `android-emu`
-  / the Android Emulator app) and NOT for driving app UIs (that is the gateway's
-  `mobile-mcp` server — this skill gets the device connected so mobile-mcp can).
+  or any ADB connectivity/diagnosis task. Also covers the traps of automating apps
+  inside a Samsung "Secure Folder" ("look inside the Secure Folder", "the app in my
+  secure folder", Knox work profile) — no UI tree, wrong-profile launches, black
+  secure screens. NOT for the virtual emulator (that is `android-emu` / the Android
+  Emulator app); general app-UI driving is the plugin's `mobile-mcp` server.
 ---
 
 # Android over ADB — the `android-phone` operator
@@ -85,6 +87,37 @@ Why it recurs: Escrcpy ships **adhoc-signed** (`codesign -dv` → `Identifier=El
 reinstall or cask upgrade produces a new one, while Settings still shows the old
 toggle as **ON** — so "it's already allowed" is not evidence (measured 2026-10-25).
 The grant cannot be scripted, so expect to repeat step 3 after each Escrcpy update.
+
+## Samsung Secure Folder — a second Android user, driven blind
+
+A Secure Folder is a separate Android user (Knox), and every app inside it is a second
+copy of the main-profile app with its own accounts and data. Measured on a Galaxy S24
+Ultra, 2026-10-25:
+
+| Trap | What happens | Do instead |
+| --- | --- | --- |
+| **No UI tree** | `mobile_list_elements_on_screen` returns only the status bar for Secure-Folder apps; `adb shell` cannot reach the user (permission denied) | Screenshots + coordinate taps; multiply by the scale the screenshot reports |
+| **Wrong-profile launch** | `mobile_launch_app <package>` opens the **main-profile** copy | `mobile_launch_app com.samsung.knox.securefolder` (folder must be unlocked by the human), tap the folder's 🔍, type the app name, tap the single result |
+| **Taps mid-animation** | The folder opens with a zoom; a tap during it lands on a different icon (it opened Settings and botim) | Take a second screenshot until the layout is stable before tapping |
+| **Lost flow on return** | Relaunching the folder restarts the activity, so a one-time email verification has to start over | Return with `APP_SWITCH` (Recents) and tap the card |
+| **Black screenshots** | Samsung-account screens set FLAG_SECURE and capture as solid black; the folder's notifications read "Content hidden" | Verify server-side (the account's web dashboard, the inbox), or ask the human to read the screen |
+| **Background stalls** | A WhatsApp cloud backup sat at 3% while backgrounded, then ran 3%→100% in about a minute in the foreground | Keep long uploads in the foreground |
+
+Typing works through adb input on the focused field: `adb shell input keycombination 113 29`
+(select all) then `input keyevent 67` clears it. adb cannot type emoji, so set them with
+`mobile_clipboard` and paste with `input keyevent 279`.
+
+**Contacts are per profile, and uploads take all of them.** A social app's "upload contacts"
+sends every contact on that profile, from every signed-in Google account. Before turning
+uploads on, remove any account whose contacts must stay out (Settings → Manage accounts →
+the account → Remove account; the data stays in that Google account). Samsung's *Merge
+duplicate contacts* only links cards on the device. Google Contacts keeps them separate
+until you merge them at contacts.google.com (*Select* → *Merge*).
+
+**Samsung Pass inside a Secure Folder has no sync.** Changing the Samsung account ID warns
+that unsynced Pass data is deleted, and the folder's Pass settings offer no "Account and
+syncing". Use *Export data to phone* (`.spass`, needs the human's biometric) first, or
+accept the loss. Passkeys usually do not survive an export.
 
 ## Routing to neighbors
 
