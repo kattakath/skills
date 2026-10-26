@@ -1,0 +1,72 @@
+# Arms auto-merge on open `dependabot[bot]` PRs.
+#
+# Ported from kattakath/nix-config's arm-dependabot.yml, which records why the
+# one-line alternatives fail. In short:
+#
+# - Widening auto-merge.yml to Dependabot cannot work. GitHub: "When a Dependabot
+#   event triggers a workflow, the only secrets available to the workflow are
+#   Dependabot secrets." So `secrets.CI_BOT_APP_PRIVATE_KEY` resolves EMPTY and the
+#   token step fails. Measured here on #92 (2026-10-22): "The 'private-key' input
+#   must be set to a non-empty string".
+# - Arming with `GITHUB_TOKEN` attributes the merge to it, and then `validate`'s
+#   `push: main` leg never fires (see auto-merge.yml's header).
+# - Copying the App key into a Dependabot secret creates a second copy of one
+#   private key that must rotate in lockstep with the first.
+#
+# A scheduled run is not a Dependabot event. It keeps Actions secrets and mints the
+# App token the same way auto-merge.yml does.
+name: arm-dependabot
+
+on:
+  schedule:
+    # Off the hour: GitHub delays and drops scheduled runs at peak. NOMINAL 6 h
+    # cadence only; dispatch it by hand to arm at once.
+    - cron: "41 */6 * * *"
+  workflow_dispatch:
+
+# The App token carries the merge rights; the default token needs none.
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: arm-dependabot
+  cancel-in-progress: false
+
+jobs:
+  arm:
+    name: Arm auto-merge on Dependabot PRs
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.CI_BOT_CLIENT_ID }}
+          private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
+
+      # Idempotent: re-arming an armed PR is a no-op. Squash is the only method
+      # main allows. The author filter is exact (`app/dependabot` is what `gh`
+      # renders for the App author) so other bot lanes are never touched. No
+      # `github.event.*` value reaches the shell, so there is no injection surface.
+      - name: Arm open dependabot[bot] PRs
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          prs=$(gh pr list --state open --limit 50 \
+            --json number,author,isDraft,autoMergeRequest \
+            --jq '.[] | select(.author.login == "app/dependabot" or .author.login == "dependabot")
+                      | select(.isDraft == false)
+                      | select(.autoMergeRequest == null)
+                      | .number')
+          if [ -z "$prs" ]; then
+            echo "no unarmed open dependabot PRs"
+            exit 0
+          fi
+          for n in $prs; do
+            echo "arming #$n"
+            # One PR that cannot be armed must not abort the sweep for the others.
+            gh pr merge --squash --auto "$n" || echo "  could not arm #$n; leaving it"
+          done
