@@ -17,7 +17,8 @@
  *      allowed ONLY when piped straight into a sink that emits a count or a digest
  *      (wc, shasum, sha*sum, md5, openssl dgst, cmp) or back into pbcopy, or into a
  *      gpg stage that can only produce ciphertext or key metadata, or into the
- *      fleet's Keychain writer `secret set` / `set-secret` — it STORES the value and
+ *      fleet's Keychain writer `secret set --no-export` / `set-secret --no-export`
+ *      (never exported, never `--env`) — it STORES the value and
  *      prints only the item name and its length (canary-measured 2026-10-26: a
  *      10-byte canary appeared 0 times in its output; the length is what `wc -c`
  *      already discloses). Other `secret` verbs (reveal, copy, exec) are not
@@ -144,8 +145,17 @@ function checkPbpaste(cmd) {
       }
       continue;
     }
-    // A Keychain write stores the value without printing it; only the `set` verb.
-    if (sink === "set-secret" || (sink === "secret" && argv[1] === "set")) continue;
+    // A Keychain write stores the value without printing it — but ONLY the
+    // non-exporting shape. A default or `--env` set binds the value to an env var in
+    // every new shell, where an allowed `printenv NAME` would print it.
+    // Residual, accepted: `secret exec V=item -- sh -c 'echo "$V"'` can still read a
+    // stored value back — a deliberate two-step, the same class as the script-file
+    // limit in this header; blocking exec would break the skill's own exec lane.
+    const setArgs = sink === "set-secret" ? argv.slice(1) : sink === "secret" && argv[1] === "set" ? argv.slice(2) : null;
+    if (setArgs) {
+      if (setArgs.includes("--no-export") && !setArgs.some((a) => a === "--env" || a.startsWith("--env="))) continue;
+      return "`pbpaste | secret set` is allowed only with `--no-export` (an exported value lands in every shell's env, where printenv shows it)";
+    }
     if (!SINKS.test(sink)) {
       return `\`pbpaste | ${sink || "?"}\` would show clipboard content to the model; only wc / shasum / sha*sum / md5 / openssl dgst / cmp / pbcopy are allowed sinks`;
     }
