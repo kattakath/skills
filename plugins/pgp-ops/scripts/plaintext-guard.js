@@ -17,8 +17,8 @@
  *      allowed ONLY when piped straight into a sink that emits a count or a digest
  *      (wc, shasum, sha*sum, md5, openssl dgst, cmp) or back into pbcopy, or into a
  *      gpg stage that can only produce ciphertext or key metadata, or into the
- *      fleet's Keychain writer `secret set --no-export` / `set-secret --no-export`
- *      (never exported, never `--env`) — it STORES the value and
+ *      fleet's Keychain writer `secret set` / `set-secret`, in the EXACT unbound
+ *      shape `[--no-export] SERVICE` (see checkPbpaste) — it STORES the value and
  *      prints only the item name and its length (canary-measured 2026-10-26: a
  *      10-byte canary appeared 0 times in its output; the length is what `wc -c`
  *      already discloses). Other `secret` verbs (reveal, copy, exec) are not
@@ -145,16 +145,25 @@ function checkPbpaste(cmd) {
       }
       continue;
     }
-    // A Keychain write stores the value without printing it — but ONLY the
-    // non-exporting shape. A default or `--env` set binds the value to an env var in
-    // every new shell, where an allowed `printenv NAME` would print it.
+    // A Keychain write stores the value without printing it — but ONLY an unbound
+    // one. A bound set exports the value to every new shell, where an allowed
+    // `printenv NAME` would print it. Deny by default: the stage must be EXACTLY
+    // `[--no-export...] SERVICE`, mirroring set-secret's own grammar (flags only
+    // before SERVICE; `--env` binds; with no `--no-export`, SERVICE binds itself
+    // when it is a valid env name `[A-Za-z_][A-Za-z0-9_]*`). Anything else —
+    // `--env`, `--`, a VALUE argument, unknown options — is refused.
     // Residual, accepted: `secret exec V=item -- sh -c 'echo "$V"'` can still read a
     // stored value back — a deliberate two-step, the same class as the script-file
     // limit in this header; blocking exec would break the skill's own exec lane.
     const setArgs = sink === "set-secret" ? argv.slice(1) : sink === "secret" && argv[1] === "set" ? argv.slice(2) : null;
     if (setArgs) {
-      if (setArgs.includes("--no-export") && !setArgs.some((a) => a === "--env" || a.startsWith("--env="))) continue;
-      return "`pbpaste | secret set` is allowed only with `--no-export` (an exported value lands in every shell's env, where printenv shows it)";
+      let i = 0;
+      while (setArgs[i] === "--no-export") i++;
+      const service = setArgs[i];
+      const exact = i + 1 === setArgs.length && /^[A-Za-z_][A-Za-z0-9_.:-]*$/.test(service || "");
+      const unbound = i > 0 || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(service || "");
+      if (exact && unbound) continue;
+      return "`pbpaste | secret set` is allowed only as `[--no-export] SERVICE` with no other arguments, and only when the item stays unbound (`--no-export`, or a SERVICE like `a:b:c` that cannot be an env-var name)";
     }
     if (!SINKS.test(sink)) {
       return `\`pbpaste | ${sink || "?"}\` would show clipboard content to the model; only wc / shasum / sha*sum / md5 / openssl dgst / cmp / pbcopy are allowed sinks`;
