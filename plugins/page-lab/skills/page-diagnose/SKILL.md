@@ -108,6 +108,13 @@ belongs to the preset tool.
   tools — upstream's generated docs describe roughly twice that, from `main`
   [F-CDP-29TOOLS]. `references/tools.md` records what exists, what is absent, and how to
   re-measure after a version bump.
+- **Files enter and leave through the working directory.** Uploads and saved snapshots are
+  refused outside the server's workspace roots; copy into a git-ignored directory under the
+  working directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS].
+- **A quiet UI is not success — read the response, not the page.** A form that resets with no
+  error can still have been rejected by the server (a GraphQL `errors` array behind an HTTP 200).
+  Confirm an outward action in the response body or a fresh read of the resource, and read that
+  body without printing request headers, which carry live credentials [F-NETREQ-PRINTS-AUTH].
 
 ## Extensions
 
