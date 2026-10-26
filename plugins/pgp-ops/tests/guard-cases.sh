@@ -65,6 +65,15 @@ B 'pbpaste | gpg --enarmor'
 B 'pbpaste | gpg --clearsign'
 B 'pbpaste | gpg --store'
 B 'pbpaste | openssl base64'
+B 'pbpaste | secret reveal x'
+B 'pbpaste | secret copy x'
+B "pbpaste | secret exec V=x -- sh -c 'cat'"
+B 'pbpaste | secret'
+B "pbpaste | tr -d '\n' | secret set x"
+B 'pbpaste | secret set x'
+B 'pbpaste | secret set --env FOO x'
+B 'pbpaste | secret set --no-export --env FOO x'
+B 'pbpaste | set-secret x'
 B "osascript -e 'the clipboard'"
 B "osascript -e 'get the clipboard as text'"
 B 'python3 -c "import pyperclip; print(pyperclip.paste())"'
@@ -96,6 +105,8 @@ A 'pbpaste | openssl dgst -sha256'
 A 'pbpaste | gpg --batch --list-packets'
 A 'pbpaste | gpg --armor --encrypt --recipient-file THEIRS.asc | pbcopy'
 A 'pbpaste | gpg --dearmor > key.gpg'
+A 'pbpaste | secret set --no-export android-emu:pixel_play:pin'
+A 'pbpaste | set-secret --no-export x'
 A 'printf "x" | pbcopy'
 A "osascript -e 'set the clipboard to \"x\"'"
 A 'gpgconf --kill all'
