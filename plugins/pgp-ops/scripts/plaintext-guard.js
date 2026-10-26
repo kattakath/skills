@@ -16,7 +16,12 @@
  *   2. Reading the clipboard where the result can reach the model: `pbpaste` is
  *      allowed ONLY when piped straight into a sink that emits a count or a digest
  *      (wc, shasum, sha*sum, md5, openssl dgst, cmp) or back into pbcopy, or into a
- *      gpg stage that can only produce ciphertext or key metadata. Everything else —
+ *      gpg stage that can only produce ciphertext or key metadata, or into the
+ *      fleet's Keychain writer `secret set` / `set-secret` — it STORES the value and
+ *      prints only the item name and its length (canary-measured 2026-10-26: a
+ *      10-byte canary appeared 0 times in its output; the length is what `wc -c`
+ *      already discloses). Other `secret` verbs (reveal, copy, exec) are not
+ *      sinks. Everything else —
  *      bare, redirected to a file, captured in $(…), piped to head/grep/base64 — is
  *      refused, because after a decrypt the clipboard IS the plaintext.
  *   3. Other clipboard readers: osascript mentioning the clipboard (except
@@ -139,6 +144,8 @@ function checkPbpaste(cmd) {
       }
       continue;
     }
+    // A Keychain write stores the value without printing it; only the `set` verb.
+    if (sink === "set-secret" || (sink === "secret" && argv[1] === "set")) continue;
     if (!SINKS.test(sink)) {
       return `\`pbpaste | ${sink || "?"}\` would show clipboard content to the model; only wc / shasum / sha*sum / md5 / openssl dgst / cmp / pbcopy are allowed sinks`;
     }
