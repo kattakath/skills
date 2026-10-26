@@ -17,6 +17,10 @@ name: auto-merge
 # `pull_request`, not `pull_request_target`: the job never checks out or runs PR
 # code, and the fork guard means a fork's run never reaches the App-token step,
 # which needs a secret a fork cannot read.
+#
+# Dependabot PRs are skipped here: a Dependabot-triggered run gets only Dependabot
+# secrets, so `CI_BOT_APP_PRIVATE_KEY` resolves EMPTY and the token step fails
+# (#92, 2026-10-22). arm-dependabot.yml arms them from a schedule instead.
 
 on:
   pull_request:
@@ -32,7 +36,7 @@ permissions:
 
 jobs:
   arm:
-    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft
+    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
