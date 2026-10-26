@@ -260,6 +260,27 @@
       "source": "./plugins/harvest"
     },
     {
+      "name": "history-scrub",
+      "description": "Take a literal that must not be public out of a public git repo's history: census every copy, fix the tip forward, back up by SHA, rewrite the minimal range, prove the tip tree is unchanged, push with a SHA-pinned lease, then chase refs/pull, cached views and PR edit history.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "git",
+        "history",
+        "rewrite",
+        "filter-repo",
+        "force-with-lease",
+        "privacy",
+        "sensitive-data",
+        "scrub"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/history-scrub",
+      "license": "MIT",
+      "source": "./plugins/history-scrub"
+    },
+    {
       "name": "jsonresume-tailor",
       "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
       "author": {

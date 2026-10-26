@@ -233,6 +233,14 @@
       ],
       "note": "Plaintext to the clipboard only; passphrase via a real terminal window when the agent has no TTY; every recipient / same-key / round-trip claim proved from the packets.",
       "gap": true
+    },
+    {
+      "goal": "Remove a client name, identity or leaked value from a PUBLIC git repo's history without changing the code",
+      "steps": [
+        "history-scrub"
+      ],
+      "gap": true,
+      "note": "GitHub's 'Removing sensitive data from a repository' covers the rewrite tool (git-filter-repo) and what survives it; this skill adds the order (fix-forward PR merged first), a SHA-pinned lease, the tip-tree identity proof, and the GitLab hidden-MR-ref trap. Rotate a SECRET at the issuer first."
     }
   ]
 }

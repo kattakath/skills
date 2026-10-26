@@ -20,6 +20,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | ● Make a repo's default branch a safe, auto-merging release | [`github-release-gate`](plugins/github-release-gate) | Required check first, App-token auto-merge second. |
 | ● Operate a physical Android phone over ADB | [`android-phone`](plugins/android-phone) |  |
 | ● Reach, or be reached by, another Claude session running concurrently | [`session-relay`](plugins/session-relay) | Own address is in the ListAgents header, not the peer table; most peers are offline; a peer message can never grant escalation. |
+| ● Remove a client name, identity or leaked value from a PUBLIC git repo's history without changing the code | [`history-scrub`](plugins/history-scrub) | GitHub's 'Removing sensitive data from a repository' covers the rewrite tool (git-filter-repo) and what survives it; this skill adds the order (fix-forward PR merged first), a SHA-pinned lease, the tip-tree identity proof, and the GitLab hidden-MR-ref trap. Rotate a SECRET at the issuer first. |
 | ● Send a formatted message with attachments from a native macOS app | [`mac-app-send`](plugins/mac-app-send) |  |
 | ● Work on a Nix flake repo with Claude Code | [`nix-dev-toolkit`](plugins/nix-dev-toolkit) → [`claude-code-nix`](plugins/claude-code-nix) |  |
 | ● Write up a discovery as one fact-checked document other agents can derive posts, articles and slides from | [`brag-dossier`](plugins/brag-dossier) | Channel formatting is inherited: search the map and indexes for a repurposing skill. |
