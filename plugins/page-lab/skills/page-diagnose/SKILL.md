@@ -115,6 +115,10 @@ belongs to the preset tool.
   error can still have been rejected by the server (a GraphQL `errors` array behind an HTTP 200).
   Confirm an outward action in the response body or a fresh read of the resource, and read that
   body without printing request headers, which carry live credentials [F-NETREQ-PRINTS-AUTH].
+- **A hand-written CDP client starts from `DevToolsActivePort`, not `/json/list`.** An
+  autoConnect browser serves only its browser-level socket, so attach to targets from there
+  [F-AUTOCONNECT-BROWSER-SOCKET-ONLY]. Synthetic paste and page clipboard reads do not reach
+  the OS clipboard [F-SYNTH-PASTE-NO-CLIPBOARD].
 
 ## Extensions
 
