@@ -1,0 +1,22 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "history-scrub",
+  "description": "Remove a literal that must not be public (a client name, a real identity, an internal hostname, a leaked value) from a public git repo's history: census every copy, fix the tip forward, back up by SHA, rewrite the minimal range, prove the tip tree is byte-identical, push with a SHA-pinned lease — then chase what a rewrite cannot reach (refs/pull, cached views, PR edit history, GitLab hidden MR refs).",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/history-scrub",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "git",
+    "history",
+    "rewrite",
+    "filter-repo",
+    "filter-branch",
+    "force-with-lease",
+    "privacy",
+    "sensitive-data",
+    "scrub"
+  ]
+}
