@@ -54,6 +54,6 @@ arrangement `claude-code-nix` has with `mcp-nixos`. The launcher is what knows t
 connection URI and the version pins the server needs; the plugin cannot, and should not,
 hardcode a machine's database coordinates. Without it on PATH the server fails to start.
 
-Unlike the sibling `wordpress` and `apify` launchers, this one reads **no secret**: the
+Unlike the sibling `wordpress` launcher, this one reads **no secret**: the
 store is loopback-only with `trust` auth and a role scoped to `ragdb` alone, so there is
 nothing to fetch from a Keychain — the blast radius is that one database.

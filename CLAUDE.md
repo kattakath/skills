@@ -33,7 +33,7 @@ directly.
   every server's own README shows) — data, not a plugin. nix-config's gateway read it
   directly until that gateway was purged on 2026-10-02; it is now a **reference catalog**
   of real invocations, and the servers themselves live in the owning plugin's `.mcp.json`
-  (`page-lab`, `claude-code-nix`, `mac-app-send`, `android-phone`, `rag`, `apify`,
+  (`page-lab`, `claude-code-nix`, `mac-app-send`, `android-phone`, `rag`,
   `wordpress`). A server needing a credential names a launcher BINARY there, because
   `.mcp.json` `env` takes literals and passthroughs only and cannot run a Keychain read —
   that half is a PATH package in nix-config (`local.gmailMcp`, `local.pluginMcp`).

@@ -1,7 +1,0 @@
-{
-  "mcpServers": {
-    "apify": {
-      "command": "nix-mcp-apify"
-    }
-  }
-}

@@ -26,10 +26,10 @@ need it.
 
 That launcher comes from **`kattakath/nix-config`** — `modules/home/plugin-mcp.nix` builds
 it when `local.pluginMcp.servers` includes `"desktop-commander"`. Same arrangement the
-apify, wordpress and rag plugins have. Without it on PATH the server simply fails to
+wordpress and rag plugins have. Without it on PATH the server simply fails to
 start, and nothing here can fix that.
 
-Those three names are deliberately **not** in backticks, and neither is the one in the next
+Those two names are deliberately **not** in backticks, and neither is the one in the next
 sentence. A backticked entry name inside a plugin's own markdown is how the skill-curator
 plugin detects one entry depending on another (`skill-usage.py` greps for the name wrapped
 in backticks), and it then marks the named entry `exempt` from staleness. So a prose
@@ -37,7 +37,7 @@ mention in backticks silently exempts an unrelated plugin from curation. Caught 
 suite's own `usage-cases.sh` on the first push of this plugin —
 `FAIL rag: want active, got exempt`.
 
-**Unlike those three, the reason the launcher is in Nix is not a credential.** This server
+**Unlike those two, the reason the launcher is in Nix is not a credential.** This server
 needs none. It is there because a plugin's `.mcp.json` cannot run
 `sandbox-exec -f <profile>`, and that fence is the only thing that makes the server safe to
 run at all.
