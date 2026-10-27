@@ -110,7 +110,11 @@ belongs to the preset tool.
   re-measure after a version bump.
 - **Files enter and leave through the working directory.** Uploads and saved snapshots are
   refused outside the server's workspace roots; copy into a git-ignored directory under the
-  working directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS].
+  working directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS]. For many files, or an
+  input the page creates only on click, capture the input and set files over CDP
+  [F-FILE-INPUT-ON-CLICK].
+- **A visible menu or dialog with no snapshot nodes is `aria-hidden`, not absent.** Drive it
+  through `evaluate_script` on the DOM [F-ARIA-HIDDEN-OPEN-UI].
 - **A quiet UI is not success — read the response, not the page.** A form that resets with no
   error can still have been rejected by the server (a GraphQL `errors` array behind an HTTP 200).
   Confirm an outward action in the response body or a fresh read of the resource, and read that
