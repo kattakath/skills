@@ -79,6 +79,14 @@ flag B5  "git diff --quiet"             'git diff --quiet && echo clean'
 flag B1  "git checkout -- path"         'git checkout -- src/app.js'
 flag C5  "gh api without --paginate"    'gh api repos/o/r/issues --jq ".[].number"'
 flag C11 "jq -r without -e"             'gh pr view 1 --json title | jq -r .title'
+flag A16 "bare \$var then newline"      $'for f in $files\ndo echo "$f"; done'
+flag C5  "list endpoint, piped jq"      'gh api repos/o/r/issues/4423/events -q ".[].event" | tail'
+flag C5  "list endpoint after a pipe"   'gh pr view 1 --json title; gh api repos/o/r/pulls/1/comments --jq length'
+flag C11 "gh api --jq has no --json"    'gh api repos/o/r/pulls/1 --jq .state'
+flag C11 "--jq typo vs --json field"    'gh pr view 1 --json state --jq .stat'
+flag C11 "--jq nested path"             'gh pr view 1 --json mergeCommit --jq .mergeCommit.oid'
+flag C11 "--jq indexes a field"         $'gh pr view 1 --json headRefOid --jq \'.headRefOid[0:9]\''
+flag C11 "--jq iterates"                $'gh pr list --json number --jq \'.[].number\''
 flag D2  "forced sandbox, no --rebuild" 'nix build --option sandbox true .#checks.aarch64-darwin.project-gate'
 flag D2  "flake check, forced sandbox"  'nix flake check --option sandbox true'
 
@@ -109,6 +117,17 @@ quiet "forced sandbox with --check"      'nix-build --check --option sandbox tru
 quiet "sandbox false is the default"     'nix build --option sandbox false .#checks.aarch64-darwin.project-gate'
 quiet "reading the sandbox setting"      'nix config show sandbox'
 quiet "plain flake check"                'nix flake check --all-systems --no-build'
+# Real firings on ordinary work (takeoff-ai session, 2026-10-27): each must stay quiet.
+quiet "for over literal \$D/ words"      'for f in $D/a.jsonl $D/b.jsonl; do echo "$f"; done'
+quiet "gh api one check-run by id"       'gh api repos/o/r/check-runs/121740144041 > run.json'
+quiet "gh api one comment, PATCH"        'gh api -X PATCH repos/o/r/issues/comments/6438749595 -F body=@c.md'
+quiet "gh api job logs blob"             'gh api repos/o/r/actions/jobs/121830686211/logs 2>&1 | grep -E "FAILED"'
+quiet "gh api one commit by sha"         'gh api repos/o/r/commits/5be0731db'
+quiet "gh api the repo object"           'gh api repos/o/r'
+quiet "gh api inside quoted prose"       $'printf \'read it with gh api .../actions/jobs/<id>\\n\' >> notes.md'
+quiet "--json fields, bare --jq paths"   $'gh pr view 1 --json state,mergedAt --jq \'"\\(.state) \\(.mergedAt)"\''
+quiet "--json field, --jq=form"          'gh pr view 1 --json url --jq=.url'
+quiet "--jq text inside a heredoc"       $'python3 - <<\'EOF\'\nt = "gh pr view --jq .x"\nEOF'
 
 echo "== must never throw, and must ignore non-Bash tools =="
 for j in \
