@@ -1,0 +1,22 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "workspace-gtd",
+  "description": "A work-life system on eight Google Workspace apps (Gmail, Chat, Calendar, Tasks, Drive, Docs, Sheets, Forms): GTD on Tasks + Calendar, one home per fact, daily shutdown, agent-drafted weekly review, Studio nudges to Chat, no alarms, and the employer's Outlook/Slack joined as a free/busy + pointer adapter rather than a second system.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/workspace-gtd",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "gtd",
+    "google-workspace",
+    "google-tasks",
+    "google-calendar",
+    "workspace-studio",
+    "productivity",
+    "weekly-review",
+    "para",
+    "time-blocking"
+  ]
+}

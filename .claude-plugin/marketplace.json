@@ -566,6 +566,25 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
       "license": "MIT",
       "source": "./plugins/wordpress"
+    },
+    {
+      "name": "workspace-gtd",
+      "description": "A work-life system on eight Google Workspace apps (Gmail, Chat, Calendar, Tasks, Drive, Docs, Sheets, Forms): GTD on Tasks + Calendar, one home per fact, daily shutdown, agent-drafted weekly review, Studio nudges to Chat, no alarms, and the employer's Outlook/Slack joined as a free/busy + pointer adapter rather than a second system.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "gtd",
+        "google-workspace",
+        "google-tasks",
+        "google-calendar",
+        "workspace-studio",
+        "productivity"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/workspace-gtd",
+      "license": "MIT",
+      "source": "./plugins/workspace-gtd"
     }
   ]
 }
