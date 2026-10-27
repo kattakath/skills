@@ -26,6 +26,8 @@ description below is what actually carries the information.
 | **SITE-C** | Float-based grid whose container **computes `height: 0`** while its children paint — a collapsed float container. Hand-authored class names. Light stock ground, so a theme is genuinely needed. |
 | **SITE-D** | Hash-classed SPA: most class names carry a **build hash**, some blocks have no class at all, and one hashed class stopped matching **between two loads minutes apart**. Lazily-rendered grid. `header` computes **`display: contents`**. Ships its own dark theme, which shifts with `prefers-color-scheme`. |
 | **SITE-E** | Ambiguous class signatures — **seven containers share one string**, which is what makes a signature unusable as a selector. |
+| **SITE-F** | Closure-compiled photo-library SPA (obfuscated class names). Its "add photos" menu renders as `role=menuitem` nodes under an `aria-hidden` ancestor, and the upload `<input type=file multiple>` **does not exist until** the "import from computer" item is clicked, which creates it and calls `.click()` on it. |
+| **SITE-G** | Fluent-UI webmail/calendar SPA. Its Settings panel opens as a `role=dialog` modal whose subtree is hidden from the accessibility tree; dropdowns are `button[role=combobox]` with `role=option` popups. |
 
 ## Supplying real values, privately
 
