@@ -35,13 +35,123 @@
 
 "use strict";
 
+// ── shell helpers for the gh rules (C5, C11): quote-aware, never throw past test() ──
+
+// Words, quoted strings and separators, so a `|` or `;` inside a quoted jq program
+// does not split the gh invocation it belongs to.
+const TOKEN =
+  /'[^']*'|"(?:\\.|[^"\\])*"|\|\||&&|[|;\n()]|[^\s'"|;&()]+(?:'[^']*'|"(?:\\.|[^"\\])*"|[^\s'"|;&()]+)*/g;
+const SEPARATOR = /^(?:\|\||&&|[|;\n()])$/;
+
+function unquote(t) {
+  return /^(['"]).*\1$/s.test(t) ? t.slice(1, -1) : t;
+}
+
+// Each gh invocation as its token list (from the `gh` word to the next separator).
+function ghInvocations(c) {
+  const out = [];
+  let cur = null;
+  for (const t of c.match(TOKEN) || []) {
+    if (SEPARATOR.test(t)) {
+      if (cur) out.push(cur);
+      cur = null;
+    } else if (cur) {
+      cur.push(t);
+    } else if (t === "gh") {
+      cur = [];
+    }
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+// Value of a flag in a token list: `--flag X` or `--flag=X`.
+function flagValue(args, names) {
+  for (let i = 0; i < args.length; i++) {
+    for (const n of names) {
+      if (args[i] === n && i + 1 < args.length) return unquote(args[i + 1]);
+      if (args[i].startsWith(n + "=")) return unquote(args[i].slice(n.length + 1));
+    }
+  }
+  return null;
+}
+
+const GH_API_VALUE_FLAGS = new Set([
+  "-q", "--jq", "-H", "--header", "-f", "--raw-field", "-F", "--field", "-X", "--method",
+  "-t", "--template", "--hostname", "-p", "--preview", "--input", "--cache",
+]);
+
+// Endpoints of the `gh api` READS that could be lists: skips --paginate/--slurp,
+// graphql and any non-GET method.
+function ghApiEndpoints(c) {
+  const out = [];
+  for (const inv of ghInvocations(c)) {
+    if (inv[0] !== "api") continue;
+    const args = inv.slice(1);
+    if (args.some((a) => a === "--paginate" || a === "--slurp")) continue;
+    const method = flagValue(args, ["-X", "--method"]);
+    if (method && method.toUpperCase() !== "GET") continue;
+    let endpoint = null;
+    for (let i = 0; i < args.length; i++) {
+      const a = args[i];
+      if (GH_API_VALUE_FLAGS.has(a)) { i++; continue; }
+      if (a.startsWith("-")) continue;
+      endpoint = unquote(a);
+      break;
+    }
+    if (endpoint && endpoint !== "graphql") out.push(endpoint);
+  }
+  return out;
+}
+
+// A path whose last segment is an id, a sha or a blob leaf names ONE resource.
+function isListEndpoint(ep) {
+  const segs = ep.split("?")[0].replace(/\/+$/, "").split("/").filter(Boolean);
+  const last = segs[segs.length - 1] || "";
+  if (/^\d+$/.test(last) || /^[0-9a-f]{7,40}$/i.test(last)) return false;
+  if (/^(?:logs|zipball|tarball|readme|raw|diff|patch)$/i.test(last)) return false;
+  if (segs[0] === "repos" && segs.length === 3) return false; // repos/{owner}/{repo}
+  return true;
+}
+
+// The gh invocations that filter with --jq: their --json list (if any) and program.
+function ghJqSegments(c) {
+  const out = [];
+  for (const inv of ghInvocations(c)) {
+    const jq = flagValue(inv, ["--jq"]); // --jq only: the rule never read -q, so no new firings
+    if (jq === null) continue;
+    out.push({ json: inv[0] === "api" ? null : flagValue(inv, ["--json"]), jq });
+  }
+  return out;
+}
+
+// True only when every path in the jq program is a bare top-level field gh was asked
+// for with --json: nested paths (`.a.b`), indexing (`.[0]`, `.x[0]`) and fields not
+// in the list all return false, because gh validates none of those.
+function jqPathsCoveredByJson(seg) {
+  if (!seg.json) return false;
+  const fields = new Set(seg.json.split(",").map((f) => f.trim()).filter(Boolean));
+  if (/(?:^|[^\w\]).])\.\[/.test(seg.jq)) return false;
+  const path = /(^|[^\w\]).])\.([A-Za-z_][A-Za-z0-9_]*)/g;
+  let m;
+  while ((m = path.exec(seg.jq)) !== null) {
+    const after = seg.jq.slice(path.lastIndex);
+    if (/^(?:\.[A-Za-z_\[]|\[)/.test(after)) return false;
+    if (!fields.has(m[2])) return false;
+  }
+  return true;
+}
+
 const RULES = [
   {
     id: "A16",
     // `for x in $list` — unquoted, and not a glob. In zsh (the default shell on
     // macOS) an unquoted parameter is NOT field-split, so this iterates ONCE over the
     // whole value and exits 0. Excludes "$list" (correct) and $list* (a glob).
-    test: (c) => /\bfor\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+\$(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)(?![*?[\w])/.test(c),
+    // The list must be the bare parameter ALONE (then `;`, newline or `do`): in
+    // `for f in $D/a.json $D/b.json` each word is one item already, so not splitting
+    // it is correct — that literal-word form fired on real work (2026-10-27).
+    test: (c) => /\bfor\s+[A-Za-z_][A-Za-z0-9_]*\s+in\s+\$(?:\{[A-Za-z_][A-Za-z0-9_]*\}|[A-Za-z_][A-Za-z0-9_]*)[ \t]*(?:;|\n|do\b)/.test(c),
     say: "`for x in $var` is not field-split in zsh, so it iterates ONCE over the whole value and exits 0 — the loop can do nothing and still look successful. Use `while IFS= read -r x; do …; done < <(producer)`, and cross-check the loop's count against an independent one.",
   },
   {
@@ -98,12 +208,19 @@ const RULES = [
   },
   {
     id: "C5",
-    test: (c) => /\bgh\s+api\b/.test(c) && !/--paginate|\bgraphql\b|--slurp/.test(c) && !/-X\s*(?:POST|PATCH|PUT|DELETE)|--method\s*(?:POST|PATCH|PUT|DELETE)/i.test(c),
+    // Only a LIST read truncates. An endpoint ending in an id (`check-runs/123`,
+    // `comments/6438749595`), a sha, or a non-JSON leaf (`/logs`) returns one object
+    // or a blob — those were most of this rule's firings on real work (2026-10-27).
+    test: (c) => ghApiEndpoints(c).some(isListEndpoint),
     say: "REST list endpoints truncate at 30 (max 100) with NO marker in the body — a complete-looking array, HTTP 200. Use `gh api --paginate`, and treat `length == per_page` as 'assume truncated'.",
   },
   {
     id: "C11",
-    test: (c) => /\bgh\b[^|]*--jq\b/.test(c) || /\|\s*jq\s+(?!-e\b)-r\b/.test(c),
+    // `gh <cmd> --json a,b --jq …` is safe ONLY when every path is a bare top-level
+    // field from the --json list: gh rejects an unknown --json field (exit 1) and emits
+    // every requested one. A jq typo is NOT caught — measured 2026-10-27:
+    // `--json state --jq .stat` printed nothing and exited 0 — so anything else flags.
+    test: (c) => ghJqSegments(c).some((s) => !jqPathsCoveredByJson(s)) || /\|\s*jq\s+(?!-e\b)-r\b/.test(c),
     say: "A wrong or renamed `jq` path yields `null`, not an error, and passes through as exit 0 — absent, null and 'my path was wrong' are indistinguishable. Use `jq -e` for scalars, or assert the shape with `has(\"field\")`.",
   },
   {

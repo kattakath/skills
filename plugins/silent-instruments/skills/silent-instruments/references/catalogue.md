@@ -356,6 +356,11 @@ always pass `--limit` explicitly.
 ### C11 · A wrong `jq` path is `null`, not an error, and `--jq` passes it through as exit 0
 A typo'd field, a renamed field and a genuinely-null field are indistinguishable:
 `--jq '.stargazerz_count'` → empty line, exit **0**.
+`--json` narrows this, but does not close it. `gh pr view --json nosuchfield` fails (**exit 1**,
+`Unknown JSON field`), and gh emits every field it was asked for. But a typo in the `--jq` path
+is still silent: `--json state --jq .stat` prints an empty line and exits **0** (measured
+2026-10-27). So the hook stays quiet only when every `--jq` path is a **bare top-level field from
+the `--json` list**. A nested path (`.mergeCommit.oid`) or an index (`.x[0]`, `.[]`) still flags.
 **Correct:** `jq -e` (exits 1 on null/false) for scalars; assert the shape with
 `has("field") or error("field gone")`.
 `MEASURED`
