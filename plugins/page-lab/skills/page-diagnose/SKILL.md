@@ -108,9 +108,10 @@ belongs to the preset tool.
   tools — upstream's generated docs describe roughly twice that, from `main`
   [F-CDP-29TOOLS]. `references/tools.md` records what exists, what is absent, and how to
   re-measure after a version bump.
-- **Files enter and leave through the working directory.** Uploads and saved snapshots are
-  refused outside the server's workspace roots; copy into a git-ignored directory under the
-  working directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS]. For many files, or an
+- **Files enter and leave through the server's roots.** Uploads and saved snapshots are
+  refused outside them: the session's start directory, `$TMPDIR` and the Claude Code
+  scratchpads (`/private/tmp/claude-<uid>`); set `CDP_EXTRA_WORKSPACES` for more, or copy into
+  a git-ignored directory under the start directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS]. For many files, or an
   input the page creates only on click, capture the input and set files over CDP
   [F-FILE-INPUT-ON-CLICK].
 - **A visible menu or dialog with no snapshot nodes is `aria-hidden`, not absent.** Drive it

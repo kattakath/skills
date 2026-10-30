@@ -43,6 +43,23 @@ esac
 # launcher that discards argv is a trap for whoever adds one later.
 set -- --no-usage-statistics --no-performance-crux "$@"
 
+# File roots (chrome-devtools-mcp >= 1.12). Tools that read or write local files
+# (upload_file, take_screenshot/take_snapshot with filePath) accept only paths under
+# the client's MCP roots plus the server's --workspace roots (`#combinedRoots`). Claude
+# Code sends only the session's project directory, and the server's default extra root
+# is os.tmpdir() (/var/folders/…/T on macOS) — NOT Claude Code's scratchpads under
+# /private/tmp/claude-<uid>, so every scratchpad path was refused with "is not within
+# any of the configured workspace roots". Passing --workspace replaces that default, so
+# os.tmpdir() is re-added explicitly. CDP_EXTRA_WORKSPACES (colon-separated) adds more
+# (e.g. ~/Downloads); it is opt-in so the default stays the temp dirs only.
+ws_list="${TMPDIR:-/tmp}:/private/tmp/claude-$(id -u)${CDP_EXTRA_WORKSPACES:+:$CDP_EXTRA_WORKSPACES}"
+old_ifs="$IFS"
+IFS=:
+for w in $ws_list; do
+  if [ -n "$w" ]; then set -- "$@" "--workspace=$w"; fi
+done
+IFS="$old_ifs"
+
 ports="$port"
 if [ -r "$active" ]; then
   recorded="$(sed -n 1p "$active" 2>/dev/null | tr -d '[:space:]')"
