@@ -73,9 +73,9 @@ fi
 for p in $ports; do
   if /usr/bin/curl -fsS --max-time 2 "http://127.0.0.1:$p/json/version" >/dev/null 2>&1; then
     # shellcheck disable=SC2086
-    exec npx -y chrome-devtools-mcp@latest --browser-url="http://127.0.0.1:$p" $ext "$@"
+    exec npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$p" $ext "$@"
   fi
 done
 
 # shellcheck disable=SC2086
-exec npx -y chrome-devtools-mcp@latest --autoConnect --userDataDir="$dir" $ext "$@"
+exec npx -y chrome-devtools-mcp@1.12.0 --autoConnect --userDataDir="$dir" $ext "$@"

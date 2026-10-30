@@ -5,7 +5,7 @@
     },
     "sequential-thinking": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking@2.0.0"]
     },
     "terraform": {
       "command": "terraform-mcp-server"
