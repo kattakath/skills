@@ -49,7 +49,7 @@ are adopted through nix-config's gateway, never a plugin `.mcp.json`" — which 
 
 It names a **binary**, not a package. `nix-mcp-postgres` comes from
 [`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s
-`modules/shared/plugin-mcp.nix` (`local.pluginMcp.servers` includes `"postgres"`), the same
+`modules/home/plugin-mcp.nix` (`local.pluginMcp.servers` includes `"postgres"`), the same
 arrangement `claude-code-nix` has with `mcp-nixos`. The launcher is what knows the loopback
 connection URI and the version pins the server needs; the plugin cannot, and should not,
 hardcode a machine's database coordinates. Without it on PATH the server fails to start.

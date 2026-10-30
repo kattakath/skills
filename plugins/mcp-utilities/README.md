@@ -31,10 +31,10 @@ path, which rotates on every rebuild. So the two servers that are not a plain `n
 fetch name a binary that **`kattakath/nix-config` installs**, the same arrangement
 `claude-code-nix` has with `mcp-nixos` and `gmail` has with its launchers:
 
-| command | comes from | already on PATH? |
-|---|---|---|
-| `terraform-mcp-server` | nixpkgs 1.3.0, via `modules/shared/home.nix` | **yes** — added there ahead of this move |
-| `nix-mcp-mcpfinder` | `packages/mcpfinder-mcp.nix`, via `modules/shared/home.nix` | **no** — needs the paired nix-config PR |
+| command | comes from |
+|---|---|
+| `terraform-mcp-server` | nixpkgs, installed by `modules/home/default.nix` |
+| `nix-mcp-mcpfinder` | `packages/mcpfinder-mcp.nix`, installed by `modules/home/default.nix` |
 
 Without its command on PATH a server simply fails to start. Nothing in this repo can fix
 that.
@@ -103,7 +103,3 @@ Set `MEMORY_FILE_PATH` yourself to override it; the script honours an existing v
   key; search still answers from the Official MCP Registry and Smithery.
 - **Claude Desktop loads no plugins.** The portal that used to serve these four also
   served Desktop. Desktop therefore loses all four and this plugin cannot give them back.
-- **nix-config's allow-rules are keyed to the old names.** `.claude/settings.json` there
-  still pre-approves `mcp__plugin_hm_kattakath-portal__memory_*` and names `mcpfinder`'s
-  four read-only tools under that dead prefix. Until they are re-spelled these servers
-  prompt on every call — fail-safe, but noisy. Handled in the paired nix-config PR.

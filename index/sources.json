@@ -38,7 +38,7 @@
       "kind": "index",
       "consume": "`https://registry.modelcontextprotocol.io/v0/servers?search=<term>`, then Smithery `https://registry.smithery.ai/servers?q=<term>`",
       "adopted": true,
-      "use_for": "MCP server search. Adoption goes through nix-config's mcp-scout, never `claude mcp add`.",
+      "use_for": "MCP server search. Adoption goes through nix-config's mcp-scout into the owning plugin's `.mcp.json`, never `claude mcp add`.",
       "checked": "2026-09-23"
     },
     {

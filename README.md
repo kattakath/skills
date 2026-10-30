@@ -16,7 +16,7 @@ Agent resources by Ismail Kattakath — Claude Code skills and plugins, plus por
 
 - `plugins/` holds every plugin: one folder each, carrying its own `.claude-plugin/plugin.json` and bundling [Agent Skills](https://agentskills.io) (`skills/<name>/SKILL.md`) with commands, agents, hooks or output styles. A lone skill ships as a one-skill plugin, so there is no separate `skills/` tree.
 - `.claude-plugin/marketplace.json` publishes them all as the `kattakath` marketplace.
-- `mcp-clients/` and `mcp/` hold portable MCP data — a client-config catalog and (eventually) registry declarations — consumed by external harnesses like nix-config, not installed as plugins.
+- `mcp/` holds portable MCP data — (eventually) registry declarations — not installed as a plugin. The MCP servers themselves are declared in each owning plugin's `plugins/<name>/.mcp.json`.
 
 ## Install
 

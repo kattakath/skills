@@ -11,8 +11,7 @@ container, everything needed to maintain this repo is in this tree.
 
 This repo is broader than "plugin marketplace" — it's the operator's general library of
 agent resources; some of it (skills, plugins) installs via Claude Code's marketplace
-mechanism, some (`mcp-clients/`, `mcp/`) is portable data external harnesses consume
-directly.
+mechanism, some (`mcp/`) is portable data external harnesses consume directly.
 
 - Published as `github:kattakath/skills`. Consumers run `/plugin marketplace add
   kattakath/skills` then `/plugin install <name>@kattakath`.
@@ -29,12 +28,10 @@ directly.
   rerun the script. CI's `Index up to date` check fails a PR where they've drifted.
 - `mcp/` holds MCP server declarations (one `server.json` per the MCP registry schema) —
   documented, none declared yet.
-- `mcp-clients/` holds a portable MCP *client*-config catalog (the plain `mcpServers` shape
-  every server's own README shows) — data, not a plugin. nix-config's gateway read it
-  directly until that gateway was purged on 2026-10-02; it is now a **reference catalog**
-  of real invocations, and the servers themselves live in the owning plugin's `.mcp.json`
-  (`page-lab`, `claude-code-nix`, `mac-app-send`, `android-phone`, `rag`,
-  `wordpress`). A server needing a credential names a launcher BINARY there, because
+- **MCP servers live in the owning plugin's `.mcp.json`** (`plugins/*/.mcp.json`) — the
+  only lane since nix-config's gateway was purged on 2026-10-02. (The old `mcp-clients/`
+  catalog the gateway read was deleted once nothing read it.) A server needing a
+  credential names a launcher BINARY there, because
   `.mcp.json` `env` takes literals and passthroughs only and cannot run a Keychain read —
   that half is a PATH package in nix-config (`local.gmailMcp`, `local.pluginMcp`).
 - **Plugins here carry no `version` field: every commit on `main` is a new release**,
