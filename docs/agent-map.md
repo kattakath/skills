@@ -412,7 +412,7 @@ skill it relies on, and the plumbing that turns a merged PR into something every
 | `github-release-gate` | Safety: the gate order as a reusable skill | guards Retain | `skills/github-release-gate/` (`assets/ruleset.json`, `assets/auto-merge.yml`, `references/merge-queue.md`) | 0.2.0 [measured] |
 | `validate` + `auto-merge` workflows | The gate itself for this repo | guards Retain | `.github/workflows/validate.yml`, `.github/workflows/auto-merge.yml` | commit SHA |
 | `kattakath` marketplace | Delivery: every merge to `main` is a release | n/a | `.claude-plugin/marketplace.json` | versionless since [#4](https://github.com/kattakath/skills/pull/4) [measured] |
-| Harness (`kattakath/nix-config`) | Declaration: which marketplaces exist and which plugins are enabled | n/a | `modules/shared/home.nix` in https://github.com/kattakath/nix-config | Nix flake |
+| Harness (`kattakath/nix-config`) | Declaration: which marketplaces exist and which plugins are enabled | n/a | `modules/home/default.nix` (`local.claudePlugins.marketplaces`, `.declared`; options in `modules/home/claude-plugins.nix`) in https://github.com/kattakath/nix-config | Nix flake |
 
 - The CBR column uses the 4R cycle of Aamodt and Plaza (AI Communications 1994, doi 10.3233/AIC-1994-7104): Retrieve, Reuse, Revise, Retain, plus case-base maintenance. [source] Assigning each component to a verb is this document's own mapping. [inferred]
 - Versions are the `version:` lines in each `SKILL.md` frontmatter as of 2026-09-23. [measured] No `plugin.json` or marketplace entry carries a `version`, so what users install is pinned by the commit SHA. [measured, PR #4]
@@ -515,10 +515,10 @@ What each arrow is, concretely:
 ```
  CONTENT: kattakath/skills        HARNESS: kattakath/nix-config
  ┌────────────────────────┐       ┌────────────────────────┐
- │ PR ─▶ validate ─▶ merge│       │ modules/shared/home.nix│
+ │ PR ─▶ validate ─▶ merge│       │modules/home/default.nix│
  │ to main                │       │ local.claudePlugins    │
- │ (commit SHA = version) │       │  .marketplaces         │
- └───────────┬────────────┘       │  .kattakath.plugins    │
+ │ (commit SHA = version) │       │  .marketplaces: catalog│
+ └───────────┬────────────┘       │  .declared.<id> = true │
              │ no `version`       │ + 1 line per NEW skill │
              ▼                    └───────────┬────────────┘
  ┌────────────────────────┐   declares as     │
@@ -539,13 +539,21 @@ What each arrow is, concretely:
 | Change | Content-repo PR | Harness PR | Flake pin bump |
 |---|---|---|---|
 | Edit an **already enabled** skill or plugin | yes | **no**, auto-update delivers it | no |
-| Add a **new** skill or plugin | yes (first; also adds its route) | yes, **one line** in the enabled list, only after the content PR merges | no |
+| Add a **new** skill or plugin | yes (first; also adds its route) | yes, **one line** in `local.claudePlugins.declared` (an `<plugin>@kattakath` id set to `true`), only after the content PR merges — or `/plugin`, machine-local | no |
 | Retire a skill (curator) | no | yes, remove the enable line (defined in `skills/skill-curator/SKILL.md` §3; not yet exercised) | no |
 | Change `superhook` or `page-lab-pick` (PATH packages) | yes | yes, bump the flake input `kattakath-skills` when the new code is needed there [inferred] | yes; the pin feeds only these two packages [measured, `flake.nix` comment] |
 
 - Since PR [#4](https://github.com/kattakath/skills/pull/4) (2026-09-23T09:08:54Z, `6dd2083`), plugins carry **no `version`**. The commit SHA is the version, so every merge to `main` reaches every user with marketplace auto-update on. [measured]
 - The flake input was renamed from `kattakath-ai` to `kattakath-skills` on 2026-09-23. It is used only for the two PATH packages, and plugins are not read from the pin. [measured, `flake.nix` comment] That is why "bump kattakath-ai in nix-config" turned out to need no bump. [measured]
 - The enable PRs from this session: [#616](https://github.com/kattakath/nix-config/pull/616) (`github-release-gate`, 2026-09-23T12:37:32Z), [#617](https://github.com/kattakath/nix-config/pull/617) (`skill-creator`, 13:19:11Z), [#618](https://github.com/kattakath/nix-config/pull/618) (`skill-curator`). Each was merged by nix-config's own App-token auto-merge after all of its checks passed. [measured]
+- **SUPERSEDED 2026-10-30 — the enable mechanism changed; do not copy those PRs.** They
+  appended names to `local.claudePlugins.marketplaces.kattakath.plugins`. That list is now a
+  catalogue and **enables nothing**: nix-config #751 added a name there on 2026-10-02, nothing
+  loaded, and #754 reverted it. What enables a plugin is an `enabledPlugins` entry, written
+  either by `local.claudePlugins.declared` (nix-config #758) or by `/plugin`. "Enable line"
+  in this document means a `declared` entry from here on. The canonical statement is
+  harvest's adapter table, Enable row (`plugins/harvest/skills/harvest/SKILL.md`); the
+  mechanism is nix-config `modules/home/claude-plugins.nix`.
 - Until the harness PR merges, a new skill is not loaded globally. A project-local copy under `.claude/skills/` is acceptable only if it is deleted before the harness PR lands, because two copies shadow each other. [measured, `skills/harvest/SKILL.md`]
 
 > **Note:** under a declarative harness, the broker and harvest never install imperatively. `npx skills find` is allowed, `npx skills add` is not, and MCP servers are adopted only through nix-config's `mcp-scout` into the owning plugin's `.mcp.json`, never `claude mcp add`. [measured, `INDEX.md` sources; PR [#10](https://github.com/kattakath/skills/pull/10)]
@@ -846,7 +854,7 @@ the SKILL.md files.* [source: the SKILL.md files listed below]
 | capability-broker | Retrieve: find the lightest capability that works | 0.3.0 | `skills/capability-broker/SKILL.md` |
 | INDEX.md | The map: goal → route, generated and CI-checked | n/a | `scripts/build-index.py` |
 | skill-curator | Maintain: retire unused skills on counted evidence | 0.2.0 | `skills/skill-curator/SKILL.md` |
-| Delivery | Ship: versionless marketplace plus Nix harness | n/a | `.claude-plugin/marketplace.json`, nix-config `modules/shared/home.nix` |
+| Delivery | Ship: versionless marketplace plus Nix harness | n/a | `.claude-plugin/marketplace.json`, nix-config `modules/home/default.nix` |
 
 ---
 
@@ -1046,7 +1054,7 @@ declarative harness may delete on its next activation. [source: `skills/harvest/
 | Harness | `kattakath/nix-config` |
 | Prior art to search | nix-config `docs/`, `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
 | Index | Route in `index/routes.json` (`gap: true` if no outside source covers it), then `python3 scripts/build-index.py` |
-| Enable | Append the name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
+| Enable | **Not** the `local.claudePlugins.marketplaces.kattakath.plugins` list — a catalogue that enables nothing (nix-config #751, reverted #754). Two lanes enable: `local.claudePlugins.declared` in nix-config `modules/home/default.nix` (#758), or `/plugin` per machine. Canonical: harvest's own Enable row. |
 | MCP servers | Never harvested here; only through nix-config's `mcp-scout`, into the owning plugin's `.mcp.json` |
 
 **Evidence** [measured, 2026-09-23]
@@ -1320,9 +1328,10 @@ retirement is reversible.* [source]
 
 **Key rules**
 
-- **Retire from the harness, not the repo.** Remove the name from
-  `local.claudePlugins.marketplaces.kattakath.plugins` in nix-config
-  `modules/shared/home.nix`. The skill stays published, and one line restores it. The git
+- **Retire from the harness, not the repo.** Remove (or set `false`) its
+  `local.claudePlugins.declared` entry in nix-config `modules/home/default.nix` — not the
+  `plugins` catalogue, which enables nothing (see [§5.3](#53-the-two-repo-delivery-path)).
+  The skill stays published, and one line restores it. The git
   revert is the rollback that Hermes needed tar snapshots for. [source]
 - **Never delete** a skill directory during curation. Deletion is a separate, explicit
   decision (as with Hermes `purge`). [source]
@@ -1393,9 +1402,9 @@ changed outside a gated PR. [inferred; see [§5.3](#53-the-two-repo-delivery-pat
 ```
  kattakath/skills                       kattakath/nix-config
 ┌──────────────────────┐               ┌───────────────────────────┐
-│ PR ─► validate ─►    │               │ home.nix:                 │
-│ App-token auto-merge │               │  marketplaces.kattakath   │
-│ ─► main (SHA = ver.) │               │  .plugins = [ ... ]       │
+│ PR ─► validate ─►    │               │ modules/home/default.nix: │
+│ App-token auto-merge │               │  claudePlugins.declared   │
+│ ─► main (SHA = ver.) │               │  .<id> = true             │
 └─────────┬────────────┘               └────────────┬──────────────┘
           │ git marketplace, auto-update            │ enable PR
           │ (enabled entries change)                │ (new only)
@@ -1456,7 +1465,7 @@ enable line after its content PR merges, and retiring removes that line. [measur
 
 **Files:** `.claude-plugin/marketplace.json` (15 entries at commit 308e0c6 (PR #13) [source]),
 `.github/workflows/validate.yml`, `.github/workflows/auto-merge.yml`; nix-config
-`modules/shared/home.nix`, `flake.nix`, `docs/auto-merge-and-merge-queue.md`.
+`modules/home/default.nix`, `flake.nix`, `docs/auto-merge-and-merge-queue.md`.
 
 ## 8. Why this, not that
 
@@ -1722,7 +1731,7 @@ The ladder comes from the author's motto: "Off-the-shelf over hand-rolled. Prove
 
 ### 8.17 Why retire a skill through the harness instead of deleting it?
 
-- **Decision:** retirement is a PR that removes the skill's enable line in nix-config (`local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix`). The skill directory stays. Deletion is a separate, explicit decision. `[measured]`
+- **Decision:** retirement is a PR that removes the skill's enable line in nix-config (its `local.claudePlugins.declared` entry in `modules/home/default.nix`; earlier revisions said the `plugins` list, which enables nothing — [§5.3](#53-the-two-repo-delivery-path)). The skill directory stays. Deletion is a separate, explicit decision. `[measured]`
 - **Why:**
   - It can be undone: `git revert` of that PR is the rollback. `[measured]`
   - Hermes does the same: it archives into `.archive/` and never deletes. `[source]`
@@ -1741,7 +1750,7 @@ The ladder comes from the author's motto: "Off-the-shelf over hand-rolled. Prove
 
 ### 8.19 Why declare marketplaces in Nix instead of running `npx skills add`?
 
-- **Decision:** with a declarative harness, **installation is declaration**. nix-config registers `kattakath/skills` as an auto-updating git marketplace and lists enabled plugins in `modules/shared/home.nix`. A new skill needs a one-line enable PR there (for example #616, #617, #618). `capability-broker` runs `npx skills find` to **search** but never `npx skills add` under a harness. `[measured]`
+- **Decision:** with a declarative harness, **installation is declaration**. nix-config registers `kattakath/skills` as an auto-updating git marketplace and enables plugins through `local.claudePlugins.declared` in `modules/home/default.nix`. A new skill needs a one-line enable PR there. (#616, #617 and #618 used the `plugins` list, which no longer enables anything — [§5.3](#53-the-two-repo-delivery-path).) `capability-broker` runs `npx skills find` to **search** but never `npx skills add` under a harness. `[measured]`
 - **Why:**
   - An imperative install writes state the harness does not know about. The next rebuild may drop it, and a second machine never gets it. `[inferred]`
   - The enable PRs go through nix-config's own gate: Lint .claude config, Scan for secrets, arm auto-merge, builds for aarch64-darwin and aarch64-linux, flake-checker, legs, required-checks, review. `[measured]`
@@ -2374,7 +2383,7 @@ SECI (Nonaka, 1994) has no arXiv entry. It is cited by name in [Section 9](#9-pr
 | Gate | `skills/github-release-gate/` (0.2.0): `assets/ruleset.json`, `assets/auto-merge.yml`, `references/merge-queue.md` |
 | CI | `.github/workflows/validate.yml`, `.github/workflows/auto-merge.yml` |
 | PRs of the session | https://github.com/kattakath/skills/pull/1 and https://github.com/kattakath/skills/pull/5 through https://github.com/kattakath/skills/pull/13 (ledger in [Appendix A](#appendix-a-pr-and-commit-ledger)) |
-| Harness | https://github.com/kattakath/nix-config: `modules/shared/home.nix`, `docs/auto-merge-and-merge-queue.md`; enable PRs https://github.com/kattakath/nix-config/pull/616, https://github.com/kattakath/nix-config/pull/617, https://github.com/kattakath/nix-config/pull/618 |
+| Harness | https://github.com/kattakath/nix-config: `modules/home/default.nix`, `docs/auto-merge-and-merge-queue.md`; enable PRs https://github.com/kattakath/nix-config/pull/616, https://github.com/kattakath/nix-config/pull/617, https://github.com/kattakath/nix-config/pull/618 |
 
 ```
  standards --> Anthropic guidance --> indexes --> collections
@@ -3088,7 +3097,7 @@ Copied from [§1](#1-tldr), [§5.4](#54-the-release-gate-order-matters) and [App
 | §14: merge-time spine | The day's merges on a vertical spine, marking the missing gate at #5 and the silent merge at #7. |
 | §15.2: Roadmap in three horizons | Now, next and later columns listing the state and next steps for route, chart, prune, gate and delivery. |
 | Appendix C: The files this document refers to | A file tree of kattakath/skills showing index/, scripts/, skills/ and plugins/. |
-| Appendix C: The three nix-config files | A file tree of nix-config with flake.nix, home.nix and the auto-merge doc. |
+| Appendix C: The three nix-config files | A file tree of nix-config with flake.nix, modules/home/default.nix and the auto-merge doc. |
 | Appendix D: The production pipeline | BRIEF and FACTS feed nine parallel writers and fact-checkers, then assembly, a critic and a draft PR. |
 
 The §16.9 storyboards and the §7.5 PR-body template are frame lists and a template, not diagrams, so they get no alt text.
@@ -3109,7 +3118,7 @@ The §16.9 storyboards and the §7.5 PR-body template are frame lists and a temp
 | **Marketplace** | A catalogue of plugins defined by `.claude-plugin/marketplace.json`. Here: the `kattakath` marketplace. |
 | **Versionless marketplace** | Plugins with no `version` field, so the commit SHA is the version and every merge to `main` ships through auto-update (since PR #4). [measured] |
 | **Harness** | The declarative environment that decides what an agent has. Here: `kattakath/nix-config`, a Nix flake that declares machines, Claude Code settings, marketplaces and enabled plugins. |
-| **Enable line / enable PR** | The one line in nix-config's `modules/shared/home.nix` (`local.claudePlugins.marketplaces.kattakath.plugins`) that turns a plugin on, and the PR that adds it (#616–#618). |
+| **Enable line / enable PR** | The one `local.claudePlugins.declared` entry in nix-config's `modules/home/default.nix` that turns a plugin on, and the PR that adds it. Not a name in the `plugins` catalogue, which enables nothing; #616–#618 predate that distinction ([§5.3](#53-the-two-repo-delivery-path)). |
 | **Pin (flake input)** | nix-config's `kattakath-skills` input (renamed from `kattakath-ai`). It feeds only two PATH packages (`superhook`, `page-lab-pick`), not plugins. |
 | **Map** | This document's metaphor for the charted know-how. Concretely: `INDEX.md` plus the skill descriptions. Illustrative, not literal. |
 | **INDEX.md** | The generated goal → route table and source list at the repo root. Built by `scripts/build-index.py` and checked in CI. |
@@ -3275,10 +3284,10 @@ kattakath/skills
 ```
 kattakath/nix-config  (the harness)
 ├── flake.nix                 input kattakath-skills (PATH pkgs)
-├── modules/shared/home.nix   marketplaces.kattakath.plugins
+├── modules/home/default.nix  claudePlugins.declared (enables)
 └── docs/auto-merge-and-merge-queue.md   App token; queue history
 ```
-*Caption: The three nix-config files involved: the pin, the enable list, and the doc that already held the fix.*
+*Caption: The three nix-config files involved: the pin, the enable lane, and the doc that already held the fix.*
 
 ### Appendix D. How this document was produced, and how to regenerate it
 

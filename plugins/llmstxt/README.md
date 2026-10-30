@@ -4,9 +4,8 @@ Author a spec-compliant **`llms.txt`** — and, where it earns its place, the de
 **`llms-full.txt`** — from any body of written work: a docs tree, a website, a repo, a
 portfolio, or a developer accomplishment document.
 
-In-repo plugin, served from the `kattakath-nix-config` marketplace (`plugins/` at the repo
-root) and installed declaratively by `modules/shared/home.nix`. Nothing is fetched from a
-third-party marketplace, so it cannot drift.
+Served from the `kattakath` marketplace (`github:kattakath/skills`). Delivery and
+enablement are documented once, in this repo's `CLAUDE.md` — not restated here.
 
 ## What llms.txt is
 
@@ -169,19 +168,7 @@ site-side publishing, not content authoring, and this plugin depends on none of 
 
 ## Installing / changing it
 
-Installed by `home.activation.claudeCodePlugins` (`modules/shared/home.nix`) as
-`llmstxt@kattakath-nix-config`, from a Nix **source path** — `plugins/` is copied into the
-store and the marketplace is pinned to that store path.
-
-Editing anything under `plugins/` changes the store path, so activation re-pins the
-marketplace and reinstalls the plugin on the next switch. Bump `version` in **both**
-`.claude-plugin/plugin.json` and `plugins/.claude-plugin/marketplace.json` when you change
-behaviour — `claude plugin tag` validates that the two agree.
-
-```bash
-git add -A                                        # flakes ignore untracked files
-claude plugin validate --strict plugins/llmstxt   # manifest + component check
-claude plugin validate --strict plugins           # marketplace check
-nix flake check                                   # fleet-wide evaluation gate
-activate                                          # activate (operator's call)
-```
+The plugin id is `llmstxt@kattakath`. It carries no `version`: a merge to `main` is the
+release, and how it reaches a machine (and how a merged change is pulled in sooner) is this
+repo's `CLAUDE.md` § Shipping a change. The checks to run before pushing are its
+§ Validating before you push.

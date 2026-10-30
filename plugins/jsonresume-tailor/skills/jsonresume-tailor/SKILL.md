@@ -38,8 +38,9 @@ version stays diffable, re-renderable, and honest.
   resume URL from `jsonResumeGistId` (modules/parts/identity.nix), so `jsonresume download` with no
   `--url` fetches the canonical resume.
 - **Rendering CLIs** (npm globals): `resumed` (+ `puppeteer`) preferred, `resume-cli`
-  fallback / for md-text. PDF renders through system Chrome (the puppeteer policy in
-  `modules/shared/home.nix`).
+  fallback / for md-text. PDF renders through the host's own browser, never a
+  puppeteer download (the `PUPPETEER_*` session variables in nix-config
+  `modules/home/default.nix` own which one).
 - **Job sources:** the **Indeed** connector (`mcp__claude_ai_Indeed__search_jobs`,
   `…__get_job_details`) and/or the **`jobspy`** scraper (`packages/jobspy.nix`,
   LinkedIn/Indeed/… → CSV/JSON).
