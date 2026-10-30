@@ -149,6 +149,6 @@ found and could not be cleared. Exit `2` is the loud one — a tab somewhere is 
 2. **An open debugging port is an unauthenticated control channel.** Any local process can
    drive that browser and act as the signed-in user. Hand-run only — **never** a launchd agent
    or a login item — and close it when the work ends.
-3. **Kapture's two halves drift.** The bridge is an unpinned `npx -y …@latest`; the extension
-   is pinned in Nix, and the bridge already version-gates it [F-KAPTURE-SKEW]. A tier-2/3
+3. **Kapture's two halves drift.** The bridge version is pinned in this plugin's `.mcp.json`;
+   the extension is pinned separately in Nix, and the bridge already version-gates it [F-KAPTURE-SKEW]. A tier-2/3
    failure that appeared without a config change is a skew suspect before it is a bug.
