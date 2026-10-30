@@ -191,7 +191,7 @@ symlink into a version-controlled directory so it is not the only copy.
 | Index | a route in `index/routes.json` (goal → steps; `gap: true` if no outside source covers it), then `python3 scripts/build-index.py`. CI fails if a skill has no route. An outside source that did the job goes in `index/sources.json` instead of a new skill. |
 | Enable | **Not the Nix `plugins` list** — that is a catalogue and enables nothing (`claude-plugins.nix` feeds it to an id set plus one assertion; `extraKnownMarketplaces` reads only `source`/`autoUpdate`). Measured 2026-10-02: nix-config #751 added a name there expecting it to go live, nothing happened, reverted in #754. **Two lanes actually enable:** `local.claudePlugins.declared` (an `attrsOf bool` of `<plugin>@<marketplace>` ids — ADR-008's declarative lane, landed in nix-config #758) and `/plugin` at runtime, which overrides per machine. The always-on floor is a small hardcoded set — read the names in `claude-plugins.nix`, do not copy them into prose (see the note below). |
 | Harness checks | `git add -A && nix flake check`; PR title per its `pr-title` rule |
-| MCP servers | never harvested here — adopted only through nix-config's `mcp-scout` |
+| MCP servers | never harvested here — adopted through nix-config's `mcp-scout`, which declares them in the owning plugin's `.mcp.json` |
 
 **Do not name sibling plugins in prose.** `skill-curator`'s reference detector counts a
 backticked plugin name **anywhere** in another plugin's markdown as a dependency, so citing one as

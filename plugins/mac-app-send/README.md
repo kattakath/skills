@@ -37,7 +37,7 @@ means a throw would fail **open** and silently disarm every rule above it.
 ## Requires
 
 **The `computer-use` MCP server.** This plugin does **not** ship or install one — on this fleet
-MCP servers are adopted only through `nix-config`'s `mcp-scout`, never a plugin `.mcp.json`.
+an MCP server is declared in its owning plugin's `.mcp.json`, adopted through `nix-config`'s `mcp-scout`.
 If the computer-use tools are absent, the skill and commands still explain the method but
 nothing can be driven.
 

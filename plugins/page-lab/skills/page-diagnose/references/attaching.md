@@ -60,7 +60,7 @@ relaunch leaves pointing at a **dead** socket [F-DEVTOOLSACTIVEPORT-STALE].
 **So probe, never assume.** `/json/version` is authoritative *when it answers*, because it
 carries the live `webSocketDebuggerUrl` rather than a cached copy. Fall back to the file
 only when nothing answers — which is exactly the mode in which the file is fresh. That is
-what `nix-mcp-chrome-devtools` (`modules/shared/mcp.nix`) and `browserSocket()` in
+what the launcher (`scripts/chrome-devtools-attach.sh`) and `browserSocket()` in
 `scripts/lib/cdp.mjs` both do, and what `devtools-doctor.sh` reports.
 
 ### 2a. `--browser-url` (manual port) — for a LAUNCH-FLAG browser
@@ -184,9 +184,9 @@ fails with `Could not find DevToolsActivePort for chrome at …/Google/Chrome/De
 dir** (the one holding `DevToolsActivePort` and `Default/`), not the `Default/` profile inside it.
 
 In consent mode this is the only route that survives a restart, because the port **and**
-the browser WebSocket UUID both change every launch. `modules/shared/mcp.nix` therefore
-configures **both** a probe port and a directory, and picks between this and 2a at spawn
-time rather than committing to either.
+the browser WebSocket UUID both change every launch. `scripts/chrome-devtools-attach.sh`
+therefore configures **both** a probe port and a directory, and picks between this and 2a
+at spawn time rather than committing to either.
 
 #### Pitfall — the spawn-time pick holds for the whole session [F-ATTACH-MODE-LOCKED]
 
