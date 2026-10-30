@@ -104,9 +104,8 @@ belongs to the preset tool.
   polling only adds latency and flakiness.
 - **One page id per call.** Confirm it from the page list rather than assuming the last-opened
   page is still current.
-- **Never build a plan on a documented-but-absent tool.** The published package ships **29**
-  tools — upstream's generated docs describe roughly twice that, from `main`
-  [F-CDP-29TOOLS]. `references/tools.md` records what exists, what is absent, and how to
+- **Never build a plan on a documented-but-absent tool.** The published package ships fewer
+  tools than upstream's generated docs describe, from `main` [F-CDP-29TOOLS]. `references/tools.md` records what exists, what is absent, and how to
   re-measure after a version bump.
 - **Files enter and leave through the server's roots.** Uploads and saved snapshots are
   refused outside them: the session's start directory, `$TMPDIR` and the Claude Code
@@ -127,10 +126,11 @@ belongs to the preset tool.
 
 ## Extensions
 
-**Not possible in the published version.** The entire Extensions tool group is absent from
-`chrome-devtools-mcp@1.8.0` [F-CDP-29TOOLS], so the appealing "launch a clean instance and
-install a userscript manager into it" route **does not exist**. Exercising extension behaviour
-means attaching to a browser that already has it installed.
+**Exposed, not proven.** The Extensions tool group exists only behind `--categoryExtensions`,
+which this plugin's launcher passes [F-CDP-29TOOLS]. Nothing has yet shown it loading a
+userscript manager into a clean instance, so that route is **unproven** — until a measurement
+shows it, exercising extension behaviour means attaching to a browser that already has it
+installed.
 
 ## Hand-off
 

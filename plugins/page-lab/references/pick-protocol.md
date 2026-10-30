@@ -285,9 +285,9 @@ selector.
 
 - **`$0` from a separate CDP session.** `undefined` even with `includeCommandLineAPI:true`; it
   is bound per session via `DOM.setInspectedNode` [F-DOLLAR-ZERO-DEAD].
-- **Loading a userscript manager into a clean instance.** The whole Extensions tool group is
-  absent from the pinned server [F-CDP-29TOOLS], so the clean-room route does not exist and
-  the loop still ends at a human clicking Install.
+- **Loading a userscript manager into a clean instance.** The Extensions tools are exposed
+  (flag-gated) but have never been shown to load a manager [F-CDP-29TOOLS], so the clean-room
+  route is unproven and the loop still ends at a human clicking Install.
 - **"The socket close cleans it up."** Unmeasured [F-UNMEASURED-DISCONNECT-RESET]. Disarm
   explicitly.
 - **An arbitrary CDP command through the MCP server.** No version has ever had one
