@@ -117,7 +117,7 @@ quiet "forced sandbox with --check"      'nix-build --check --option sandbox tru
 quiet "sandbox false is the default"     'nix build --option sandbox false .#checks.aarch64-darwin.project-gate'
 quiet "reading the sandbox setting"      'nix config show sandbox'
 quiet "plain flake check"                'nix flake check --all-systems --no-build'
-# Real firings on ordinary work (takeoff-ai session, 2026-10-27): each must stay quiet.
+# Real firings on ordinary work (a client-repo session, 2026-10-27): each must stay quiet.
 quiet "for over literal \$D/ words"      'for f in $D/a.jsonl $D/b.jsonl; do echo "$f"; done'
 quiet "gh api one check-run by id"       'gh api repos/o/r/check-runs/121740144041 > run.json'
 quiet "gh api one comment, PATCH"        'gh api -X PATCH repos/o/r/issues/comments/6438749595 -F body=@c.md'

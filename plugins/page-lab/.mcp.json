@@ -2,7 +2,7 @@
   "mcpServers": {
     "kapture": {
       "command": "npx",
-      "args": ["-y", "kapture-mcp@latest", "bridge"]
+      "args": ["-y", "kapture-mcp@2.6.1", "bridge"]
     },
     "chrome-devtools": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/chrome-devtools-attach.sh",

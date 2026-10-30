@@ -28,7 +28,8 @@ on:
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number }}
-  cancel-in-progress: true
+  # false: `true` let a later event cancel the ready_for_review arm run, leaving the PR unarmed (kattakath/nix-config #750).
+  cancel-in-progress: false
 
 # The App token carries the merge rights; the default token needs none.
 permissions:
