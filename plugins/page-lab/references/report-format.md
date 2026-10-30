@@ -37,17 +37,10 @@ The envelope contract is [`pick-protocol.md`](pick-protocol.md) § 1.
 
 ### Rows the fleet skill adds
 
-`.claude/skills/userscript-author/SKILL.md` renders the same block and appends **only** these
-three, because only they are specific to how a script reaches this fleet's browser:
-
-```markdown
-- **Files:** userscripts/<kebab>.user.js · modules/shared/home.nix
-- **Gates:** userscripts ✅/❌ · fmt ✅/❌ · flake check ✅/❌
-- **Operator action:** activate, then click <kebab> in index.html and confirm
-```
-
-The fleet `Operator action:` replaces the portable one; `Files:` and `Gates:` slot in ahead of
-it. Nothing else in the block changes.
+The fleet layer — `.claude/skills/userscript-author/SKILL.md` in `kattakath/nix-config` —
+owns its own rows, which describe how a script reaches this fleet's browser (delivery is
+publication, not a Nix declaration). Read them there; they are deliberately not copied here,
+because a copy is what went stale the last time delivery changed.
 
 ## Diagnosis report
 

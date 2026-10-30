@@ -1,8 +1,8 @@
 <!-- page-lab:tools-measurement
 MEASURED_PACKAGE=chrome-devtools-mcp
-MEASURED_VERSION=1.8.0
-MEASURED_TOOL_COUNT=29
-MEASURED_AT=2026-09-06
+MEASURED_VERSION=1.12.0
+MEASURED_TOOL_COUNT=32
+MEASURED_AT=2026-10-30
 -->
 
 # Tool catalogue
@@ -12,20 +12,27 @@ MEASURED_AT=2026-09-06
 `TOOLS_DRIFT=yes|no`. **Edit it only after re-running that measurement** — a hand-edited header
 turns the one drift detector this plugin has into a liar. The prose below must agree with it.
 
-**The published package exposes fewer tools than upstream's documentation lists.** Measured
-against `chrome-devtools-mcp@1.8.0` (npm latest, published 2026-08-25) on 2026-09-06:
-**29 tools**, identical in both attach mode (`--browser-url`) and launch mode
-(`--isolated --headless`) [F-CDP-29TOOLS].
+**`MEASURED_VERSION` must equal the version pinned in `scripts/chrome-devtools-attach.sh`.**
+The doctor measures the version written HERE, not the one the launcher runs — so a launcher bump
+without a re-measure still reports `TOOLS_DRIFT=no`, against the old release.
 
-**Upstream's generated `docs/tool-reference.md` is written from `main`** and describes roughly
-**57**; `--slim` is **3**. So a gap between a doc and this file is the expected state, not
+**The header counts the DEFAULT tool set**, which is what the doctor's runner starts. The
+plugin's launcher also passes `--categoryExtensions` (`.mcp.json` sets
+`CDP_CATEGORY_EXTENSIONS=1`), which adds the Extensions group below — so a live session sees
+more tools than the header. Both counts and their date live in [F-CDP-29TOOLS]; this file
+lists the names.
+
+**Upstream's generated `docs/tool-reference.md` is written from `main`** and describes more
+than the pinned release ships. So a gap between a doc and this file is the expected state, not
 evidence of a broken install — **re-measure the pinned version before claiming any gap is real.**
 
 Trust this list for what can be called today; trust upstream's doc for where the project is
 heading. Never assume a tool exists because a doc mentions it. The client's own tool list is
 the final authority.
 
-## The 29 tools that exist in 1.8.0
+## The tools that exist in the pinned release
+
+`get_css_styles` and the screencast pair are grouped by this file, not by upstream.
 
 ### Input (9)
 
@@ -74,10 +81,10 @@ This is the group `--no-performance-crux` protects: without it, trace URLs leave
 
 List first, then fetch the single request for headers, timing and status.
 
-### Debugging (6)
+### Debugging (7)
 
 `evaluate_script` · `list_console_messages` · `get_console_message` · `take_snapshot` ·
-`take_screenshot` · `lighthouse_audit`
+`take_screenshot` · `lighthouse_audit` · `get_css_styles`
 
 - **`evaluate_script`** runs JavaScript in the page — how measurement probes execute.
 - **`take_snapshot`** returns structured content and every `uid`; **`take_screenshot`**
@@ -85,36 +92,46 @@ List first, then fetch the single request for headers, timing and status.
 - **`list_console_messages`** carries source-mapped stacks. An empty console where an error
   was expected usually means the code never ran.
 
+### Screencast (2)
+
+`screencast_start` · `screencast_stop`
+
 ### Memory (1)
 
 `take_heapsnapshot`
 
-Only the capture tool ships in 1.8.0.
+Only the capture tool ships in the pinned release.
 
-## Documented upstream but ABSENT from 1.8.0
+### Extensions (5) — only with `--categoryExtensions`
+
+`install_extension` · `list_extensions` · `reload_extension` · `trigger_extension_action` ·
+`uninstall_extension`
+
+Absent from the default set (and so from the header's count); present because this plugin's
+launcher opts in. **Exposed is not exercised:** whether `install_extension` can load a userscript
+manager into a driven browser has not been measured, so do not plan on it until it is.
+
+## Documented upstream but ABSENT from the pinned release
 
 Do not plan a workflow around these until a measurement shows them present:
 
 | Group | Missing tools | Consequence |
 |---|---|---|
-| **Extensions** | `install_extension`, `list_extensions`, `reload_extension`, `trigger_extension_action`, `uninstall_extension` | **No way to load an extension into the driven browser.** Testing a userscript manager means attaching to a browser that already has one. |
 | **Memory** | the other 12 `*_heapsnapshot*` tools | A snapshot can be captured but not compared or queried, so the compare-two-snapshots leak workflow is unavailable. |
 | **PWA** | `get_os_app_state`, `install_pwa`, `launch_pwa`, `uninstall_pwa` | No PWA lifecycle control. |
 | **Third-party / WebMCP** | `list_3p_developer_tools`, `execute_3p_developer_tool`, `list_webmcp_tools`, `execute_webmcp_tool` | Not available. |
-| **Misc** | `click_at`, `screencast_start`, `screencast_stop` | No coordinate clicking and no screencast; `take_screenshot` is the evidence tool. |
+| **Misc** | `click_at` | No coordinate clicking. |
 
-The Extensions gap is the one that changes plans: the appealing idea of "launch a clean
-isolated browser, install a userscript manager into it, test there" **cannot be done with
-1.8.0**. Attaching to a browser that already has the extension is the only route today.
-
-**The clean-room authoring route therefore does not exist.** No amount of protocol access
-loads a userscript manager into a driven browser, so the authoring loop still ends where it
-always did: **a human clicking Install**, in their own browser, on their own profile.
+**The clean-room authoring route is still unproven.** The Extensions tools exist, but nothing
+here has shown one loading a userscript manager into a driven browser. Until a measurement
+does, the authoring loop ends where it always did: **a human clicking Install**, in their own
+browser, on their own profile.
 
 ## Slim mode
 
-`--slim` exposes a reduced set (3) for basic navigate-and-read work. The full 29 are needed for
-tracing, snapshots and network inspection.
+`--slim` exposes a reduced set (3: `navigate`, `evaluate`, `screenshot`, re-measured on the
+pinned release) for basic navigate-and-read work. The full set is needed for tracing, snapshots
+and network inspection.
 
 ## How this list was produced — the re-measure recipe
 

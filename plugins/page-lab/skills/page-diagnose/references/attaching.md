@@ -4,6 +4,10 @@ Everything here is from the upstream README and `docs/advanced-usage.md`, **fetc
 2026-09-06**. Where upstream states a limit or a warning, it is quoted rather than
 paraphrased.
 
+The examples pin the same version as the plugin's launcher, `scripts/chrome-devtools-attach.sh`,
+which is the owner of that pin — when it moves, move these with it. Never `@latest`: an
+unpinned fetch can change the tool surface under a recorded measurement.
+
 ## Mode 1 — let the server launch Chrome (default)
 
 No setup. The server starts Chrome the first time a tool needs a browser; merely
@@ -15,7 +19,7 @@ connecting to the MCP server does not launch anything.
     "chrome-devtools": {
       "command": "npx",
       "args": [
-        "-y", "chrome-devtools-mcp@latest",
+        "-y", "chrome-devtools-mcp@1.12.0",
         "--no-usage-statistics",
         "--no-performance-crux"
       ]
@@ -34,10 +38,10 @@ should leave no trace.
 
 Add `--headless` for no window, and `--slim` to expose only the basic tool set.
 
-**No extensions are present in a fresh profile, and 1.8.0 cannot add any** — the Extensions
-tool group is documented upstream but absent from the published package (measured
-2026-09-06; see `references/tools.md`). Exercising extension behaviour therefore requires
-attach mode against a browser that already has it installed.
+**No extensions are present in a fresh profile.** The Extensions tool group exists only behind
+`--categoryExtensions` and has not been shown to load a userscript manager [F-CDP-29TOOLS], so
+until it is, exercising extension behaviour requires attach mode against a browser that
+already has it installed.
 
 ## Mode 2 — attach to an already-running browser
 
@@ -75,7 +79,7 @@ the live WebSocket URL every time. **Dead against a consent-mode browser.**
     "chrome-devtools": {
       "command": "npx",
       "args": [
-        "-y", "chrome-devtools-mcp@latest",
+        "-y", "chrome-devtools-mcp@1.12.0",
         "--browser-url=http://127.0.0.1:9222",
         "--no-usage-statistics",
         "--no-performance-crux"
@@ -161,7 +165,7 @@ user-data dir.
     "chrome-devtools": {
       "command": "npx",
       "args": [
-        "-y", "chrome-devtools-mcp@latest",
+        "-y", "chrome-devtools-mcp@1.12.0",
         "--autoConnect",
         "--userDataDir=/Users/you/Library/Application Support/com.operasoftware.OperaAir",
         "--no-usage-statistics",
@@ -222,7 +226,7 @@ window in it.
 ### 2c. `--wsEndpoint` (one-shot, exact)
 
 ```bash
-npx -y chrome-devtools-mcp@latest \
+npx -y chrome-devtools-mcp@1.12.0 \
   --wsEndpoint "ws://127.0.0.1:61867/devtools/browser/<uuid>" \
   --no-usage-statistics --no-performance-crux
 ```

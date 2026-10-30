@@ -15,7 +15,7 @@ Run the **`page-diagnose`** skill from this plugin for: `$ARGUMENTS`
 2. **Choose the profile deliberately.** Launch an **isolated** instance for a public site; attach
    to the daily browser only when login state or an installed extension changes the result.
    `skills/page-diagnose/references/attaching.md` has both modes and the already-running trap.
-3. **Check what exists.** The published package ships far fewer tools than upstream's generated
+3. **Check what exists.** The published package ships fewer tools than upstream's generated
    docs describe [F-CDP-29TOOLS]. Consult `skills/page-diagnose/references/tools.md` rather than
    assuming a documented tool is callable — **never build a plan on an absent tool**.
 4. **Snapshot before interacting.** Input tools address elements by `uid` from the page snapshot,

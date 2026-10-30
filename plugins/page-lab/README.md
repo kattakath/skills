@@ -112,9 +112,9 @@ promoted only by re-running their recipe and dating the result — never by tidy
 
 That discipline is not decoration. Measured examples currently in the table:
 
-- `chrome-devtools-mcp@1.8.0` ships **29** tools, not the ~57 its generated docs describe —
-  so the entire Extensions group does not exist, and any plan built on `install_extension`
-  fails at the first call.
+- The pinned `chrome-devtools-mcp` ships fewer tools than its generated docs describe, and the
+  Extensions group appears only behind a flag [F-CDP-29TOOLS]. An earlier row called that
+  group absent; a flagged re-measure showed it had been there all along.
 - `$0` is **not** readable from a separate CDP session. Do not retry it.
 - `Overlay.setInspectMode({mode:'none'})` **rejects** unless `highlightConfig` is passed on the
   *disarm* too — which is why one `try/catch` around a disarm loop leaves every tab armed.
