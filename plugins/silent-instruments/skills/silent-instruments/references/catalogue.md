@@ -380,10 +380,11 @@ only where `false` is not a legal value.
 ### D1 · A list that reads like the enablement list — and nothing reads it
 In `kattakath/nix-config`, `local.claudePlugins.marketplaces.<mp>.plugins` reads exactly like
 "the plugins that are enabled". It is not. It has exactly two consumers, both in
-`modules/shared/claude-plugins.nix`: `idsOf`/`allIds` (`:66`) and a per-name assertion (`:186`).
-The settings key is `enabledPlugins = lib.genAttrs alwaysOnIds (_: true)` (`:289`), and
-`alwaysOnIds` is `allIds` **filtered to three hardcoded names** (`alwaysOnNames`, `:70`). So
-adding any other name is a no-op that evaluates, formats, builds, passes CI and merges.
+`modules/home/claude-plugins.nix`: `idsOf`/`allIds` and the per-always-on-name assertion.
+The settings key is `enabledPlugins = cfg.declared // lib.genAttrs alwaysOnIds (_: true)`, and
+`alwaysOnIds` is `allIds` **filtered to a short hardcoded list** (`alwaysOnNames`). So adding
+any other name to `plugins` is a no-op that evaluates, formats, builds, passes CI and merges.
+(The `cfg.declared` half is the fix, nix-config #758: a `<plugin>@<mp>` id there IS written.)
 
 Nothing reports it, and every surface agrees with you: the PR is green, activation succeeds, the
 name is visibly present in the file you edited — complete with the comment you wrote explaining
@@ -393,7 +394,8 @@ that `genAttrs … (_: true)` cannot emit. So the file is written by the CLI and
 Nix: "my line is in the `.nix`" says nothing about what the runtime holds. nix-config **#751**
 added `empire` this way under a comment asserting it changed how every session starts; nothing
 happened, and **#754** reverted it. **#753** added `silent-instruments` the same way, and
-`silent-instruments@kattakath` is absent from `enabledPlugins` today.
+`silent-instruments@kattakath` was absent from `enabledPlugins` when this entry was
+measured.
 
 **Correct:** read the consumer, not the declaration —
 `jq '.enabledPlugins | has("<plugin>@<mp>")' ~/.claude/settings.json` (`has`, not a value read:

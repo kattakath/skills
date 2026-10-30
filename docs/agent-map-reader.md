@@ -209,11 +209,12 @@ one after the required `validate` check passed. [measured]
 | `skill-curator` | Prune: count use from transcripts, propose retirements by PR | `skills/skill-curator/` |
 | `INDEX.md` | The map: goal → route, generated from `index/*.json` and `marketplace.json`, checked in CI | repo root |
 | `github-release-gate` | The safety layer: required check, then auto-merge, then App-token arming | `skills/github-release-gate/` |
-| `kattakath/nix-config` | The harness: declares which marketplaces and skills each machine gets | its `modules/shared/home.nix` |
+| `kattakath/nix-config` | The harness: declares which marketplaces and skills each machine gets | its `modules/home/default.nix` |
 
 **Delivery.** A merge to the content repo ships through the auto-updating marketplace. A
-brand-new skill also needs one line in the harness to be enabled; changes to an enabled
-skill need nothing.
+brand-new skill also needs one `local.claudePlugins.declared` line in the harness (or a
+`/plugin` toggle) to be enabled — listing its name in the marketplace's `plugins` catalogue
+enables nothing. Changes to an enabled skill need nothing.
 
 **The gate, in the only safe order:**
 

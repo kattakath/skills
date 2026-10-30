@@ -78,7 +78,7 @@ try {
 const now = () => new Date().toISOString();
 
 // Size-based rotation, matching the collector's own policy for the OTel stream
-// (50 MiB / 5 backups — modules/shared/claude-otel.nix). Without it this file
+// (50 MiB / 5 backups — modules/home/claude-otel.nix in nix-config). Without it this file
 // grows without bound inside the repo: measured at 1,074,908 bytes with no
 // rotation, in a directory whose sibling observer log had reached 9 MB.
 // Deliberately smaller than the collector's cap — this is a hook log read by a

@@ -65,9 +65,9 @@ Two limits of the signal, stated in the PR every time:
 
 - **deprecated** → propose retiring it the same way, naming its `replaced_by`.
 - **archive-candidate** → propose retiring it from the **harness**, not the repo: remove its
-  name from the enabled list (for the kattakath fleet, `local.claudePlugins.marketplaces.kattakath.plugins`
-  in nix-config `modules/shared/home.nix`). The skill stays published and one line restores
-  it: the git revert is the rollback Hermes needed snapshots for.
+  enable entry (for the kattakath fleet, its `local.claudePlugins.declared` key in nix-config
+  `modules/home/default.nix` — not the marketplace's `plugins` list, which enables nothing).
+  The skill stays published and one line restores it: the git revert is the rollback Hermes needed snapshots for.
 - **stale** → list it in the PR description as next to go; change nothing.
 - **Never delete** a skill directory as part of curation. Deleting is a separate, explicit
   decision (Hermes' `purge` is also explicit-only).
