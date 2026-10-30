@@ -1,7 +1,8 @@
 #!/bin/sh
 # chrome-devtools-mcp launcher — attaches to a browser in EITHER of the two modes it
 # can be in. Ported from kattakath/nix-config's modules/shared/mcp.nix (the
-# `nix-mcp-chrome-devtools` wrapper) for the MCP ownership split, #657 batch 2.
+# `nix-mcp-chrome-devtools` wrapper, since deleted with the gateway on 2026-10-02)
+# for the MCP ownership split, #657 batch 2. This script is now the only copy.
 #
 # WHY A SCRIPT AND NOT A PLAIN `.mcp.json` ENTRY — this is the whole point, do not
 # "simplify" it away. No single upstream flag attaches in both modes:

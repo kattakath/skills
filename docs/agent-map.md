@@ -548,7 +548,7 @@ What each arrow is, concretely:
 - The enable PRs from this session: [#616](https://github.com/kattakath/nix-config/pull/616) (`github-release-gate`, 2026-09-23T12:37:32Z), [#617](https://github.com/kattakath/nix-config/pull/617) (`skill-creator`, 13:19:11Z), [#618](https://github.com/kattakath/nix-config/pull/618) (`skill-curator`). Each was merged by nix-config's own App-token auto-merge after all of its checks passed. [measured]
 - Until the harness PR merges, a new skill is not loaded globally. A project-local copy under `.claude/skills/` is acceptable only if it is deleted before the harness PR lands, because two copies shadow each other. [measured, `skills/harvest/SKILL.md`]
 
-> **Note:** under a declarative harness, the broker and harvest never install imperatively. `npx skills find` is allowed, `npx skills add` is not, and MCP servers are adopted only through nix-config's `mcp-scout`, never `claude mcp add`. [measured, `INDEX.md` sources; PR [#10](https://github.com/kattakath/skills/pull/10)]
+> **Note:** under a declarative harness, the broker and harvest never install imperatively. `npx skills find` is allowed, `npx skills add` is not, and MCP servers are adopted only through nix-config's `mcp-scout` into the owning plugin's `.mcp.json`, never `claude mcp add`. [measured, `INDEX.md` sources; PR [#10](https://github.com/kattakath/skills/pull/10)]
 
 > **Why not a second marketplace or a registry of our own?** The public collections and indexes already pin, scan and rank what they list, so the marketplace here is only the delivery format Claude Code already understands, for this repo's glue. Full record: [§8.10](#810-why-not-build-a-marketplace). [inferred]
 
@@ -1047,7 +1047,7 @@ declarative harness may delete on its next activation. [source: `skills/harvest/
 | Prior art to search | nix-config `docs/`, `.github/workflows/` comments, `.claude/rules/`; `gh search code --owner kattakath` |
 | Index | Route in `index/routes.json` (`gap: true` if no outside source covers it), then `python3 scripts/build-index.py` |
 | Enable | Append the name to `local.claudePlugins.marketplaces.kattakath.plugins` in `modules/shared/home.nix` |
-| MCP servers | Never harvested here; only through nix-config's `mcp-scout` |
+| MCP servers | Never harvested here; only through nix-config's `mcp-scout`, into the owning plugin's `.mcp.json` |
 
 **Evidence** [measured, 2026-09-23]
 
@@ -1141,8 +1141,8 @@ rail. [source: `skills/capability-broker/SKILL.md`]
 - **Detect the harness first.** Signals: `readlink ~/.claude/settings.json` resolves into
   `/nix/store`; an `mcp-scout`-style skill exists; deny rules block `claude mcp add`. [source]
 - **With a harness, installation IS declaration.** No `claude mcp add`, no writes to
-  `~/.claude.json`. Skills go through harvest, MCP servers through nix-config's `mcp-scout`,
-  plugins through the declared marketplace list. [source]
+  `~/.claude.json`. Skills go through harvest, MCP servers through nix-config's `mcp-scout`
+  (into a plugin `.mcp.json`), plugins through the declared marketplace list. [source]
 - **A new MCP server usually connects only next session**, so the task takes two sessions.
   Say so up front. [source]
 - **Human gates, whatever the tier:** authentication, money, irreversible or external acts

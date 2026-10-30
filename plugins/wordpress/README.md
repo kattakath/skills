@@ -21,7 +21,7 @@ delete.
 { "wordpress": { "command": "nix-mcp-wordpress" } }
 ```
 
-That launcher comes from **`kattakath/nix-config`** — `modules/shared/plugin-mcp.nix`
+That launcher comes from **`kattakath/nix-config`** — `modules/home/plugin-mcp.nix`
 builds it when `local.pluginMcp.servers` includes `"wordpress"`. Same arrangement
 `claude-code-nix` has with `mcp-nixos` and `page-lab` with `page-lab-pick`: the plugin
 declares, Nix installs. Without it on PATH the server simply fails to start.
