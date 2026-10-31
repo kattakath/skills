@@ -544,8 +544,31 @@ scripts and four hosts, through the DevTools protocol (`evaluate_script` + `new_
    that URL from an extension page gets swallowed. A changed `@name` installs as a NEW entry
    beside the old one; remove the old one, or both run.
 
+8. **Classify a red suite before believing it.** A fresh test profile is not the operator's
+   profile. Age gates, consent modals and region prompts come up that the operator passed
+   long ago. They hold focus, cover the player and lock scrolling, so keyboard, player and
+   scroll checks fail for reasons that have nothing to do with the build. Measured
+   2026-10-31: one host failed 11 checks across three runs while the same build worked on
+   the operator's profile.
+   - **A/B against the base build in the SAME browser.** Identical failures on the old file
+     mean the environment, not the change. Only a failure the base build does not show
+     counts against the release.
+   - **Skip named overlays, never broad ones.** Before keyboard, player or scroll checks,
+     detect the host's own gate or consent signature (its class or id, or a fixed overlay
+     covering most of the viewport with a gate element inside). Report those checks as
+     SKIPPED-ENVIRONMENT, with the reason. A generic "anything covers the page → skip"
+     would also hide a real script bug that covers the page.
+   - **Never clear a gate in a test profile to make a check pass.** Prove the armed state
+     where the gate is already passed (the operator's profile), and test the gated state
+     in a fresh one. An age-gate cookie can be short-lived (one hour on one family of
+     sites), so plan that test inside its window.
+   - **Repair a check that flakes repeatedly; don't re-run it.** One that fails now and
+     then on untouched code is a test bug. Diagnose first: did the event reach the
+     element, did a site handler or popunder eat it, or was it timing? Then fix the
+     check, and note the cause next to it.
+
 **Prevents:** measuring the installed version and calling it the new one, test traffic that
-moves real counters or queues, and a release that only works when injected late.
+moves real counters or queues, a release that only works when injected late, and a suite left permanently red by the test profile rather than the code.
 
 ---
 
