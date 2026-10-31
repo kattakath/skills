@@ -191,6 +191,10 @@ to make a `git push` the release without `@updateURL`.
 **Re-measure before re-writing** (B–D): the page changed, the recorded measurement did not. Then
 re-lint (F) and re-prove (G).
 
+**The operator's profile already runs the old version.** Before any live test of the new one,
+settle which copy you are measuring (same world or not), shim the manager's API and stub
+every side effect: [`patterns.md`](references/patterns.md) § 13.
+
 ## Install reality (Chromium)
 
 One-time per profile on the manager's `chrome://extensions` details page: **Allow User
