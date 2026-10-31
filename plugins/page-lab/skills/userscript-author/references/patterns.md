@@ -395,6 +395,12 @@ comment (Greasy Fork's Code rule). Run it in your own CI — see the plugin READ
 `eslint-plugin-userscripts` covers roughly this same residue; it is **not** adopted here (its
 rule ids are not re-verified — see below), so the rules above are prose discipline.
 
+**Duplication audits: `jscpd` skips a big userscript and prints nothing.** Its defaults are
+`--max-lines 1000` and `--max-size 100kb` (`jscpd@4.0.5 --help`). An over-limit file is dropped
+with no warning: on a 9,000-line script the default run printed no result line at all, and
+`--max-lines 100000 --max-size 5mb` found 43 clones (measured 2026-10-31). Raise both limits,
+and seed a known clone first so a "0" is evidence rather than an empty scan.
+
 **Prevents:** believing a green gate proved something it never looked at.
 
 ---
