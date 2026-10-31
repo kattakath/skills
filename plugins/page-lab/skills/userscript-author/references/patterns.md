@@ -558,10 +558,12 @@ scripts and four hosts, through the DevTools protocol (`evaluate_script` + `new_
      covering most of the viewport with a gate element inside). Report those checks as
      SKIPPED-ENVIRONMENT, with the reason. A generic "anything covers the page → skip"
      would also hide a real script bug that covers the page.
-   - **Never clear a gate in a test profile to make a check pass.** Prove the armed state
-     where the gate is already passed (the operator's profile), and test the gated state
-     in a fresh one. An age-gate cookie can be short-lived (one hour on one family of
-     sites), so plan that test inside its window.
+   - **Pre-set the gate cookie in a throwaway profile, and keep one gated run.** A fresh test
+     profile needs the gate cookie the site itself sets on "I am 18+" (read its name and value
+     from the site's own JS, not from guesswork). Set it via the protocol before the first
+     navigation, so the armed-state checks run without anyone clicking. Keep ONE cookie-less
+     run per gated host: it is the only proof that the script stays inert while gated. Never
+     do this in the operator's own profile, and never script a click on the gate.
    - **Repair a check that flakes repeatedly; don't re-run it.** One that fails now and
      then on untouched code is a test bug. Diagnose first: did the event reach the
      element, did a site handler or popunder eat it, or was it timing? Then fix the
