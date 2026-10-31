@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an accounts-file closing balance that agrees upgrades structural to asserted"
+exit = 0
+args = ["--require", "asserted"]

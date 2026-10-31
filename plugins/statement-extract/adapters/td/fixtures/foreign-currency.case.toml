@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a row in another currency fails single_currency"
+exit = 3
+stderr_has = "single_currency"

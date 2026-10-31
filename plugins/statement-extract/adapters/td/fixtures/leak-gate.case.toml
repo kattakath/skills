@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a first-six card shape no mask rule covers trips the leak gate: exit 5, nothing emitted"
+exit = 5
+stderr_has = "exit 5"

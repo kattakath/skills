@@ -194,6 +194,15 @@ jobs:
       - name: skill-curator usage cases
         run: bash plugins/skill-curator/skills/skill-curator/tests/usage-cases.sh
 
+      # statement-extract's frozen key normalisers are a contract with stored data: a key that
+      # changes bytes silently duplicates every downstream row. run.sh pins them with golden
+      # vectors made BY the legacy extractor itself, a source hash per normaliser, and an exact
+      # stdout golden per synthetic fixture, plus count floors so a moved directory cannot pass
+      # as zero cases. System python3 only (3.12 here): the plugin is stdlib-only by design.
+      # The poppler-backed "pdf reader smoke" step lands with the PDF adapters (release 3).
+      - name: statement-extract cases
+        run: bash plugins/statement-extract/tests/run.sh
+
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which
       # matters more than the flags: this hook is enabled in every repo, so a rule that

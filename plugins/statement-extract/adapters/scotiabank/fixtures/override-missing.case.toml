@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "<ACCTID> is an internal reference: without an accounts-file last4 the file is refused"
+exit = 4
+stderr_has = "needs an accounts-file entry"

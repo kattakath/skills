@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a <STMTTRN> the statement path never reaches fails count_reconcile"
+exit = 3
+stderr_has = "count_reconcile"

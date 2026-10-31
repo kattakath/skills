@@ -1,0 +1,21 @@
+# Tangerine, "Download Transactions" -> QFX, one file per account.
+institution = "Tangerine"
+format = "ofx"
+description = "Tangerine QFX: chequing (labelled SAVINGS in the file), credit card"
+
+[identify]
+# Measured 2026-10-31 on both Tangerine exports (identify --print-identifiers).
+intu_bid = ["10951"]
+
+[keys]
+scheme = "fitid"   # account-level sequence numbers, stable across exports (41/41)
+
+# Tangerine (2026-10-31): each card purchase also arrives as extra $0.00 rows named
+# "Posted :DD Mon YYYY" (FITID n.1, n.2): memo fragments of the row before, not
+# transactions. Real $0.00 rows (e.g. "Interest Paid") are kept.
+[[skip]]
+amount = "0"
+name_prefix = "Posted :"
+
+[reconcile]
+minimum = "structural"

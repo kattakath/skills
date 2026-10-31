@@ -1,0 +1,19 @@
+# TD Canada Trust, EasyWeb "Intuit Quicken" download (QFX). One file may hold every account.
+institution = "TD"   # the key prefix: frozen, it is inside every stored key
+format = "ofx"
+description = "TD EasyWeb QFX: chequing, line of credit, credit card"
+
+# TD EasyWeb (2026-10-31): an empty <ACCTTYPE>, and the LOC wrapped as <STMTTRNRS> inside
+# CREDITCARDMSGSRSV1 but closed as </CCSTMTTRNRS>.
+repairs = ["empty-accttype", "cc-stmttrnrs-wrapper"]
+
+[identify]
+# Intuit bank id, measured 2026-10-31 on every export variant of this bank (identify
+# --print-identifiers). The FI block (ORG/FID) is absent from these exports.
+intu_bid = ["00002"]
+
+[keys]
+scheme = "fitid"   # chequing and LOC FITIDs re-matched 41/41 across exports
+
+[reconcile]
+minimum = "structural"

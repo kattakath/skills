@@ -1,0 +1,5 @@
+synthetic = true
+quirk = "--require asserted with no outside balance refuses a structural statement"
+exit = 3
+args = ["--require", "asserted"]
+stderr_has = "below the required"

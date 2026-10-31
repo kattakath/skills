@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a FITID repeated inside one statement fails fitid_unique"
+exit = 3
+stderr_has = "fitid_unique"
