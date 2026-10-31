@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a prior closing plus the rows after it must equal the closing (balance_equation)"
+exit = 0
+args = ["--require", "asserted"]

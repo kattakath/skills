@@ -531,6 +531,26 @@
       "source": "./plugins/skill-curator"
     },
     {
+      "name": "statement-extract",
+      "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX today) into canonical, masked, deduplicated JSONL: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "bank-statements",
+        "ofx",
+        "qfx",
+        "reconciliation",
+        "transactions",
+        "deduplication",
+        "personal-finance"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/statement-extract",
+      "license": "MIT",
+      "source": "./plugins/statement-extract"
+    },
+    {
       "name": "superhook",
       "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
       "author": {

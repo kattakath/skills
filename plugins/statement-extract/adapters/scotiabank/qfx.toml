@@ -1,0 +1,25 @@
+# Scotiabank, per-account "Download as Quicken" (QFX), up to 2 years.
+institution = "Scotiabank"
+format = "ofx"
+description = "Scotiabank QFX: credit card, line of credit"
+
+[identify]
+org = ["SYNTH-SCOTIABANK"]
+
+[keys]
+scheme = "fitid"
+
+# Scotiabank (2026-10-31): interest, fee, cash-back and adjustment rows carry a per-export
+# counter FITID ("undefined", "undefined-1", ...) that restarts in every file. Those rows are
+# keyed by content instead (operator-approved), with the frozen legacy normaliser.
+[[keys.fallback]]
+fitid_pattern = 'undefined(-\d+)?'
+scheme = "content-occurrence/legacy-qfx-v0"
+
+# <ACCTID> is an internal reference, not the card/LOC number on screen. The consumer's
+# accounts file must give the screen's last four, the same value on every run.
+[account]
+require_override = true
+
+[reconcile]
+minimum = "structural"

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a statement without LEDGERBAL cannot reach structural"
+exit = 3
+stderr_has = "ledgerbal_present"

@@ -1,0 +1,18 @@
+# CIBC Online Banking, per-account "Quicken" download (QFX).
+institution = "CIBC"
+format = "ofx"
+description = "CIBC QFX: chequing, credit card, line of credit"
+
+# CIBC (2026-10-31): CHARSET:1252 declared over a UTF-8 body, and <ACCTTYPE> inside
+# CCACCTFROM. Card memos carry "CC#<first4>****<last4>"; the engine's mask handles that.
+repairs = ["charset-1252-utf8-body", "ccacctfrom-accttype"]
+
+[identify]
+org = ["SYNTH-CIBC"]
+
+
+[keys]
+scheme = "fitid"
+
+[reconcile]
+minimum = "structural"

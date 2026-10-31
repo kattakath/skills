@@ -1,0 +1,93 @@
+{
+ "_comment": "Keys emitted by agentic-ledger's own qfx_rows.py (worktree-distributed-crafting-liskov @ b78340c, ofxtools 0.9.5) over these synthetic fixtures, with --institution from the adapter, --acct-last4 from the case's accounts file and --known from its seen file. The plugin must emit exactly these keys. Never edit by hand.",
+ "cases": {
+  "cibc/card-memo-first4": [
+   "CIBC|••2204|0000202610050104"
+  ],
+  "cibc/ccacctfrom-accttype": [
+   "CIBC|••2203|0000202610040103"
+  ],
+  "cibc/charset-1252-utf8-body": [
+   "CIBC|••2201|0000202610020101"
+  ],
+  "cibc/memo-only-description": [
+   "CIBC|••2205|0000202610060105",
+   "CIBC|••2205|0000202610070106"
+  ],
+  "cibc/real-cp1252": [
+   "CIBC|••2202|0000202610030102"
+  ],
+  "scotiabank/counter-fitid": [
+   "Scotiabank|••4401|0000202610020201",
+   "Scotiabank|••4401|2026-10-03|-2.50|OVERLIMIT  FEE|1",
+   "Scotiabank|••4401|2026-10-04|-1.25|INTEREST CHARGES|1",
+   "Scotiabank|••4401|2026-10-05|3.00|CASH BACK|1"
+  ],
+  "scotiabank/counter-same-day": [
+   "Scotiabank|••4404|2026-10-07|-1.50|SERVICE FEE|1",
+   "Scotiabank|••4404|2026-10-07|-1.50|SERVICE FEE|2"
+  ],
+  "scotiabank/counter-tz-shift": [
+   "Scotiabank|••4405|2026-10-16|-0.75|INTEREST|1"
+  ],
+  "scotiabank/half-even": [
+   "Scotiabank|••4406|2026-10-08|-1.00|ODD FEE|1",
+   "Scotiabank|••4406|2026-10-08|-1.02|ODD FEE|1"
+  ],
+  "scotiabank/seen-roundtrip": [
+   "Scotiabank|••4407|0000202610090204"
+  ],
+  "scotiabank/star-masked-payee": [
+   "Scotiabank|••4403|0000202610060203",
+   "Scotiabank|••4403|2026-10-06|-1.00|TO - ••0567|1"
+  ],
+  "tangerine/posted-fragments": [
+   "Tangerine|••4401|0000100"
+  ],
+  "tangerine/zero-interest-kept": [
+   "Tangerine|••4402|0000200",
+   "Tangerine|••4402|0000201"
+  ],
+  "td/assert-closing": [
+   "TD|••1116|0000202610200028"
+  ],
+  "td/clean-chequing": [
+   "TD|••1101|0000202610020001",
+   "TD|••1101|0000202610030002",
+   "TD|••1101|0000202610040003",
+   "TD|••1101|0000202610050004"
+  ],
+  "td/empty-accttype": [
+   "TD|••1102|0000202610060005"
+  ],
+  "td/entities": [
+   "TD|••1115|0000202610190027"
+  ],
+  "td/identical-rows": [
+   "TD|••1107|0000202610110010",
+   "TD|••1107|0000202610110011",
+   "TD|••1107|0000202610110012"
+  ],
+  "td/loc-stmttrnrs-wrapper": [
+   "TD|••1103|0000202610070006"
+  ],
+  "td/multi-account": [
+   "TD|••1104|0000202610080007",
+   "TD|••1105|0000202610080008",
+   "TD|••1105|0000202610090009"
+  ],
+  "td/numeric-fitid": [
+   "TD|••1114|00009301234567890123"
+  ],
+  "td/ofx-v2-xml": [
+   "TD|••3301|0000202610230033"
+  ],
+  "td/prior-balance": [
+   "TD|••1118|0000202610050030",
+   "TD|••1118|0000202610210031"
+  ],
+  "td/tz-dtposted": [
+   "TD|••1106|0000202610150010"
+  ]
+ }
+}

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an accounts-file closing balance that disagrees is a refusal"
+exit = 3
+stderr_has = "external_assertion"

@@ -1,0 +1,182 @@
+# statement-extract
+
+Turn bank and card statements into **reconciled, masked, deduplicated** transaction records,
+many files at once, the same bytes every run. It **fails closed**: a statement that does not
+reconcile, a key that collides, or a string that still looks like an account number stops the
+run with a distinct exit code and emits nothing.
+
+The plugin ends at canonical JSONL (and a CSV exporter). Writing to a Sheet or a ledger stays
+with the consumer.
+
+## Status: release 1 (QFX/OFX)
+
+| Ships now | Later releases |
+|---|---|
+| Core engine, CLI contract, run log, CSV exporter, fixture lint | R2: Wise via a declarative CSV driver |
+| MIT OFX 1.x/2.x reader + 4 named repairs | R3: PDF text-layer reader, Desjardins and closed-chequing adapters |
+| Adapters: **TD, CIBC, Scotiabank, Tangerine** | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+
+There are **no skills in this release**: drive the CLI directly.
+
+## Run it
+
+```bash
+SE="${CLAUDE_PLUGIN_ROOT}/scripts/statement-extract"
+"$SE" doctor
+"$SE" extract statements/*.qfx --accounts accounts.toml --seen keys.txt --report run.json > out.jsonl
+"$SE" export out.jsonl > out.csv
+```
+
+| Command | Does |
+|---|---|
+| `extract FILES…` | Extract. Flags: `--seen F` `--emit-seen` `--manifest F` `--force` `--accounts F` `--format jsonl\|csv` `--require structural\|asserted\|proven` `--keep-going` `--report F`; global `--log F` |
+| `identify FILES…` | Which adapter claims each file. `--print-identifiers` prints ORG / FID / INTU.BID / CURDEF, **never the account id** |
+| `explain FILE` | Masked diagnosis: candidates, repairs fired, every check with expected/actual |
+| `adapters`, `doctor` | List adapters; check the runtime |
+| `export [F]` | Canonical JSONL → CSV (transactions) |
+| `fixture lint` | Keep real data out of this tree |
+| `corpus check DIR --lock F` | Drift lock over a private corpus: hashes and counts only |
+
+### Exit codes
+
+| Code | Meaning | What to do |
+|---|---|---|
+| 0 | OK | |
+| 1 | Bug | Report it |
+| 2 | Usage | Fix the command or the accounts file |
+| 3 | **Refused**: a check failed, or one key carried two payloads | Read `explain`; fix the adapter. Never work around it |
+| 4 | **Unidentified**, ambiguous, or a required account override is missing | Add the accounts entry, or an adapter |
+| 5 | **Leak**: an output string still has an account-number shape | Add a mask rule; nothing was emitted |
+| 6 | Partial (`--keep-going` only) | The report names the refused files |
+
+Default is all-or-nothing.
+
+## Output: `schema: "statement-extract/1"`
+
+One JSONL stream, statements first, then transactions. No timestamps, so two runs, or one with
+shuffled arguments, produce identical bytes.
+
+- **`record: "statement"`**: `statement_id`, institution, `account{ref, kind, currency}`, period,
+  balances, `source{file, sha256, format, extractor_version, adapter{id, sha256}, repairs}`,
+  `reconcile{status, checks[]}`, `counts{parsed, skipped, emitted, seen, dup_in_run}`.
+- **`record: "transaction"`**: `key`, `key_scheme`, `statement_id`, institution, `account`,
+  `booking_date`, `transaction_date`, `amount` (decimal string, **+ = money in**), `currency`,
+  `credit_debit` (zero = CRDT), masked `description` / `memo` / `counterparty`, `source_type`,
+  `entry_ref`, `running_balance`, `source{file, sha256, locator}`.
+- Ordering: institution, account, booking date, file sha256, locator. Never argv order.
+- Changes within `/1` are **additive only**: every merge to `main` ships, so consumers should
+  assert the schema string.
+
+## Reconcile status
+
+| Status | Means |
+|---|---|
+| `structural` | Every raw `<STMTTRN>` parsed, no unknown tags, FITIDs unique, LEDGERBAL present, one currency |
+| `asserted` | Structural **and** a balance from `accounts.toml` agrees with the file |
+| `proven` | The statement proves itself from printed totals (PDF adapters, later) |
+
+`--require asserted` refuses anything weaker.
+
+## Keys are a contract
+
+| Scheme | Used for | Shape |
+|---|---|---|
+| `fitid` | TD, CIBC, Scotiabank, Tangerine | `Institution\|••1234\|FITID` |
+| `content-occurrence/legacy-qfx-v0` | Scotiabank counter FITIDs (`undefined`, `undefined-1`, …) | `Institution\|••1234\|date\|amount\|text\|n` |
+| `content-occurrence/legacy-collapse-v0` | Reserved for Desjardins (R3) | same, whitespace collapsed |
+
+- The two content normalisers are **frozen** copies of the extractors that made keys already
+  stored downstream. Three tests pin them:
+  - golden vectors produced by running the legacy code itself (`tests/golden/normalisers.json`);
+  - a source hash per function (`tests/golden/frozen.json`);
+  - the legacy extractor's own keys over every fixture (`tests/golden/legacy-keys.json`).
+- Measured on 24 fixture cases: **identical keys**. Display fields differ in two cases only:
+  - whitespace is collapsed for display;
+  - a timezone-bearing date shows the day as written. The key keeps the legacy UTC day.
+- A normaliser never changes in place. A change is a new scheme name plus a consumer
+  migration. Display masking (`mask.py`) is separate, and may improve freely.
+
+## Dedupe
+
+| Layer | Behaviour |
+|---|---|
+| In-run | Same key and same payload: kept once (`dup_in_run`). Same key, different payload: **exit 3**, both locators named |
+| `--seen F` | One key per line, read with `splitlines()` (content keys contain spaces). `--emit-seen` appends what was emitted |
+| `--manifest F` | Append-only sha256 log; skips unchanged files (`--force` overrides). Speed only |
+
+## `accounts.toml` (consumer-owned, never in this repo)
+
+```toml
+[[account]]
+institution = "Scotiabank"
+acctid_last4 = "0001"   # last four of the file's own account id
+last4 = "4321"          # what keys and labels use: the number on screen
+kind = "card"
+
+[[account.balance]]     # optional: upgrades the statement to "asserted"
+as_of = "2026-10-31"
+amount = "-12.34"       # in the file's sign: a card balance owed is negative
+```
+
+Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an entry
+(exit 4 without one). Keep `last4` identical on every run, or the keys change.
+
+## Masking and the leak gate
+
+- Display masking keeps the **last four** of anything account-shaped:
+  - long digit runs (TD `TO:`/`FRM:` payees);
+  - star-masked payees (Scotiabank);
+  - `CC#dddd****dddd` (CIBC card memos);
+  - grouped digits, with dates excluded.
+- Every output string then passes the leak gate:
+  `\d{7,}|\d{4} ?\d{2}\*|\d{4}\*{4,}|\*{2,}\d|•{3,}`.
+- The gate skips two kinds of value:
+  - **hex digests**: a sha256 has ~90% odds of a 7-digit run by chance;
+  - **the institution's own transaction id** (`entry_ref`, and the FITID segment of a
+    `fitid` key): numeric FITIDs are routine, and key bytes are frozen.
+
+## Run log and OpenTelemetry
+
+- Every run appends **OTel Logs Data Model** records as JSONL. The path is the first that is set:
+  - `--log`;
+  - `$STATEMENT_EXTRACT_LOG`;
+  - `$XDG_STATE_HOME/statement-extract/runs.jsonl`.
+- **Events:** run start/end, adapter matched, repair fired, every check (expected/actual),
+  refusals, dedupe counts. Masked values only.
+- **OTLP push:** with `OTEL_EXPORTER_OTLP_ENDPOINT` (or `…_LOGS_ENDPOINT`) set to http(s), the
+  same records are POSTed as OTLP/HTTP-JSON to `/v1/logs`. `OTEL_EXPORTER_OTLP_HEADERS` is
+  honoured.
+- **A failed push never fails extraction.** It is recorded in the local log.
+- An OTLP collector listening on **gRPC only** will not receive this. Give it an `http`
+  receiver, or a `filelog` receiver on `runs.jsonl`.
+
+## Privacy
+
+- Fixtures are **synthetic only**, one per quirk.
+- Every synthetic account or FITID digit run starts `0000`.
+- `fixture lint` refuses:
+  - a 7+ digit run outside that reserved pattern;
+  - a case without `synthetic = true`;
+  - any PDF or other binary in this tree.
+- Real statements never enter this repo. A private corpus is checked consumer-side with
+  `corpus check`, which stores hashes and counts only.
+
+## Adding an institution (until the R4 skill lands)
+
+1. Run `identify --print-identifiers` on a real file **locally**. Copy its ORG/FID into
+   `adapters/<institution>/<format>.toml`.
+2. Write one synthetic fixture per quirk: `<case>.qfx`, `<case>.case.toml` (`synthetic = true`,
+   `quirk`, `exit`), and optionally `<case>.accounts.toml` / `<case>.seen.txt`.
+3. Generate the goldens: `STATEMENT_EXTRACT_UPDATE_GOLDENS=1 python3 -m unittest test_fixtures`,
+   run from `tests/`. Then review the diff.
+4. `bash tests/run.sh`.
+
+TOML trap: a key written after a `[table]` header lands inside that table. The loader rejects
+unknown `identify` fields for exactly that reason.
+
+## Requires
+
+- Python **≥ 3.11**, standard library only. No uv, no ofxtools: ofxtools is GPL-3.0, and this
+  reader is MIT.
+- The launcher re-execs under `python3 -I`, so `PYTHONPATH` and the working directory cannot
+  inject modules.

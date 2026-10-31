@@ -1,0 +1,14 @@
+#!/usr/bin/env python3
+"""Launcher: re-exec under -I (isolated: no PYTHONPATH, no user site, no cwd on sys.path),
+then put ../lib on sys.path from this file's real location and run the CLI."""
+import os
+import sys
+
+if not sys.flags.isolated:
+    os.execv(sys.executable, [sys.executable, "-I", os.path.realpath(__file__), *sys.argv[1:]])
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                                "lib"))
+from statement_extract.cli import main  # noqa: E402
+
+sys.exit(main())
