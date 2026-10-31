@@ -4,7 +4,8 @@ format = "ofx"
 description = "Tangerine QFX: chequing (labelled SAVINGS in the file), credit card"
 
 [identify]
-org = ["SYNTH-TANGERINE"]
+# Measured 2026-10-31 on both Tangerine exports (identify --print-identifiers).
+intu_bid = ["10951"]
 
 [keys]
 scheme = "fitid"   # account-level sequence numbers, stable across exports (41/41)

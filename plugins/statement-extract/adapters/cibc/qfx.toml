@@ -8,7 +8,9 @@ description = "CIBC QFX: chequing, credit card, line of credit"
 repairs = ["charset-1252-utf8-body", "ccacctfrom-accttype"]
 
 [identify]
-org = ["SYNTH-CIBC"]
+# Intuit bank id, measured 2026-10-31 on every export variant of this bank (identify
+# --print-identifiers). The FI block (ORG/FID) is absent from these exports.
+intu_bid = ["00005"]
 
 
 [keys]

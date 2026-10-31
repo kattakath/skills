@@ -8,7 +8,9 @@ description = "TD EasyWeb QFX: chequing, line of credit, credit card"
 repairs = ["empty-accttype", "cc-stmttrnrs-wrapper"]
 
 [identify]
-org = ["SYNTH-TD"]
+# Intuit bank id, measured 2026-10-31 on every export variant of this bank (identify
+# --print-identifiers). The FI block (ORG/FID) is absent from these exports.
+intu_bid = ["00002"]
 
 [keys]
 scheme = "fitid"   # chequing and LOC FITIDs re-matched 41/41 across exports

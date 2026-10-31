@@ -4,7 +4,9 @@ format = "ofx"
 description = "Scotiabank QFX: credit card, line of credit"
 
 [identify]
-org = ["SYNTH-SCOTIABANK"]
+# Intuit bank id, measured 2026-10-31 on every export variant of this bank (identify
+# --print-identifiers). The FI block (ORG/FID) is absent from these exports.
+intu_bid = ["00025"]
 
 [keys]
 scheme = "fitid"

@@ -39,7 +39,7 @@ class ExitCodes(Tmp):
 
     def test_unidentified(self):
         f = self.tmp / "unknown.qfx"
-        f.write_bytes((TD / "clean-chequing.qfx").read_bytes().replace(b"SYNTH-TD", b"NOBODY"))
+        f.write_bytes((TD / "clean-chequing.qfx").read_bytes().replace(b"<INTU.BID>00002", b"<INTU.BID>09999"))
         p = run("extract", f)
         self.assertEqual((p.returncode, p.stdout), (4, ""))
         self.assertIn("no adapter", p.stderr)
