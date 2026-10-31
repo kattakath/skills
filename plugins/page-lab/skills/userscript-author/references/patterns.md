@@ -491,6 +491,64 @@ script.
 
 ---
 
+## 13 · Testing a new build against an already-installed copy
+
+The operator's profile runs the INSTALLED version, so a live test of the next version has to
+decide, before the first probe, which copy it is measuring. Measured 2026-10-31 across six
+scripts and four hosts, through the DevTools protocol (`evaluate_script` + `new_page`).
+
+1. **Find the installed copy's world first.** Look for its teardown global from the page
+   (`typeof window.__<script>Teardown`):
+
+   | Visible from the page | Meaning | Test there? |
+   |---|---|---|
+   | yes (typically `@grant none`; Violentmonkey's `auto` picks page context) | same world as an injected build | **yes** — the build's entry teardown replaces the installed copy cleanly |
+   | no (any `GM_*` grant pushes it to the content world) | two copies will run side by side | **no** — test in an `isolatedContext` page (no extensions), sign-in states aside |
+
+   A double copy does not error. It shows up as two of everything, or as two `fit()` loops
+   fighting over one value, which reads like a layout bug.
+
+2. **Bundle, don't paste.** `esbuild --minify <file>.user.js --outfile=<dir>/x.min.js`, then
+   `evaluate_script` with `sourcePath` and `format: "script"`. `sourcePath` reads **only files
+   under the MCP server's workspace roots**, so `<dir>` is a gitignored folder inside one of them,
+   not `/tmp`. Delete the bundle when done.
+
+3. **Shim what the build calls, and stub every side effect.** Injected code has no manager:
+   - `GM_addStyle` → `(css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); return s; }`
+   - `GM_xmlhttpRequest` → a stub that calls `onload` / `onerror` / `ontimeout` on a timer.
+     Never let a test reach a real local service (a download queue, a webhook).
+   - **Counted page views:** where every GET of a detail page bumps a public counter, stub
+     `fetch` to reject those paths and COUNT them. The count is the measurement. One such
+     test cut a phone-width load from 7 counted fetches to 2.
+
+4. **Injected after load is not `document-start`.** `navigate_page`'s `initScript` runs at
+   document start, but a large bundle (~30 KB and up) is unwieldy to pass inline. Inject after
+   load for selector and behaviour checks, and say so in the report. Two bugs only appeared at
+   document start: a late-rendered button that a retry window gave up on, and a header that
+   only a scroll ever revealed. When the fix is about load timing, take the `initScript` route.
+
+5. **Background tabs lie about motion.** Opacity transitions, scroll-reveal headers and
+   `requestAnimationFrame` loops are throttled or frozen in a background tab. Bring the page
+   to the front (`select_page` with `bringToFront`) for any scroll, opacity or animation
+   assertion, then close it.
+
+6. **Prove the click, not the box.** For a control the script builds, an untrusted
+   `el.click()` passes where a real click may not. Use the snapshot `uid` + `click` tool. Test
+   anything that routes clicks (a viewer that opens on card click, a key that follows a link)
+   through the script's OWN interceptor: a viewer whose "open this item" key clicked the
+   card's link was caught by its own card-click handler and reopened itself.
+
+7. **Re-installing for the real proof.** If the manager's own update check leaves the old
+   version in place, open the listing's `.user.js` URL in a fresh `about:blank` tab. The
+   manager's confirm page opens; one trusted click on Reinstall installs it. Navigating to
+   that URL from an extension page gets swallowed. A changed `@name` installs as a NEW entry
+   beside the old one; remove the old one, or both run.
+
+**Prevents:** measuring the installed version and calling it the new one, test traffic that
+moves real counters or queues, and a release that only works when injected late.
+
+---
+
 ## Flagged — NOT verified from primary docs
 
 **Unverified. Do not promote a row without re-verifying it, and do not cite one as settled.**
