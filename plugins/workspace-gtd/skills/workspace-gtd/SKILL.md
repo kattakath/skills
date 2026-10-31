@@ -40,8 +40,8 @@ repo, a memory file or a doc.
 | Every action, work and family | **Tasks** | New item → **Inbox** list. Date only: the Tasks API drops the time |
 | Waiting on someone | Tasks **Waiting** | Title starts with who, e.g. "Bank — mortgage letter" |
 | When something happens | **Calendar** | Timed reminder = an event with `overrideReminders` popups (max 5). Read it back before reporting it set |
-| Email | **Gmail** | Labels file mail; they never hold actions. An email needing action → Gmail's native **Add to Tasks** |
-| Reference | **Drive**, PARA folders | Projects / Areas / Resources / Archive (numbered folders are fine) |
+| Email | **Gmail** | Labels file mail; they never hold actions. An email needing action → Gmail's native **Add to Tasks**. Labels mirror Drive's numbered areas (`02 Finance/Bills`, `03 Career/Jobs`, `04 Travel/…`); a retired label moves under `99 Archive/` |
+| Reference | **Drive**, PARA folders | Projects / Areas / Resources / Archive (numbered folders are fine). **One** archive — `99 Archive`, with area subfolders inside — never an Archive folder per area. Link sharing ("Anyone with the link") stays off; share with named people |
 | Nudges | **Chat** via Studio | Never a list, never a capture point |
 | Intake from other people | **Forms** → Sheet | Only when a flow genuinely needs structured input |
 
@@ -129,3 +129,6 @@ edit the review step — nothing else changes.
 | Keep reminders | Keep's API is admin-only and has no reminder field |
 | Forwarding employer mail to Gmail | Policy breach and a copy of client data |
 | Google Chat API for pings | Needs its own Chat app in Google Cloud; Studio's *Notify me in Chat* is native |
+| Studio template "Label emails with action items" | Turns a label into a second action list; measured 2026-10-31: 16 of its 21 "To respond" threads were noise. *Add to Tasks* is the capture |
+| Fixed-day repeating Tasks for card or bill dues | Statement due dates move, so the reminder drifts from the real date (one was 6 days early). The date lives on the dated task |
+| Filters that skip the Inbox for bank notices | Hides a due date. Only receipts and utilities skip the Inbox |
