@@ -20,8 +20,11 @@ There are **no skills in this release**: drive the CLI directly.
 
 ## Run it
 
+The launcher is `scripts/statement-extract` inside the installed plugin. Claude Code keeps one
+directory per installed version (a 12-character commit prefix), so pick the newest:
+
 ```bash
-SE="${CLAUDE_PLUGIN_ROOT}/scripts/statement-extract"
+SE=$(ls -td ~/.claude/plugins/cache/kattakath/statement-extract/*/ | head -1)scripts/statement-extract
 "$SE" doctor
 "$SE" extract statements/*.qfx --accounts accounts.toml --seen keys.txt --report run.json > out.jsonl
 "$SE" export out.jsonl > out.csv
@@ -63,6 +66,9 @@ shuffled arguments, produce identical bytes.
   `booking_date`, `transaction_date`, `amount` (decimal string, **+ = money in**), `currency`,
   `credit_debit` (zero = CRDT), masked `description` / `memo` / `counterparty`, `source_type`,
   `entry_ref`, `running_balance`, `source{file, sha256, locator}`.
+- `source.file` is the **masked basename**: a date-stamped name such as `X_20261031.qfx` has
+  a 7+ digit run. A consumer that needs the original name maps it by `source.sha256`, since it
+  holds the path it passed in.
 - Ordering: institution, account, booking date, file sha256, locator. Never argv order.
 - Changes within `/1` are **additive only**: every merge to `main` ships, so consumers should
   assert the schema string.
