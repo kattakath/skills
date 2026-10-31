@@ -568,7 +568,7 @@ scripts and four hosts, through the DevTools protocol (`evaluate_script` + `new_
      check, and note the cause next to it.
 
 **Prevents:** measuring the installed version and calling it the new one, test traffic that
-moves real counters or queues, and a release that only works when injected late, and a suite left permanently red by the test profile rather than the code.
+moves real counters or queues, a release that only works when injected late, and a suite left permanently red by the test profile rather than the code.
 
 ---
 
