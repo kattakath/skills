@@ -1,0 +1,7 @@
+[[account]]
+institution = "TD"
+acctid_last4 = "1118"
+
+[[account.balance]]
+as_of = "2026-10-10"
+amount = "100.00"

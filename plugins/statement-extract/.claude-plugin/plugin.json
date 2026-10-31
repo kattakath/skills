@@ -1,0 +1,20 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "statement-extract",
+  "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX today) into canonical, masked, deduplicated JSONL: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/statement-extract",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "bank-statements",
+    "ofx",
+    "qfx",
+    "reconciliation",
+    "transactions",
+    "deduplication",
+    "personal-finance"
+  ]
+}

@@ -1,0 +1,20 @@
+# CIBC Online Banking, per-account "Quicken" download (QFX).
+institution = "CIBC"
+format = "ofx"
+description = "CIBC QFX: chequing, credit card, line of credit"
+
+# CIBC (2026-10-31): CHARSET:1252 declared over a UTF-8 body, and <ACCTTYPE> inside
+# CCACCTFROM. Card memos carry "CC#<first4>****<last4>"; the engine's mask handles that.
+repairs = ["charset-1252-utf8-body", "ccacctfrom-accttype"]
+
+[identify]
+# Intuit bank id, measured 2026-10-31 on every export variant of this bank (identify
+# --print-identifiers). The FI block (ORG/FID) is absent from these exports.
+intu_bid = ["00005"]
+
+
+[keys]
+scheme = "fitid"
+
+[reconcile]
+minimum = "structural"

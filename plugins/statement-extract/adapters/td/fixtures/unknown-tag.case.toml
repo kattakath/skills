@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an unknown tag inside STMTTRN is a refusal, never a dropped account"
+exit = 3
+stderr_has = "unknown tag <BOGUS>"

@@ -1,0 +1,3 @@
+synthetic = true
+quirk = "TD LOC opens <STMTTRNRS> inside CREDITCARDMSGSRSV1, closes </CCSTMTTRNRS> (repair cc-stmttrnrs-wrapper)"
+exit = 0

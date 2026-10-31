@@ -248,6 +248,13 @@
       ],
       "gap": true,
       "note": "GitHub's 'Removing sensitive data from a repository' covers the rewrite tool (git-filter-repo) and what survives it; this skill adds the order (fix-forward PR merged first), a SHA-pinned lease, the tip-tree identity proof, and the GitLab hidden-MR-ref trap. Rotate a SECRET at the issuer first."
+    },
+    {
+      "goal": "Turn bank/card statements into reconciled, deduplicated transaction records",
+      "steps": [
+        "statement-extract"
+      ],
+      "note": "Fails closed (exit 3/4/5) rather than emit an unreconciled or unmasked row. QFX/OFX adapters for TD, CIBC, Scotiabank and Tangerine; CSV and PDF arrive in later releases. Sinks (a Sheet, a ledger) stay with the consumer."
     }
   ]
 }

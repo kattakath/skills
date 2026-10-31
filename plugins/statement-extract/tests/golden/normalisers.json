@@ -1,0 +1,145 @@
+{
+ "_comment": "Produced by running agentic-ledger's own qfx_rows.mask_text (legacy-qfx-v0) and pdf_rows_desjardins.mask_text (legacy-collapse-v0), branch worktree-distributed-crafting-liskov @ b78340c, under ofxtools 0.9.5, on synthetic strings. Never edit by hand: these ARE the frozen bytes.",
+ "vectors": [
+  {
+   "in": "",
+   "legacy-qfx-v0": "",
+   "legacy-collapse-v0": ""
+  },
+  {
+   "in": "   ",
+   "legacy-qfx-v0": "",
+   "legacy-collapse-v0": ""
+  },
+  {
+   "in": null,
+   "legacy-qfx-v0": "",
+   "legacy-collapse-v0": ""
+  },
+  {
+   "in": "PLAIN PAYEE",
+   "legacy-qfx-v0": "PLAIN PAYEE",
+   "legacy-collapse-v0": "PLAIN PAYEE"
+  },
+  {
+   "in": "  LEADING AND TRAILING  ",
+   "legacy-qfx-v0": "LEADING AND TRAILING",
+   "legacy-collapse-v0": "LEADING AND TRAILING"
+  },
+  {
+   "in": "DOUBLE  SPACE  KEPT",
+   "legacy-qfx-v0": "DOUBLE  SPACE  KEPT",
+   "legacy-collapse-v0": "DOUBLE SPACE KEPT"
+  },
+  {
+   "in": "TAB\tINSIDE",
+   "legacy-qfx-v0": "TAB\tINSIDE",
+   "legacy-collapse-v0": "TAB INSIDE"
+  },
+  {
+   "in": "TO:0000123456789",
+   "legacy-qfx-v0": "TO:••6789",
+   "legacy-collapse-v0": "TO:••6789"
+  },
+  {
+   "in": "FRM:0000987654321 REF 0000111",
+   "legacy-qfx-v0": "FRM:••4321 REF ••0111",
+   "legacy-collapse-v0": "FRM:••4321 REF ••0111"
+  },
+  {
+   "in": "123456",
+   "legacy-qfx-v0": "123456",
+   "legacy-collapse-v0": "123456"
+  },
+  {
+   "in": "1234567",
+   "legacy-qfx-v0": "••4567",
+   "legacy-collapse-v0": "••4567"
+  },
+  {
+   "in": "PAYMENT FROM - *****12*3456",
+   "legacy-qfx-v0": "PAYMENT FROM - ••3456",
+   "legacy-collapse-v0": "PAYMENT FROM - ••3456"
+  },
+  {
+   "in": "TO - *****0000567",
+   "legacy-qfx-v0": "TO - ••0567",
+   "legacy-collapse-v0": "TO - ••0567"
+  },
+  {
+   "in": "CC#4500********0000",
+   "legacy-qfx-v0": "CC#••0000",
+   "legacy-collapse-v0": "CC#••0000"
+  },
+  {
+   "in": "CC#4500****0000 AND 0000123456789",
+   "legacy-qfx-v0": "CC#••0000 AND ••6789",
+   "legacy-collapse-v0": "CC#••0000 AND ••6789"
+  },
+  {
+   "in": "e-Transfer *1234 ref",
+   "legacy-qfx-v0": "e-Transfer *1234 ref",
+   "legacy-collapse-v0": "e-Transfer *1234 ref"
+  },
+  {
+   "in": "x**1234",
+   "legacy-qfx-v0": "x••1234",
+   "legacy-collapse-v0": "x••1234"
+  },
+  {
+   "in": "**12345",
+   "legacy-qfx-v0": "••2345",
+   "legacy-collapse-v0": "••2345"
+  },
+  {
+   "in": "0000 12** **** 0000 CARD",
+   "legacy-qfx-v0": "0000 12** **** 0000 CARD",
+   "legacy-collapse-v0": "••0000 CARD"
+  },
+  {
+   "in": "000012** ****0000",
+   "legacy-qfx-v0": "000012** ••0000",
+   "legacy-collapse-v0": "••0000"
+  },
+  {
+   "in": "DATE 2026-10-31 AMT 1,234.56",
+   "legacy-qfx-v0": "DATE 2026-10-31 AMT 1,234.56",
+   "legacy-collapse-v0": "DATE 2026-10-31 AMT 1,234.56"
+  },
+  {
+   "in": "PRÊT HYPOTHÉCAIRE",
+   "legacy-qfx-v0": "PRÊT HYPOTHÉCAIRE",
+   "legacy-collapse-v0": "PRÊT HYPOTHÉCAIRE"
+  },
+  {
+   "in": "A & B",
+   "legacy-qfx-v0": "A & B",
+   "legacy-collapse-v0": "A & B"
+  },
+  {
+   "in": "••1234 already",
+   "legacy-qfx-v0": "••1234 already",
+   "legacy-collapse-v0": "••1234 already"
+  },
+  {
+   "in": "FEE NBSP",
+   "legacy-qfx-v0": "FEE NBSP",
+   "legacy-collapse-v0": "FEE NBSP"
+  },
+  {
+   "in": "MIXED  *****1234  AND  0000123456789",
+   "legacy-qfx-v0": "MIXED  ••1234  AND  ••6789",
+   "legacy-collapse-v0": "MIXED ••1234 AND ••6789"
+  },
+  {
+   "in": "5 1234567 9",
+   "legacy-qfx-v0": "5 ••4567 9",
+   "legacy-collapse-v0": "5 ••4567 9"
+  },
+  {
+   "in": "0000-1234-5678",
+   "legacy-qfx-v0": "0000-1234-5678",
+   "legacy-collapse-v0": "0000-1234-5678"
+  }
+ ]
+}
