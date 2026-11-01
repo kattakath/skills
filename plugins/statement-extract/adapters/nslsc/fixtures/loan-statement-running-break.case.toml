@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "one printed Principal Balance does not follow from the row before it: refused, never emitted"
+exit = 3
+stderr_has = "running_chain"

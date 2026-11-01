@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "real dated rows with a running Principal Balance: a statement AND a position; rows print newest first and their dates and descriptions wrap above and below the amounts; Opening, Closing and the interest-outstanding pseudo-row are anchors; disbursements print a zero Transaction Amount"
+exit = 0
+pdf_smoke = true

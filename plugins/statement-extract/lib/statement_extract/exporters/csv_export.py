@@ -1,4 +1,8 @@
-"""Canonical JSONL -> CSV, transactions only. The plugin's boundary: sinks live in consumers."""
+"""Canonical JSONL -> CSV, transactions only. The plugin's boundary: sinks live in consumers.
+
+Statement and position records are skipped: a position (a loan balance snapshot) is not a
+movement of money, and a transactions CSV has no column for it. Read positions from the JSONL.
+"""
 import csv
 import io
 import json

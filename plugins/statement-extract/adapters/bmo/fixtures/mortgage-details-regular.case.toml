@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a position snapshot on a two-column page shared with the property address: the prime rate wraps below its label and the rate type sits alone in the rate column; no as-of date printed (as_of = Next Payment Date); P&I + tax = payment and prime + spread = rate tie"
+exit = 0
+pdf_smoke = true

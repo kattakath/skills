@@ -1,0 +1,40 @@
+# CIBC mortgage, the online banking "Mortgage Loan - Details" page saved as a PDF (one page).
+# A balance SNAPSHOT, not a statement: it emits one `position` record and no transactions.
+# The page prints no "as of" date; its balance is the one after the latest payment in its
+# own payment history, so as_of is that payment's date (as_of_basis = "last_payment_date").
+institution = "CIBC"
+format = "pdftext"
+description = "CIBC mortgage, online Mortgage Loan Details page (position snapshot)"
+
+[identify]
+# ASCII markers only: the page title carries an en dash.
+text = ['^MORTGAGE DETAILS', 'Mortgage Loan\s+Next Payment\s+Payment Frequency\s+Payment Amount',
+        '^\s*Maturity Balance:', '^\s*Principal Paid:']
+
+[position]
+kind = "mortgage"
+
+[keys]
+# Required by every adapter; unused, because a position page carries no rows.
+scheme = "content-occurrence/1"
+
+[reconcile]
+minimum = "structural"
+
+# {AMT} is substituted with pdfkit.AMOUNT, {RATE} with pdfkit.RATE, {DATE} with
+# pdfkit.LONG_DATE before compiling.
+[grammar]
+# The address line also carries the mortgage number and the balance; only those two are read.
+header = '\((\d{6,}(?:\.\d+)?)\)\s+({AMT})'
+top_header = 'Mortgage Loan\s+Next Payment\s+Payment Frequency\s+Payment Amount\s+Interest Rate'
+top_values = '^\s*Balance\s+Date\s+(\S.*?)\s{2,}({AMT})\s+({RATE})%\s*(\S.*?)?\s*$'
+top_balance = '^\s*({AMT})\s+{DATE}'
+maturity_date = 'Maturity Date:\s*{DATE}'
+maturity_balance = 'Maturity Balance:\s*({AMT})'
+prepayment = 'Prepayment of:\s*({AMT})'
+amortization = 'Remaining Amortization:\s*(\d+) Years? (\d+) Months?'
+principal_interest = 'Principal and Interest Amount:\s*({AMT})'
+tax = 'Tax Payment:\s*({AMT})'
+history_dates = '^\s*Payment Date:(.*)$'
+history_date = '([A-Z][a-z]{2}) (\d{1,2}), (\d{4})'
+history = { principal = '^\s*Principal Paid:(.*)$', interest = '^\s*Interest Paid:(.*)$', taxes = '^\s*Taxes Paid:(.*)$', total = '^\s*Total Paid:(.*)$' }

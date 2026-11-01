@@ -66,6 +66,29 @@ def nearest_column(span: tuple[int, int], cols: dict[str, tuple[int, int]]) -> s
     return min(cols, key=lambda k: abs(cols[k][1] - span[1]))
 
 
+# --- loan / mortgage positions ------------------------------------------------------------
+
+RATE = r"\d{1,2}\.\d{2,5}"  # a printed percentage without its % sign: "2.45", "3.14500"
+LONG_DATE = r"([A-Z][a-z]+\.?) (\d{1,2}), (\d{4})"  # "April 1, 2027", "Apr 1, 2027"
+
+
+def long_date(mon: str, day: str, year: str) -> str:
+    return iso(int(year), month(mon), int(day))
+
+
+def duration(years: str | int, months: str | int = 0) -> str:
+    """'23 years 4 months' -> ISO 8601 'P23Y4M' (a term or remaining amortization)."""
+    y, m = int(years), int(months)
+    return "P" + (f"{y}Y" if y else "") + (f"{m}M" if m or not y else "")
+
+
+def sum_check(name: str, parts, total: Decimal, note: str) -> Check:
+    """A printed split must add up to its printed total (payment = P&I + tax, ...)."""
+    got = sum(parts, Decimal(0))
+    return Check(name, got == total, expected=format(total, "f"), actual=format(got, "f"),
+                 note=note)
+
+
 def running_chain(opening: Decimal, rows: list[dict]) -> Check:
     """rows: [{'amount': signed Decimal, 'balance': Decimal | None}] in statement order.
     Where a balance is printed (every row, or only a day's last row), the running total so far

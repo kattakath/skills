@@ -1,0 +1,58 @@
+Mortgage Details
+0000123456
+
+Your current balance includes the principal of your mortgage as at the last transaction date and does not include accrued interest and
+optional insurance premiums (if applicable).
+
+Information displayed on this page is effective for the previous business day, and is updated between 6 a.m. (ET) and 8 a.m. (ET).
+
+
+ Mortgage Details                                                                                       Property Address
+ Current Balance:          $312,456.78     BMO Prime Rate:                                              1 SAMPLE STREET
+                                                                          2.700%
+ Original Amount:          $350,000.00                                                                  SAMPLETON
+                                           Discount from BMO Prime:      -0.650%                        ON A1A
+                                                                                                        1A1
+ Current Mortgage
+                                           Current Interest Rate:        2.050%
+ Term:                       60 months
+                                                                         Variable
+ Mortgage Cash
+ Account:                  Not Available
+
+
+
+
+   Payment Details
+   Total Mortgage Payment:                                               $1,654.32
+   Principal & Interest:                                                 $1,654.32
+   Property Tax:                                                             $0.00
+   Payment Frequency:                                                      Monthly
+   Next Payment Date:                                                 May 1, 2022
+
+
+   Principal Prepayment Details
+   Year to Date Lump Sum Payments:                                           $0.00
+   Last Lump Sum Payment:                                             Not Available
+   Last Payment Increase (Principal & Interest):                    Not Applicable
+
+
+   Skipped Payment Details (Principal & Interest)
+   Year to Date Skipped Payments:                                            $0.00
+   Last Skipped Payment:                                            Not Applicable
+
+
+
+
+   Additional Details
+   Fund Date:                                                          Jul 15, 2021
+   Renewal Date:                                                       Aug 1, 2026
+   Original Amortization Date:                                        August 2046
+   Remaining Amortization Date:                                       Not Available
+   Balance Protection:                                                          No
+   Payment Protection:                                                          No
+
+
+
+   Please visit the Help Centre for more information about mortgage features and the information shown here.
+

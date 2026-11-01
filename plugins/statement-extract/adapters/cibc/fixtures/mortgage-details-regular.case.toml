@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a position snapshot: values under a one-line heading row, the balance dropped below its two-line heading; no as-of date printed (as_of = newest payment in the history); every history column adds up to Total Paid; the title carries an en dash"
+exit = 0
+pdf_smoke = true

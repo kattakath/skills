@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "Principal & Interest + Property Tax does not equal the Total Mortgage Payment: refused, never emitted"
+exit = 3
+stderr_has = "payment_split"

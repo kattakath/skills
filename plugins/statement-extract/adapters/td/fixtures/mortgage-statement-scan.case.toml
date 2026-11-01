@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a scanned mortgage statement: a page image with almost no text layer refuses as a scan (exit 3), never as unidentified"
+exit = 3
+stderr_has = "a scan"
