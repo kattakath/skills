@@ -43,11 +43,13 @@ with the consumer.
 
 ## Run it
 
-The launcher is `scripts/statement-extract` inside the installed plugin. Claude Code keeps one
-directory per installed version (a 12-character commit prefix), so pick the newest:
+The launcher is `scripts/statement-extract` inside the installed plugin. Inside a skill it is
+`${CLAUDE_PLUGIN_ROOT}/scripts/statement-extract`. From a shell, take the install path Claude Code
+records. Do NOT pick the newest cache directory by modification time: after an update the old
+version's directory can be newer (measured 2026-11-01, `ls -td` picked the superseded copy).
 
 ```bash
-SE=$(ls -td ~/.claude/plugins/cache/kattakath/statement-extract/*/ | head -1)scripts/statement-extract
+SE="$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.claude/plugins/installed_plugins.json")))["plugins"]["statement-extract@kattakath"][0]["installPath"])')/scripts/statement-extract"
 "$SE" doctor
 "$SE" extract statements/*.qfx --accounts accounts.toml --seen keys.txt --report run.json > out.jsonl
 "$SE" export out.jsonl > out.csv
