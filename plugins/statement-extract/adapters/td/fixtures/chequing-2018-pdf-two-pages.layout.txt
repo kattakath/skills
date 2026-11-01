@@ -1,0 +1,35 @@
+                                                                                                  SAMPLE BRANCH
+                                                                                                  100 SAMPLE ROAD
+                                                      ALEX SAMPLE
+                                                      1 SAMPLE STREET
+                                                      SAMPLETON ON A0A 0A0
+                                                 Statement of Account                                             Account Type                                           Statement From To
+                                          Branch No.              Account No.                                                                                           JUN 30/18 - JUL 31/18
+                                                                                                                     EVERYDAY
+                                                1234               1234-0000123                                                                                                 Page 1 of 2
+                                                     DESCRIPTION                             WITHDRAWALS                            DEPOSITS                  DATE                  BALANCE
+                                            BALANCE FORWARD                                                                                       JUN30                          1,000.00
+                                            SAMPLE GROCER                                                        45.00                            JUL02
+                                            PAYROLL DEPOSIT                                                                              2,000.00 JUL02                          2,955.00
+       000000
+                                            TD ATM W/D 000123                                                   100.00                            JUL05                          2,855.00
+                                                                                                            145.00                          2,000.00
+       SAMPLE00000_0000000_000 - 0000000
+                                            Account/Transaction Type                                    Fees
+                                            ACCOUNT ISSUED BY: THE TORONTO-DOMINION BANK
+                                                                                                  SAMPLE BRANCH
+                                                                                                  100 SAMPLE ROAD
+                                                      ALEX SAMPLE
+                                                      1 SAMPLE STREET
+                                                      SAMPLETON ON A0A 0A0
+                                                 Statement of Account                                             Account Type                                           Statement From To
+                                          Branch No.              Account No.                                                                                           JUN 30/18 - JUL 31/18
+                                                                                                                     EVERYDAY
+                                                1234               1234-0000123                                                                                                 Page 2 of 2
+                                                     DESCRIPTION                             WITHDRAWALS                            DEPOSITS                  DATE                  BALANCE
+                                            BALANCE FORWARD                                                                                       JUL31                          2,855.00
+                                            SAMPLE PHARMACY                                                      25.00                            JUL20
+                                            MONTHLY ACCOUNT FEE                                                  10.95                            JUL31                          2,819.05
+       000000
+                                                                                                             35.95                                  .00
+                                            ACCOUNT ISSUED BY: THE TORONTO-DOMINION BANK

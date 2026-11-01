@@ -34,12 +34,22 @@ total = '^\s+Total\s+({AMT})\s*(CR|-)?\s*$'
 section_regular = 'REGULAR TRANSACTION DETAILS|DÉTAIL DES TRANSACTIONS'
 section_operations = '^\s*Account Operations|Opérations au compte'
 section_done = 'CASH BACK EARNED|REMISE EN ARGENT'
+# The 2021 print adds a 3-digit "Transaction Number" column after the posting date. It is
+# only parsed where the column header says so (`numbered`), so the 2022+ grammar above,
+# whose keys are frozen, never sees this variant. The number is a per-statement sequence,
+# not an id: it is kept out of the description (and so out of the key).
+numbered = '^\s*Transaction Date\s+Posting Date\s+Transaction\s*$'
+txn_numbered = '^\s*(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+\d{3}\s+(?P<desc>\S.*?)\s+(?:(?P<cb>\d+(?:[.,]\d+)?\s?%)\s+)?(?P<amt>{AMT})\s*(?P<cr>CR|-)?\s*$'
 
 [grammar.summary]
 previous = 'Previous Balance|Solde précédent'
 purchases = 'Purchases / Debits|Achats / débits'
 cash_advances = 'Cash Advances|Avances de fonds'
-charges = 'Credit Charges|Frais de crédit'
+# 2021 prints two lines, "(Interest on Purchases)" and "(Interest on Cash Advances)". The
+# optional group can only match where the 2022+ wording did not (it needs "(" right after),
+# so the first-match position on those statements is unchanged.
+charges = 'Credit Charges(?: \(Interest on Purchases\))?|Frais de crédit'
+charges_cash = 'Credit Charges \(Interest on Cash Advances\)'
 instalment = 'Accord D financing Instalment|Versement Accord D'
 credits = 'Payments / Credits|Paiements / crédits'
 new = 'New Regular Balance|Nouveau solde régulier'
