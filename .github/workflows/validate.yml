@@ -227,6 +227,14 @@ jobs:
           /tmp/bk/bin/pip install -q beancount==3.2.3 beanquery==0.2.0 smart-importer==1.2
           PYTHON=/tmp/bk/bin/python bash plugins/beancount/tests/run.sh
 
+      # An unpinned `npx -y foo` / `uvx foo` ships whatever the registry serves today to
+      # every user, with no PR here. Dependabot cannot see these specs (it reads manifests,
+      # not .mcp.json args or shell launchers), so this gate is the only pin keeper.
+      - name: Runner specs pinned
+        run: |
+          python3 -I scripts/check-pins.py --self-test
+          python3 -I scripts/check-pins.py
+
       # The launcher's credential precedence is the plugin's whole contract, and an empty
       # userConfig value (what an UNSET one substitutes to) blanking the environment is the
       # bug it exists to prevent. A stub uvx records argv + env, so no network or uv is needed.

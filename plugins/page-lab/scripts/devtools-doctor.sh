@@ -87,6 +87,7 @@ if [ "$verify_tools" = 1 ]; then
     exit 1
   }
 
+  # check-pins: pinned by MEASURED_VERSION in the tools doc (empty is refused above)
   runner=(npx -y "$want_pkg@$want_ver" --no-usage-statistics --no-performance-crux)
   command -v timeout >/dev/null 2>&1 && runner=(timeout 120 "${runner[@]}")
 
