@@ -21,7 +21,8 @@ accounts.toml (screen) ──┘
   overridden in `ledger.toml`. Unmatched rows are flagged `!` on `Expenses:Uncategorized`.
 - Transfers between own accounts clear through `Assets:Transfers`, paired one-to-one: exact,
   a fee band (the shortfall posts to a fee account), cross-currency (`@@`), or an in-wallet
-  conversion. Unpaired legs stay in the clearing account and are listed.
+  conversion. Unpaired legs post to an external-transfers account and are listed, so the
+  clearing account always nets to zero.
 - Statement closings, screen figures and loan snapshots become `balance` assertions, dated
   the day after the figure. One opening pad per asserted account; later loan snapshots pad
   from an interest account.
