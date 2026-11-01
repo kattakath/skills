@@ -110,6 +110,19 @@ class Build(unittest.TestCase):
         self.assertIn("Balance failed", err)
         self.assertFalse(out.exists())
 
+    def test_overlapping_statement_dates_set_the_assertion_aside(self):
+        # The February statement prints a fee dated January 31, the January statement's last
+        # day. No day boundary separates them, so January's figure is set aside, not padded.
+        feb = [scenario.stmt("gggg", "Bank", "••0002", "card", "CAD", "-65.00", "2026-02-28"),
+               scenario.txn("gggg", "Bank", "••0002", "CAD", "Bank|••0002|C3", "2026-01-31",
+                            "-5.00", "MONTHLY FEE")]
+        (self.d / "card-feb.jsonl").write_text("".join(json.dumps(r) + "\n" for r in feb))
+        files = [*self.files.values(), self.d / "card-feb.jsonl"]
+        code, err = self.run_build("--check-only", files=files)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(err.splitlines()[0])["assertions_skipped_overlap"], 2)
+        self.assertIn("not asserted (a later statement has rows dated <= 2026-01-31)", err)
+
     def test_gap_pads_from_equity_gaps(self):
         led = self.d / "ledger.toml"
         led.write_text(led.read_text() + '\n[[gap]]\naccount = "Liabilities:Bank:Card-0002"\n'

@@ -46,6 +46,7 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `review` | entries flagged `!` on `Expenses:Uncategorized` |
 | `unpaired_must_pair` | rows whose rule required a partner and found none (now in review) |
 | `transfer_residue` | own-account legs with no partner; each Key is listed below the line |
+| `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
 
 ## Exit codes
