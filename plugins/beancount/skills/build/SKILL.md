@@ -145,3 +145,6 @@ derived.
   exactly; a mismatch is a missing or doubled transaction, not something to pad over. Pad a
   known hole with a `[[gap]]` and its reason.
 - **Assertions land the day after the figure's date**: Beancount checks at the start of a day.
+- **Assertions are exact to the cent** (`~ 0.00`). Beancount's default would pass a figure one
+  cent off. A cent that no statement explains, e.g. interest rounded between two statements
+  the bank never issued, is a `[[gap]]` with its reason, never a looser tolerance.
