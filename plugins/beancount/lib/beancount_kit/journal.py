@@ -3,8 +3,10 @@
 Every own-account row is one entry, keyed by its `key` metadata. The other leg is chosen in
 this order:
   1. a decision or [categories] override that names an account for the category
-  2. an own-account transfer candidate -> transfers.account (paired legs clear to zero; an
-     unpaired leg is residue the report lists)
+  2. a PAIRED own-account transfer leg -> transfers.account, which therefore always nets to
+     zero; an UNPAIRED candidate leg -> transfers.external, listed by the report as residue.
+     A full rebuild re-pairs every time, so a late partner moves a leg back automatically, and
+     net worth never carries an unmatched leg as a phantom asset or debt.
   3. a rule marked EXT, or any TRANSFER_* category -> transfers.external
   4. NEEDS_REVIEW -> Expenses:Uncategorized, flagged "!"
   5. the Plaid default: Income:<Rest> for INCOME, otherwise <Root>:<Primary>:<Rest>
@@ -71,7 +73,7 @@ def other_account(x, ledger) -> str:
     if x.cat in ledger.categories:
         return ledger.categories[x.cat]
     if x.cps:
-        return tr.account
+        return tr.account if x.pair else tr.external
     if (x.rule and x.rule["cp"] == "EXT") or x.cat.startswith(("TRANSFER_IN", "TRANSFER_OUT")):
         return tr.external
     if x.cat == NEEDS_REVIEW:

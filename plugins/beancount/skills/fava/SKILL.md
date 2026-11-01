@@ -30,6 +30,6 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | Question | Fava page |
 |---|---|
 | What needs review? | Journal, filter `flag:!` |
-| Do transfers clear? | Account `Assets:Transfers` (zero, or the listed residue) |
+| Do transfers clear? | `Assets:Transfers` is zero by construction; unmatched legs are in `Equity:Transfers:External` |
 | Net worth over time | Balance Sheet → chart |
 | Spending by category | Income Statement, or Query with a recipe from the `query` skill |

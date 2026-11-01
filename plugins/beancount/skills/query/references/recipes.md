@@ -47,11 +47,13 @@ WHERE flag = '!' AND account = 'Expenses:Uncategorized' ORDER BY date
 
 ```sql
 SELECT date, payee, entry_meta('key') AS key, position
-WHERE account = 'Assets:Transfers' AND entry_meta('transfer') IS NULL ORDER BY date
+WHERE account = 'Equity:Transfers:External' AND entry_meta('transfer') IS NULL
+  AND entry_meta('category') ~ '^TRANSFER_' ORDER BY date
 ```
 
-- The second query is the **transfer residue**: own-account legs with no partner. It should
-  list exactly the Keys the build report printed.
+- The second query lists legs booked outside the journal: the **transfer residue** (own-account
+  legs with no partner) plus rows a rule marks EXT. `Assets:Transfers` itself always nets to
+  zero, because only paired legs post there.
 
 ## One transaction
 
