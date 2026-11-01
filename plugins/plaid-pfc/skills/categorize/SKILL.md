@@ -24,7 +24,7 @@ description: Pre-fill a Plaid PFC v2 category suggestion for every transaction s
 ## Steps
 
 ```bash
-PFC="$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.claude/plugins/installed_plugins.json")))["plugins"]["plaid-pfc@kattakath"][0]["installPath"])')/scripts/pfc"
+PFC="${CLAUDE_PLUGIN_ROOT}/scripts/pfc"
 D=<the consumer's data folder>          # history and suggestions carry row text: keep them there
 ```
 
