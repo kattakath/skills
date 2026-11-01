@@ -30,6 +30,7 @@ class Row:
     acct: str           # the account label: ref, or "<CUR> balance" for a balance account
     cur: str
     sha: str
+    statement_id: str = ""
     n: int = 0          # tiebreak: position after sorting by (date, key)
     # set by the rules pass
     cat: str = ""
@@ -60,6 +61,7 @@ class Assertion:
     amount: Decimal     # holder view: an amount owed is negative
     cur: str
     origin: str         # statement | screen | position
+    statement_id: str = ""
 
 
 def _dec(s, where: str) -> Decimal:
@@ -104,7 +106,7 @@ def read_jsonl(paths: list[Path]):
                     a = r["account"]
                     asserts.append(Assertion(r["institution"], label_of(a["ref"], a["kind"]),
                                              b["closing_as_of"], _dec(b["closing"], p.name),
-                                             a["currency"], "statement"))
+                                             a["currency"], "statement", r["statement_id"]))
             elif kind == "position":
                 a = r["account"]
                 principal = _dec(r["balances"]["principal_outstanding"], p.name)
@@ -120,7 +122,8 @@ def read_jsonl(paths: list[Path]):
                           payee=ws(r.get("counterparty") or r.get("description") or ""),
                           memo=ws(r.get("memo")), inst=r["institution"],
                           acct=label_of(r["account"], st["account"]["kind"]),
-                          cur=r["currency"], sha=r["source"]["sha256"])
+                          cur=r["currency"], sha=r["source"]["sha256"],
+                          statement_id=r["statement_id"])
                 old = rows.get(row.key)
                 if old is None:
                     rows[row.key] = row
@@ -132,7 +135,31 @@ def read_jsonl(paths: list[Path]):
     out = sorted(rows.values(), key=lambda x: (x.iso, x.key))
     for n, x in enumerate(out):
         x.n = n
-    return out, asserts, positions
+    return out, *split_overlaps(asserts, out), positions
+
+
+def split_overlaps(asserts, rows):
+    """A statement closing is asserted at the start of the day after its as-of date. When a LATER
+    statement of the same account prints a row dated on or before that as-of date (a bank that
+    posts next period's fee on this period's last day, measured 2026-11-01), no day boundary
+    separates the two statements, so the figure cannot be asserted at day granularity. Those
+    assertions are set aside and counted, never adjusted: an adjusted figure is one no
+    statement printed. Every other figure stays a strict assertion."""
+    end_of = {a.statement_id: a.as_of for a in asserts if a.statement_id}
+    by_acct = {}
+    for x in rows:
+        by_acct.setdefault((x.inst, x.acct), []).append(x)
+    keep, skipped = [], []
+    for a in asserts:
+        if a.origin == "statement":
+            clash = any(x.statement_id != a.statement_id and x.iso <= a.as_of
+                        and end_of.get(x.statement_id, "") > a.as_of
+                        for x in by_acct.get((a.inst, a.acct), ()))
+            if clash:
+                skipped.append(a)
+                continue
+        keep.append(a)
+    return keep, skipped
 
 
 def read_screen_balances(path: Path, default_cur: str) -> list[Assertion]:
