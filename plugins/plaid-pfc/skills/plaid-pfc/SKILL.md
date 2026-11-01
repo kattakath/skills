@@ -37,6 +37,27 @@ PFC="$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.cl
    - `split` means one v1 name became several v2 names, so **list it for the operator**;
      never pick one silently.
 
+## Suggest from the consumer's own history (phase 3)
+
+1. **Export labelled history.** For a Beancount ledger, run `beancount-kit history` (same
+   inputs as `build`, `--out FILE`). It writes one row per transaction: `key`, `payee`, `memo`,
+   `category`, `source` (decision | rule | none), `ref` and `note`.
+   - **It contains row text:** keep it in the consumer's data folder, never in a repository.
+2. **Suggest:** `"$PFC" suggest --history H.jsonl --input T.jsonl` emits `Suggestion` JSONL for
+   rows whose merchant key (`"$PFC" merchant PAYEE`) has history.
+   - **Weights:** decision 2, rule 1, provisional 0.5 (a note matching `--provisional`,
+     default `\bauto\b`).
+   - **Confidence** is the top category's share of the weight.
+3. **Measure before trusting:** `"$PFC" eval --history H.jsonl` prints coverage and precision
+   at each confidence threshold, as counts only.
+   - **seen:** 20% of rows held out;
+   - **unseen:** 20% of merchants held out, every row of each;
+   - **provisional labels are never scored**;
+   - `--show` lists misses, with row text: never paste that output anywhere public.
+
+**Exact match cannot know a new merchant.** `unseen` coverage is 0% by design, and that number
+is what justifies the evidence adapters.
+
 ## Updating the pin (deliberate, never automatic)
 
 1. `"$PFC" refresh` fetches Plaid's CSV and prints the diff (added, removed, redescribed)
