@@ -88,6 +88,7 @@ class Ledger:
     gaps: list[Gap]
     fava_options: dict = field(default_factory=dict)
     queries: list = field(default_factory=list)     # [(name, sql)], generic + personal
+    fava_extensions: list = field(default_factory=list)  # [(module, config or "")]
 
     def account_for(self, institution: str, label: str) -> Account | None:
         for a in self.accounts:
@@ -154,11 +155,20 @@ def load(path: Path) -> Ledger:
         if not isinstance(v, (str, int, float)):
             raise Refusal(Exit.USAGE, f"fava.{k}: a Fava option takes one string or number")
         fava[str(k)] = str(v)
+    extensions = []
+    for i, x in enumerate(raw.get("fava_extension", [])):
+        name = x.get("name")
+        if not (isinstance(name, str) and re.fullmatch(r"[A-Za-z_][A-Za-z0-9_.]*", name)):
+            raise Refusal(Exit.USAGE, f"fava_extension[{i}]: name must be a Python module name")
+        cfg = x.get("config", "")
+        if not isinstance(cfg, str):
+            raise Refusal(Exit.USAGE, f"fava_extension[{i}]: config is one string (Fava passes it verbatim)")
+        extensions.append((name, cfg))
     queries = dict(_queries(Path(__file__).resolve().parent / "queries.toml", "queries.toml"))
     queries.update(_queries_raw(raw.get("query", []), "ledger.toml"))
     return Ledger(operating_currency=raw.get("operating_currency", "CAD"),
                   title=raw.get("title", "Ledger"), transfers=transfers, categories=categories,
-                  accounts=accounts, gaps=gaps, fava_options=fava,
+                  accounts=accounts, gaps=gaps, fava_options=fava, fava_extensions=extensions,
                   queries=sorted(queries.items()))
 
 

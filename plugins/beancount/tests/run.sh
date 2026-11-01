@@ -26,7 +26,7 @@ echo "== minimum counts"
 # A floor, so a renamed directory cannot turn this suite into a green no-op.
 tests=$(grep -c '^    def test_' tests/test_build.py)
 echo "tests=$tests"
-[ "$tests" -ge 40 ] || { echo "expected >= 40 tests, found $tests" >&2; exit 1; }
+[ "$tests" -ge 41 ] || { echo "expected >= 41 tests, found $tests" >&2; exit 1; }
 
 echo "== unit + golden"
 # -I drops cwd and the script dir from sys.path; the test file inserts lib/ and tests/ itself.

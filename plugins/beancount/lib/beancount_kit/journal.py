@@ -228,8 +228,10 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
     if earliest:
         head += [f"{earliest} custom \"fava-option\" {q(k)} {q(v)}"
                  for k, v in sorted(ledger.fava_options.items())]
+        head += [f"{earliest} custom \"fava-extension\" {q(n)}" + (f" {q(c)}" if c else "")
+                 for n, c in ledger.fava_extensions]
         head += [f"{earliest} query {q(n)} {q(s)}" for n, s in ledger.queries]
-        if ledger.fava_options or ledger.queries:
+        if ledger.fava_options or ledger.queries or ledger.fava_extensions:
             head.append("")
     opn = []
     for name in sorted(opens):
