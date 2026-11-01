@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a card's printed Total disagrees with its rows: refused"
+exit = 3
+stderr_has = "section_total_charges"

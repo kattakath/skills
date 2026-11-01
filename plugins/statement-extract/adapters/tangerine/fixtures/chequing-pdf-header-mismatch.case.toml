@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an accounts-file last4 that disagrees with the statement header is refused"
+exit = 3
+stderr_has = "header_last4"

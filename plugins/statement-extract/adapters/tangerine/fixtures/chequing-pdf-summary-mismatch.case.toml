@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a summary-table Account Balance that disagrees with the Closing Balance row is refused"
+exit = 3
+stderr_has = "summary_balance"

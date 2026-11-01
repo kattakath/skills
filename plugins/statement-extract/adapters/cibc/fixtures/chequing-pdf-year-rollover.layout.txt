@@ -1,0 +1,48 @@
+CIBC Account Statement
+
+ALEX SAMPLE                                                                        For Dec 1 to Jan 2, 2026
+
+                                                                                   Account number
+                                                                                   00-01234
+The xxxxx xxxxx xxx xxxxx on xxx xxxxxxx xxxxxxx, xx of October 1,
+                                                                                   Branch transit number
+2025. This statement xxxx xxx xxxxxxx xxx xxxxxxx in account xxxxxxx
+and account xxxxxx xxxxx xxxx may xxxx xxxxxxxx xxxxx to xxxx date.                00001
+
+
+
+
+Account summary                                                                    Contact information
+Opening balance on Dec 1, 2025                                          -$20.00       1 800 000-0000 CIBC (0000)
+
+Withdrawals                                        -                       45.00
+
+Deposits                                          +                       300.00
+                                                  =                     $235.00
+Closing balance on Jan 2, 2026
+
+                                                                                      www.cibc.com
+
+
+
+Transaction details
+Date          Description                                 Withdrawals ($)          Deposits ($)                Balance ($)
+Dec 1         Opening balance                                                                                      -$20.00
+Dec 1         OVERDRAFT INTEREST CHARGE                               0.50                                          -20.50
+Dec 30        E-TRANSFER       000012345683                                              300.00                     279.50
+              SAMPLE FRIEND
+Jan 2         SERVICE CHARGE                                          4.50                                          275.00
+              SERVICE CHARGE OVERDRAFT FEE                           40.00                                          235.00
+              Closing balance                                                                                      $235.00
+
+
+Important: This statement will be considered correct xxxxx xxxxx xxxxxx xxxx xxxxxx xx xx xxxxxx xxx xxxxx xx xxx xxxxxxxx
+balances to CIBC in writing xxxxxx the period xxxxxxxxxx to your regular account statement cycle, as follows:
+           xxxxxxxx xx xxxxxxxxx: 30 days from the date the entry was posted, as stated in the record; or
+           Statement: 30 days from last date of the statement period covered by a statement xxxxxx regular statement cycle.
+Interac is a registered trade-mark of Interac Corp. Used under license.
+
+
+
+
+00000E PER-0000/00                                                                                             Page 2 of 2

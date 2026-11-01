@@ -1,0 +1,59 @@
+# CIBC Visa credit card, monthly PDF statement. One layout measured on the operator's
+# statements from 2021 to 2026; the only drift is the header's account number, printed in full
+# in 2021 and first-four/last-four with the middle masked later. Both keep the last four.
+institution = "CIBC"
+format = "pdftext"
+description = "CIBC Visa credit card, monthly PDF statement"
+
+[identify]
+text = ['CIBC .*Visa.*Card', '^\s*Total charges\s+\+', '^\s*Total balance\s+=',
+        'Transactions from [A-Z][a-z]+ \d{1,2}']
+
+[keys]
+# No FITID in a PDF. Content key over (posting date, signed amount, description):
+#   CIBC|••1234|<date>|<amount>|<text>|<n>
+scheme = "content-occurrence/1"
+
+# The header prints the card number (the number on screen). An accounts-file last4 that
+# disagrees with it is refused (header_last4).
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # every row is tied to a per-direction printed total and the balance equation
+
+# {AMT} is substituted with pdfkit.AMOUNT, {MONTH} with a full month name, {MON} with a
+# 3-letter month, before compiling. Summary amounts must not be followed by "%": the interest
+# rate sidebar repeats "Cash advances" and "purchases" with a rate.
+[grammar]
+month = '(?:January|February|March|April|May|June|July|August|September|October|November|December)'
+mon = '(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)'
+account = 'Account number\s*\n\s*(\d{4} \S{4} \S{4} \d{4})\s*$'
+period = '({MONTH}) (\d{1,2})(?:, (\d{4}))? to ({MONTH}) (\d{1,2}), (\d{4})'
+statement_date = 'Statement Date\s*\n\s*({MONTH}) (\d{1,2}), (\d{4})'
+previous = '^\s*Previous balance\s+({AMT})(?![\d%])'
+payments = '^\s*Payments\s+({AMT})(?![\d%])'
+total_credits = '^\s*Total credits\s+-\s+({AMT})(?![\d%])'
+purchases = '^\s*Purchases\s+({AMT})(?![\d%])'
+cash_advances = '^\s*Cash advances\s+({AMT})(?![\d%])'
+interest = '^\s*Interest\s+({AMT})(?![\d%])'
+fees = '^\s*Fees\s+({AMT})(?![\d%])'
+total_charges = '^\s*Total charges\s+\+\s+({AMT})(?![\d%])'
+total_balance = '^\s*Total balance\s+=\s+({AMT})(?![\d%])'
+# Transaction tables: a heading line names the columns; rows carry two dates.
+start = '^\s*Transactions from '
+header = '^\s*date\s+date\s+Description\b'
+row = '^\s*({MON}) (\d{1,2})\s+({MON}) (\d{1,2})\b'
+section_total = '^\s*Total\b'
+card_line = '^\s*Card number\b'
+amount_heading = 'Amount\s?\(\$\)'
+# The contactless icon prints as a lone U+00DD right after the posting date.
+icon = '^Ý\s+'
+# Section headings, and which direction a row under each one takes. Under "charges and
+# credits" the printed sign decides; payments print positive and are credits.
+[grammar.sections]
+payments = '^\s*Your payments\b'
+charges = '^\s*Your new charges and credits\b'
+interest = '^\s*Your interest\b'
+fees = '^\s*Your fees\b'

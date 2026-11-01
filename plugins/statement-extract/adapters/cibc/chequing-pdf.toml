@@ -1,0 +1,41 @@
+# CIBC chequing (deposit account), monthly "CIBC Account Statement" PDF. One layout measured
+# unchanged on the operator's statements from 2021 to 2026 (fixture shape, oldest and newest).
+institution = "CIBC"
+format = "pdftext"
+description = "CIBC chequing account, monthly PDF statement (Withdrawals / Deposits / Balance)"
+
+[identify]
+text = ['CIBC Account Statement', 'Opening balance on [A-Z][a-z]{2} \d{1,2}, \d{4}',
+        'Withdrawals \(\$\)\s+Deposits \(\$\)\s+Balance \(\$\)']
+
+[keys]
+# No FITID in a PDF. Content key over (posting date, signed amount, first description line):
+#   CIBC|••1234|<date>|<amount>|<text>|<n>
+scheme = "content-occurrence/1"
+
+# The header prints the real account number ("Account number" / "dd-ddddd"). An accounts-file
+# last4 that disagrees with it is refused (header_last4), never silently preferred.
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # every row prints a running balance that must chain, and both column totals tie
+
+# {AMT} is substituted with pdfkit.AMOUNT before compiling; {MON} with a 3-letter month.
+[grammar]
+mon = '[A-Z][a-z]{2}'
+opening = '^Opening balance on ({MON}) (\d{1,2}), (\d{4})\s+({AMT})'
+closing_date = '^Closing balance on ({MON}) (\d{1,2}), (\d{4})'
+closing_amount = '^\s+=\s+({AMT})\s'
+withdrawals = '^Withdrawals\s+-\s+({AMT})'
+deposits = '^Deposits\s+\+\s+({AMT})'
+account = 'Account number:?\s*(\d+(?:-\d+)+)\b'
+# The column heading line; it is repeated, shifted, on every continuation page.
+header = '^\s*Date\s+Description\s+Withdrawals \(\$\)\s+Deposits \(\$\)\s+Balance \(\$\)'
+columns = { withdrawals = 'Withdrawals \(\$\)', deposits = 'Deposits \(\$\)', balance = 'Balance \(\$\)' }
+date = '^\s*({MON}) (\d{1,2})\s{2,}'
+end_of_page = '\(continued on next page\)'
+opening_row = '^Opening balance$'
+forward_row = '^Balance forward$'
+closing_row = '^Closing balance$'

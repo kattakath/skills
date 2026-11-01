@@ -31,13 +31,14 @@ echo "== minimum counts"
 # Floors, so a renamed directory cannot turn this suite into a green no-op. These are R1's
 # real counts; RAISE THEM with each release (plan end state: adapters >= 7, cases >= 51).
 # R1: 4 adapters / 33 cases. R3: + Desjardins and closed Scotiabank chequing PDFs.
+# R3b: + PDF adapters for TD, CIBC, Scotiabank card/LOC, Tangerine and BMO (16 / 92).
 adapters=$(find adapters -mindepth 2 -maxdepth 2 -name '*.toml' | wc -l | tr -d ' ')
 cases=$(find adapters -path '*/fixtures/*.case.toml' | wc -l | tr -d ' ')
 repairs=$("$py" -I -c 'import sys; sys.path.insert(0, "lib")
 from statement_extract.repairs.ofx import REPAIRS; print(len(REPAIRS))')
 echo "adapters=$adapters cases=$cases repairs=$repairs"
-[ "$adapters" -ge 6 ] || { echo "expected >= 6 adapters, found $adapters" >&2; exit 1; }
-[ "$cases" -ge 46 ] || { echo "expected >= 46 fixture cases, found $cases" >&2; exit 1; }
+[ "$adapters" -ge 16 ] || { echo "expected >= 16 adapters, found $adapters" >&2; exit 1; }
+[ "$cases" -ge 92 ] || { echo "expected >= 92 fixture cases, found $cases" >&2; exit 1; }
 [ "$repairs" -ge 4 ] || { echo "expected >= 4 repairs, found $repairs" >&2; exit 1; }
 
 echo "== unit + golden"

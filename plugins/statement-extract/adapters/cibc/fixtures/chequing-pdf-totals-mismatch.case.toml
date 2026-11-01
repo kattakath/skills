@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the summary Deposits total disagrees with the Deposits column: refused"
+exit = 3
+stderr_has = "summary_deposits"

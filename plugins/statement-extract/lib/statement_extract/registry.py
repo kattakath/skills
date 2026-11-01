@@ -15,7 +15,7 @@ FORMATS = ("ofx", "pdftext")  # the csv driver arrives with Wise
 # The only functions a Python hook may define, each because TOML cannot express it.
 HOOKS = ("parse_lines", "post_drafts", "extra_checks")
 KNOWN_TOP = {"institution", "format", "description", "identify", "repairs", "keys", "account",
-             "reconcile", "skip", "sign", "grammar"}
+             "reconcile", "skip", "sign", "grammar", "hook"}
 
 
 @dataclass
@@ -118,7 +118,16 @@ def load(root: Path = ADAPTERS_DIR) -> list[Adapter]:
         check_spec(adapter_id, spec)
         h = hashlib.sha256(raw)
         hook = None
-        hook_path = p.with_suffix(".py")
+        # `hook = "other.py"` shares a sibling adapter's hook (same layout, different data)
+        # instead of a copy; its bytes enter THIS adapter's sha256, so an edit to the shared
+        # hook changes every adapter that uses it.
+        named = spec.get("hook")
+        if named is not None and (not isinstance(named, str) or "/" in named
+                                  or not named.endswith(".py")):
+            raise AdapterError(f"{adapter_id}: hook must be a sibling file name ending .py")
+        hook_path = p.with_name(named) if named else p.with_suffix(".py")
+        if named and not hook_path.exists():
+            raise AdapterError(f"{adapter_id}: hook {named} not found")
         if hook_path.exists():
             h.update(b"\0" + hook_path.read_bytes())
             hook = load_hook(adapter_id, hook_path)

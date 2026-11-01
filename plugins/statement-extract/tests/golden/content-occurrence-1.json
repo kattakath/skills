@@ -1,0 +1,133 @@
+{
+ "_comment": "content-occurrence/1, frozen 2026-10-31. Produced by keys.content_v1 when it was frozen (equal to mask.mask that day on every vector). Never edit by hand.",
+ "vectors": [
+  {
+   "in": "",
+   "out": ""
+  },
+  {
+   "in": "   ",
+   "out": ""
+  },
+  {
+   "in": null,
+   "out": ""
+  },
+  {
+   "in": "PLAIN PAYEE",
+   "out": "PLAIN PAYEE"
+  },
+  {
+   "in": "  LEADING AND TRAILING  ",
+   "out": "LEADING AND TRAILING"
+  },
+  {
+   "in": "DOUBLE  SPACE  KEPT",
+   "out": "DOUBLE SPACE KEPT"
+  },
+  {
+   "in": "TAB\tINSIDE",
+   "out": "TAB INSIDE"
+  },
+  {
+   "in": "TO:0000123456789",
+   "out": "TO:••6789"
+  },
+  {
+   "in": "FRM:0000987654321 REF 0000111",
+   "out": "FRM:••4321 REF ••0111"
+  },
+  {
+   "in": "123456",
+   "out": "123456"
+  },
+  {
+   "in": "1234567",
+   "out": "••4567"
+  },
+  {
+   "in": "PAYMENT FROM - *****12*3456",
+   "out": "PAYMENT FROM - ••3456"
+  },
+  {
+   "in": "TO - *****0000567",
+   "out": "TO - ••0567"
+  },
+  {
+   "in": "CC#4500********0000",
+   "out": "CC#••0000"
+  },
+  {
+   "in": "CC#4500****0000 AND 0000123456789",
+   "out": "CC#••0000 AND ••6789"
+  },
+  {
+   "in": "e-Transfer *1234 ref",
+   "out": "e-Transfer *1234 ref"
+  },
+  {
+   "in": "x**1234",
+   "out": "x••1234"
+  },
+  {
+   "in": "**12345",
+   "out": "••2345"
+  },
+  {
+   "in": "0000 12** **** 0000 CARD",
+   "out": "••0000 CARD"
+  },
+  {
+   "in": "000012** ****0000",
+   "out": "••0000"
+  },
+  {
+   "in": "DATE 2026-10-31 AMT 1,234.56",
+   "out": "DATE 2026-10-31 AMT 1,234.56"
+  },
+  {
+   "in": "PRÊT HYPOTHÉCAIRE",
+   "out": "PRÊT HYPOTHÉCAIRE"
+  },
+  {
+   "in": "A & B",
+   "out": "A & B"
+  },
+  {
+   "in": "••1234 already",
+   "out": "••1234 already"
+  },
+  {
+   "in": "FEE NBSP",
+   "out": "FEE NBSP"
+  },
+  {
+   "in": "MIXED  *****1234  AND  0000123456789",
+   "out": "MIXED ••1234 AND ••6789"
+  },
+  {
+   "in": "5 1234567 9",
+   "out": "••5679"
+  },
+  {
+   "in": "0000-1234-5678",
+   "out": "••5678"
+  },
+  {
+   "in": "Transfer from 0000 01234 56",
+   "out": "Transfer from ••3456"
+  },
+  {
+   "in": "DATE 31/10/2026 OK",
+   "out": "DATE 31/10/2026 OK"
+  },
+  {
+   "in": "Mortgage payment #000012-3",
+   "out": "Mortgage payment #••0123"
+  },
+  {
+   "in": "TO:0000123456789  NOW",
+   "out": "TO:••6789 NOW"
+  }
+ ]
+}

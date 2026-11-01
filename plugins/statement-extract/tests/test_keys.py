@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from helpers import GOLDEN, case_name, cases, golden_path
 
-from statement_extract import keys
+from statement_extract import keys, mask
 
 
 class FrozenNormalisers(unittest.TestCase):
@@ -16,8 +16,18 @@ class FrozenNormalisers(unittest.TestCase):
         self.assertGreaterEqual(len(doc["vectors"]), 25)
         for v in doc["vectors"]:
             for scheme, fn in keys.FROZEN.items():
+                if "/legacy-" not in scheme:
+                    continue
                 with self.subTest(scheme=scheme, input=v["in"]):
                     self.assertEqual(fn(v["in"]), v[scheme.split("/")[1]])
+
+    def test_content_v1_vectors(self):
+        doc = json.loads((GOLDEN / "content-occurrence-1.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(doc["vectors"]), 30)
+        for v in doc["vectors"]:
+            with self.subTest(input=v["in"]):
+                self.assertEqual(keys.content_v1(v["in"]), v["out"])
+                self.assertFalse(mask.leaks(v["out"]) and not mask.leaks(v["in"] or ""))
 
     def test_source_unchanged(self):
         doc = json.loads((GOLDEN / "frozen.json").read_text(encoding="utf-8"))

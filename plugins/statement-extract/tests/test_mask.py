@@ -10,6 +10,7 @@ RULE_CASES = {
     "desjardins-card": [("0000 12** **** 0000", "••0000"), ("0000 12 0000", "0000 12 0000")],
     "star-masked": [("FROM - *****12*3456", "FROM - ••3456"), ("e-Transfer *1234", "e-Transfer *1234")],
     "first4-stars-last4": [("CC#4500********2204", "CC#••2204"), ("CC#4500**2204", "CC#4500**2204")],
+    "star-short-tail": [("FROM 00012/****345", "FROM 00012/••345"), ("NOTE ** 12", "NOTE ** 12")],
     "grouped-digits": [("ACCT 0000 1234 567", "ACCT ••4567"), ("ON 2026-10-31 OK", "ON 2026-10-31 OK"),
                        ("PH 416 555", "PH 416 555")],
     "long-digit-run": [("TO:0000123456789", "TO:••6789"), ("REF 123456", "REF 123456")],
@@ -36,7 +37,7 @@ class Rules(unittest.TestCase):
 
     def test_masked_output_never_leaks(self):
         for given in ("TO:0000123456789", "CC#4500********2204", "*****12*3456",
-                      "0000 12** **** 0000", "0000-1234-5678-9012"):
+                      "0000 12** **** 0000", "0000-1234-5678-9012", "00012/****345"):
             with self.subTest(given=given):
                 self.assertFalse(mask.leaks(mask.mask(given)))
 
