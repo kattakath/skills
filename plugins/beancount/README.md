@@ -50,7 +50,8 @@ and `fava` as programs; it ships none of their code. Fava is MIT.
 `beancount-kit coverage` checks the statement JSONL for **completeness** (each statement's
 opening equals the previous closing; date holes and where history starts per account) and
 **occurrence** (a Key in several files counts once; one Key with two values fails;
-look-alikes are listed). Exit 3 on a balance break or a conflicting Key.
+look-alikes are listed; two sources printing the same rows under different Keys fail).
+Exit 3 on a balance break, a conflicting Key or a doubled source.
 
 `beancount-kit suggest` (optional, needs **smart_importer 1.2**, MIT) suggests a category
 for each flagged entry, learned from the categorised ones; the operator accepts or not.

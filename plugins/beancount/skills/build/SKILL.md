@@ -63,6 +63,11 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
   two different date/amount values fails; look-alikes (same account, date, amount, description,
   different Keys) are listed. Banks post identical charges; a passing balance assertion over
   the period means the bank has every one.
+- **Doubled sources fail:** two statements of one account that print the same date and
+  amount under different Keys, inside dates both cover. Typical cause: a PDF kept for
+  reference beside the QFX for the same period. Keep one source per account and period.
+- **No start date** (some PDFs print only the end): breaks are still checked in end-date
+  order; holes and overlap fall back to the statement's own row dates.
 - Run it beside every build. No off-the-shelf Beancount plugin checks statement continuity
   (searched 2026-11-01); the core `noduplicates` plugin catches exact duplicates only.
 

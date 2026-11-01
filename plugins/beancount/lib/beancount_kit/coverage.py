@@ -9,6 +9,8 @@ entries only.
 Per account (institution + label):
   - periods: distinct (start, end) statement periods, sorted; re-downloads collapse
   - balance breaks: next opening != previous closing, where both are printed  -> FAIL
+    (checked even when a statement prints no start date, e.g. Desjardins PDFs: periods are
+    ordered by end date; such a statement can't be checked for holes or overlap by period)
   - date holes: more than one day between one period's end and the next's start -> WARN
     (statement boundaries leave such days; rows dated on them sit in the next statement, and
     an unbroken balance chain or a passing journal assertion proves nothing is missing)
@@ -18,6 +20,12 @@ Across files:
   - one Key in several files (overlapping downloads)                           -> counted once
   - look-alikes: same account, date, amount and description, different Keys    -> listed
     (banks do post identical charges; a passing balance assertion means the bank has them)
+  - doubled sources: two statements of one account both print a row on the same date for
+    the same amount under different Keys, inside the dates both cover            -> FAIL
+    (a PDF for a period a QFX already covers keys by content, the QFX by FITID: the Key
+    dedupe cannot see it. Identical charges inside ONE statement are never counted here.
+    Measured 2026-11-01: 29 reference PDFs over QFX periods; the balance chain stayed
+    unbroken on two accounts, and only this check names the cause)
 """
 import collections
 import json
@@ -54,8 +62,9 @@ def coverage(paths: list[Path]) -> dict:
     per = collections.defaultdict(list)
     for s in stmts.values():
         per[(s["institution"], label_of(s["account"]["ref"], s["account"]["kind"]))].append(s)
-    span = {}
+    span, by_stmt = {}, collections.defaultdict(list)
     for r in rows:
+        by_stmt[r["statement_id"]].append(r)
         k = (r["institution"], label_of(r["account"], kind_of.get(r["statement_id"], "")))
         lo, hi = span.get(k, (r["booking_date"], r["booking_date"]))
         span[k] = (min(lo, r["booking_date"]), max(hi, r["booking_date"]))
@@ -72,21 +81,23 @@ def coverage(paths: list[Path]) -> dict:
         holes, breaks = [], []
         for a, b in zip(chain, chain[1:]):
             ae, bs = a["period"]["end"], b["period"]["start"]
-            if not (ae and bs):
-                continue
-            gap = (date.fromisoformat(bs) - date.fromisoformat(ae)).days
-            if gap > 1:
+            gap = (date.fromisoformat(bs) - date.fromisoformat(ae)).days if ae and bs else None
+            if gap is not None and gap > 1:
                 holes.append({"after": ae, "before": bs, "days": gap - 1})
             ac, bo = a["balances"]["closing"], b["balances"]["opening"]
-            if gap > 0 and ac is not None and bo is not None and Decimal(ac) != Decimal(bo):
+            if (gap is None or gap > 0) and ac is not None and bo is not None \
+                    and Decimal(ac) != Decimal(bo):
                 breaks.append({"at": ae, "closing": ac, "next_opening": bo})
+        doubled = _doubled(per[k], by_stmt)
         starts = [s["period"]["start"] for s in chain if s["period"]["start"]]
         ends = [s["period"]["end"] for s in chain if s["period"]["end"]]
         lo, hi = span.get(k, (None, None))
         accounts.append({"institution": k[0], "account": k[1], "files": len(per[k]),
                          "periods": len(chain), "from": min(starts) if starts else lo,
                          "to": max(ends) if ends else hi, "date_holes": holes,
-                         "balance_breaks": breaks})
+                         "balance_breaks": breaks, "doubled": doubled,
+                         "periods_without_start": sum(1 for s in chain
+                                                      if not s["period"]["start"])})
 
     bykey = collections.defaultdict(list)
     for r in rows:
@@ -105,7 +116,46 @@ def coverage(paths: list[Path]) -> dict:
             "keys_in_several_files": sum(1 for v in bykey.values() if len(v) > 1),
             "key_conflicts": conflicts, "lookalikes": lookalikes,
             "balance_breaks": sum(len(a["balance_breaks"]) for a in accounts),
+            "doubled_rows": sum(d["rows"] for a in accounts for d in a["doubled"]),
             "date_holes": sum(len(a["date_holes"]) for a in accounts)}
+
+
+def _window(s, rows):
+    ds = [r["booking_date"] for r in rows]
+    lo = s["period"]["start"] or (min(ds) if ds else s["period"]["end"])
+    return lo, s["period"]["end"] or (max(ds) if ds else lo)
+
+
+def _doubled(stmts, by_stmt) -> list[dict]:
+    """Rows a second statement adds, inside dates the first also covers, that match one of the
+    first's rows on date and amount under a different Key. Each first-statement row matches at
+    most once, so two real identical charges printed by BOTH statements are not counted."""
+    out = []
+    for i, a in enumerate(stmts):
+        ra = by_stmt.get(a["statement_id"], [])
+        alo, ahi = _window(a, ra)
+        if not (alo and ahi):
+            continue
+        for b in stmts[i + 1:]:
+            rb = by_stmt.get(b["statement_id"], [])
+            blo, bhi = _window(b, rb)
+            lo, hi = max(alo, blo or alo), min(ahi, bhi or ahi)
+            if lo > hi:
+                continue
+            ka, kb = {r["key"] for r in ra}, {r["key"] for r in rb}
+            pool = collections.Counter((r["booking_date"], Decimal(r["amount"])) for r in ra
+                                       if r["key"] not in kb and lo <= r["booking_date"] <= hi)
+            n, first = 0, None
+            for r in rb:
+                t = (r["booking_date"], Decimal(r["amount"]))
+                if r["key"] not in ka and lo <= t[0] <= hi and pool[t] > 0:
+                    pool[t] -= 1
+                    n += 1
+                    first = min(first or t[0], t[0])
+            if n:
+                out.append({"from": lo, "to": hi, "rows": n, "first": first,
+                            "files": sorted({a["source"]["file"], b["source"]["file"]})})
+    return out
 
 
 def report(c: dict, out) -> None:
@@ -115,11 +165,15 @@ def report(c: dict, out) -> None:
         w(f"  {a['institution']:12s} {a['account']:14s} files {a['files']:3d} periods "
           f"{a['periods']:3d}  {a['from']} -> {a['to']}  date holes {len(a['date_holes'])}  "
           f"balance breaks {len(a['balance_breaks'])}\n")
+        for d in a["doubled"]:
+            w(f"      DOUBLED {d['rows']} rows {d['from']} -> {d['to']}: two sources, different "
+              f"Keys ({', '.join(d['files'])})\n")
         for b in a["balance_breaks"]:
             w(f"      BREAK at {b['at']}: closing {b['closing']} != next opening "
               f"{b['next_opening']}\n")
     w(f"OCCURRENCE (no double counting)\n  rows {c['rows_read']}, unique Keys "
       f"{c['unique_keys']}, Keys in several files {c['keys_in_several_files']} (counted once), "
-      f"conflicting Keys {len(c['key_conflicts'])}, look-alike groups {len(c['lookalikes'])}\n")
+      f"conflicting Keys {len(c['key_conflicts'])}, look-alike groups {len(c['lookalikes'])}, "
+      f"doubled rows {c['doubled_rows']}\n")
     for k in c["key_conflicts"][:20]:
         w(f"      CONFLICT {k}\n")
