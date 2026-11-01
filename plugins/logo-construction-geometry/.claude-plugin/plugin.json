@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "logo-construction-geometry",
+  "version": "1.0.0",
   "description": "Rebuild a raster or noisy auto-traced logo as clean SVG from measured construction geometry: find centres, radii, angles and nodes, infer the rule, regenerate from named parameters, score the overlap against the source.",
   "author": {
     "name": "Ismail Kattakath"

@@ -1,0 +1,53 @@
+name: release-tags
+
+# Every plugin release gets a `<plugin>--v<version>` git tag, made by Claude Code's own
+# `claude plugin tag` (it refuses when plugin.json and the marketplace entry disagree).
+# The tags are what a dependency's version RANGE resolves against: Claude Code checks
+# `"dependencies": [{"name": "x", "version": "^1.2"}]` against git tags, not plugin.json.
+#
+# Runs after a merge to main. A plugin whose current version already has its tag is
+# skipped, so a re-run or a merge that bumped nothing tags nothing.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-tags
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+
+      - name: Tag each plugin version that has no tag yet
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          made=0
+          for dir in plugins/*/; do
+            name=$(jq -r .name "$dir.claude-plugin/plugin.json")
+            ver=$(jq -r '.version // empty' "$dir.claude-plugin/plugin.json")
+            [ -n "$ver" ] || { echo "::error::$dir has no version"; exit 1; }
+            tag="$name--v$ver"
+            if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+              continue
+            fi
+            # Pinned with validate.yml's CLI; raise both together.
+            npx -y @anthropic-ai/claude-code@2.1.268 plugin tag "$dir" --push -m "$name %s"
+            made=$((made + 1))
+          done
+          echo "tagged $made plugin release(s)"
