@@ -26,4 +26,4 @@ mkdir -p "$data_dir"
 MEMORY_FILE_PATH="${MEMORY_FILE_PATH:-$data_dir/graph.jsonl}"
 export MEMORY_FILE_PATH
 
-exec npx -y @modelcontextprotocol/server-memory "$@"
+exec npx -y @modelcontextprotocol/server-memory@2.0.1 "$@"
