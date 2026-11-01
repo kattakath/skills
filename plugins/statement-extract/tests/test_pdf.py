@@ -138,6 +138,40 @@ class ShapePrivacy(unittest.TestCase):
         self.assertTrue(all(w.replace("-", "").isalpha() for w in fixtures.LABELS))
 
 
+class PdfKit(unittest.TestCase):
+    def test_amounts(self):
+        from decimal import Decimal as D
+        from statement_extract import pdfkit as k
+        for text, want in (("1,234.56", D("1234.56")), ("$1,234.56", D("1234.56")),
+                           ("-5.00", D("-5.00")), ("5.00-", D("-5.00")), ("(5.00)", D("-5.00")),
+                           ("12.34 CR", D("-12.34")), ("12.34CR", D("-12.34"))):
+            with self.subTest(text=text):
+                self.assertEqual(k.amount(text), want)
+                self.assertTrue(k.AMOUNT_RE.fullmatch(text))
+
+    def test_dates_and_columns(self):
+        from statement_extract import pdfkit as k
+        self.assertEqual((k.month("Sep"), k.month("SEP"), k.month("September")), (9, 9, 9))
+        self.assertEqual(k.infer_year(12, 1, 2026), 2025)
+        self.assertEqual(k.infer_year(1, 1, 2026), 2026)
+        cols = k.columns("  Description     Withdrawals     Deposits   Balance",
+                         {"out": "Withdrawals", "in": "Deposits", "bal": "Balance"})
+        self.assertEqual(k.nearest_column((26, 32), cols), "out")
+        self.assertEqual(k.nearest_column((38, 44), cols), "in")
+
+    def test_running_chain_day_groups(self):
+        from decimal import Decimal as D
+        from statement_extract import pdfkit as k
+        rows = [{"amount": D("-5"), "balance": None}, {"amount": D("-5"), "balance": D("90")},
+                {"amount": D("10"), "balance": D("100")}]
+        self.assertTrue(k.running_chain(D("100"), rows).ok)
+        rows[1]["balance"] = D("91")
+        bad = k.running_chain(D("100"), rows)
+        self.assertFalse(bad.ok)
+        self.assertEqual(bad.actual, "breaks at row(s) [2, 3]")  # 91 + 10 != 100 either
+        self.assertFalse(k.running_chain(D("0"), [{"amount": D("1"), "balance": None}]).ok)
+
+
 class Reader(Tmp):
     def test_non_text_file_is_not_a_statement(self):
         f = self.tmp / "x.layout.txt"

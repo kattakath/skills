@@ -35,9 +35,32 @@ def legacy_collapse_v0(s):
     return re.sub(r"\d{4}\*{4,}(\d{4})", r"••\1", s)
 
 
+def content_v1(s):
+    # FROZEN 2026-10-31 for statements with no institution id (PDF). Collapse whitespace,
+    # then keep only the last four of anything account-shaped, including space/dash-grouped
+    # numbers (real Scotiabank payees: "ddddd ddddd dd"), dates excepted. A frozen copy of
+    # mask.py's rules of that day: mask.py may improve, this may not.
+    s = re.sub(r"\s+", " ", (s or "").strip())
+    s = re.sub(r"\d{4} ?\d{2}\*\* ?\*{4} ?(\d{4})", r"••\1", s)
+    s = re.sub(r"(?<![\d*])\*{2,}[\d*]*(\d{4})\b", r"••\1", s)
+    s = re.sub(r"\d{4}\*{4,}(\d{4})", r"••\1", s)
+
+    def grouped(m):
+        text = m.group(0)
+        digits = re.sub(r"\D", "", text)
+        if len(digits) < 7 or re.fullmatch(
+                r"\d{4}[-/ ]\d{2}[-/ ]\d{2}|\d{2}[-/ ]\d{2}[-/ ]\d{4}|\d{2}[-/ ]\d{2}[-/ ]\d{2}", text):
+            return text
+        return "••" + digits[-4:]
+
+    s = re.sub(r"(?<![\d•])\d+(?:[ -]\d+)+(?!\d)", grouped, s)
+    return re.sub(r"\d{7,}", lambda m: "••" + m.group(0)[-4:], s)
+
+
 FROZEN = {
     "content-occurrence/legacy-qfx-v0": legacy_qfx_v0,
     "content-occurrence/legacy-collapse-v0": legacy_collapse_v0,
+    "content-occurrence/1": content_v1,
 }
 
 # Schemes this release can build. native-id-ts/1 (Wise) and content-hash/1 arrive with the
