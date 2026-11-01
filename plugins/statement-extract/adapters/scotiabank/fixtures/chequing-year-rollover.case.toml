@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a January statement's December row takes the previous year"
+exit = 0
+pdf_smoke = true

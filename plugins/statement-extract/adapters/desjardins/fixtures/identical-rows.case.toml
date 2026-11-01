@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "two identical rows on one posting day are numbered by occurrence (|1, |2)"
+exit = 0
+pdf_smoke = true

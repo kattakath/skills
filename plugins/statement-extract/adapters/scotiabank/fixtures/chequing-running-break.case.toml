@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a row whose balance does not follow from the one before is refused"
+exit = 3
+stderr_has = "running_chain"

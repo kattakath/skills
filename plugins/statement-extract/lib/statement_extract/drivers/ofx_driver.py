@@ -11,8 +11,9 @@ from ..repairs import ofx as repairs
 IDENT_FIELDS = {"org": "ORG", "fid": "FID", "intu_bid": "INTU.BID"}
 
 
-def identify(raw: bytes, spec: dict) -> bool:
+def identify(raw: bytes, adapter, path=None) -> bool:
     """Every field the adapter lists must match one of its values."""
+    spec = adapter.spec
     found = ofx.identifiers(raw)
     if not found:
         return False
@@ -50,7 +51,8 @@ def _dt(text):
         raise Refusal(Exit.REFUSED, str(e)) from None
 
 
-def extract(raw: bytes, spec: dict) -> tuple[list[StatementDraft], list[str]]:
+def extract(raw: bytes, adapter, path=None) -> tuple[list[StatementDraft], list[str]]:
+    spec = adapter.spec
     fixed, fired = repairs.apply(raw, spec.get("repairs", []))
     try:
         doc = ofx.parse(fixed)

@@ -17,7 +17,8 @@ TD = ADAPTERS / "td" / "fixtures"
 SC = ADAPTERS / "scotiabank" / "fixtures"
 OK_FILES = [TD / "clean-chequing.qfx", TD / "multi-account.qfx", TD / "identical-rows.qfx",
             ADAPTERS / "cibc" / "fixtures" / "card-memo-first4.qfx",
-            ADAPTERS / "tangerine" / "fixtures" / "posted-fragments.qfx"]
+            ADAPTERS / "tangerine" / "fixtures" / "posted-fragments.qfx",
+            SC / "chequing-regular.layout.txt", SC / "chequing-year-rollover.layout.txt"]
 
 
 def records(stdout: str) -> list[dict]:
@@ -167,7 +168,8 @@ class Commands(unittest.TestCase):
 
     def test_adapters_and_doctor(self):
         ids = [json.loads(line)["id"] for line in run("adapters").stdout.splitlines()]
-        self.assertEqual(ids, ["cibc/qfx", "scotiabank/qfx", "tangerine/qfx", "td/qfx"])
+        self.assertEqual(ids, ["cibc/qfx", "desjardins/pdf", "scotiabank/chequing-pdf",
+                               "scotiabank/qfx", "tangerine/qfx", "td/qfx"])
         self.assertEqual(run("doctor").returncode, 0)
 
     def test_fixture_lint_clean(self):

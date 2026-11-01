@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a transaction line with no running balance is refused"
+exit = 3
+stderr_has = "no running balance"
