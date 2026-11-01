@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "direction from the column under the current page's headings, which move between pages; detail lines by indentation; an overdrawn (negative) running balance; a sidebar on the summary row"
+exit = 0
+pdf_smoke = true

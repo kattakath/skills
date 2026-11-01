@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a summary total and the Closing totals row that disagree with the rows are refused"
+exit = 3
+stderr_has = "summary_deposits"

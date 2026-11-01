@@ -1,0 +1,59 @@
+Your branch address:
+SAMPLE 000
+                                                                                                       Everyday Banking
+0000 SAMPLE STREET
+SAMPLETON, ONTARIO A0A0A0
+
+                                                                                                       Your Branch
+                                                                                                       Transit number: 0123
+          ALEX SAMPLE
+          1 SAMPLE STREET
+          SAMPLETON ON A0A 0A0
+
+Your Everyday Banking statement                                                                        Plus Plan
+
+For the period ending November 22, 2021
+
+Summary of your account
+                                                   Total             Total              Closing
+                             Opening            amounts           amounts        balance ($) on
+                                         -                   +               =
+Account                    balance ($)       deducted ($)        added ($)        Nov 22, 2021
+Primary Chequing Account
+# 0123 0004-567                1,250.00           3,449.67         3,800.00               1,600.33        Ask us about our sample offer.
+
+Here's what happened in your account
+                                                                    Amounts deducted                  Amounts added
+Date       Description                                           from your account ($)            to your account ($)       Balance ($)
+
+           Primary Chequing Account # 0123 0004-567
+
+Owner(s):
+ALEX SAMPLE,
+
+Oct 22     Opening balance                                                                                                   1,250.00
+Oct 23     INTERAC e-Transfer Sent                                              1,100.00                                       150.00
+Oct 25     Online Transfer, TF 0000123456789012345                                                   2,000.00                2,150.00
+Oct 28     Debit Card Purchase, SAMPLE PURCHASE                                    45.67                                     2,104.33
+           28OCT2021, SAMPLETON ON
+Oct 29     Withdrawal Fee, INTERAC                                                  2.00                                     2,102.33
+
+                                                                                                                              continued
+Page 1 of 2
+
+Here's what happened in your account (continued)
+                                                                 Amounts deducted           Amounts added
+Date      Description                                         from your account ($)     to your account ($)          Balance ($)
+
+          Primary Chequing Account # 0123 0004-567                                                                  (continued)
+Nov 01    Pre-authorized Payment No Fee, A/P SAMPLE/PAY                  2,300.00                                      -197.67
+          CO/LTD
+Nov 03    Payroll Deposit, SAMPLE EMPLOYER PAY/PAY                                         1,800.00                   1,602.33
+Nov 03    Withdrawal Fee, INTERAC                                            2.00                                     1,600.33
+Nov 03    Closing totals                                                 3,449.67          3,800.00
+
+
+Trade-marks
+Registered trade-marks of Bank of Montreal
+
+Page 2 of 2
