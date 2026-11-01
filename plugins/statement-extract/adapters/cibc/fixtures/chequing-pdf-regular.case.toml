@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "direction from the Withdrawals/Deposits column; the date only on a day's first row; detail lines by indentation; a continuation page re-anchors shifted columns and opens with Balance forward; an in-text 'FEE$5.00' is not an amount"
+exit = 0
+pdf_smoke = true

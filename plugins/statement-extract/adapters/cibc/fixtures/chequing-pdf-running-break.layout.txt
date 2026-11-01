@@ -1,0 +1,74 @@
+CIBC Account Statement
+
+ALEX SAMPLE                                                                        For Oct 1 to Oct 31, 2025
+
+                                                                                   Account number
+                                                                                   00-01234
+The xxxxx xxxxx xxx xxxxx on xxx xxxxxxx xxxxxxx, xx of October 1,
+                                                                                   Branch transit number
+2025. This statement xxxx xxx xxxxxxx xxx xxxxxxx in account xxxxxxx
+and account xxxxxx xxxxx xxxx may xxxx xxxxxxxx xxxxx to xxxx date.                00001
+
+
+
+
+Account summary                                                                    Contact information
+Opening balance on Oct 1, 2025                                          $500.00       1 800 000-0000 CIBC (0000)
+
+Withdrawals                                        -                    1,262.34
+
+Deposits                                          +                     2,550.00
+                                                  =                   $1,787.66
+Closing balance on Oct 31, 2025
+
+                                                                                      www.cibc.com
+
+
+
+Transaction details
+Date          Description                                 Withdrawals ($)          Deposits ($)                Balance ($)
+Oct 1         Opening balance                                                                                      $500.00
+Oct 1         E-TRANSFER       000012345678                                            1,200.00                   1,700.00
+              ALEX SAMPLE
+              INTERNET BILL PAY 000012345679                         85.00                                        1,615.00
+              SAMPLE HYDRO
+              MORTGAGE PAYMENT                                    1,100.00                                          515.00
+              MTG000012345.0
+              SAMPLE BANK
+Oct 14        PAYROLL DEPOSIT 000012345680                                             1,350.00                   1,865.00
+Oct 15        VISA DEBIT PURCHASE 000012345681                       12.34                                        1,852.66
+              SAMPLE CAFE
+                                                                                                     (continued on next page)
+
+
+
+
+00000E PER-0000/00                                                                                             Page 1 of 2
+
+     CIBC Account Statement                                                                Oct 1 to Oct 31, 2025
+                                                                                           Account number: 00-01234
+                                                                                           Branch transit number: 00001
+
+
+
+ Transaction details (continued)
+ Date          Description                                          Withdrawals ($)        Deposits ($)                  Balance ($)
+ Oct 15        Balance forward                                                                                             $1,852.66
+               VISA DEBIT PURCHASE 000012345682                              60.00                                          1,795.66
+               SAMPLE GROCER #
+ Oct 31        SERVICE CHARGE                                                 5.00                                          1,787.66
+               MONTHLY FEE$5.00
+               RECORD-KEEPING N/A
+               Closing balance                                                                                             $1,787.66
+
+
+Important: This statement will be considered correct xxxxx xxxxx xxxxxx xxxx xxxxxx xx xx xxxxxx xxx xxxxx xx xxx xxxxxxxx
+balances to CIBC in writing xxxxxx the period xxxxxxxxxx to your regular account statement cycle, as follows:
+           xxxxxxxx xx xxxxxxxxx: 30 days from the date the entry was posted, as stated in the record; or
+           Statement: 30 days from last date of the statement period covered by a statement xxxxxx regular statement cycle.
+Interac is a registered trade-mark of Interac Corp. Used under license.
+
+
+
+
+00000E PER-0000/00                                                                                             Page 2 of 2

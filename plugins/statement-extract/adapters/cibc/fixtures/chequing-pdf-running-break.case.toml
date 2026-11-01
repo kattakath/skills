@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a printed running balance that does not chain is refused"
+exit = 3
+stderr_has = "running_chain"
