@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the summary prints Cash Advances and Interest bare, with their two amounts alone on the lines below in the summary's amount column; each pairs with its label in order, and the debit rows tie to the four charge lines"
+exit = 0
+pdf_smoke = true

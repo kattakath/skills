@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a credit balance prints its minus apart from the dollar sign ('- $', 2025 layout) in the summary, TOTAL NEW BALANCE and NEW BALANCE; the previous balance row prints '-$'"
+exit = 0
+pdf_smoke = true

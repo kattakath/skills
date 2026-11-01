@@ -33,6 +33,23 @@ DRIVERS = {"ofx": ofx_driver, "pdftext": pdftext_driver, "csv": csv_driver}
 EXEMPT_FIELDS = {"statement_id", "previous_statement_id", "position_id", "sha256",
                  "extractor_version", "entry_ref"}
 
+# A star mask that ends in fewer than four digits ("***4ab", a TD transfer reference) passes
+# through the frozen content normalisers unchanged, so their key text trips the leak gate's
+# `\*{2,}\d` and the whole file is refused. Such text is first reduced as below, then
+# normalised as usual. Only text whose frozen key would leak is touched, and a leaking key was
+# never emitted, so no stored key changes. FROZEN like the normalisers, because rescued keys
+# are stored: a copy of mask.py's star-short-tail rule of 2026-11-01, which may itself change.
+_KEY_RESCUE = re.compile(r"\*{2,}[\d*]*\d")
+
+
+def _key_text(normalise, text: str | None) -> str | None:
+    """`text` as the content key reads it: unchanged unless its frozen normalisation would
+    trip the leak gate, in which case each star run ending in a digit keeps up to its last
+    four digits (`***4ab` -> `••4ab`). Text that still leaks is left to the gate."""
+    if not text or not mask.leaks(normalise(text)):
+        return text
+    return _KEY_RESCUE.sub(lambda m: "••" + re.sub(r"\D", "", m.group(0))[-4:], text)
+
 
 @dataclass
 class FileResult:
@@ -148,7 +165,8 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
                 key = keys.statement_line_key(adapter.institution, ref, d.period_end, n)
             else:
                 keyer = keyers.setdefault(use, keys.ContentKeyer(use, adapter.institution, ref))
-                key = keyer.key(t.key_date or t.booking_date, t.amount, t.description)
+                key = keyer.key(t.key_date or t.booking_date, t.amount,
+                                _key_text(keyer.normalise, t.description))
             txns.append({
                 "schema": SCHEMA, "record": "transaction",
                 "key": key, "key_scheme": use, "statement_id": sid,

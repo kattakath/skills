@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the OPENING and CLOSING BALANCE rows print their month split after its capital (M ar, M ay: March and May statements), as does the period end; the month is re-joined, the file is identified and the frame read"
+exit = 0
+pdf_smoke = true

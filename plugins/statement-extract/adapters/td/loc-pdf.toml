@@ -8,8 +8,9 @@ description = "TD line of credit monthly PDF statement"
 # pdftotext splits some header words of this layout ("St at ement"), so the markers use
 # tokens that come out whole. The card's terms text mentions a line of credit, but never at
 # the start of a line.
-text = ['^\s*Your Line of Credit', '^\s*[A-Z][a-z]{2} \d{1,2}\s+OPENING BALANCE\s',
-        '^\s*[A-Z][a-z]{2} \d{1,2}\s+CLOSING BALANCE\s', 'Account Number: \d{4}-\d{7}',
+# The frame rows' month can arrive split too ("M ar", "M ay": March and May statements).
+text = ['^\s*Your Line of Credit', '^\s*[A-Z] ?[a-z]{2} \d{1,2}\s+OPENING BALANCE\s',
+        '^\s*[A-Z] ?[a-z]{2} \d{1,2}\s+CLOSING BALANCE\s', 'Account Number: \d{4}-\d{7}',
         'INTEREST FOR THE']
 
 [keys]
@@ -30,7 +31,8 @@ proves = true   # the sign is printed; credits tie to the payments total, debits
 [grammar]
 amt = '-?\d{1,3}(?:,\d{3})*\.\d{2}'
 dollar = '\$\d{1,3}(?:,\d{3})*\.\d{2}'
-txn = '^\s*(?P<mon>[A-Z][a-z]{2}) (?P<day>\d{1,2})\s{2,}(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s*$'
+# The month may arrive split after its capital ("M ay"); it is re-joined before parsing.
+txn = '^\s*(?P<mon>[A-Z] ?[a-z]{2}) (?P<day>\d{1,2})\s{2,}(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s*$'
 opening = 'OPENING BALANCE'
 closing = 'CLOSING BALANCE'
 # "Statement Period: July 1, 2021 to July 31, 2021", with words split by the text layer:

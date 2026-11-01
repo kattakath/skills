@@ -1,0 +1,40 @@
+                                                     SAMPLE BRANCH
+                                                     100 SAMPLE ROAD                                                   To see how this statement
+                                                     SAMPLETON, ON A0A 0A0                                             works, call:
+                                                                                                                       TTY: 1-800-555-0100
+                                                                                                                       Tel: 1-800-555-0199
+
+
+
+         ALEX SAMPLE
+         1 SAMPLE STREET UNIT 1
+         SAMPLETON ON A0A 0A0
+
+
+         Statement of Account                                            Account Type                                       Statement From To
+    Branch No.                Account No.                                                                                MAR 31/26 - APR 30/26
+                                                                             MINIMUM
+         1234                1234-0000123                                                                                         Page 1 of 1
+
+              Description                              Withdrawals                          Deposits                   Date                Balance
+ STARTING BALANCE                                                                                                     MAR31                       1,000.00
+ PAYROLL DEP SAMPLE CO                                                                                 2,500.00       APR01                       3,500.00
+ SEND E-TFR ***4ab                                                      150.00                                        APR03
+ TO:00001234567                                                          40.00                                        APR03                       3,310.00
+ TD VISA    A1B2C3                                                      250.00                                        APR10                       3,060.00
+ Wise CAN                                                               500.00                                        APR15                       2,560.00
+ MONTHLY ACCOUNT FEE                                                      4.95                                        APR30                       2,555.05
+ Total                                                                  944.95                         2,500.00
+
+
+
+
+ Total                                                                  944.95                         2,500.00
+
+   Account/Transaction Type                                Fees              Waived Balance               Waived Fees                     Paid Fees
+  MINIMUM                                                     $4.95           n/a                          $0.00                                $4.95
+                                                                                                                    Fees paid:                  $4.95
+
+ ACCOUNT ISSUED BY: THE TORONTO-DOMINION BANK
+ For your protection, please examine this statement and report any error within 30 days of the statement date.
+

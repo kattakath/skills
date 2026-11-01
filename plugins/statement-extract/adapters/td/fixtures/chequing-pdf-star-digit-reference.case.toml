@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a transfer reference masked by the bank as stars then a digit (***4ab): the frozen content key would keep the star-digit shape and trip the leak gate, so its key text reduces the star run to its digits (••4ab) first; the description shows the same"
+exit = 0
+pdf_smoke = true
