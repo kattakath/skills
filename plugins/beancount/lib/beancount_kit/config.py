@@ -86,6 +86,8 @@ class Ledger:
     categories: dict
     accounts: list[Account]
     gaps: list[Gap]
+    fava_options: dict = field(default_factory=dict)
+    queries: list = field(default_factory=list)     # [(name, sql)], generic + personal
 
     def account_for(self, institution: str, label: str) -> Account | None:
         for a in self.accounts:
@@ -145,6 +147,33 @@ def load(path: Path) -> Ledger:
             interest=_name(a["interest"], where) if a.get("interest") else None))
     gaps = [Gap(_name(g.get("account"), f"gap[{i}]"), _date(g.get("date"), f"gap[{i}]"),
                 g.get("reason", "")) for i, g in enumerate(raw.get("gap", []))]
+    fava = {}
+    for k, v in raw.get("fava", {}).items():
+        if isinstance(v, bool):
+            v = "true" if v else "false"
+        if not isinstance(v, (str, int, float)):
+            raise Refusal(Exit.USAGE, f"fava.{k}: a Fava option takes one string or number")
+        fava[str(k)] = str(v)
+    queries = dict(_queries(Path(__file__).resolve().parent / "queries.toml", "queries.toml"))
+    queries.update(_queries_raw(raw.get("query", []), "ledger.toml"))
     return Ledger(operating_currency=raw.get("operating_currency", "CAD"),
                   title=raw.get("title", "Ledger"), transfers=transfers, categories=categories,
-                  accounts=accounts, gaps=gaps)
+                  accounts=accounts, gaps=gaps, fava_options=fava,
+                  queries=sorted(queries.items()))
+
+
+def _queries_raw(items, where: str) -> list[tuple[str, str]]:
+    out = []
+    for i, x in enumerate(items):
+        n, s = x.get("name"), x.get("sql")
+        if not (isinstance(n, str) and n.strip() and isinstance(s, str) and s.strip()):
+            raise Refusal(Exit.USAGE, f"{where} query[{i}]: needs a name and an sql string")
+        out.append((n.strip(), " ".join(s.split())))
+    return out
+
+
+def _queries(path: Path, where: str) -> list[tuple[str, str]]:
+    try:
+        return _queries_raw(tomllib.loads(path.read_text(encoding="utf-8")).get("query", []), where)
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        raise Refusal(Exit.USAGE, f"{where}: {e}") from None

@@ -155,7 +155,13 @@ def read_jsonl(paths: list[Path]):
     for n, x in enumerate(out):
         x.n = n
     survival = {"dropped": dropped,
-                "holes": survive.holes(all_stmts, [r for *_, r in raw], acct_of)}
+                "holes": survive.holes(all_stmts, [r for *_, r in raw], acct_of),
+                # every statement, for `document` links: (account, as-of, sha256, file name)
+                "statements": sorted(
+                    (acct_of(s), s["balances"].get("closing_as_of") or s["period"].get("end"),
+                     (s.get("source") or {}).get("sha256", ""), (s.get("source") or {}).get("file", ""))
+                    for s in all_stmts.values()
+                    if (s["balances"].get("closing_as_of") or s["period"].get("end")))}
     return out, *split_overlaps(asserts, out, stmts_of), positions, survival
 
 
@@ -209,6 +215,37 @@ def read_screen_balances(path: Path, default_cur: str) -> list[Assertion]:
                                  _dec(b["amount"], f"accounts.toml account[{i}]"), cur,
                                  "screen"))
     return out
+
+
+BUDGET_FIELDS = ("from", "account", "period", "amount")
+BUDGET_PERIODS = {"daily", "weekly", "monthly", "quarterly", "yearly"}
+
+
+def read_budgets(path: Path, default_cur: str) -> list[tuple]:
+    """The Budgets tab exported as CSV: from, account, period, amount[, currency]. Rows with
+    no amount are skipped (a category listed but not yet budgeted)."""
+    try:
+        rows = list(csv.DictReader(path.open(encoding="utf-8")))
+    except OSError as e:
+        raise Refusal(Exit.USAGE, f"budgets: {e}") from None
+    if rows and not set(BUDGET_FIELDS) <= set(rows[0]):
+        raise Refusal(Exit.USAGE, f"budgets: needs columns {', '.join(BUDGET_FIELDS)}")
+    out, bad = [], []
+    for i, r in enumerate(rows, 2):
+        if not (r.get("amount") or "").strip():
+            continue
+        acct, period = (r.get("account") or "").strip(), (r.get("period") or "").strip().lower()
+        try:
+            d = date.fromisoformat((r.get("from") or "").strip()).isoformat()
+            amt = Decimal((r["amount"] or "").replace(",", "").strip())
+        except (ValueError, InvalidOperation):
+            bad.append(f"row {i}: from/amount"); continue
+        if not re.match(r"^[A-Z][A-Za-z0-9-]*(:[A-Z0-9][A-Za-z0-9-]*)+$", acct) or period not in BUDGET_PERIODS:
+            bad.append(f"row {i}: account/period"); continue
+        out.append((d, acct, period, amt, (r.get("currency") or "").strip() or default_cur))
+    if bad:
+        raise Refusal(Exit.USAGE, "budgets: rows not understood", bad)
+    return sorted(out)
 
 
 DECISION_FIELDS = ("key", "category", "note", "service", "service_ref", "suggestion", "accept")
