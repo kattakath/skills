@@ -1,0 +1,31 @@
+# Generic saved queries, written into every journal as `query` directives (Fava: Query tab).
+# Personal ones go in ledger.toml [[query]]; a personal query with the same name replaces one here.
+# Each was run against a real journal with beanquery 0.2 (2026-11-01).
+
+[[query]]
+name = "Review queue"
+sql = "SELECT date, account, payee, narration, position WHERE flag = '!' ORDER BY date"
+
+[[query]]
+name = "Spending by month"
+sql = "SELECT year, month, sum(cost(position)) AS total WHERE account ~ '^Expenses' GROUP BY year, month ORDER BY year, month"
+
+[[query]]
+name = "Spending by category, this year"
+sql = "SELECT account, sum(cost(position)) AS total WHERE account ~ '^Expenses' AND year = year(today()) GROUP BY account ORDER BY total DESC"
+
+[[query]]
+name = "Interest and fees by month"
+sql = "SELECT year, month, account, sum(cost(position)) AS total WHERE account ~ '^Expenses:Bank-Fees' GROUP BY year, month, account ORDER BY year, month"
+
+[[query]]
+name = "Unpaired transfer legs"
+sql = "SELECT date, payee, narration, position WHERE account ~ '^Equity:Transfers' ORDER BY date"
+
+[[query]]
+name = "Unrecorded gaps"
+sql = "SELECT date, account, position WHERE account ~ '^Equity:Gaps' ORDER BY date"
+
+[[query]]
+name = "Rows by rule"
+sql = "SELECT any_meta('rule') AS rule, account, count(*) AS n WHERE account ~ '^(Expenses|Income)' GROUP BY rule, account ORDER BY n DESC"

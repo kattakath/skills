@@ -62,11 +62,14 @@ def build(a) -> int:
     # are zero is Beancount's arithmetic, not ours: render, drop exactly the pads it reports
     # unused, render once more. Any error left after that is real.
     from .check import check
-    text, rstats = render(rows, asserts, positions, ledger, bridges=survival["holes"])
+    from .inputs import read_budgets
+    budgets = read_budgets(Path(a.budgets), ledger.operating_currency) if a.budgets else []
+    documents, docs_missing = _documents(survival["statements"], ledger, a.statements)
+    extra = dict(bridges=survival["holes"], budgets=budgets, documents=documents)
+    text, rstats = render(rows, asserts, positions, ledger, **extra)
     errs, unused = check(text)
     if unused:
-        text, rstats = render(rows, asserts, positions, ledger, skip_pads=unused,
-                              bridges=survival["holes"])
+        text, rstats = render(rows, asserts, positions, ledger, skip_pads=unused, **extra)
         errs, _ = check(text)
     report = {"rows": len(rows), **stats, **{k: v for k, v in rstats.items()
                                              if k not in ("transfer_residue", "bridges")},
@@ -74,6 +77,7 @@ def build(a) -> int:
               "bridges": len(rstats["bridges"]),
               "assertions_skipped_overlap": len(overlapped),
               "rows_dropped_overlap": sum(d["rows"] for d in survival["dropped"]),
+              "documents_missing": docs_missing,
               "check_errors": len(errs)}
     print(json.dumps(report), file=sys.stderr)
     for k in rstats["transfer_residue"]:
@@ -130,6 +134,30 @@ def history_cmd(a) -> int:
                                  "source": src, "ref": ref, "note": note}, ensure_ascii=False) + "\n")
     print(json.dumps({"rows": len(rows), **n}), file=sys.stderr)
     return 0
+
+
+def _documents(statements, ledger, folder):
+    """Link each statement to its file: the file under `folder` whose name the statement
+    records and whose sha256 matches. A statement with no such file is counted, not linked."""
+    if not folder:
+        return [], 0
+    import hashlib
+    by_name = {}
+    for p in Path(folder).rglob("*"):
+        if p.is_file():
+            by_name.setdefault(p.name, []).append(p)
+    out, missing, seen = [], 0, set()
+    for (inst, label), as_of, sha, name in statements:
+        acct = ledger.account_for(inst, label)
+        hit = next((p for p in by_name.get(name, [])
+                    if hashlib.sha256(p.read_bytes()).hexdigest() == sha), None)
+        if acct is None or hit is None:
+            missing += 1
+            continue
+        k = (acct.name, as_of, str(hit.resolve()))
+        if k not in seen:
+            seen.add(k); out.append(k)
+    return sorted(out), missing
 
 
 def coverage_cmd(a) -> int:
@@ -218,6 +246,8 @@ def main(argv=None) -> int:
     b.add_argument("--rules", required=True)
     b.add_argument("--decisions")
     b.add_argument("--accounts", help="statement-extract accounts.toml: screen balances")
+    b.add_argument("--budgets", help="Budgets tab as CSV: from, account, period, amount[, currency]")
+    b.add_argument("--statements", help="folder of the statement files: each gets a `document` link")
     g = b.add_mutually_exclusive_group(required=True)
     g.add_argument("--out", help="journal path, or - for stdout")
     g.add_argument("--check-only", action="store_true")
