@@ -1,0 +1,107 @@
+{
+ "_comment": "agentic-ledger P5 equivalence gate, 2026-11-01: synthetic reproductions of every real display diff (digits invented, 0000… account-like runs, 555-010 phones). Each was verified by agentic-ledger to reproduce its real case under both the legacy mask and the plugin's. 'want' is the LEGACY string, the operator's target. 'format' is the adapter format the rows came from. Never edit 'want' by hand.",
+ "cases": [
+  {
+   "finding": "F4",
+   "format": "ofx",
+   "raw": "WIDGETCO REMOTE ALPHA TRANSFER;FEE $3.75 000000004821;135790.24 CAD @ 1;EXAMPLEX CHARLIE",
+   "want": "WIDGETCO REMOTE ALPHA TRANSFER;FEE $3.75 ••4821;135790.24 CAD @ 1;EXAMPLEX CHARLIE"
+  },
+  {
+   "finding": "F4",
+   "format": "ofx",
+   "raw": "SAMPLEAB OFFICE BRAVO PAYMENTS;CHG $6.10 000000007315;246801.35 USD @ 2;MOCKNAME DELTAXY",
+   "want": "SAMPLEAB OFFICE BRAVO PAYMENTS;CHG $6.10 ••7315;246801.35 USD @ 2;MOCKNAME DELTAXY"
+  },
+  {
+   "finding": "F1 3-3-4",
+   "format": "ofx",
+   "raw": "555-010-0199, AB;CC#0000********4321",
+   "want": "555-010-0199, AB;CC#••4321"
+  },
+  {
+   "finding": "F1 3-3-4",
+   "format": "pdftext",
+   "raw": "MOCK SHOP CO             555-010-0188 ZZ",
+   "want": "MOCK SHOP CO 555-010-0188 ZZ"
+  },
+  {
+   "finding": "F1 3-3-4 digit before",
+   "format": "pdftext",
+   "raw": "MOCK SHOP CO*AB1234CD5   555-010-0177 ZZ",
+   "want": "MOCK SHOP CO*AB1234CD5 555-010-0177 ZZ"
+  },
+  {
+   "finding": "F1 3-3-4",
+   "format": "csv",
+   "raw": "EXAMPLEAB.COM 555-010-0166",
+   "want": "EXAMPLEAB.COM 555-010-0166"
+  },
+  {
+   "finding": "F1 3-7",
+   "format": "ofx",
+   "raw": "SAMPLE STORENM ABCDE555-0000123",
+   "want": "SAMPLE STORENM ABCDE555-••0123"
+  },
+  {
+   "finding": "F1 3-8",
+   "format": "csv",
+   "raw": "SAMPLE*STORE ABC1D2 555-00001234",
+   "want": "SAMPLE*STORE ABC1D2 555-••1234"
+  },
+  {
+   "finding": "F1 4-3-1",
+   "format": "ofx",
+   "raw": "MOCK SHOP CO*A12BC3DE1234-567-8",
+   "want": "MOCK SHOP CO*A12BC3DE1234-567-8"
+  },
+  {
+   "finding": "F1 10-3-1",
+   "format": "ofx",
+   "raw": "MOCK SHOP CO*AB0000004321-567-8",
+   "want": "MOCK SHOP CO*AB••4321-567-8"
+  },
+  {
+   "finding": "F1 7-3-4",
+   "format": "ofx",
+   "raw": "SAMPLE.AB*CD1EF0000123-567-8901",
+   "want": "SAMPLE.AB*CD1EF••0123-567-8901"
+  },
+  {
+   "finding": "F2 short swallowed",
+   "format": "ofx",
+   "raw": "MERCHNT* S123 000000004321",
+   "want": "MERCHNT* S123 ••4321"
+  },
+  {
+   "finding": "F2 short swallowed",
+   "format": "ofx",
+   "raw": "SAMPLEST #4567 000000008765",
+   "want": "SAMPLEST #4567 ••8765"
+  },
+  {
+   "finding": "F2 short swallowed",
+   "format": "ofx",
+   "raw": "MERCHNT* ST1A2 000000005678",
+   "want": "MERCHNT* ST1A2 ••5678"
+  },
+  {
+   "finding": "F2 two tails",
+   "format": "pdftext",
+   "raw": "PAYMENT RECORD 00001234 0000005678 ABCDEFGHIJ/KLM NOP",
+   "want": "PAYMENT RECORD ••1234 ••5678 ABCDEFGHIJ/KLM NOP"
+  },
+  {
+   "finding": "F1 5-3-1",
+   "format": "ofx",
+   "raw": "MOCK SHOP CO*AB12345-567-8",
+   "want": "MOCK SHOP CO*AB12345-567-8"
+  },
+  {
+   "finding": "F1 4-3-4",
+   "format": "ofx",
+   "raw": "MOCK SHOP CO*AB1234-567-8901",
+   "want": "MOCK SHOP CO*AB1234-567-8901"
+  }
+ ]
+}

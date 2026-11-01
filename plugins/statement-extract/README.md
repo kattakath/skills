@@ -198,7 +198,9 @@ amount = "72.43"
   - star-masked payees (Scotiabank);
   - `dddd****dddd` (CIBC card memos as `CC#dddd****dddd`; Wise cards: first four dropped, last four kept);
   - a star run with a short tail, `****ddd` (CIBC HELOC memos, TD e-transfer references);
-  - grouped digits, with dates and North-American phone numbers (`999-999-9999`) excluded. A
+  - grouped digits, **in PDF statements only** (QFX/OFX and CSV print account numbers as unbroken
+    runs, and their dashed store references stay readable, as the legacy extractors showed them),
+    with dates and North-American phone numbers (`999-999-9999`) excluded. A
     7+ digit run is masked on its own **before** grouping, so neither a short number beside it nor
     the cents of an amount are glued into one tail.
 - Every output string then passes the leak gate:
