@@ -163,6 +163,30 @@ class Fuzzy(unittest.TestCase):
         self.assertEqual(idx.suggest("y", "STARBUCKS COFFEE #9").method, "history-exact")
 
 
+class Pipeline(unittest.TestCase):
+    def test_flagged_rows_get_suggestions_and_the_rest_is_written(self):
+        rows = [H("a", "TIM HORTONS #1", "FOOD_AND_DRINK_COFFEE", "decision"),
+                H("f1", "TIM HORTONS #7", "NEEDS_REVIEW", "none"),
+                H("f2", "QUANTUM ZYGOTE", "NEEDS_REVIEW", "none")]
+        with tempfile.TemporaryDirectory() as d:
+            h, rest = Path(d) / "h.jsonl", Path(d) / "rest.jsonl"
+            h.write_text("".join(json.dumps(x.__dict__) + "\n" for x in rows))
+            code, out, _ = run("suggest", "--history", str(h), "--flagged", "--rest", str(rest))
+            self.assertEqual(code, 0)
+            got = [json.loads(l) for l in out.splitlines()]
+            self.assertEqual([(g["key"], g["category"]) for g in got], [("f1", "FOOD_AND_DRINK_COFFEE")])
+            self.assertEqual([json.loads(l)["key"] for l in rest.read_text().splitlines()], ["f2"])
+
+    def test_validate_suggestions_refuses_an_invented_name(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "s.jsonl"
+            ok = {"key": "k", "category": "FOOD_AND_DRINK_COFFEE", "confidence": 0.5, "method": "llm-text"}
+            f.write_text(json.dumps(ok) + "\n")
+            self.assertEqual(run("validate", "--suggestions", str(f))[0], 0)
+            f.write_text(json.dumps({**ok, "category": "FOOD_AND_DRINK_PIZZA_PARTY"}) + "\n")
+            self.assertEqual(run("validate", "--suggestions", str(f))[0], 3)
+
+
 class Eval(unittest.TestCase):
     def rows(self):
         out = []
