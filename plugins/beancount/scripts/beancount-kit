@@ -1,0 +1,18 @@
+#!/usr/bin/env python3
+"""Launcher: re-exec once under $BEANCOUNT_PYTHON (the interpreter that has beancount),
+isolated (-I: no PYTHONPATH, no user site, no cwd on sys.path), then run the CLI from ../lib.
+A marker variable stops a second exec: a Nix python env's executable is a wrapper, so
+comparing interpreter paths cannot tell "already there"."""
+import os
+import sys
+
+if os.environ.get("BEANCOUNT_KIT_EXEC") != "1":
+    os.environ["BEANCOUNT_KIT_EXEC"] = "1"
+    target = os.environ.get("BEANCOUNT_PYTHON") or sys.executable
+    os.execv(target, [target, "-I", os.path.realpath(__file__), *sys.argv[1:]])
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.realpath(__file__))),
+                                "lib"))
+from beancount_kit.cli import main  # noqa: E402
+
+sys.exit(main())
