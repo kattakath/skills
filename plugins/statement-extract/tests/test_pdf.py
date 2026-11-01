@@ -57,6 +57,18 @@ class HookRules(Tmp):
         with self.assertRaisesRegex(AdapterError, "immutable"):
             registry.load(root)
 
+    def test_named_hook_must_be_an_existing_sibling(self):
+        for value, msg in (('"../x.py"', "sibling"), ('"missing.py"', "not found")):
+            with self.subTest(hook=value):
+                shutil.rmtree(self.tmp / "x", ignore_errors=True)
+                root = self._adapter(self.TOML + f"hook = {value}\n".replace("hook", "hook", 1),
+                                     None)
+                # TOML: a key after [keys] would land inside it, so put hook at the top.
+                t = (root / "x" / "pdf.toml")
+                t.write_text(f"hook = {value}\n" + self.TOML)
+                with self.assertRaisesRegex(AdapterError, msg):
+                    registry.load(root)
+
     def test_shipped_hooks_load(self):
         loaded = registry.load()
         pdf = {a.id for a in loaded if a.format == "pdftext"}

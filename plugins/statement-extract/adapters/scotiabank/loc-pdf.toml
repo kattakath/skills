@@ -4,6 +4,8 @@
 # CREDITS/DEBITS subtotals.
 institution = "Scotiabank"
 format = "pdftext"
+# Same layout as the Visa card: share its parser (its bytes enter this adapter's sha256).
+hook = "card-pdf.py"
 description = "Scotiabank line of credit monthly PDF statement"
 
 [identify]
