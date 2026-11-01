@@ -51,7 +51,7 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `bridges` | holes bridged by a labelled `Equity:Gaps` pad, each listed as `gap bridged:` with its date range |
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `budgets` / `queries` / `documents` | Fava budgets, saved queries and statement links written (see below) |
-| `documents_missing` | statements with no matching file under `--statements` (by name **and** sha256) |
+| `documents_missing` | statements with no file of the recorded sha256 under `--statements` |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
 
 ## Fava features, derived each build
@@ -63,7 +63,7 @@ The journal is rebuilt every time, so nothing is typed into it. Each feature has
 | Fava options | `ledger.toml` `[fava]`, e.g. `default-page = "income_statement"` | `custom "fava-option" "<key>" "<value>"` |
 | Saved queries (Query tab) | generic ones in `lib/beancount_kit/queries.toml`; personal ones in `ledger.toml` `[[query]]` `name` + `sql`; a personal query of the same name replaces a generic one | `query "<name>" "<sql>"` |
 | Budgets | a CSV with `from, account, period, amount[, currency]` (`--budgets`); period is daily, weekly, monthly, quarterly or yearly; a row with no amount is skipped | `custom "budget" <account> "<period>" <amount> <cur>` |
-| Statement PDFs | `--statements <folder>`: each statement links to the file its extract recorded, matched by name **and** sha256 | `document <account> "<absolute path>"` at the statement's closing date |
+| Statement PDFs | `--statements <folder>`: each statement links to the file whose sha256 its extract recorded (by content: recorded names are masked) | `document <account> "<absolute path>"` at the statement's closing date |
 
 Every categorised entry also carries `rule: "<priority>"`, the Category rules row that decided
 it (absent when a decision row did). The generic "Rows by rule" query groups by it.

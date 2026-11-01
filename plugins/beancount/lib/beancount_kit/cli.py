@@ -137,20 +137,21 @@ def history_cmd(a) -> int:
 
 
 def _documents(statements, ledger, folder):
-    """Link each statement to its file: the file under `folder` whose name the statement
-    records and whose sha256 matches. A statement with no such file is counted, not linked."""
+    """Link each statement to its file: the file under `folder` whose sha256 the statement
+    records. Matched by content only: statement-extract masks digits in the recorded file name
+    (measured 2026-11-01: 133 of 387 names carried `••`), so a name is no key. A statement with
+    no such file is counted, not linked."""
     if not folder:
         return [], 0
     import hashlib
-    by_name = {}
-    for p in Path(folder).rglob("*"):
-        if p.is_file():
-            by_name.setdefault(p.name, []).append(p)
+    by_sha = {}
+    for p in sorted(Path(folder).rglob("*")):
+        if p.is_file() and p.stat().st_size <= 50_000_000:
+            by_sha.setdefault(hashlib.sha256(p.read_bytes()).hexdigest(), p)
     out, missing, seen = [], 0, set()
-    for (inst, label), as_of, sha, name in statements:
+    for (inst, label), as_of, sha, _name in statements:
         acct = ledger.account_for(inst, label)
-        hit = next((p for p in by_name.get(name, [])
-                    if hashlib.sha256(p.read_bytes()).hexdigest() == sha), None)
+        hit = by_sha.get(sha)
         if acct is None or hit is None:
             missing += 1
             continue
