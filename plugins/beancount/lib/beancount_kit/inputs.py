@@ -76,11 +76,15 @@ def label_of(ref: str, kind: str) -> str:
 
 
 def read_jsonl(paths: list[Path]):
-    """Every record of every file. Rows dedupe by Key across files; two records with one Key
-    that disagree on date, amount, currency or account refuse the build."""
+    """Every record of every file. Overlapping statements of one account are resolved by
+    survivorship (survive.py): each day belongs to the best-ranked source covering it. Rows
+    then dedupe by Key across files; two records with one Key that disagree on date, amount,
+    currency or account refuse the build."""
+    from . import survive
     rows: dict[str, Row] = {}
     stmts_of: dict[str, set] = {}   # Key -> every statement that prints it (dedupe keeps one row)
     asserts, positions, conflicts = [], [], []
+    all_stmts, raw = {}, []
     for p in paths:
         try:
             lines = p.read_text(encoding="utf-8").splitlines()
@@ -99,6 +103,7 @@ def read_jsonl(paths: list[Path]):
                                           f"expected {SCHEMA!r}")
             recs.append((i, r))
         stmts = {r["statement_id"]: r for _, r in recs if r.get("record") == "statement"}
+        all_stmts.update(stmts)
         for i, r in recs:
             kind = r.get("record")
             if kind == "statement":
@@ -114,30 +119,43 @@ def read_jsonl(paths: list[Path]):
                 positions.append(Assertion(r["institution"], label_of(a["ref"], a["kind"]),
                                            r["as_of"], -principal, a["currency"], "position"))
             elif kind == "transaction":
-                st = stmts.get(r["statement_id"])
-                if st is None:
+                if r["statement_id"] not in stmts:
                     raise Refusal(Exit.USAGE, f"{p.name}:{i}: no statement record for "
                                               "its statement_id")
-                row = Row(key=r["key"], iso=r["booking_date"],
-                          amount=_dec(r["amount"], f"{p.name}:{i}"),
-                          payee=ws(r.get("counterparty") or r.get("description") or ""),
-                          memo=ws(r.get("memo")), inst=r["institution"],
-                          acct=label_of(r["account"], st["account"]["kind"]),
-                          cur=r["currency"], sha=r["source"]["sha256"],
-                          statement_id=r["statement_id"])
-                stmts_of.setdefault(row.key, set()).add(row.statement_id)
-                old = rows.get(row.key)
-                if old is None:
-                    rows[row.key] = row
-                elif (old.iso, old.amount, old.cur, old.inst, old.acct) != \
-                        (row.iso, row.amount, row.cur, row.inst, row.acct):
-                    conflicts.append(row.key)
+                raw.append((p.name, i, r))
+
+    def acct_of(s):
+        return (s["institution"], label_of(s["account"]["ref"], s["account"]["kind"]))
+
+    kept, twins, dropped = survive.resolve(all_stmts, [r for *_, r in raw], acct_of)
+    kept_ids = {id(r) for r in kept}
+    for name, i, r in raw:
+        if id(r) not in kept_ids:
+            continue
+        st = all_stmts[r["statement_id"]]
+        row = Row(key=r["key"], iso=r["booking_date"],
+                  amount=_dec(r["amount"], f"{name}:{i}"),
+                  payee=ws(r.get("counterparty") or r.get("description") or ""),
+                  memo=ws(r.get("memo")), inst=r["institution"],
+                  acct=label_of(r["account"], st["account"]["kind"]),
+                  cur=r["currency"], sha=r["source"]["sha256"],
+                  statement_id=r["statement_id"])
+        stmts_of.setdefault(row.key, set()).add(row.statement_id)
+        stmts_of[row.key] |= twins.get(row.key, set())
+        old = rows.get(row.key)
+        if old is None:
+            rows[row.key] = row
+        elif (old.iso, old.amount, old.cur, old.inst, old.acct) != \
+                (row.iso, row.amount, row.cur, row.inst, row.acct):
+            conflicts.append(row.key)
     if conflicts:
         raise Refusal(Exit.REFUSED, "one Key, two different transactions", conflicts)
     out = sorted(rows.values(), key=lambda x: (x.iso, x.key))
     for n, x in enumerate(out):
         x.n = n
-    return out, *split_overlaps(asserts, out, stmts_of), positions
+    survival = {"dropped": dropped,
+                "holes": survive.holes(all_stmts, [r for *_, r in raw], acct_of)}
+    return out, *split_overlaps(asserts, out, stmts_of), positions, survival
 
 
 def split_overlaps(asserts, rows, stmts_of=None):
