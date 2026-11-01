@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an Account Operations debit that is not on the PAYMENT ADJUSTMENT allowlist still has to tie to Credit Charges: refused, nothing emitted"
+exit = 3
+stderr_has = "summary_charges"

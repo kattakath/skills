@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a PAYMENT ADJUSTMENT debit whose amount the printed Purchases / Debits does not include: refused, nothing emitted"
+exit = 3
+stderr_has = "summary_purchases"
