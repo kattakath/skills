@@ -8,6 +8,9 @@
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/gif-meme",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
+  "dependencies": [
+    "page-lab"
+  ],
   "keywords": [
     "gif",
     "meme",

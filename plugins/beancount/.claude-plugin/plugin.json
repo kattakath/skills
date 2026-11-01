@@ -8,6 +8,9 @@
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/beancount",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
+  "dependencies": [
+    "plaid-pfc"
+  ],
   "keywords": [
     "beancount",
     "fava",

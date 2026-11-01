@@ -30,7 +30,8 @@ search actually looks — with the per-site footguns measured and pre-empted.
   pins its own ffmpeg and gifsicle. This plugin ships **no** encoder of its own: one source of truth
   for the ladder, and the shellcheck/CI that the Nix build gives it.
 - **The chrome-devtools MCP attached to a Chromium on `--remote-debugging-port=9222`.** On this fleet
-  that MCP and its attach script ship with the `page-lab` plugin; this plugin declares no MCP server
+  That MCP and its attach script ship with the `page-lab` plugin, which this plugin declares as a
+  dependency, so installing `gif-meme` installs and enables `page-lab` too. It runs no MCP server
   of its own.
 - **The user's Tenor (Google) and GIPHY accounts.** Sign-in is the user's step, every time.
 

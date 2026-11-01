@@ -15,7 +15,7 @@ description: Plaid Personal Finance Category (PFC) names, pinned and strictly va
   returned by a model.
 
 ```bash
-PFC="$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.claude/plugins/installed_plugins.json")))["plugins"]["plaid-pfc@kattakath"][0]["installPath"])')/scripts/pfc"
+PFC="${CLAUDE_PLUGIN_ROOT}/scripts/pfc"
 ```
 
 ## Steps
