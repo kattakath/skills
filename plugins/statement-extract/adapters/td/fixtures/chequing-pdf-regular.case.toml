@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "direction from the Withdrawals/Deposits column; a balance only on a day's last row (chained through day groups); no closing row, so the last printed balance closes; the Total line printed twice; the fee table below is not read; a TO: account payee is masked"
+exit = 0
+pdf_smoke = true
