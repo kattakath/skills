@@ -49,6 +49,37 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
 
+## Reviewing flagged entries: merchant groups first
+
+```bash
+"$KIT" groups --out groups.csv     # group, pattern, count, total, first, last, sample, accounts
+```
+
+- One row per merchant (masked references, numbers and punctuation stripped; first two
+  words), busiest first, with a suggested case-insensitive rule `pattern`.
+- Give a group a category once; turn it into a category rule; rebuild. Rules are exact and
+  reviewable, which a model is not.
+- Groups whose counterparty is masked (e-transfers) cannot become a rule: decide those per row.
+- **Why not a standard?** The global merchant code (MCC, ISO 18245) is not in bank exports
+  (0 of 19 real QFX files carried OFX `<SIC>`), and no open merchant-name dataset exists.
+
+## Suggestions for flagged entries (optional, weak)
+
+```bash
+"$KIT" suggest --evaluate                 # holdout accuracy on entries already categorised
+"$KIT" suggest --out suggestions.csv      # key,suggestion for every entry flagged "!"
+```
+
+- Learns from the entries flagged `*` (paired transfers excluded) with smart_importer's
+  predictor, and predicts the `category` of each flagged entry. **It never writes the
+  journal.**
+- Put each suggestion into the decisions table's `suggestion` column with `accept` unticked.
+  It counts only once the operator ticks `accept`; then rebuild.
+- `--evaluate` is an upper bound: rule-labelled entries are easier than the flagged ones.
+  Measured 2026-11-01: 92.9% on the holdout, about 3 in 15 right on a spot check of flagged
+  entries. Prefer groups.
+- Needs `smart_importer` in `$BEANCOUNT_PYTHON`; `doctor` reports whether it is there.
+
 ## Exit codes
 
 | Code | Meaning | Do |

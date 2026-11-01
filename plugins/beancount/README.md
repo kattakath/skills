@@ -47,6 +47,9 @@ and `fava` as programs; it ships none of their code. Fava is MIT.
 | `query` | answer questions with tested bean-query recipes |
 | `fava` | start, check and stop Fava, read-only, on 127.0.0.1 |
 
+`beancount-kit suggest` (optional, needs **smart_importer 1.2**, MIT) suggests a category
+for each flagged entry, learned from the categorised ones; the operator accepts or not.
+
 ## Not here, on purpose
 
 - **No data.** The account map, rules, decisions and the journal live with the consumer.
