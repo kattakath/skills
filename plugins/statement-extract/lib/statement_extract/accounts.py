@@ -5,6 +5,9 @@
     acctid_last4 = "0001"   # last four of the file's own account id
     last4 = "4321"          # the last four keys and labels use (e.g. the card on screen)
     kind = "card"           # optional label override
+    reissued = true         # optional: acctid_last4 is an EARLIER card of the account last4
+                            # names (a card reissued on expiry or loss gets a new number but
+                            # stays the same account); its statements may print the old number
 
     [[account.balance]]     # optional; each one is checked, any match upgrades to "asserted"
     as_of = "2026-10-31"
@@ -37,6 +40,13 @@ class Account:
     kind: str | None = None
     balances: list[Balance] = field(default_factory=list)
     currency: str | None = None
+    reissued: bool = False
+
+    def header_matches(self, head: str) -> bool:
+        """A statement header's last four agrees with this entry: the card on screen, or, for
+        an entry marked reissued, the earlier card number the old statement printed. Without
+        `reissued`, a header that prints acctid_last4 still fails: that is a wrong entry."""
+        return head == self.last4 or (self.reissued and head == self.acctid_last4)
 
 
 class AccountsError(ValueError):
@@ -66,6 +76,11 @@ def load(path: Path | None) -> list[Account]:
         for k in ("acctid_last4", "last4"):
             if k in a and not re.fullmatch(r"\d{4}", a[k]):
                 raise AccountsError(f"{where}: {k} must be exactly four digits")
+        if not isinstance(a.get("reissued", False), bool):
+            raise AccountsError(f"{where}: reissued must be true or false")
+        if a.get("reissued") and not (a.get("acctid_last4") and a.get("last4")):
+            raise AccountsError(f"{where}: reissued needs both acctid_last4 (the old card) and "
+                                "last4 (the current one)")
         bals = []
         for b in a.get("balance", []):
             try:
@@ -73,7 +88,7 @@ def load(path: Path | None) -> list[Account]:
             except (KeyError, InvalidOperation):
                 raise AccountsError(f"{where}: balance needs as_of and a decimal amount") from None
         out.append(Account(a["institution"], a.get("acctid_last4"), a.get("last4"), a.get("kind"),
-                           bals, a.get("currency")))
+                           bals, a.get("currency"), a.get("reissued", False)))
     return out
 
 

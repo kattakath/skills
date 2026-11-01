@@ -176,6 +176,20 @@ amount = "-12.34"       # in the file's sign: a card balance owed is negative
 Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an entry
 (exit 4 without one). Keep `last4` identical on every run, or the keys change.
 
+**A reissued card** (expiry, loss, theft) gets a new number but stays the same card account,
+so its old statements print the old number. Map the old number to the current one and mark it,
+so the header check accepts the old number for that entry only:
+
+```toml
+[[account]]
+institution = "TD"
+acctid_last4 = "1111"   # the earlier card, as the old statement prints it
+last4 = "2222"          # the current card: rows key and label as this account
+reissued = true
+```
+
+Without `reissued`, a header that disagrees with `last4` is still refused (`header_last4`).
+
 A Wise balance is selected by currency, and takes no `last4`:
 
 ```toml
