@@ -55,8 +55,13 @@ PFC="$(python3 -c 'import json,os;print(json.load(open(os.path.expanduser("~/.cl
    - **provisional labels are never scored**;
    - `--show` lists misses, with row text: never paste that output anywhere public.
 
-**Exact match cannot know a new merchant.** `unseen` coverage is 0% by design, and that number
-is what justifies the evidence adapters.
+**Exact match cannot know a new merchant.** `unseen` coverage is 0% by design.
+
+- **`--fuzzy` (on `suggest` and `eval`)** falls back to trigram similarity on the payee text.
+- **Measured 2026-11-01:** about 56% of unseen-merchant rows get a suggestion at ≥ 0.5, at about
+  83% precision.
+- **Use fuzzy suggestions for review only, never auto-accept.** Rows a human had to decide stay
+  hard (about 9% coverage at 60%).
 
 ## Updating the pin (deliberate, never automatic)
 

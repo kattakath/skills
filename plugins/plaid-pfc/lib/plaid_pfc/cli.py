@@ -7,8 +7,8 @@
   pfc schema [category|txn|evidence|suggestion]                         JSON Schema (draft 2020-12)
   pfc refresh [--from CSV] [--write] [--accept-removals]                re-pin from Plaid's CSV
   pfc merchant PAYEE [MEMO]                                             the merchant key a decision applies to
-  pfc suggest --history H.jsonl --input T.jsonl                         Suggestion JSONL from own history
-  pfc eval --history H.jsonl [--json] [--show]                          accuracy on held-out rows (counts)
+  pfc suggest --history H.jsonl --input T.jsonl [--fuzzy]               Suggestion JSONL from own history
+  pfc eval --history H.jsonl [--fuzzy] [--json] [--show]                accuracy on held-out rows (counts)
 
 Exit codes: 0 ok · 2 usage · 3 refused (an unknown name, or a refresh that removes names).
 """
@@ -114,7 +114,7 @@ def _provisional(a):
 
 
 def cmd_suggest(a) -> int:
-    idx = history.Index(history.read(a.history), _provisional(a))
+    idx = history.Index(history.read(a.history), _provisional(a), fuzzy=a.fuzzy)
     n = hit = 0
     with open(a.input, encoding="utf-8") as fh:
         for line in fh:
@@ -131,7 +131,7 @@ def cmd_suggest(a) -> int:
 
 
 def cmd_eval(a) -> int:
-    r = evaluate.score(history.read(a.history), _provisional(a), show=a.show)
+    r = evaluate.score(history.read(a.history), _provisional(a), show=a.show, fuzzy=a.fuzzy)
     print(json.dumps(r, indent=2) if a.json else evaluate.table(r))
     return OK
 
@@ -156,6 +156,8 @@ def main(argv=None) -> int:
         x.add_argument("--provisional", default=history.DEFAULT_PROVISIONAL,
                        help="regex on a label's note marking it a guess (weight 0.5, never scored)")
         x.add_argument("--no-provisional", action="store_true")
+        x.add_argument("--fuzzy", action="store_true",
+                       help="fall back to trigram similarity when the merchant has no exact history")
         if name == "suggest":
             x.add_argument("--input", required=True)
         else:

@@ -143,6 +143,26 @@ class History(unittest.TestCase):
         self.assertIsNone(idx.suggest("y", "#1234"))   # no text left: never matched
 
 
+class Fuzzy(unittest.TestCase):
+    def test_similar_unseen_merchant_gets_a_scaled_suggestion(self):
+        rows = [H("a", "STARBUCKS COFFEE 0412", "FOOD_AND_DRINK_COFFEE", "decision"),
+                H("b", "STARBUCKS COFFEE 7781", "FOOD_AND_DRINK_COFFEE", "rule"),
+                H("c", "SHELL CANADA 553", "TRANSPORTATION_GAS", "rule")]
+        idx = history.Index(rows, fuzzy=True)
+        # "STARBUCK COFFE" is a different merchant key (a typo), so exact match has nothing
+        self.assertIsNone(history.Index(rows).suggest("x", "STARBUCK COFFE KIOSK"))
+        s = idx.suggest("x", "STARBUCK COFFE KIOSK")
+        self.assertEqual((s.category, s.method), ("FOOD_AND_DRINK_COFFEE", "history-fuzzy"))
+        self.assertLess(s.confidence, 1.0)
+        self.assertLessEqual(s.confidence, max(e.weight for e in s.evidence))
+
+    def test_unrelated_text_gets_nothing_and_exact_still_wins(self):
+        rows = [H("a", "STARBUCKS COFFEE", "FOOD_AND_DRINK_COFFEE", "decision")]
+        idx = history.Index(rows, fuzzy=True)
+        self.assertIsNone(idx.suggest("x", "QUANTUM ZYGOTE LTD"))
+        self.assertEqual(idx.suggest("y", "STARBUCKS COFFEE #9").method, "history-exact")
+
+
 class Eval(unittest.TestCase):
     def rows(self):
         out = []
