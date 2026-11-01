@@ -3275,7 +3275,7 @@ kattakath/skills
 │   │   └── references/merge-queue.md
 │   ├── brag-dossier/      0.1.0  (working tree, unmerged)
 │   └── android-phone, jsonresume-tailor, nix-dev-toolkit, rag
-└── plugins/               brain-signals, claude-code-nix,
+└── plugins/               brain-signals, nix-flake-kit,
                            foundation-audit, llmstxt,
                            mac-app-send, page-lab, superhook
 ```

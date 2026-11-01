@@ -64,7 +64,7 @@
       "goal": "Work on a Nix flake repo with Claude Code",
       "steps": [
         "nix-dev-toolkit",
-        "claude-code-nix"
+        "nix-flake-kit"
       ],
       "gap": true
     },

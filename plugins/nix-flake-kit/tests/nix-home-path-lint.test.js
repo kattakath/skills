@@ -6,7 +6,7 @@
 // equivalent of. The hook ALWAYS exits 0, so a finding is asserted by parsing
 // stdout, and quiet by empty stdout + stderr — exit code alone tells nothing.
 //
-// Run:  node --test plugins/claude-code-nix/tests/nix-home-path-lint.test.js
+// Run:  node --test plugins/nix-flake-kit/tests/nix-home-path-lint.test.js
 //
 // Both halves are asserted — must-FLAG and must-stay-QUIET — and so is "never
 // throws", because an uncaught error exits 0 and silently disarms the lint.
