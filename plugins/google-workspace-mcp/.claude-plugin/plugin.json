@@ -1,0 +1,48 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "google-workspace-mcp",
+  "description": "Google Workspace as one stdio MCP server (workspace-mcp, pinned): Google Tasks by default, any other service opt-in. Credentials come from a credential command you name, then the environment, then a prompt, so a secret held elsewhere is never copied.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/google-workspace-mcp",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "mcp",
+    "google-workspace",
+    "google-tasks",
+    "google-chat",
+    "workspace-mcp",
+    "oauth"
+  ],
+  "userConfig": {
+    "tools": {
+      "type": "string",
+      "title": "Services",
+      "description": "Comma-separated workspace-mcp services to load. Default: tasks. Others: appscript, calendar, chat, contacts, docs, drive, forms, gmail, search, sheets, slides. Chat needs a Workspace account. Each added service widens the OAuth scopes and asks you to sign in again.",
+      "default": "tasks"
+    },
+    "credential_command": {
+      "type": "string",
+      "title": "Credential command (optional)",
+      "description": "A command PREFIX that runs its trailing arguments with GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET in the environment, e.g. `op run --env-file=/path/google.env --` or `envchain google`. Split on spaces, no quoting. Wins over the environment and the two fields below."
+    },
+    "client_id": {
+      "type": "string",
+      "title": "OAuth client ID (optional)",
+      "description": "Used only when neither the credential command nor the environment supplies GOOGLE_OAUTH_CLIENT_ID. A Google Cloud OAuth client of type Desktop app."
+    },
+    "client_secret": {
+      "type": "string",
+      "title": "OAuth client secret (optional)",
+      "description": "Used only when neither the credential command nor the environment supplies GOOGLE_OAUTH_CLIENT_SECRET. Stored in the OS credential store, never in settings.json.",
+      "sensitive": true
+    },
+    "email": {
+      "type": "string",
+      "title": "Google account email (optional)",
+      "description": "Sets USER_GOOGLE_EMAIL, which makes the user_google_email tool argument optional and defaults it to this address. Leave empty and the model must pass the address on each call."
+    }
+  }
+}
