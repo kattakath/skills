@@ -1,17 +1,23 @@
 """`fixture lint`: keep real statement data out of this plugin's tree.
 
 Rules:
-- every fixture input (*.qfx, *.ofx) sits under adapters/<inst>/fixtures/ with a
+- every fixture input (*.qfx, *.ofx, *.csv) sits under adapters/<inst>/fixtures/ with a
   <case>.case.toml saying `synthetic = true` and a <case>.expected.jsonl golden;
 - no PDF, XLSX or other binary file anywhere in the plugin (PDF cases are *.layout.txt);
 - no stray 7+ digit run in a fixture input or case file, except the reserved synthetic
-  pattern (a run starting 0000) and OFX datetime values (<DT...>).
+  pattern (a run starting 0000) and OFX datetime values (<DT...>);
+- no CSV fixture with a value under a never-read column ("Payee Account Number"): the
+  column may be present, as the real header has it, but every cell must be empty.
 """
+import csv
+import io
 import re
 import tomllib
 from pathlib import Path
 
-INPUTS = {".qfx", ".ofx"}
+from .drivers.csv_driver import NEVER_READ
+
+INPUTS = {".qfx", ".ofx", ".csv"}
 LAYOUT = ".layout.txt"  # a PDF fixture: synthetic text-layer, never a PDF
 
 
@@ -22,12 +28,26 @@ def case_stem(p: Path) -> str | None:
     if p.suffix.lower() in INPUTS:
         return p.stem
     return None
-ALLOWED_SUFFIXES = (".qfx", ".ofx", ".case.toml", ".expected.jsonl", ".accounts.toml",
+ALLOWED_SUFFIXES = (".qfx", ".ofx", ".csv", ".case.toml", ".expected.jsonl", ".accounts.toml",
                     ".seen.txt", ".layout.txt")
 BINARY_EXT = {".pdf", ".xlsx", ".xls", ".docx", ".zip", ".png", ".jpg", ".jpeg"}
 RESERVED = re.compile(r"0000\d*")
 DT_VALUE = re.compile(r"<DT[A-Z]+>[0-9.\[\]+:A-Z-]*")
 RUN = re.compile(r"\d{7,}")
+
+
+def never_read_values(text: str) -> list[str]:
+    """Never-read columns that hold a value in this CSV text (column names only)."""
+    rows = list(csv.reader(io.StringIO(text.lstrip("\ufeff"), newline="")))
+    if not rows:
+        return []
+    hits = []
+    for col in NEVER_READ:
+        if col in rows[0]:
+            i = rows[0].index(col)
+            if any(i < len(r) and r[i].strip() for r in rows[1:]):
+                hits.append(col)
+    return hits
 
 
 def stray_runs(text: str) -> list[str]:
@@ -61,6 +81,14 @@ def lint(plugin_root: Path) -> list[str]:
             # Goldens are engine output, already through the leak gate (which exempts digests).
             for run in stray_runs(raw.decode("utf-8", "replace")):
                 problems.append(f"{rel}: 7+ digit run {run} outside the reserved 0000… pattern")
+        if p.suffix.lower() == ".csv":
+            try:
+                hits = never_read_values(raw.decode("utf-8", "replace"))
+            except csv.Error as e:
+                problems.append(f"{rel}: CSV does not parse ({e})")
+                hits = []
+            for col in hits:
+                problems.append(f"{rel}: {col!r} holds a value; a fixture leaves it empty")
         name = case_stem(p)
         if name is not None:
             case = p.with_name(name + ".case.toml")

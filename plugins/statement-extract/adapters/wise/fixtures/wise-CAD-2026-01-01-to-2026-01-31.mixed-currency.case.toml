@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a USD row inside a file named for CAD"
+exit = 3
+stderr_has = "single_currency"

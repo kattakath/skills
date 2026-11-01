@@ -32,13 +32,14 @@ echo "== minimum counts"
 # real counts; RAISE THEM with each release (plan end state: adapters >= 7, cases >= 51).
 # R1: 4 adapters / 33 cases. R3: + Desjardins and closed Scotiabank chequing PDFs.
 # R3b: + PDF adapters for TD, CIBC, Scotiabank card/LOC, Tangerine and BMO (16 / 92).
+# R2: + Wise CSV (11 cases) and Wise PDF (3 cases): 18 / 106 with R3b.
 adapters=$(find adapters -mindepth 2 -maxdepth 2 -name '*.toml' | wc -l | tr -d ' ')
 cases=$(find adapters -path '*/fixtures/*.case.toml' | wc -l | tr -d ' ')
 repairs=$("$py" -I -c 'import sys; sys.path.insert(0, "lib")
 from statement_extract.repairs.ofx import REPAIRS; print(len(REPAIRS))')
 echo "adapters=$adapters cases=$cases repairs=$repairs"
-[ "$adapters" -ge 16 ] || { echo "expected >= 16 adapters, found $adapters" >&2; exit 1; }
-[ "$cases" -ge 92 ] || { echo "expected >= 92 fixture cases, found $cases" >&2; exit 1; }
+[ "$adapters" -ge 18 ] || { echo "expected >= 18 adapters, found $adapters" >&2; exit 1; }
+[ "$cases" -ge 106 ] || { echo "expected >= 106 fixture cases, found $cases" >&2; exit 1; }
 [ "$repairs" -ge 4 ] || { echo "expected >= 4 repairs, found $repairs" >&2; exit 1; }
 
 echo "== unit + golden"

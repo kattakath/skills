@@ -6,16 +6,18 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from . import ADAPTERS_DIR
-from .drivers import ofx_driver, pdftext_driver
+from .drivers import csv_driver, ofx_driver, pdftext_driver
 from .keys import SCHEMES
 from .model import STATUSES
 from .repairs.ofx import BY_NAME
 
-FORMATS = ("ofx", "pdftext")  # the csv driver arrives with Wise
+FORMATS = ("ofx", "pdftext", "csv")
+DRIVER_MODULES = {"ofx": ofx_driver, "pdftext": pdftext_driver, "csv": csv_driver}
 # The only functions a Python hook may define, each because TOML cannot express it.
 HOOKS = ("parse_lines", "post_drafts", "extra_checks")
 KNOWN_TOP = {"institution", "format", "description", "identify", "repairs", "keys", "account",
-             "reconcile", "skip", "sign", "grammar", "hook"}
+             "reconcile", "skip", "sign", "grammar", "csv", "hook"}
+ACCOUNT_REFS = ("last4", "currency")
 
 
 @dataclass
@@ -62,7 +64,7 @@ def check_spec(adapter_id: str, spec: dict) -> None:
         raise AdapterError(f"{adapter_id}: identify needs at least one non-empty list")
     # A key written after a [table] header lands INSIDE that table in TOML, so a misplaced
     # `repairs = [...]` would silently become an identify field. Reject anything unknown.
-    allowed = {"ofx": ofx_driver, "pdftext": pdftext_driver}[spec["format"]].IDENT_FIELDS
+    allowed = DRIVER_MODULES[spec["format"]].IDENT_FIELDS
     bad_ident = set(ident) - set(allowed)
     if bad_ident:
         raise AdapterError(f"{adapter_id}: unknown identify field(s) {sorted(bad_ident)}; "
@@ -80,6 +82,15 @@ def check_spec(adapter_id: str, spec: dict) -> None:
     minimum = spec.get("reconcile", {}).get("minimum", "structural")
     if minimum not in STATUSES:
         raise AdapterError(f"{adapter_id}: reconcile.minimum {minimum!r} not in {STATUSES}")
+    ref = spec.get("account", {}).get("ref", "last4")
+    if ref not in ACCOUNT_REFS:
+        raise AdapterError(f"{adapter_id}: account.ref {ref!r} not in {ACCOUNT_REFS}")
+    if spec["format"] == "csv":
+        problems = csv_driver.check_spec(spec)
+        if problems:
+            raise AdapterError(f"{adapter_id}: " + "; ".join(problems))
+    elif "csv" in spec:
+        raise AdapterError(f"{adapter_id}: a [csv] table needs format = \"csv\"")
     if "statement-line/1" in schemes and spec["keys"].get("immutable") is not True:
         raise AdapterError(f"{adapter_id}: statement-line/1 keys need keys.immutable = true "
                            "(a statement that can be reissued would change every key)")

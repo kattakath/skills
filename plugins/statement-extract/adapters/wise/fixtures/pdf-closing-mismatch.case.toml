@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the printed closing balance disagrees with the newest running balance"
+exit = 3
+stderr_has = "closing_balance"

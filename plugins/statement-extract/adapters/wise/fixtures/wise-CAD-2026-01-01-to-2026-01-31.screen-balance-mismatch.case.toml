@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the screen balance in accounts.toml disagrees with the newest running balance"
+exit = 3
+stderr_has = "external_assertion"

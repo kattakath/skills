@@ -1,0 +1,49 @@
+  Wise Payments Sample Ltd.
+  1 Example Street, Sample City
+  Canada
+
+
+
+  CAD statement
+  1 January 2026 [GMT-05:00] - 31 January 2026 [GMT-05:00]
+
+  Generated on: 2 February 2026
+
+
+   Account holder
+   ALEX SAMPLE
+
+
+
+   CAD on 31 January 2026 [GMT-05:00]                                                                                       297.63 CAD
+
+  Description                                                                                 Incoming           Outgoing      Amount
+
+  Card transaction of 5.25 CAD issued by DEMO TRANSIT                                                             -5.25       297.36
+  MONTREAL
+  20 January 2026 | Card ending in 0001 | ALEX SAMPLE | Transaction: CARD-0000605
+
+  Card transaction of 7.00 USD issued by DEMO*SHOP 555-0000123                                                    -9.99       302.61
+  9 January 2026 | Card ending in 0001 | ALEX SAMPLE | Transaction: CARD-0000604
+
+  Card transaction of 15.00 CAD issued by SAMPLE STORE                                            15.00                          312.60
+  TORONTO
+  7 January 2026 | Card ending in 0001 | ALEX SAMPLE | Transaction: CARD-0000603
+
+ref:0000aaaa-0000-bbbb                                                                                      1/2
+
+  Card transaction of 40.00 CAD issued by SAMPLE STORE                                                           -40.00       297.60
+  TORONTO
+  5 January 2026 | Card ending in 0001 | ALEX SAMPLE | Transaction: CARD-0000603
+
+  Card transaction of 12.40 CAD issued by SAMPLE CAFE                                                            -12.40       337.60
+  TORONTO
+  3 January 2026 | Card ending in 0001 | ALEX SAMPLE | Transaction: CARD-0000602
+
+  Added to account                                                                               250.00                          350.00
+  2 January 2026 | Transaction: TRANSFER-0000601
+
+
+   Wise Payments Sample Ltd. is a sample service. Need help? Visit wise.example/help
+
+ref:0000aaaa-0000-bbbb                                                                                      2/2
