@@ -27,27 +27,19 @@ Equity:Gaps on its first day, labelled with the range: the rows there were never
 the pad says so instead of hiding the jump in the next balance. A hole whose pad Beancount
 reports unused (nothing moved) is dropped like any unused pad.
 """
-import tomllib
 from collections import defaultdict
 from datetime import date, timedelta
 from decimal import Decimal
-from pathlib import Path
 
+from . import pfc
 from .errors import Exit, Refusal
 from .rules import NEEDS_REVIEW
 
 OPENING = "Equity:Opening-Balances"
 GAPS = "Equity:Gaps"
 UNCATEGORIZED = "Expenses:Uncategorized"
-DATA = Path(__file__).resolve().parent.parent.parent / "data"
 
 
-def _primaries() -> list[str]:
-    raw = tomllib.loads((DATA / "plaid-pfc.toml").read_text(encoding="utf-8"))
-    return sorted(raw["primary"], key=len, reverse=True)
-
-
-PRIMARIES = _primaries()
 INCOME_ROOTS = {"INCOME", "TRANSFER_IN", "LOAN_DISBURSEMENTS"}
 
 
@@ -56,7 +48,7 @@ def component(s: str) -> str:
 
 
 def plaid_account(cat: str) -> str:
-    primary = next((p for p in PRIMARIES if cat == p or cat.startswith(p + "_")), None)
+    primary = next((p for p in pfc.primaries() if cat == p or cat.startswith(p + "_")), None)
     if primary is None:
         raise Refusal(Exit.REFUSED, "category has no Plaid PRIMARY", [cat])
     rest = cat[len(primary) + 1:]

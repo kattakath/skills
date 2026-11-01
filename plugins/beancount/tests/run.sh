@@ -14,6 +14,10 @@ py=${PYTHON:-${BEANCOUNT_PYTHON:-python3}}
   exit 1
 }
 
+# The PFC names come from the sibling plaid-pfc plugin's pin, as they do in use (one source).
+export PLAID_PFC_DATA=${PLAID_PFC_DATA:-$(cd "$plugin/.." && pwd)/plaid-pfc/data/pfc-v2.json}
+[ -f "$PLAID_PFC_DATA" ] || { echo "plaid-pfc pin not found at $PLAID_PFC_DATA" >&2; exit 1; }
+
 echo "== compile"
 "$py" -m compileall -q lib tests
 "$py" -c 'import py_compile, sys; py_compile.compile(sys.argv[1], doraise=True)' scripts/beancount-kit
@@ -22,7 +26,7 @@ echo "== minimum counts"
 # A floor, so a renamed directory cannot turn this suite into a green no-op.
 tests=$(grep -c '^    def test_' tests/test_build.py)
 echo "tests=$tests"
-[ "$tests" -ge 30 ] || { echo "expected >= 30 tests, found $tests" >&2; exit 1; }
+[ "$tests" -ge 34 ] || { echo "expected >= 34 tests, found $tests" >&2; exit 1; }
 
 echo "== unit + golden"
 # -I drops cwd and the script dir from sys.path; the test file inserts lib/ and tests/ itself.

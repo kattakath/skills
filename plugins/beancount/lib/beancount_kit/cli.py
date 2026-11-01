@@ -35,6 +35,10 @@ def _jsonl_paths(items: list[str]) -> list[Path]:
 
 def build(a) -> int:
     ledger = load_ledger(Path(a.ledger))
+    from . import pfc
+    bad = pfc.unknown(ledger.categories)
+    if bad:
+        raise Refusal(Exit.USAGE, "ledger.toml [categories]: not a pinned Plaid PFC v2 name", bad)
     rows, asserts, overlapped, positions, survival = read_jsonl(_jsonl_paths(a.jsonl))
     if a.accounts:
         asserts += read_screen_balances(Path(a.accounts), ledger.operating_currency)
@@ -169,6 +173,12 @@ def doctor(_a) -> int:
     if j:
         line(Path(j).parent.exists(), f"journal folder reachable: {Path(j).parent}")
     line(bool(fava.fava_bin()), f"fava binary: {fava.fava_bin()}")
+    try:
+        from . import pfc
+        p = pfc.pin()
+        line(True, f"plaid-pfc pin: {len(p['detailed'])} names, fetched {p['fetched']} ({pfc.locate()})")
+    except Refusal as e:
+        line(False, e.reason)
     return 0 if ok else 3
 
 
