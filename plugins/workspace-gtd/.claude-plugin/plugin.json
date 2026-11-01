@@ -8,6 +8,9 @@
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/workspace-gtd",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
+  "dependencies": [
+    "google-workspace-mcp"
+  ],
   "keywords": [
     "gtd",
     "google-workspace",
