@@ -107,5 +107,5 @@ Measured both ways: **55 pass / 0 fail** with zsh, **49 pass / 0 fail / 2 skip**
 
 ## Requires
 
-Nothing. `bash`, `git` and `node` for the tests; the suites skip `zsh` cases when zsh is
+`node` at runtime: the PostToolUse hook runs `scripts/silent-instrument-lint.js`. `bash`, `git` and `node` for the tests; the suites skip `zsh` cases when zsh is
 absent and never touch the network, so CI stays credential-free.

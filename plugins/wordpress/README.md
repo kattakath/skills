@@ -26,6 +26,11 @@ builds it when `local.pluginMcp.servers` includes `"wordpress"`. Same arrangemen
 `claude-code-nix` has with `mcp-nixos` and `page-lab` with `page-lab-pick`: the plugin
 declares, Nix installs. Without it on PATH the server simply fails to start.
 
+**Using it on another machine.** The launcher is an environment override:
+`WORDPRESS_MCP_COMMAND` (default `nix-mcp-wordpress`) names any stdio WordPress MCP launcher that
+finds its own site URL and credentials. Claude Code expands `${VAR:-default}` in a plugin's
+`.mcp.json` `command`, so with it unset nothing changes.
+
 **Why the credential work is not in this repo.** The launcher reads three values from the
 macOS login Keychain at launch — the site URL, the username and an **application
 password**. A plugin's `.mcp.json` can set `env` to literals or passthroughs but **cannot**

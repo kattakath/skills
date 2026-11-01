@@ -31,7 +31,11 @@ version stays diffable, re-renderable, and honest.
 └─────────────┘     └──────────────┘
 ```
 
-## Prerequisites (all already in this repo)
+## Prerequisites
+
+These come from the owner's `kattakath/nix-config` (not this repository). Elsewhere, install
+the public equivalents: `npm i -g resumed puppeteer` (or `resume-cli`), `pip install python-jobspy`,
+and fetch the resume JSON yourself instead of using the `jsonresume` wrapper.
 
 - **`jsonresume`** wrapper (`packages/jsonresume.nix`, on PATH via home-manager) —
   `download` / `validate` / `print` / `markdown` / `text`. It bakes in the default

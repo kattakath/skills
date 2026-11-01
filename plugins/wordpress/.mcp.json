@@ -1,7 +1,7 @@
 {
   "mcpServers": {
     "wordpress": {
-      "command": "nix-mcp-wordpress"
+      "command": "${WORDPRESS_MCP_COMMAND:-nix-mcp-wordpress}"
     }
   }
 }

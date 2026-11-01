@@ -1,9 +1,9 @@
 {
   "mcpServers": {
     "kattakath": {
-      "command": "nix-mcp-gmail",
+      "command": "${GMAIL_MCP_COMMAND:-nix-mcp-gmail}",
       "args": [
-        "ismail@kattakath.com"
+        "${GMAIL_MCP_ACCOUNT:-ismail@kattakath.com}"
       ]
     }
   }

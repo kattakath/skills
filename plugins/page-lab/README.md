@@ -102,7 +102,9 @@ Wire the linter into CI:
 - run: plugins/page-lab/scripts/userscript-meta-lint.sh userscripts/
 ```
 
-Requires `bash`, and `node` for the `.mjs` scripts. Zero npm dependencies.
+Requires `bash`, and `node` for the `.mjs` scripts, which have zero npm dependencies. The plugin's
+MCP servers are separate: `.mcp.json` fetches `kapture-mcp` and `chrome-devtools-mcp` (pinned) through
+`npx` at runtime, and they need a Chromium with a debug port.
 
 ## Facts are dated, not remembered
 

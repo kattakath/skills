@@ -408,6 +408,7 @@ unknown `identify` fields for exactly that reason.
 ## Requires
 
 - **poppler** (`pdftotext`) for PDF statements only.
+- **node** and **git** for the staging-guard hook (`hooks/hooks.json`), which blocks staging statement files.
 - Python **≥ 3.11**, standard library only. No uv, no ofxtools: ofxtools is GPL-3.0, and this
   reader is MIT.
 - The launcher re-execs under `python3 -I`, so `PYTHONPATH` and the working directory cannot
