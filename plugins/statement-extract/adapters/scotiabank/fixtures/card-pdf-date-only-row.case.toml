@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2024 layout: on a continued page whose AMOUNT($) heading moved, a row prints its dates alone and its details, amount and FX line below"
+exit = 0
+pdf_smoke = true

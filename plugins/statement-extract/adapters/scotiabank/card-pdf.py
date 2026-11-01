@@ -32,8 +32,10 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
     """Why not TOML: the amount column is located per page from the AMOUNT($) heading, because
     the summary and interest-rate column on the right shares lines with rows; a wrapped
     description line folds into the row above by its indentation; rows are grouped into
-    per-cardholder sections, each tied to its own printed CREDITS/DEBITS subtotals; and the
-    year is inferred per row from the statement period. Control flow over a line stream."""
+    per-cardholder sections, each tied to its own printed CREDITS/DEBITS subtotals; a row
+    that prints only its dates takes its details and amount from the next line (2023/2024);
+    and the year is inferred per row from the statement period. Control flow over a line
+    stream."""
     g = spec["grammar"]
     row_re = re.compile(g["row"])
     amt_re = re.compile(g["row_amount"])
@@ -58,7 +60,42 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
     current: dict = {"rows": []}
     heading = None                     # (start, end) of this page's AMOUNT($)
     fold_col = None                    # desc column of the row just read, while it may wrap
+    pending = None                     # the row match of a line that printed only its dates
+
+    def _take(m, line: str, start: int) -> None:
+        """One row: dates from `m`, details and amount from `line` right of column `start`."""
+        nonlocal fold_col
+        cands = {i: c.span() for i, c in enumerate(amt_re.finditer(line, start))}
+        if not cands:
+            raise Refusal(Exit.REFUSED, "a transaction row carries no amount")
+        best = nearest_column(heading, cands)
+        a0, a1 = cands[best]
+        if abs(a1 - heading[1]) > slack:
+            raise Refusal(Exit.REFUSED, "a row's amount is not under the AMOUNT($) heading")
+        if "CREDITS" in current or "DEBITS" in current:
+            raise Refusal(Exit.REFUSED, "a row inside a section's subtotal lines")
+        pm, tm = month(m.group("pmon")), month(m.group("tmon"))
+        r = {"date": iso(infer_year(pm, end_m, end_y), pm, int(m.group("pday"))),
+             "tdate": iso(infer_year(tm, end_m, end_y), tm, int(m.group("tday"))),
+             "desc": line[start:a0].strip(),
+             "amt": amount(line[a0:a1])}  # card view: purchase +, "-" credit
+        rows.append(r)
+        current["rows"].append(r)
+        fold_col = start
+
+    orphan = "a row printing only its dates is not followed by its details line"
     for line in lines:
+        if pending is not None:
+            # 2023/2024: the dates alone on one line, details and amount on the next.
+            if not line.strip():
+                continue
+            indent = len(line) - len(line.lstrip())
+            if (head_re.search(line) or row_re.match(line) or sub_re.match(line)
+                    or indent < pending.start("pmon")):
+                raise Refusal(Exit.REFUSED, orphan)
+            _take(pending, line, indent)
+            pending = None
+            continue
         h = head_re.search(line)
         if h:
             heading, fold_col = h.span(), None
@@ -67,23 +104,10 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
         if m:
             if heading is None:
                 raise Refusal(Exit.REFUSED, "a transaction row before any AMOUNT($) heading")
-            cands = {i: c.span() for i, c in enumerate(amt_re.finditer(line, m.end()))}
-            if not cands:
-                raise Refusal(Exit.REFUSED, "a transaction row carries no amount")
-            best = nearest_column(heading, cands)
-            a0, a1 = cands[best]
-            if abs(a1 - heading[1]) > slack:
-                raise Refusal(Exit.REFUSED, "a row's amount is not under the AMOUNT($) heading")
-            if "CREDITS" in current or "DEBITS" in current:
-                raise Refusal(Exit.REFUSED, "a row inside a section's subtotal lines")
-            pm, tm = month(m.group("pmon")), month(m.group("tmon"))
-            r = {"date": iso(infer_year(pm, end_m, end_y), pm, int(m.group("pday"))),
-                 "tdate": iso(infer_year(tm, end_m, end_y), tm, int(m.group("tday"))),
-                 "desc": line[m.end():a0].strip(),
-                 "amt": amount(line[a0:a1])}  # card view: purchase +, "-" credit
-            rows.append(r)
-            current["rows"].append(r)
-            fold_col = m.end()
+            if not line[m.end():].strip():
+                pending, fold_col = m, None
+                continue
+            _take(m, line, m.end())
             continue
         st = sub_re.match(line)
         if st:
@@ -98,6 +122,8 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
         if fold_col is not None and chunk and abs(indent - fold_col) <= 2:
             rows[-1]["desc"] += " " + chunk
         fold_col = None
+    if pending is not None:
+        raise Refusal(Exit.REFUSED, orphan)
 
     debits = sum((r["amt"] for r in rows if r["amt"] > 0), _ZERO)
     credits = -sum((r["amt"] for r in rows if r["amt"] < 0), _ZERO)

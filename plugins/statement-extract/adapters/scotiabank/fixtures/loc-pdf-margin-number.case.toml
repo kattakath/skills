@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2023/2024 layout: a six-digit print-sequence number in the left margin shares a row's line; the row still parses"
+exit = 0
+pdf_smoke = true

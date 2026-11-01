@@ -1,0 +1,32 @@
+                                                                                                                               Statement Period       May 3, 2024 - Jun 4, 2024
+                                                                                                                               Statement date                         Jun 4, 2024
+                                                                                                                               Account #                  0000 000 000 001 234
+                                                                                                                               Page                                       1 of 1
+
+                                                                                                                               Scotia Momentum VISA Infinite* Card
+
+                                  ALEX SAMPLE
+                                  SAMPLETON, ON A0A 0A0
+
+                                                                                                                               Previous balance, May 2/24                 $300.00
+                                                                                                                               Total interest             +                 $5.00
+                                                                                                                               Total payments/credits     -               $300.00
+                                                                                                                               Total purchases/charges    +                $95.50
+
+                                                                                                                               New balance                =               $100.50
+
+                                  Transactions since your last statement
+                                          TRANS. POST
+                                     REF.# DATE DATE           DETAILS                                    AMOUNT($)
+
+                                     001    Jun 4       Jun 4    INTEREST CHARGES-PURCHASE                     5.00
+                                     SUBTOTAL CREDITS                                                         $0.00
+                                     SUBTOTAL DEBITS                                                          $5.00
+
+
+                                  ALEX SAMPLE - 0000 000 000 001 234
+                                     002    May 10      May 10   PAYMENT FROM - *****00*0001                300.00-
+                                     003    May 20      May 21   SAMPLE CAFE SAMPLETON ON                     15.50
+                                     004    Jun 1       Jun 1
+                                     SUBTOTAL CREDITS - 0000 000 000 001 234                                $300.00 -
+                                     SUBTOTAL DEBITS - 0000 000 000 001 234                                  $95.50
