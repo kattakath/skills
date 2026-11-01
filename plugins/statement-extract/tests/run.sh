@@ -50,4 +50,7 @@ echo "== unit + golden"
 echo "== fixture lint"
 "$py" scripts/statement-extract fixture lint
 
+echo "== commit guard cases"
+bash tests/guard-cases.sh
+
 echo "statement-extract: all checks passed"
