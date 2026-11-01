@@ -1,0 +1,3 @@
+synthetic = true
+quirk = "a Dec-to-Jan statement: December rows take the previous year; a negative opening balance"
+exit = 0

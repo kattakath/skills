@@ -2,6 +2,7 @@
  "_comment": "sha256 of inspect.getsource() of each frozen key normaliser. A mismatch means someone edited a frozen function in place: revert it, and ship any change as a NEW scheme name plus a consumer migration.",
  "hashes": {
   "content-occurrence/legacy-qfx-v0": "26e8ecbf3fa4e24f2e9cdaf6e6a60622737dec011476f6038f92fa47bf2ca927",
-  "content-occurrence/legacy-collapse-v0": "0331d37ff09a454729d222a4b53495a9856d1e5fea2bdd1705ece9b60e30a676"
+  "content-occurrence/legacy-collapse-v0": "0331d37ff09a454729d222a4b53495a9856d1e5fea2bdd1705ece9b60e30a676",
+  "content-occurrence/1": "af42f611fb78933e482ed0a133e2e5298721e611750c964dd0e5ba42ec84084c"
  }
 }

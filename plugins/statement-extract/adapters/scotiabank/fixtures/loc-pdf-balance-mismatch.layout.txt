@@ -1,0 +1,40 @@
+                                                                                           Statement Period        Sep 6, 2026 - Oct 5, 2026
+                                                                                           Statement Date                        Oct 5, 2026
+                                                                                           Account #                0000 XXXX XXXX 5678
+                                                                                           Page                                       1 of 2
+
+                                                                                           ScotiaLine® Personal
+                                                                                           Line of Credit
+
+ALEX SAMPLE                                                                                Payment Due Date                 Nov 2, 2026
+SAM SAMPLE                                                                                 Total Minimum Payment                $110.50
+SAMPLETON ON A0A 0A0                                                                       New Balance       =             $19,510.50
+
+This statement shows transactions posted to your account during the Statement Period.      Account Summary
+
+Transactions since your last statement                                                     Previous balance, Sep 5/26          $20,000.00
+                                                                                           Interest                     +        $110.50
+         TRANS. POST
+   REF.# DATE                  DETAILS                                         AMOUNT($)
+                                                                                           Payments/credits             -        $600.00
+                DATE
+                                                                                           Advances/charges             +          $0.00
+
+ALEX SAMPLE - 0000 XXXX XXXX 5678
+   001      Oct 5     Oct 5    INTEREST CHARGES-ADVANCE                             10.50  Account Balance‡‡ =   $19,501.50
+   002      Oct 5     Oct 5    INTEREST CHARGES-LOC                                100.00
+   SUBTOTAL CREDITS - 0000 XXXX XXXX 5678                                           $0.00  Credit limit                        $25,000.00
+   SUBTOTAL DEBITS - 0000 XXXX XXXX 5678                                          $110.50
+                                                                                           Available credit                     $5,489.50
+
+SAM SAMPLE - 0000 XXXX XXXX 5678
+                                                                                           Interest information
+   003      Sep 8     Sep 8    PAYMENT FROM - *****00*0001                        300.00-  Sep 6 - Oct 5         7.20%            $110.50
+   004      Sep 22    Sep 22   PAYMENT FROM - *****00*0001                        300.00-
+   SUBTOTAL CREDITS - 0000 XXXX XXXX 5678                                         $600.00 -Annual interest rate(s) for the statement period:
+   SUBTOTAL DEBITS - 0000 XXXX XXXX 5678                                            $0.00  Sep 6 - Oct 5          7.20%            $110.50
+
+Interest charges posted on statement date
+Advances                                            $110.50
+                                                                                                                 For Scotiabank Visa credit card payments and Scotia Credit Card
+

@@ -13,10 +13,11 @@ text = ['Wise Payments', '^\s*[A-Z]{3} statement\s*$', '^\s*Description\s{2,}.*A
 [keys]
 # The PDF prints the Wise transaction id and the DATE, but not the millisecond Date Time that
 # native-id-ts/1 needs, so PDF keys cannot equal the CSV's. Content key instead, with the
-# frozen collapse normaliser: Wise|<CUR>|<date>|<amount 2dp>|<text>|<n>.
+# frozen content-occurrence/1 normaliser every PDF adapter uses:
+# Wise|<CUR>|<date>|<amount 2dp>|<text>|<n>.
 # CONSEQUENCE: the same movement read from the PDF and from the CSV gets two different keys.
 # Feed one source per period (prefer the CSV); never both for the same dates.
-scheme = "content-occurrence/legacy-collapse-v0"
+scheme = "content-occurrence/1"
 
 [account]
 ref = "currency"

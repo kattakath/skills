@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "one Amount column, unsigned: direction from the running balance; the first statement opens mid-period with a zero opening balance; a star-masked card payee"
+exit = 0
+pdf_smoke = true

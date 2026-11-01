@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the last holder section prints no subtotals, so its rows are tied only by the summary: refused (rows_in_sections)"
+exit = 3
+stderr_has = "rows_in_sections"

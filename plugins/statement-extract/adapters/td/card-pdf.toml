@@ -1,0 +1,51 @@
+# TD Visa credit card, monthly PDF statement from EasyWeb. The QFX download covers only
+# recent statement periods, so older ones come from these PDFs.
+institution = "TD"
+format = "pdftext"
+description = "TD Visa credit card monthly PDF statement"
+
+[identify]
+text = ['STATEMENT PERIOD: [A-Z][a-z]+ \d{1,2}, \d{4} to [A-Z][a-z]+ \d{1,2}, \d{4}',
+        'TRANSACTION\s+POSTING', 'ACTIVITY DESCRIPTION', 'PREVIOUS STATEMENT BALANCE',
+        '(?i)Toronto-Dominion Bank']
+
+[keys]
+# No FITID in the PDF. Content key: TD|••1234|<posting date>|<amount>|<text>|<n>.
+scheme = "content-occurrence/1"
+
+# The header prints the card number masked to its first six and last four: the number on
+# screen. An accounts-file last4 that disagrees with it is refused (header_last4).
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # credits tie to Payments & Credits, debits to the four charge lines, and
+                # Previous Balance + rows = NEW BALANCE
+
+# {AMT} and {MON} are substituted before compiling. Amounts print with a $; a credit with -$.
+[grammar]
+amt = '-?\$\d{1,3}(?:,\d{3})*\.\d{2}'
+mon = '(?:JAN|FEB|MAR|APR|MAY|JUN|JUL|AUG|SEP|OCT|NOV|DEC)'
+# Right-column text (the payment box, rates, the balance summary) can share a row's line
+# after a wide gap, so anything after the amount is allowed.
+txn = '^\s*(?P<tmon>{MON}) (?P<tday>\d{1,2})\s+(?P<pmon>{MON}) (?P<pday>\d{1,2})\s+(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})(?:\s{2,}\S.*)?\s*$'
+statement_date = 'STATEMENT DATE: ([A-Z][a-z]+) (\d{1,2}), (\d{4})'
+period = 'STATEMENT PERIOD: ([A-Z][a-z]+) (\d{1,2}), (\d{4}) to ([A-Z][a-z]+) (\d{1,2}), (\d{4})'
+account = 'Account Number: \d{4} \d{2}[Xx*]{2} [Xx*]{4} (\d{4})'
+previous = 'PREVIOUS STATEMENT BALANCE\s+({AMT})'
+# Some years print "Continued" left of it on the same line; TOTAL NEW BALANCE never matches
+# (one space before NEW, and in some years its amount sits two lines below).
+new = '(?:^|\s{2,})NEW BALANCE\s+({AMT})\s*$'
+# Printed only by some years' layouts; tied when present.
+net_activity = 'AMOUNT OF \S+\s+({AMT})\s*$'
+
+# The CALCULATING YOUR BALANCE block, each line anchored at the end of its line because the
+# block shares lines with transaction rows. Its seventh line is not tied (see the hook).
+[grammar.summary]
+previous = '\s{2,}Previous Balance\s+({AMT})\s*$'
+credits = '\s{2,}Payments & Credits\s+({AMT})\s*$'
+purchases = '\s{2,}Purchases & \S+ Charges\s+({AMT})\s*$'
+cash_advances = '\s{2,}Cash Advances\s+({AMT})\s*$'
+interest = '\s{2,}Interest\s+({AMT})\s*$'
+fees = '\s{2,}Fees\s+({AMT})\s*$'

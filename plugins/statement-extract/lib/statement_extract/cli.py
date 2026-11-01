@@ -37,7 +37,17 @@ def _read_inputs(files: list[str]) -> list[tuple[Path, bytes, str]]:
 
 
 def _refusal_line(e: Refusal) -> str:
-    detail = f" {_dump(e.detail)}" if e.detail else ""
+    """stderr is often read by an agent working on REAL statements, so it carries check NAMES
+    and locators only, never expected/actual figures. The full detail goes to --report."""
+    safe = {}
+    for k, v in e.detail.items():
+        if k == "checks":
+            safe[k] = [c["name"] for c in v]
+        elif k == "check":
+            safe[k] = v["name"]
+        elif k in ("first", "second", "repairs"):
+            safe[k] = v
+    detail = f" {_dump(safe)}" if safe else ""
     return f"refused (exit {int(e.code)}): {e.reason}{detail}"
 
 
@@ -114,10 +124,11 @@ def cmd_extract(a, log: RunLog) -> int:
         c = s["counts"]
         log.emit("dedupe.counts", **{"statement.id": s["statement_id"],
                                      **{f"count.{k}": v for k, v in c.items()}})
-        _err(f"{s['institution']} {s['account']['ref']} closing {s['balances']['closing']} as of "
-             f"{s['balances']['closing_as_of']} | {s['reconcile']['status']} | "
-             f"{c['emitted']} new, {c['seen']} seen, {c['dup_in_run']} dup, "
-             f"{c['skipped']} skipped")
+        # Counts and status only: balances stay in the stdout records and the --report file,
+        # so an agent verifying real statements can read stderr without seeing a figure.
+        _err(f"{s['institution']} {s['account']['ref']} {s['period']['end'] or ''} | "
+             f"{s['reconcile']['status']} | {c['emitted']} new, {c['seen']} seen, "
+             f"{c['dup_in_run']} dup, {c['skipped']} skipped")
 
     out = sys.stdout
     if a.format == "csv":

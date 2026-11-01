@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a printed day-end balance that does not follow from the rows before it is refused"
+exit = 3
+stderr_has = "running_chain"

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a CR credit and debits in one Amount column; a detail line with a star-masked account (3-digit tail) is memo, scrubbed; the interest-rate note is not a row; TOTAL INTEREST ties"
+exit = 0
+pdf_smoke = true

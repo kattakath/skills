@@ -1,0 +1,39 @@
+                                                     SAMPLE BRANCH
+                                                     100 SAMPLE ROAD                                                   To see how this statement
+                                                     SAMPLETON, ON A0A 0A0                                             works, call:
+                                                                                                                       TTY: 1-800-555-0100
+                                                                                                                       Tel: 1-800-555-0199
+
+
+
+         ALEX SAMPLE
+         1 SAMPLE STREET UNIT 1
+         SAMPLETON ON A0A 0A0
+
+
+         Statement of Account                                            Account Type                                       Statement From To
+    Branch No.                Account No.                                                                                DEC 31/25 - JAN 30/26
+                                                                             MINIMUM
+         1234                1234-0000123                                                                                         Page 1 of 1
+
+              Description                              Withdrawals                          Deposits                   Date                Balance
+ STARTING BALANCE                                                                                                     DEC31                       2,000.00
+ E-TRANSFER SAMPLE                                                                                       100.00       DEC31                       2,100.00
+ SAMPLE UTILITY BPY                                                      50.00                                        JAN02                       2,050.00
+ SAMPLE PHARMACY                                                         25.50                                        JAN15                       2,024.50
+ SAMPLE RENT CHQ                                                      2,100.00                                        JAN20                        75.50OD
+ PAYROLL DEP SAMPLE CO                                                                                   200.00       JAN28                         124.50
+ Total                                                                2,175.50                           300.00
+
+
+
+
+ Total                                                                2,175.50                           300.00
+
+   Account/Transaction Type                                Fees              Waived Balance               Waived Fees                     Paid Fees
+  MINIMUM                                                     $4.95           n/a                          $0.00                                $4.95
+                                                                                                                    Fees paid:                  $4.95
+
+ ACCOUNT ISSUED BY: THE TORONTO-DOMINION BANK
+ For your protection, please examine this statement and report any error within 30 days of the statement date.
+

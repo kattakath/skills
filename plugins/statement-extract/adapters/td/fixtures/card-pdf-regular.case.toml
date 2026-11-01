@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "right-column text shares a row's line; a wrapped description continues in the description column; a payment (-$) is money in, a purchase money out; TOTAL NEW BALANCE prints its amount two lines below, so the summary NEW BALANCE closes; credits, debits and the balance equation each tie to the summary"
+exit = 0
+pdf_smoke = true

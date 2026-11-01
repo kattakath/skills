@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a Withdrawals total that the rows do not add up to is refused, though every balance chains"
+exit = 3
+stderr_has = "summary_withdrawals"

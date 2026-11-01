@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the text layer splits header words (St at ement, Sept ember, t o) and the period is read through them; rows are only those between OPENING and CLOSING BALANCE (the interest table has the same shape); the two direction totals sit in an interleaved two-column block, matched to their labels by column"
+exit = 0
+pdf_smoke = true

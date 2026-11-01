@@ -1,0 +1,38 @@
+                                                                                            Tangerine
+                                                                                            Chequing
+                                                                                            statement
+                                                                                        www.tangerine.ca
+
+                                                                          December 31, 2025 To January 31, 2026
+                                                                                            Client #: 00004321
+ALEX SAMPLE
+1-100 SAMPLE STREET EAST
+SAMPLETON ON A0A 0A0
+
+
+
+ Your Orange Key is 00009999A1
+
+Account(s) at a glance
+Account owner(s): ALEX SAMPLE
+
+
+
+Account Type                                           Account Number                                    Account Balance($)
+Tangerine Chequing Account                             0000001234                                                  1,089.99
+
+
+The Details - Tangerine Chequing Account - 0000001234
+Current Interest Rate                Interest Earned Year To Date
+0.05%                                $0.12
+
+Transaction Date                     Transaction Description                                    Amount($)              Balance($)
+31 Dec 2025                          Opening Balance                                                  0.00               1,000.00
+31 Dec 2025                          Interest Paid                                                    0.09               1,000.09
+02 Jan 2026                          INTERAC e-Transfer From: ALEX SAMPLE                           100.00               1,100.09
+15 Jan 2026                          EFT Withdrawal to Wise                                          10.10               1,089.99
+31 Jan 2026                          Closing Balance                                                  0.00               1,089.99
+Up to $100 of each cheque you deposit will be available for withdrawal immediately. When you do so, please
+deposit each cheque in separate envelopes to help speed up processing.
+           Questions about your statement. If we can help, please call us at 1-800-555-0100 or 416-555-0100 or go to our website.
+                                                         Page 1 of 1

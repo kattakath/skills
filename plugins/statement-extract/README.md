@@ -17,6 +17,7 @@ with the consumer.
 | QFX adapters: **TD, CIBC, Scotiabank, Tangerine** | |
 | Declarative CSV driver (R2) + adapter: **Wise** balance statements | |
 | PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing**, **Wise** | |
+| PDF adapters (R3b): **TD** chequing, Visa, LOC · **CIBC** chequing, Visa, LOC/HELOC · **Scotiabank** Visa, LOC · **Tangerine** chequing · **BMO** chequing (closed) | |
 
 There are **no skills yet** (R4): drive the CLI directly.
 
@@ -93,7 +94,8 @@ shuffled arguments, produce identical bytes.
 | `fitid` | TD, CIBC, Scotiabank, Tangerine | `Institution\|••1234\|FITID` |
 | `content-occurrence/legacy-qfx-v0` | Scotiabank counter FITIDs (`undefined`, `undefined-1`, …) | `Institution\|••1234\|date\|amount\|text\|n` |
 | `content-occurrence/legacy-collapse-v0` | Desjardins Visa (PDF) | same, whitespace collapsed, ledger sign |
-| `statement-line/1` | Scotiabank closed chequing (PDF); needs `keys.immutable = true` | `Institution\|••1234\|period end\|line n` |
+| `statement-line/1` | Closed accounts: Scotiabank and BMO chequing (PDF); needs `keys.immutable = true` | `Institution\|••1234\|period end\|line n` |
+| `content-occurrence/1` | Every other PDF (TD, CIBC, Scotiabank card/LOC, Tangerine) | `Institution\|••1234\|posting date\|amount\|text\|n`, frozen normaliser that also masks space-grouped account numbers |
 | `native-id-ts/1` | Wise (CSV) | `Wise\|CAD\|<TransferWise ID>\|<Date Time as printed>` |
 
 - **`native-id-ts/1`:** Wise reuses one id for a charge and its refund or reversal, so the
@@ -101,7 +103,7 @@ shuffled arguments, produce identical bytes.
   is refused (`native_id_unique`, exit 3). The account segment is the **currency**: a Wise
   balance has no number of its own, and the legacy keys spell it that way.
 - **Wise PDF** prints the id and the date but not the time, so it cannot build
-  `native-id-ts/1`. It uses the frozen `content-occurrence/legacy-collapse-v0`, and its keys
+  `native-id-ts/1`. It uses the frozen `content-occurrence/1`, like every other PDF, and its keys
   **differ** from the CSV's for the same movement. A run holding both for overlapping dates
   is refused (`one source per period`, exit 3). Across runs nothing can catch it: feed one
   source per period, and prefer the CSV.
@@ -162,10 +164,14 @@ amount = "72.43"
 
 ## Masking and the leak gate
 
+- **stderr never carries a figure.** The summary line shows status and counts, and refusals name
+  the failed checks. Balances and expected/actual values go to stdout and `--report` only, so an
+  agent can verify real statements by reading stderr.
 - Display masking keeps the **last four** of anything account-shaped:
   - long digit runs (TD `TO:`/`FRM:` payees);
   - star-masked payees (Scotiabank);
-  - `dddd****dddd` (CIBC card memos; Wise cards: first four dropped, last four kept);
+  - `dddd****dddd` (CIBC card memos as `CC#dddd****dddd`; Wise cards: first four dropped, last four kept);
+  - a star run with a short tail, `****ddd` (CIBC HELOC memos, TD e-transfer references);
   - grouped digits, with dates excluded.
 - Every output string then passes the leak gate:
   `\d{7,}|\d{4} ?\d{2}\*|\d{4}\*{4,}|\*{2,}\d|•{3,}`.
@@ -205,10 +211,23 @@ amount = "72.43"
 - **Scotiabank closed chequing:** direction comes from the running balance, and every row
   must chain. Detail lines attach by indentation. An accounts-file last4 that disagrees with
   the header is refused (`header_last4`).
+- **Each statement type stands alone.** A bank's PDF rows get their own key, never one borrowed
+  from its QFX: the adapters exist so whatever statement is available can be extracted.
+  Coverage by two types for the same period is rare. Feed one source per period, because
+  their keys differ and `--seen` cannot dedupe across them.
+- **Measured on the operator's real PDFs (R3b, counts only):** every one of 34 statements across
+  5 banks is `proven`. Where a QFX covers the same period, the rows match it, except for rows the
+  PDF does not print (a $0.00 interest line, rows on a shared boundary day).
+- **Date basis:** PDF adapters key on the **posting** date and also emit `transaction_date`.
+  TD's and Scotiabank's QFX `DTPOSTED` is the **transaction** date, so a consumer joining the two
+  should join on `transaction_date`.
+- **Shared parsers:** `hook = "card-pdf.py"` in an adapter's TOML reuses a sibling's hook (the
+  Scotiabank LOC prints the card layout). Its bytes enter the adapter's sha256.
 - **`chain_across_statements`:** one account's back-to-back statements in a run must hand
   over the balance exactly. "Back to back" means a gap of 1–3 days, because cycles end on
   weekends and holidays (28 real hand-overs measured). The same month delivered twice is
-  counted once (`dup_in_run`), and both copies must agree. A broken hand-over refuses the
+  counted once (`dup_in_run`), and both copies must agree. TD chequing periods overlap by one day
+  (gap 0), so its hand-overs are not judged yet: no consecutive months were available to measure. A broken hand-over refuses the
   **whole run**, even with `--keep-going`, as a key collision does: either file could be
   the wrong one.
 - **Not yet exercised:** the Desjardins grammar carries the French labels from the legacy
