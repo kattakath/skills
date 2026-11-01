@@ -49,6 +49,23 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
 
+## No gaps, no double counting (`coverage`)
+
+```bash
+"$KIT" coverage <jsonl files or folders>      # exit 3 on a balance break or a conflicting Key
+```
+
+- **Completeness:** per account, each statement's opening must equal the previous closing (a
+  **balance break** fails); date holes between periods are listed but do not fail, because a
+  statement boundary leaves such days and rows dated on them sit in the next statement.
+  Coverage per account shows where history starts: earlier history was never fetched.
+- **Occurrence:** a Key in several files (overlapping downloads) is counted once; one Key with
+  two different date/amount values fails; look-alikes (same account, date, amount, description,
+  different Keys) are listed. Banks post identical charges; a passing balance assertion over
+  the period means the bank has every one.
+- Run it beside every build. No off-the-shelf Beancount plugin checks statement continuity
+  (searched 2026-11-01); the core `noduplicates` plugin catches exact duplicates only.
+
 ## Reviewing flagged entries: merchant groups first
 
 ```bash

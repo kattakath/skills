@@ -2,6 +2,7 @@
 
   build   JSONL... --ledger L --rules R [--decisions D] [--accounts A] [--out J | --check-only]
           [--emit-rows F] [--emit-pairs F]
+  coverage JSONL... [--json]          no gaps, no double counting (exit 3 on a break/conflict)
   groups  [--journal J] [--out F]   flagged entries grouped by merchant, with a rule pattern
   suggest [--journal J] [--out F | --evaluate]   category suggestions for flagged entries
   fava    start | stop | status   [--journal J]
@@ -91,6 +92,16 @@ def build(a) -> int:
     return 0
 
 
+def coverage_cmd(a) -> int:
+    from . import coverage as cv
+    c = cv.coverage(_jsonl_paths(a.jsonl))
+    if a.json:
+        print(json.dumps(c, ensure_ascii=False))
+    else:
+        cv.report(c, sys.stdout)
+    return int(Exit.REFUSED) if c["balance_breaks"] or c["key_conflicts"] else 0
+
+
 def groups_cmd(a) -> int:
     from . import groups as gr
     if not a.journal:
@@ -165,6 +176,9 @@ def main(argv=None) -> int:
     g.add_argument("--check-only", action="store_true")
     b.add_argument("--emit-rows")
     b.add_argument("--emit-pairs")
+    cp = sub.add_parser("coverage")
+    cp.add_argument("jsonl", nargs="+", help="canonical JSONL files, or folders of *.jsonl")
+    cp.add_argument("--json", action="store_true")
     gp = sub.add_parser("groups")
     gp.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
     gp.add_argument("--out", help="CSV (default stdout)")
@@ -184,6 +198,8 @@ def main(argv=None) -> int:
             return build(a)
         if a.cmd == "doctor":
             return doctor(a)
+        if a.cmd == "coverage":
+            return coverage_cmd(a)
         if a.cmd == "groups":
             return groups_cmd(a)
         if a.cmd == "suggest":

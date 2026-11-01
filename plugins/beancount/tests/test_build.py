@@ -5,7 +5,7 @@ import json
 import sys
 import tempfile
 import unittest
-from contextlib import redirect_stderr
+from contextlib import redirect_stderr, redirect_stdout
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -161,6 +161,45 @@ class Build(unittest.TestCase):
         self.assertEqual(code, 0, err)
         self.assertIn("2026-01-04 pad Liabilities:Bank:Card-0002 Equity:Gaps",
                       out.read_text(encoding="utf-8"))
+
+
+class Coverage(unittest.TestCase):
+    def stmt(self, sid, start, end, opening, closing):
+        s = scenario.stmt(sid, "Bank", "••0002", "card", "CAD", closing, end)
+        s["period"] = {"start": start, "end": end}
+        s["balances"] = dict(s["balances"], opening=opening)
+        return s
+
+    def run_cov(self, records):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "c.jsonl"
+            f.write_text("".join(json.dumps(r) + "\n" for r in records))
+            out = io.StringIO()
+            with redirect_stdout(out), redirect_stderr(io.StringIO()):
+                code = main(["coverage", str(f), "--json"])
+            return code, json.loads(out.getvalue()) if code in (0, 3) else None
+
+    def test_continuous_chain_passes(self):
+        code, c = self.run_cov([self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00"),
+                                self.stmt("a2", "2026-02-01", "2026-02-28", "-10.00", "-20.00")])
+        self.assertEqual((code, c["balance_breaks"], c["date_holes"]), (0, 0, 0))
+
+    def test_balance_break_fails_and_date_hole_warns(self):
+        code, c = self.run_cov([self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00"),
+                                self.stmt("a2", "2026-03-01", "2026-03-31", "-15.00", "-20.00")])
+        self.assertEqual(code, 3)
+        a = c["accounts"][0]
+        self.assertEqual(a["balance_breaks"][0]["next_opening"], "-15.00")
+        self.assertEqual(a["date_holes"][0]["days"], 28)
+
+    def test_overlap_counted_once_lookalike_listed_conflict_fails(self):
+        s = self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00")
+        t = lambda k, amt: scenario.txn("a1", "Bank", "••0002", "CAD", k, "2026-01-05", amt, "TIM")
+        code, c = self.run_cov([s, t("K1", "-2.00"), t("K1", "-2.00"), t("K2", "-2.00")])
+        self.assertEqual((code, c["unique_keys"], c["keys_in_several_files"]), (0, 2, 1))
+        self.assertEqual(c["lookalikes"][0]["count"], 2)
+        code, c = self.run_cov([s, t("K1", "-2.00"), t("K1", "-3.00")])
+        self.assertEqual((code, c["key_conflicts"]), (3, ["K1"]))
 
 
 class Groups(unittest.TestCase):
