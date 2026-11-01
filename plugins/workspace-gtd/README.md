@@ -39,6 +39,9 @@ and Forms. One skill, `workspace-gtd:workspace-gtd`.
 ## Requires
 
 - **A Google Workspace account and the operator's data.** The skill reads list names, calendars and key senders from Google at run time, so this repo holds none of them.
-- **Connectors:** the Google Calendar, Gmail and Drive connectors, plus a Google Tasks MCP server.
+- **Tools, connector first.** The claude.ai Gmail, Calendar, Drive, Docs and Sheets connectors where you have them.
+  Tasks and Chat have no connector, so they come from [`google-workspace-mcp`](../google-workspace-mcp),
+  which this plugin declares as a dependency: installing this one installs and enables it.
+  Its default service is `tasks`; add `chat` to its `tools` setting to get the Chat nudges.
 - **Browser automation**, for Studio and settings pages that have no API.
 - **Optional:** adb, for the phone settings.

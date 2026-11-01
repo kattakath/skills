@@ -22,6 +22,20 @@ The operator's specifics — list names, calendar names, key senders, employer �
 Google**, not here. Read them at run time (§ 1). Never write a second copy of them into a
 repo, a memory file or a doc.
 
+## Which tool serves each app — connector first
+
+| App | Use | Fallback |
+|---|---|---|
+| Gmail, Calendar, Drive, Docs, Sheets | the **claude.ai connector** | `google-workspace-mcp` with that service in its `tools` |
+| Tasks | `google-workspace-mcp` (default `tools`) | none — no connector exists |
+| Chat | `google-workspace-mcp` with `chat` in its `tools` | Studio's Chat step, which only posts |
+| Forms | `google-workspace-mcp` with `forms` in its `tools` | the browser |
+
+- **One path per app per session.** When a connector serves an app, do not also call the
+  server's tools for it: two tool sets for one mailbox or calendar split the evidence.
+- **A missing tool is a setup gap, not a reason to improvise.** Say which connector or which
+  `tools` entry is missing, then stop that step.
+
 ## 1. Discover before acting
 
 - `list_task_lists` (Tasks) — expect the default list renamed **Inbox**, plus Work, Home,
