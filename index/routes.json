@@ -263,6 +263,13 @@
         "beancount"
       ],
       "note": "statement-extract turns statements into canonical JSONL; beancount builds the journal from it plus rules and decisions, checks it, and serves it read-only in Fava. The journal is derived, never edited. Walked end to end on synthetic data 2026-11-01."
+    },
+    {
+      "goal": "Pick, check or enforce a transaction category against a recognised taxonomy",
+      "steps": [
+        "plaid-pfc"
+      ],
+      "note": "Plaid's PFC v2 (127 detailed names) pinned with descriptions and a v1-to-v2 crosswalk; validate refuses invented names; JSON Schema binds LLM output to the list. Stdlib only, no data."
     }
   ]
 }
