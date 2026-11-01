@@ -33,7 +33,7 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
   catalog the gateway read was deleted once nothing read it.) A server needing a
   credential names a launcher BINARY there, because
   `.mcp.json` `env` takes literals and passthroughs only and cannot run a Keychain read —
-  that half is a PATH package in nix-config (`local.gmailMcp`, `local.pluginMcp`).
+  that half is a PATH package in nix-config (`local.pluginMcp`).
 - **Plugins here carry no `version` field: every commit on `main` is a new release**,
   shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
   on what merges to `main` — see § Shipping a change.
