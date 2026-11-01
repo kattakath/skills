@@ -12,7 +12,8 @@ with the consumer.
 
 | Ships now | Later releases |
 |---|---|
-| Core engine, CLI contract, run log, CSV exporter, fixture lint and shape | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+| Core engine, CLI contract, run log, CSV exporter, fixture lint and shape | |
+| R4: the `extract` and `adapter` skills, the `adapter-author` agent, the commit guard | |
 | MIT OFX 1.x/2.x reader + 4 named repairs | |
 | QFX adapters: **TD, CIBC, Scotiabank, Tangerine** | |
 | Declarative CSV driver (R2) + adapter: **Wise** balance statements | |
@@ -21,7 +22,24 @@ with the consumer.
 | Older prints: **Desjardins Visa** 2021 · **TD** chequing 2021 and 2018 (`td/chequing-2018-pdf`) · **Scotiabank** business chequing 2020 (`scotiabank/chequing-2020-pdf`) | |
 | **Positions** (loan and mortgage balance snapshots, opt-in `record: "position"`): **CIBC** and **BMO** online mortgage details, **TD** annual mortgage statement, **NSLSC** student loan statement (also a proven statement with its rows) | Scanned mortgage statements (they refuse as a scan) |
 
-There are **no skills yet** (R4): drive the CLI directly.
+## Skills, agent and commit guard (R4)
+
+| Piece | Invoke | Does |
+|---|---|---|
+| `statement-extract:extract` | "extract these statements", "what does exit 3 mean" | runs the CLI over many files, reads the report, handles refusals without working around them |
+| `statement-extract:adapter` | "add support for <bank>", "this layout changed" | identify → shape → synthetic fixture → TOML/hook → checks → goldens → run.sh, under the key-freeze rule and the privacy boundary; `references/` holds the contract, the schema, the known layout traps and the fixture rules |
+| `adapter-author` agent | delegated adapter work | the same procedure in an isolated worktree, from shapes and failing reports only; it can't touch frozen normalisers, and it reports only when `run.sh` is green |
+| commit guard | automatic (PreToolUse on Bash) | blocks a `git commit` that would add OFX content outside `fixtures/` in **any** repo, or a PDF/CSV/XLSX inside this plugin outside `fixtures/` |
+
+**About the commit guard:**
+- It checks the index, plus `git commit -a`, plus the paths a `git add` earlier in the same
+  command would stage. The hook runs before that add, so the index alone would miss it.
+- It exits 2 with the reason on stderr.
+- It is deliberately narrow: it returns at once unless the command contains `git … commit`, and
+  it never blocks a CSV or PDF outside this plugin.
+- It fails **open** on a malformed payload or an internal error, because a guard that denied
+  on its own bug would stall every Bash call in every session.
+- `tests/guard-cases.sh` asserts both directions and the fail-open path.
 
 ## Run it
 
