@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "jsonresume-tailor",
+  "version": "1.0.0",
   "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
   "author": {
     "name": "Ismail Kattakath"

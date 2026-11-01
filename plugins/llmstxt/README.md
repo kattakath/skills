@@ -168,7 +168,7 @@ site-side publishing, not content authoring, and this plugin depends on none of 
 
 ## Installing / changing it
 
-The plugin id is `llmstxt@kattakath`. It carries no `version`: a merge to `main` is the
+The plugin id is `llmstxt@kattakath`. Its `version` rises with every change (CI enforces it) and a merge to `main` is the
 release, and how it reaches a machine (and how a merged change is pulled in sooner) is this
 repo's `CLAUDE.md` § Shipping a change. The checks to run before pushing are its
 § Validating before you push.

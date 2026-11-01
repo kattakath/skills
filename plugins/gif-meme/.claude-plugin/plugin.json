@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "gif-meme",
+  "version": "1.0.0",
   "description": "Turn a short video into a looping GIF that fits a byte budget, then publish it where GIF search actually looks — Tenor (Gboard, WhatsApp, Discord, Google Messages) and GIPHY (Slack, Instagram, iMessage) — driven over the Chrome DevTools Protocol with the measured per-site footguns pre-empted: hidden file inputs, a tag box that drops every other tag, a 48-hour review queue, and a search-placement gate that needs five uploads before you can even apply.",
   "author": {
     "name": "Ismail Kattakath"
