@@ -7,7 +7,7 @@ from decimal import Decimal
 
 from helpers import GOLDEN, case_name, cases, golden_path
 
-from statement_extract import keys, mask
+from statement_extract import engine, keys, mask
 
 
 class FrozenNormalisers(unittest.TestCase):
@@ -61,6 +61,30 @@ class Builders(unittest.TestCase):
     def test_unknown_scheme_refused(self):
         with self.assertRaises(ValueError):
             keys.ContentKeyer("content-hash/1", "X", "••0000")
+
+
+class KeyTextRescue(unittest.TestCase):
+    """engine._key_text: only text whose frozen key would leak is touched, so no stored key
+    can move; the rescue itself is frozen because rescued keys are stored."""
+
+    def test_star_digit_reference_rescued(self):
+        n = keys.content_v1
+        self.assertTrue(mask.leaks(n("SEND E-TFR ***4ab")))
+        self.assertEqual(engine._key_text(n, "SEND E-TFR ***4ab"), "SEND E-TFR ••4ab")
+        self.assertEqual(engine._key_text(n, "REF **12*3"), "REF ••123")
+        self.assertFalse(mask.leaks(n(engine._key_text(n, "SEND E-TFR ***4ab"))))
+
+    def test_text_that_does_not_leak_is_untouched(self):
+        n = keys.content_v1
+        for s in ("SEND E-TFR ***Ab1", "CARD ****1234", "PAYEE *****12*3456", "A  B", "", None,
+                  "TO:00001234567"):
+            with self.subTest(s=s):
+                self.assertIs(engine._key_text(n, s), s)
+
+    def test_text_that_still_leaks_is_left_to_the_gate(self):
+        n = keys.content_v1
+        out = engine._key_text(n, "ACCT 4500 12*")
+        self.assertTrue(mask.leaks(n(out)))
 
 
 class LegacyDifferential(unittest.TestCase):

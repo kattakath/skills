@@ -17,7 +17,12 @@ Read before writing a new adapter. Most new banks repeat one of these.
 | FX detail line under a purchase | Desjardins | folded into the description with ` — ` |
 | Marketing sidebar text on transaction lines | Scotiabank closed chequing, BMO | sidebar cut after a wide gap |
 | Wrapped descriptions straddle the date line | Tangerine PDF | hook splits by symmetry, refuses otherwise |
-| Words split in the text layer ("St at ement") | TD LOC | hook re-joins before parsing |
+| Words split in the text layer ("St at ement"); a frame row's month too ("M ar", "M ay") | TD LOC | hook re-joins before parsing; identify accepts the split month |
+| A credit balance prints "- $" (minus apart from the dollar sign) | TD card 2025 | `amt` allows one space |
+| Summary labels print bare, their amounts alone on later lines | TD card 2020, 2024 | hook pairs them in order by the block's amount column, refuses leftovers |
+| A wrapped row prints its amount alone below the wrap | TD card 2021 | hook holds the row open until an amount under AMOUNT($); refuses otherwise |
+| An additional cardholder's section with its own net activity | TD card 2022 | `net_activity` tied per section |
+| A bank-masked reference "***4ab" (stars, then a digit) | TD chequing 2026 | frozen key text would trip the leak gate: `engine._key_text` reduces it to "••4ab" first |
 | A month with no activity prints no table | Desjardins, Scotiabank card | a proven statement with zero rows |
 | Two prints of one product across years | Desjardins 2021, TD 2018/2021, Scotiabank 2020 | grammar alternatives, or a sibling adapter sharing the hook |
 | Statement periods 1–3 days apart (weekend cycles) | Scotiabank chequing | `chain_across_statements` judges gaps of 1–3 days |
