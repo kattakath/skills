@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an Accord D principal prepayment (2021): the payment lands on the regular balance as a CR, a PAYMENT ADJUSTMENT debit under Account Operations moves it to the plan and is printed in Purchases / Debits (not Credit Charges, and not in the regular Total), and the prepayment CR under ACCORD D FINANCING ACCOUNT OPERATIONS is not read"
+exit = 0
+pdf_smoke = true
