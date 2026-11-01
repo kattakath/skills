@@ -79,3 +79,32 @@ class StatementDraft:
     raw_txn_count: int = 0
     skipped: int = 0
     checks: list[Check] = field(default_factory=list)
+
+
+# A position's kind, and the one balance every position carries: an accounts.toml balance
+# assertion is checked against it.
+POSITION_KINDS = ("mortgage", "loan", "heloc")
+PRIMARY_BALANCE = "principal_outstanding"
+# Which printed date a position's as_of is. Most documents print one; a "details" page that
+# prints none is anchored to the date it does print, and the record says which.
+AS_OF_BASES = ("statement_date", "last_payment_date", "next_payment_date")
+
+
+@dataclass
+class PositionDraft:
+    """A loan or mortgage BALANCE SNAPSHOT as of one date: institution-side facts, positive as
+    printed (a balance owed is a positive principal_outstanding, unlike a statement's
+    holder-view closing). Not a transaction list, so it is never `proven`.
+
+    balances: money as printed, by name; principal_outstanding is required.
+    terms: the loan's terms as printed (rate, rate_type, payment, frequency, maturity_date,
+           remaining_amortization, ...): Decimal for money and rates, str otherwise.
+    as_of_basis: one of AS_OF_BASES."""
+    acctid: str                     # UNMASKED; never leaves the engine
+    kind: str
+    currency: str
+    as_of: str
+    balances: dict = field(default_factory=dict)
+    terms: dict = field(default_factory=dict)
+    as_of_basis: str = "statement_date"
+    checks: list[Check] = field(default_factory=list)

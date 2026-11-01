@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "one payment-history column does not add up to its Total Paid: refused, never emitted"
+exit = 3
+stderr_has = "history_split"

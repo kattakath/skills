@@ -1,0 +1,52 @@
+# TD mortgage, "Your Annual Statement For Your Mortgage Loan" PDF (yearly, several pages).
+# A balance SNAPSHOT with yearly totals, not a transaction list: it emits one `position`
+# record as at the statement period's end. The Beginning-of-Period column is a check input
+# (beginning principal - principal paid = end principal), not a second position: it would
+# share its position_id with the previous year's end-of-period snapshot.
+institution = "TD"
+format = "pdftext"
+description = "TD mortgage, annual mortgage statement PDF (position snapshot)"
+
+[identify]
+text = ['Your Annual Statement', 'For Your Mortgage Loan', 'Your TD mortgage loan number:',
+        '^Outstanding\s+\$', 'Mortgage Annual Statement']
+
+[position]
+kind = "mortgage"
+
+[keys]
+# Required by every adapter; unused, because this statement carries no rows.
+scheme = "content-occurrence/1"
+
+[reconcile]
+minimum = "structural"
+
+# {AMT} -> pdfkit.AMOUNT, {RATE} -> pdfkit.RATE, {DATE} -> pdfkit.LONG_DATE.
+[grammar]
+account = 'mortgage loan number:\s*\n\s*(\d{6,})\s*$'
+period = 'Statement period:\s*{DATE}\s*\n\s*to {DATE}'
+as_at = '^As at {DATE}:'
+maturity = '^Mortgage loan maturity date\s+{DATE}'
+amortization = '^Remaining amortization period\s+(\d+) Years? and (\d+) ([A-Za-z]+)'
+arrears = '^Amount in arrears as at {DATE}\s+({AMT})'
+rate = '^Annual\s+([A-Za-z]+)\s*:\s*({RATE})%\s+([A-Za-z]+)\s*:\s*({RATE})%'
+outstanding = '^Outstanding\s+({AMT})\s+({AMT})'
+# The P&I amount is printed on the line ABOVE its label (vertically centred on two lines).
+principal_interest = '(?:^Principal and interest payment\s+({AMT})|^\s+({AMT})(?:\s{2,}\S.*)?\n\s*Principal and interest payment\s*$)'
+tax = '^Property tax payment\s+({AMT})'
+credit_protection = '^Credit protection premium\s+({AMT})'
+total_payment = '^Total (\S.*?) payment\s+({AMT})'
+next_payment = '^Your next .*?payment is due\s+{DATE}'
+paid_principal = '^Principal amount paid in \d{4}\s+({AMT})'
+paid_interest = '^Interest amount paid in \d{4}\s+({AMT})'
+paid_tax = '^Payments to property tax account\s+({AMT})'
+paid_credit = '^Payments for credit protection premiums\s+({AMT})'
+paid_total = '^Total payments you made\s+({AMT})'
+tax_opening = '^Opening balance as at {DATE}\s+({AMT})'
+tax_in = '^Payments you made to \S+ for your property tax account\s+({AMT})'
+tax_out = '^Property taxes paid on your behalf\s+({AMT})'
+tax_interest = '^Interest \S+ on property tax account\s+({AMT})'
+tax_closing = '^Property tax account balance .*?\s({AMT})\s*$'
+# Repeated on a later page "as of this statement date": both must equal End of Period.
+repeat_principal = '[Oo]utstanding principal amount:\s*({AMT})'
+repeat_rate = 'interest rate of your mortgage loan:\s*({RATE})%'

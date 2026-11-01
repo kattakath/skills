@@ -8,7 +8,7 @@ from pathlib import Path
 from . import ADAPTERS_DIR
 from .drivers import csv_driver, ofx_driver, pdftext_driver
 from .keys import SCHEMES
-from .model import STATUSES
+from .model import POSITION_KINDS, STATUSES
 from .repairs.ofx import BY_NAME
 
 FORMATS = ("ofx", "pdftext", "csv")
@@ -16,7 +16,7 @@ DRIVER_MODULES = {"ofx": ofx_driver, "pdftext": pdftext_driver, "csv": csv_drive
 # The only functions a Python hook may define, each because TOML cannot express it.
 HOOKS = ("parse_lines", "post_drafts", "extra_checks")
 KNOWN_TOP = {"institution", "format", "description", "identify", "repairs", "keys", "account",
-             "reconcile", "skip", "sign", "grammar", "csv", "hook"}
+             "reconcile", "skip", "sign", "grammar", "csv", "hook", "position"}
 ACCOUNT_REFS = ("last4", "currency")
 
 
@@ -85,6 +85,14 @@ def check_spec(adapter_id: str, spec: dict) -> None:
     ref = spec.get("account", {}).get("ref", "last4")
     if ref not in ACCOUNT_REFS:
         raise AdapterError(f"{adapter_id}: account.ref {ref!r} not in {ACCOUNT_REFS}")
+    if "position" in spec:
+        # Opt-in: only an adapter that declares [position] may emit position records, and
+        # only of the kind it declares.
+        pos = spec["position"]
+        if not isinstance(pos, dict) or pos.get("kind") not in POSITION_KINDS \
+                or set(pos) - {"kind"}:
+            raise AdapterError(f"{adapter_id}: [position] takes exactly kind, one of "
+                               f"{POSITION_KINDS}")
     if spec["format"] == "csv":
         problems = csv_driver.check_spec(spec)
         if problems:

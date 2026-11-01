@@ -19,6 +19,7 @@ with the consumer.
 | PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing**, **Wise** | |
 | PDF adapters (R3b): **TD** chequing, Visa, LOC · **CIBC** chequing, Visa, LOC/HELOC · **Scotiabank** Visa, LOC · **Tangerine** chequing · **BMO** chequing (closed) | |
 | Older prints: **Desjardins Visa** 2021 · **TD** chequing 2021 and 2018 (`td/chequing-2018-pdf`) · **Scotiabank** business chequing 2020 (`scotiabank/chequing-2020-pdf`) | |
+| **Positions** (loan and mortgage balance snapshots, opt-in `record: "position"`): **CIBC** and **BMO** online mortgage details, **TD** annual mortgage statement, **NSLSC** student loan statement (also a proven statement with its rows) | Scanned mortgage statements (they refuse as a scan) |
 
 There are **no skills yet** (R4): drive the CLI directly.
 
@@ -61,8 +62,8 @@ Default is all-or-nothing.
 
 ## Output: `schema: "statement-extract/1"`
 
-One JSONL stream, statements first, then transactions. No timestamps, so two runs, or one with
-shuffled arguments, produce identical bytes.
+One JSONL stream: statements, then positions, then transactions. No timestamps, so two runs,
+or one with shuffled arguments, produce identical bytes.
 
 - **`record: "statement"`**: `statement_id`, institution, `account{ref, kind, currency}`, period,
   balances, `source{file, sha256, format, extractor_version, adapter{id, sha256}, repairs}`,
@@ -71,10 +72,14 @@ shuffled arguments, produce identical bytes.
   `booking_date`, `transaction_date`, `amount` (decimal string, **+ = money in**), `currency`,
   `credit_debit` (zero = CRDT), masked `description` / `memo` / `counterparty`, `source_type`,
   `entry_ref`, `running_balance`, `source{file, sha256, locator}`.
+- **`record: "position"`** (loan adapters only, see [Positions](#positions-loans-and-mortgages)):
+  `position_id`, institution, `account{ref, kind, currency}`, `as_of`, `as_of_basis`,
+  `balances{…}`, `terms{…}`, `source{…}` as a statement's, `reconcile{status, checks[]}`.
 - `source.file` is the **masked basename**: a date-stamped name such as `X_20261031.qfx` has
   a 7+ digit run. A consumer that needs the original name maps it by `source.sha256`, since it
   holds the path it passed in.
 - Ordering: institution, account, booking date, file sha256, locator. Never argv order.
+  Positions: institution, account, `as_of`, file sha256.
 - Changes within `/1` are **additive only**: every merge to `main` ships, so consumers should
   assert the schema string.
 
@@ -250,6 +255,53 @@ amount = "72.43"
   key set.
 - **Not yet exercised:** the Desjardins grammar carries the French labels from the legacy
   extractor, but every real statement measured was English, and no fixture covers French.
+
+## Positions (loans and mortgages)
+
+A mortgage details page or an annual mortgage statement is a **balance snapshot**, not a list
+of movements. Such a document yields one `record: "position"`, additive within `/1`: a
+consumer that ignores unknown record types is unaffected.
+
+| Field | Meaning |
+|---|---|
+| `position_id` | `sha256(institution\|ref\|kind\|as_of)[:16]`. Deterministic: a consumer **upserts** by it. Exempt from the leak gate, like `statement_id` |
+| `account.kind` | `mortgage`, `loan` or `heloc`, declared by the adapter's `[position] kind`. An accounts-file `kind` does not apply |
+| `as_of`, `as_of_basis` | The snapshot's date, and which printed date it is: `statement_date`, `last_payment_date` or `next_payment_date` (below) |
+| `balances` | Decimal strings, **positive as printed** (owed is positive, unlike a statement's holder-view closing). `principal_outstanding` is always present; others only where printed (`arrears`, `interest_outstanding`, `tax_account_balance`, `*_paid_in_period`) |
+| `terms` | Whatever terms are printed: `rate`, `rate_type`, `payment`, `frequency`, `principal_interest_payment`, `tax_payment`, `maturity_date`, `remaining_amortization` / `term` (ISO 8601 durations), … |
+
+- **Status:** `structural` when the required fields parsed and every sum the document prints
+  ties. `asserted` when an `accounts.toml` balance dated `as_of` equals `principal_outstanding`
+  (compared by magnitude, so one holder-view entry serves a loan's statement and its position).
+  **Never `proven`**: a snapshot has no rows to tie. `--require proven` refuses a position, and an
+  adapter's `minimum` / `proves` govern its statements only.
+- **Dedupe:** the same `position_id` with the same payload from two files is kept once. The same
+  id with a **different** payload is **exit 3** (`position_collision`): two documents disagree
+  about one account on one day. `--seen` does not apply to positions.
+- **Not in the transactions CSV** (`--format csv`, `export`): read positions from the JSONL.
+- **Ignored by** `one_source_per_period` and `chain_across_statements`, which judge statements.
+- **stderr** prints field counts only (`position (mortgage): 6 balances, 10 terms`), never a
+  figure.
+- A hook returns `PositionDraft`s from `parse_lines`, beside or instead of `StatementDraft`s. Only
+  an adapter whose TOML declares `[position] kind = "…"` may do so; no new hook name exists.
+
+| Adapter | Checks that must tie | `as_of` |
+|---|---|---|
+| `cibc/mortgage-details` | the account line's balance = Mortgage Loan Balance; P&I + tax = payment; every payment-history column: principal + interest + taxes = total | **derived**: the newest payment in its history (`last_payment_date`). The page prints no date |
+| `bmo/mortgage-details` | P&I + property tax = total payment; BMO prime + printed spread = current rate | **derived**: the Next Payment Date (`next_payment_date`). The page says "previous business day" but prints no date, so a re-download in the same cycle with a moved balance collides (exit 3) |
+| `td/mortgage-statement` | Beginning principal − principal paid = End principal; payment split; the year's payment summary; the property-tax account roll; the later page's repeated principal and rate | the statement's "As at" date = period end. The Beginning-of-Period column is a check input, not a second position: it would share last year's `position_id` |
+| `nslsc/loan-statement` | the statement's own: every printed Principal Balance chains (rows print newest first), Opening + movements = Closing, Transaction Amount = Principal + Interest | period end; `interest_outstanding` is the statement's end-date pseudo-row |
+
+- **NSLSC rows are real transactions**, so that adapter also emits a `proven` statement. A row's
+  amount is its **principal** movement (holder view: a disbursement is negative), because the
+  printed balance is principal only. A payment's interest share is checked, not emitted.
+- **Measured on the operator's documents (counts only):** CIBC details 1 position, 1 balance and
+  11 terms, 5 checks; BMO details 1 position, 1 + 14, 4 checks; TD annual 1 position, 6 + 10,
+  8 checks (its byte-identical second copy dedupes to the same position); NSLSC 1 proven
+  statement with 12 rows plus 1 position with 2 balances. All `structural`. The scanned annual
+  and discharge/payout statements still refuse as a scan (exit 3).
+- **Not yet covered:** a CIBC details page's payment history is checked but not emitted as rows
+  (it overlaps any future mortgage statement and has no opening balance to prove it).
 
 ## CSV statements
 

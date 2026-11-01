@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "statement-extract",
-  "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, CSV and PDF for TD, CIBC, Scotiabank, Tangerine, Desjardins, BMO, Wise) into canonical, masked, deduplicated JSONL: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
+  "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, CSV and PDF for TD, CIBC, Scotiabank, Tangerine, Desjardins, BMO, Wise) into canonical, masked, deduplicated JSONL, plus loan and mortgage balance snapshots (TD, CIBC, BMO, NSLSC) as opt-in position records: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
   "author": {
     "name": "Ismail Kattakath"
   },

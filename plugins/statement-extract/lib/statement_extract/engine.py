@@ -6,8 +6,9 @@ for every institution and a contributor cannot weaken them from an adapter.
 """
 import hashlib
 import re
-from datetime import date
 from dataclasses import dataclass, field
+from datetime import date
+from decimal import Decimal
 from pathlib import Path
 
 from . import SCHEMA, engine_version
@@ -15,7 +16,8 @@ from . import accounts as accounts_mod
 from . import keys, mask, reconcile
 from .dedupe import Deduper
 from .drivers import csv_driver, ofx_driver, pdftext_driver
-from .model import Check, Exit, Refusal, StatementDraft
+from .model import (AS_OF_BASES, PRIMARY_BALANCE, Check, Exit, PositionDraft, Refusal,
+                    StatementDraft)
 from .money import as_str, credit_debit
 from .readers import pdftext
 from .registry import Adapter
@@ -28,8 +30,8 @@ DRIVERS = {"ofx": ofx_driver, "pdftext": pdftext_driver, "csv": csv_driver}
 #   and a digest cannot carry an account number;
 # - the institution's own transaction id (entry_ref, and the id segment of a fitid key):
 #   numeric FITIDs are routine, and the key bytes are frozen, so masking them is not an option.
-EXEMPT_FIELDS = {"statement_id", "previous_statement_id", "sha256", "extractor_version",
-                 "entry_ref"}
+EXEMPT_FIELDS = {"statement_id", "previous_statement_id", "position_id", "sha256",
+                 "extractor_version", "entry_ref"}
 
 
 @dataclass
@@ -39,6 +41,7 @@ class FileResult:
     adapter: Adapter | None = None
     repairs: list[str] = field(default_factory=list)
     statements: list[dict] = field(default_factory=list)
+    positions: list[dict] = field(default_factory=list)
     transactions: list[dict] = field(default_factory=list)
     refusal: Refusal | None = None
     skipped_by_manifest: bool = False
@@ -88,7 +91,18 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
     if adapter.format == "pdftext":
         backend = pdftext.backend_version() if pdftext.is_pdf(raw) else "layout.txt"
 
-    for d in drafts:
+    positions = [d for d in drafts if isinstance(d, PositionDraft)]
+    statements = [d for d in drafts if isinstance(d, StatementDraft)]
+    if len(positions) + len(statements) != len(drafts):
+        raise TypeError(f"{adapter.id}: a hook returned something other than drafts")
+    if positions and "position" not in adapter.spec:
+        raise Refusal(Exit.REFUSED, f"{adapter.id}: emitted a position but declares no "
+                      "[position] table (positions are opt-in per adapter)")
+    for p in positions:
+        res.positions.append(_position(adapter, p, accts, sha, file_label, version, fired,
+                                       backend, reconcile.rank(require or "structural")))
+
+    for d in statements:
         ref, kind, acct = _account_view(adapter, d, accts)
         if adapter.spec.get("account", {}).get("verify_last4") and acct and acct.last4:
             # The statement header prints the real account: an override that disagrees with it
@@ -164,6 +178,73 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
     return res
 
 
+def position_id(institution: str, ref: str, kind: str, as_of: str) -> str:
+    """Deterministic: the consumer upserts a snapshot by it. The same account, kind and day
+    from any file (a re-download, a second copy) is the same position."""
+    return hashlib.sha256(f"{institution}|{ref}|{kind}|{as_of}".encode()).hexdigest()[:16]
+
+
+def _date_ok(s) -> bool:
+    try:
+        date.fromisoformat(s)
+        return True
+    except (TypeError, ValueError):
+        return False
+
+
+def _term(v) -> str:
+    return as_str(v) if isinstance(v, Decimal) else str(v)
+
+
+def _position(adapter: Adapter, p: PositionDraft, accts, sha: str, file_label: str,
+              version: str, fired: list[str], backend: str | None, need: int) -> dict:
+    """One PositionDraft -> a position record, or a Refusal. A snapshot has no rows to tie, so
+    its ceiling is `asserted`: the adapter's `proves` never applies to it, and its `minimum`
+    governs statements only."""
+    ref, _kind, acct = _account_view(adapter, p, accts)
+    if adapter.spec.get("account", {}).get("verify_last4") and acct and acct.last4:
+        head = p.acctid.strip()[-4:]
+        p.checks.append(Check("header_last4", head == acct.last4,
+                              expected=f"••{acct.last4} (accounts file)",
+                              actual=f"••{head} (statement header)"))
+    missing = [w for w, ok in (
+        ("kind", p.kind == adapter.spec["position"]["kind"]),
+        ("as_of", _date_ok(p.as_of)),
+        ("as_of_basis", p.as_of_basis in AS_OF_BASES),
+        (PRIMARY_BALANCE, isinstance(p.balances.get(PRIMARY_BALANCE), Decimal)),
+        ("balances", all(isinstance(v, Decimal) for v in p.balances.values())),
+    ) if not ok]
+    p.checks.insert(0, Check("required_fields", not missing, expected="all present",
+                             actual=("missing or malformed: " + ", ".join(missing)) if missing
+                             else "all present",
+                             note=f"kind, as_of ({p.as_of_basis}), {PRIMARY_BALANCE}"))
+    p.checks += reconcile.position_assertions(p, acct)
+    failed = [c for c in p.checks if not c.ok]
+    if failed:
+        raise Refusal(Exit.REFUSED, f"{ref}: position check(s) failed: "
+                      + ", ".join(c.name for c in failed),
+                      checks=[c.as_dict() for c in failed])
+    status = reconcile.status(p.checks, False)
+    if reconcile.rank(status) < need:
+        raise Refusal(Exit.REFUSED, f"{ref}: position status {status!r} is below the required "
+                      f"{reconcile.STATUSES[need]!r} (a snapshot is never proven)")
+    return {
+        "schema": SCHEMA, "record": "position",
+        "position_id": position_id(adapter.institution, ref, p.kind, p.as_of),
+        "institution": adapter.institution,
+        "account": {"ref": ref, "kind": p.kind, "currency": p.currency},
+        "as_of": p.as_of, "as_of_basis": p.as_of_basis,
+        "balances": {k: as_str(v) for k, v in sorted(p.balances.items())},
+        "terms": {k: _term(v) for k, v in sorted(p.terms.items())},
+        "source": {"file": file_label, "sha256": sha, "format": adapter.format,
+                   "extractor_version": version,
+                   "adapter": {"id": adapter.id, "sha256": adapter.sha256},
+                   "repairs": fired,
+                   **({"text_backend": backend} if backend else {})},
+        "reconcile": {"status": status, "checks": [c.as_dict() for c in p.checks]},
+    }
+
+
 def run_file(path: Path, raw: bytes, sha: str, adapters: list[Adapter], accts,
              require: str | None) -> FileResult:
     """Identify, then fail closed: exactly one claiming adapter must reconcile."""
@@ -219,15 +300,19 @@ def leak_scan(records: list[dict]) -> list[str]:
     return hits
 
 
-def order(statements: list[dict], txns: list[dict]) -> list[dict]:
-    """Stable, argv-independent: account, booking date, file sha256, locator."""
+def order(statements: list[dict], txns: list[dict], positions=()) -> list[dict]:
+    """Stable, argv-independent: statements, then positions, then transactions; each by
+    institution, account, its own date, then file sha256."""
+    positions = sorted(positions, key=lambda p: (
+        p["institution"], p["account"]["ref"], p["as_of"], p["source"]["sha256"],
+        p["position_id"]))
     statements = sorted(statements, key=lambda s: (
         s["institution"], s["account"]["ref"], s["period"]["start"] or "",
         s["period"]["end"] or "", s["source"]["sha256"], s["statement_id"]))
     txns = sorted(txns, key=lambda t: (
         t["institution"], t["account"], t["booking_date"], t["source"]["sha256"],
         t["source"]["locator"]))
-    return statements + txns
+    return statements + positions + txns
 
 
 def chain(results: list[FileResult]) -> None:
@@ -293,6 +378,36 @@ def one_source_per_period(results: list[FileResult]) -> None:
                                   f"{min(a['period']['end'], b['period']['end'])}; their keys "
                                   "differ, so the overlap would be emitted twice. Pass one "
                                   "source per period")
+
+
+def _position_payload(p: dict) -> tuple:
+    return (p["institution"], p["account"], p["as_of"], p["as_of_basis"], p["balances"],
+            p["terms"])
+
+
+def dedupe_positions(results: list[FileResult]) -> list[dict]:
+    """One record per position_id. The same snapshot from two files (a second copy, a
+    re-download) is kept once, from the file whose sha256 sorts first. The same id with a
+    different payload means two documents disagree about one account on one day: refuse the
+    run, never pick one. --seen does not apply: a consumer upserts positions by id."""
+    by_id: dict[str, dict] = {}
+    for r in results:
+        for p in r.positions:
+            first = by_id.get(p["position_id"])
+            if first is None:
+                by_id[p["position_id"]] = p
+                continue
+            if _position_payload(first) != _position_payload(p):
+                check = {"name": "position_collision", "ok": False,
+                         "expected": first["source"]["sha256"][:12],
+                         "actual": p["source"]["sha256"][:12],
+                         "note": "two files state different facts for one position_id"}
+                raise Refusal(Exit.REFUSED, f"{p['institution']} {p['account']['ref']}: two "
+                              "files disagree about one position (same account, kind and "
+                              "as_of)", check=check)
+            if p["source"]["sha256"] < first["source"]["sha256"]:
+                by_id[p["position_id"]] = p
+    return list(by_id.values())
 
 
 def dedupe(results: list[FileResult], seen: set[str]) -> list[dict]:

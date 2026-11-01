@@ -2,12 +2,14 @@
 adapter's parse_lines hook, and refuse anything the hook could not tie to printed totals.
 
 The adapter's TOML declares `identify.text` (regexes that must ALL match) and its `grammar`
-(the regexes its hook uses). The hook returns StatementDrafts with their checks.
+(the regexes its hook uses). The hook returns StatementDrafts with their checks, and, for an
+adapter that declares a [position] table, PositionDrafts (loan / mortgage balance snapshots)
+beside or instead of them. The engine sorts the two apart; no extra hook name is needed.
 """
 import re
 from pathlib import Path
 
-from ..model import Exit, Refusal, StatementDraft
+from ..model import Exit, PositionDraft, Refusal, StatementDraft
 from ..readers import pdftext
 
 IDENT_FIELDS = {"text": "regexes that must all match the layout text"}
@@ -20,7 +22,8 @@ def identify(raw: bytes, adapter, path: Path | None) -> bool:
     return all(re.search(rx, text, re.M) for rx in adapter.spec["identify"]["text"])
 
 
-def extract(raw: bytes, adapter, path: Path | None) -> tuple[list[StatementDraft], list[str]]:
+def extract(raw: bytes, adapter, path: Path | None
+            ) -> tuple[list[StatementDraft | PositionDraft], list[str]]:
     text = pdftext.text_of(path, raw)
     try:
         drafts = adapter.hook.parse_lines(text.splitlines(), adapter.spec, text)

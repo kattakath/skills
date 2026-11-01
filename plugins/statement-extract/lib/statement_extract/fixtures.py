@@ -129,6 +129,14 @@ LABELS = {w.lower() for w in """
     usd cad eur gbp inr aed jan feb mar apr may jun jul aug sep oct nov dec january february
     march april june july august september october november december opos pos atm e-transfer
     interac free transfer mortgage loan line overdraft service
+    bmo principal outstanding maturity remaining amortization amortisation frequency paid tax
+    taxes property prepayment privilege privileges payoff accrued term renewal original years
+    months end beginning arrears insurance protection premium premiums scheduled made you
+    behalf credited overdrawn discharge effective prime discount current start funding
+    capitalized capitalised grace thank disbursement disbursed cancelled cancellation
+    adjustment reversal correction consolidated consolidation national student loans centre
+    integrated repayment portion owing remaining since as last details lump sum increase
+    special annual
 """.split()}
 _TOKEN = re.compile(r"\d|[^\W\d_]+(?:-[^\W\d_]+)*")
 

@@ -1,0 +1,70 @@
+National Student Loans Service Centre
+
+
+
+
+LOAN STATEMENT                                                     April 15, 2020
+
+
+ALEX SAMPLE
+1 SAMPLE STREET
+SAMPLETON A1A1A1
+CANADA
+
+
+Your Canada-Ontario Integrated Student Loan Student Loan Account Number:
+0-000123
+Statement Period: March 31, 2018 to March 31, 2020
+
+                                  Transaction                          Principal
+    Date       Transaction Type               Principal     Interest
+                                    Amount                             Balance
+              Interest
+March 31,     Outstanding at
+                                       $0.00       $0.00       $3.21       $0.00
+2020          Statement End
+              Date
+March 31,
+             Closing Balance           $0.00       $0.00       $0.00 $14,000.00
+2020
+March 31,    Payment - Thank
+                                     -$250.00    -$200.00    -$50.00 $14,000.00
+2020         You
+February 29, Payment - Thank
+                                     -$250.00    -$200.00    -$50.00 $14,200.00
+2020         You
+January 31,  Payment - Thank
+                                     -$250.00    -$200.00    -$50.00 $14,400.00
+2020         You
+December 31, Payment - Thank
+                                     -$250.00    -$200.00    -$50.00 $14,600.00
+2019         You
+November 30, Payment - Thank
+                                     -$250.00    -$200.00    -$50.00 $14,800.00
+2019         You
+November 1, Loan Entered
+                                       $0.00 $15,000.00        $0.00 $15,000.00
+2019         Repayment
+November 1, End of Grace
+                                       $0.00 -$15,000.00       $0.00       $0.00
+2019         Period
+December 20,
+             Loan Disbursed            $0.00    $5,000.00      $0.00 $15,000.00
+2018
+August 20,
+             Loan Disbursed            $0.00    $6,000.00      $0.00 $10,000.00
+2018
+
+National Student Loans Service Centre
+                                 Transaction                         Principal
+    Date      Transaction Type               Principal    Interest
+                                   Amount                            Balance
+May 9, 2018   Rebalance Entry         $0.00 -$6,500.00       $0.00 $4,000.00
+
+May 9, 2018   Loan Disbursed          $0.00   $6,000.00      $0.00 $10,500.00
+
+May 9, 2018   Loan Disbursed          $0.00     $500.00      $0.00 $4,500.00
+March 31,
+              Opening Balance         $0.00       $0.00      $0.00 $4,000.00
+2018
+

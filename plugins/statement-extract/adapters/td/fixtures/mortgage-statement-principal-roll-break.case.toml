@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the principal paid in the year does not carry Beginning of Period principal to End of Period principal: refused, never emitted"
+exit = 3
+stderr_has = "principal_roll"

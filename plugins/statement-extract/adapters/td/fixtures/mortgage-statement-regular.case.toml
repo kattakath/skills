@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an annual mortgage statement as a position: two period columns, the P&I amount printed above its label, five printed relations tie (principal roll, payment split, year summary, tax-account roll, the later page repeating principal and rate); amortization remainder in weeks"
+exit = 0
+pdf_smoke = true

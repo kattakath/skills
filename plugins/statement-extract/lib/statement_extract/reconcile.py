@@ -5,11 +5,15 @@ structural  every structural check passed (the OFX gate: all raw <STMTTRN> parse
             proven in order, one currency, native ids unique, the running balance chains)
 asserted    structural + an outside balance (accounts.toml) agrees with the file
 proven      the statement proves itself from printed totals (PDF adapters, later releases)
+
+A position (a loan or mortgage balance snapshot) is structural when its required fields parsed
+and every sum the document prints ties, asserted when accounts.toml agrees with its
+principal_outstanding on its as_of; never proven, because a snapshot has no rows to tie.
 """
 from decimal import Decimal
 
 from .accounts import Account
-from .model import STATUSES, Check, StatementDraft
+from .model import PRIMARY_BALANCE, STATUSES, Check, PositionDraft, StatementDraft
 
 
 def rank(status: str) -> int:
@@ -39,6 +43,23 @@ def assertions(draft: StatementDraft, account: Account | None) -> list[Check]:
             out.append(Check("balance_equation", expected == draft.closing,
                              expected=format(expected, "f"), actual=format(draft.closing, "f"),
                              note=f"balance {b.as_of} + rows after it = closing"))
+    return out
+
+
+def position_assertions(pos: PositionDraft, account: Account | None) -> list[Check]:
+    """external_assertion for a position: an accounts.toml balance dated the position's as_of
+    must equal its principal_outstanding. Compared by magnitude: a position states the balance
+    owed positive, while a statement of the same account states it holder-view (negative), and
+    one accounts entry serves both. A balance on another day says nothing about a snapshot."""
+    out = []
+    owed = pos.balances.get(PRIMARY_BALANCE)
+    if account is None or owed is None:
+        return out
+    for b in account.balances:
+        if b.as_of == pos.as_of:
+            out.append(Check("external_assertion", abs(b.amount) == owed,
+                             expected=format(abs(b.amount), "f"), actual=format(owed, "f"),
+                             note=f"{PRIMARY_BALANCE} as of {b.as_of}"))
     return out
 
 

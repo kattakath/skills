@@ -17,8 +17,15 @@ from make_pdf import build
 
 
 def records(text: str) -> list[tuple]:
-    return [(r["key"], r["amount"], r["booking_date"], r["description"])
-            for r in map(json.loads, text.splitlines()) if r["record"] == "transaction"]
+    """Transactions by key and content; positions (loan snapshots, no rows) by id and figures."""
+    out = []
+    for r in map(json.loads, text.splitlines()):
+        if r["record"] == "transaction":
+            out.append((r["key"], r["amount"], r["booking_date"], r["description"]))
+        elif r["record"] == "position":
+            out.append((r["position_id"], r["as_of"], json.dumps(r["balances"], sort_keys=True),
+                        json.dumps(r["terms"], sort_keys=True)))
+    return out
 
 
 def main() -> int:
