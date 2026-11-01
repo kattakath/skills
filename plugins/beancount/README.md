@@ -50,6 +50,14 @@ and `fava` as programs; it ships none of their code. Fava is MIT.
 `beancount-kit suggest` (optional, needs **smart_importer 1.2**, MIT) suggests a category
 for each flagged entry, learned from the categorised ones; the operator accepts or not.
 
+## Language server
+
+The marketplace entry declares `beancount-language-server --stdio` for `.beancount` and
+`.bean` files (`strict: false` + `lspServers`, the pattern Anthropic's own LSP plugins use).
+Install the binary separately (nix-config's `local.beancount` does). Measured 2026-11-01 on
+1.9.2: 12 capabilities, and the golden journal's two `!` entries come back as warnings.
+The journal is generated, so the server is for reading and querying it, not hand-editing.
+
 ## Not here, on purpose
 
 - **No data.** The account map, rules, decisions and the journal live with the consumer.
