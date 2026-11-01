@@ -163,6 +163,63 @@ class Build(unittest.TestCase):
                       out.read_text(encoding="utf-8"))
 
 
+    def pdf(self, sid, start, rows, closing="-60.00", end="2026-01-31"):
+        s = scenario.stmt(sid, "Bank", "••0002", "card", "CAD", closing, end, fmt="pdftext")
+        s["period"] = {"start": start, "end": end}
+        recs = [s] + [scenario.txn(sid, "Bank", "••0002", "CAD", f"Bank|••0002|{d}|{a}|{t}|1",
+                                   d, a, t) for d, a, t in rows]
+        f = self.d / f"{sid}.jsonl"
+        f.write_text("".join(json.dumps(r) + "\n" for r in recs))
+        return f
+
+    def report(self, files):
+        code, err = self.run_build("--check-only", files=files)
+        return code, json.loads(err.splitlines()[0]), err
+
+    def test_pdf_over_a_bank_export_is_dropped_by_day(self):
+        _, base, _ = self.report(list(self.files.values()))
+        f = self.pdf("pppp", "2026-01-01", [("2026-01-03", "-360.00", "GROCER ONE"),
+                                             ("2026-01-07", "300.00", "PAYMENT THANK YOU")])
+        code, rep, err = self.report([*self.files.values(), f])
+        self.assertEqual(code, 0, err)
+        self.assertEqual((rep["rows"], rep["rows_dropped_overlap"]), (base["rows"], 2))
+        # the PDF's closing is still asserted (it prints the kept rows' twins)
+        self.assertEqual(rep["assertions_skipped_overlap"], base["assertions_skipped_overlap"])
+
+    def test_partial_pdf_keeps_only_the_days_nothing_else_covers(self):
+        _, base, _ = self.report(list(self.files.values()))
+        f = self.pdf("qqqq", "2025-12-20", [("2025-12-22", "-10.00", "COFFEE"),
+                                             ("2025-12-23", "10.00", "COFFEE REFUND"),
+                                             ("2026-01-03", "-360.00", "GROCER ONE"),
+                                             ("2026-01-07", "300.00", "PAYMENT THANK YOU")])
+        code, rep, err = self.report([*self.files.values(), f])
+        self.assertEqual(code, 0, err)
+        self.assertEqual((rep["rows"], rep["rows_dropped_overlap"]), (base["rows"] + 2, 2))
+
+    def test_sources_that_disagree_fail(self):
+        # The PDF prints a charge the bank export lacks on a day the export owns: its closing
+        # differs, and the build refuses instead of silently trusting either side.
+        f = self.pdf("rrrr", "2026-01-01", [("2026-01-03", "-360.00", "GROCER ONE"),
+                                             ("2026-01-07", "300.00", "PAYMENT THANK YOU"),
+                                             ("2026-01-10", "-5.00", "EXTRA")], closing="-65.00")
+        code, _, err = self.report([*self.files.values(), f])
+        self.assertEqual(code, 3, err)
+
+    def test_isolated_old_statement_is_bridged_with_a_labelled_gap(self):
+        old = scenario.stmt("iiii", "Bank", "••0002", "card", "CAD", "-500.00", "2025-06-30")
+        old["period"] = {"start": "2025-06-01", "end": "2025-06-30"}
+        recs = [old, scenario.txn("iiii", "Bank", "••0002", "CAD", "Bank|••0002|OLD",
+                                  "2025-06-10", "-500.00", "OLD CHARGE")]
+        (self.d / "old.jsonl").write_text("".join(json.dumps(r) + "\n" for r in recs))
+        out = self.d / "main.beancount"
+        code, err = self.run_build("--out", str(out), files=[*self.files.values(),
+                                                              self.d / "old.jsonl"])
+        self.assertEqual(code, 0, err)
+        text = out.read_text(encoding="utf-8")
+        self.assertIn("2025-07-01 pad Liabilities:Bank:Card-0002 Equity:Gaps\n"
+                      '  gap: "not recorded: 2025-07-01 to 2026-01-02 (186 days)"', text)
+
+
 class Coverage(unittest.TestCase):
     def stmt(self, sid, start, end, opening, closing):
         s = scenario.stmt(sid, "Bank", "••0002", "card", "CAD", closing, end)
@@ -184,13 +241,17 @@ class Coverage(unittest.TestCase):
                                 self.stmt("a2", "2026-02-01", "2026-02-28", "-10.00", "-20.00")])
         self.assertEqual((code, c["balance_breaks"], c["date_holes"]), (0, 0, 0))
 
-    def test_balance_break_fails_and_date_hole_warns(self):
+    def test_break_between_adjoining_statements_fails(self):
+        code, c = self.run_cov([self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00"),
+                                self.stmt("a2", "2026-02-01", "2026-02-28", "-15.00", "-20.00")])
+        self.assertEqual(code, 3)
+        self.assertEqual(c["accounts"][0]["balance_breaks"][0]["next_opening"], "-15.00")
+
+    def test_balance_moving_across_a_hole_is_bridged_not_a_break(self):
         code, c = self.run_cov([self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00"),
                                 self.stmt("a2", "2026-03-01", "2026-03-31", "-15.00", "-20.00")])
-        self.assertEqual(code, 3)
-        a = c["accounts"][0]
-        self.assertEqual(a["balance_breaks"][0]["next_opening"], "-15.00")
-        self.assertEqual(a["date_holes"][0]["days"], 28)
+        self.assertEqual((code, c["balance_breaks"], c["bridged_holes"]), (0, 0, 1))
+        self.assertEqual(c["accounts"][0]["date_holes"][0]["days"], 28)
 
     def test_break_checked_without_start_dates(self):
         a = self.stmt("a1", None, "2026-01-31", "0.00", "-10.00")
@@ -212,6 +273,14 @@ class Coverage(unittest.TestCase):
                                 t("q", "FIT2", "2026-01-05", "-2.00"),
                                 t("p", "FIT1", "2026-01-05", "-2.00")])
         self.assertEqual((code, c["doubled_rows"]), (0, 0))
+
+    def test_pdf_over_bank_export_is_resolved_not_doubled(self):
+        q = self.stmt("q", "2026-01-01", "2026-01-31", "0.00", "-2.00")
+        p = dict(self.stmt("p", "2026-01-01", "2026-01-31", "0.00", "-2.00"))
+        p["source"] = dict(p["source"], format="pdftext")
+        t = lambda sid, k: scenario.txn(sid, "Bank", "••0002", "CAD", k, "2026-01-05", "-2.00", "TIM")
+        code, c = self.run_cov([q, p, t("q", "FIT1"), t("p", "2026-01-05|-2.00|TIM|1")])
+        self.assertEqual((code, c["doubled_rows"], c["rows_resolved_overlap"]), (0, 0, 1))
 
     def test_overlap_counted_once_lookalike_listed_conflict_fails(self):
         s = self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00")

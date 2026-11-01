@@ -35,7 +35,7 @@ def _jsonl_paths(items: list[str]) -> list[Path]:
 
 def build(a) -> int:
     ledger = load_ledger(Path(a.ledger))
-    rows, asserts, overlapped, positions = read_jsonl(_jsonl_paths(a.jsonl))
+    rows, asserts, overlapped, positions, survival = read_jsonl(_jsonl_paths(a.jsonl))
     if a.accounts:
         asserts += read_screen_balances(Path(a.accounts), ledger.operating_currency)
     rules = load_rules(Path(a.rules))
@@ -55,18 +55,28 @@ def build(a) -> int:
     # are zero is Beancount's arithmetic, not ours: render, drop exactly the pads it reports
     # unused, render once more. Any error left after that is real.
     from .check import check
-    text, rstats = render(rows, asserts, positions, ledger)
+    text, rstats = render(rows, asserts, positions, ledger, bridges=survival["holes"])
     errs, unused = check(text)
     if unused:
-        text, rstats = render(rows, asserts, positions, ledger, skip_pads=unused)
+        text, rstats = render(rows, asserts, positions, ledger, skip_pads=unused,
+                              bridges=survival["holes"])
         errs, _ = check(text)
     report = {"rows": len(rows), **stats, **{k: v for k, v in rstats.items()
-                                             if k != "transfer_residue"},
+                                             if k not in ("transfer_residue", "bridges")},
               "transfer_residue": len(rstats["transfer_residue"]),
-              "assertions_skipped_overlap": len(overlapped), "check_errors": len(errs)}
+              "bridges": len(rstats["bridges"]),
+              "assertions_skipped_overlap": len(overlapped),
+              "rows_dropped_overlap": sum(d["rows"] for d in survival["dropped"]),
+              "check_errors": len(errs)}
     print(json.dumps(report), file=sys.stderr)
     for k in rstats["transfer_residue"]:
         print(f"  unpaired transfer leg: {k}", file=sys.stderr)
+    for d in survival["dropped"]:
+        print(f"  overlap: {d['rows']} rows {d['from']} -> {d['to']} of {d['file']} "
+              f"({d['account'][0]} {d['account'][1]}) already held by a better source",
+              file=sys.stderr)
+    for g in rstats["bridges"]:
+        print(f"  gap bridged: {g}", file=sys.stderr)
     for s in overlapped:
         print(f"  not asserted (a later statement has rows dated <= {s.as_of}): "
               f"{s.inst} {s.acct}", file=sys.stderr)

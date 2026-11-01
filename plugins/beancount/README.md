@@ -47,10 +47,15 @@ and `fava` as programs; it ships none of their code. Fava is MIT.
 | `query` | answer questions with tested bean-query recipes |
 | `fava` | start, check and stop Fava, read-only, on 127.0.0.1 |
 
+`beancount-kit build` takes **every** statement file, overlapping or not: per account and per
+day, a bank export (QFX/OFX, CSV) outranks a PDF, the PDF fills only the days nothing better
+covers, and holes are bridged by labelled `Equity:Gaps` pads (source precedence, see the
+`build` skill).
+
 `beancount-kit coverage` checks the statement JSONL for **completeness** (each statement's
 opening equals the previous closing; date holes and where history starts per account) and
 **occurrence** (a Key in several files counts once; one Key with two values fails;
-look-alikes are listed; two sources printing the same rows under different Keys fail).
+look-alikes are listed; after survivorship, two same-rank sources printing the same rows under different Keys fail).
 Exit 3 on a balance break, a conflicting Key or a doubled source.
 
 `beancount-kit suggest` (optional, needs **smart_importer 1.2**, MIT) suggests a category

@@ -46,8 +46,32 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `review` | entries flagged `!` on `Expenses:Uncategorized` |
 | `unpaired_must_pair` | rows whose rule required a partner and found none (now in review) |
 | `transfer_residue` | own-account legs with no partner. They post to `transfers.external` (so `Assets:Transfers` always nets to zero) and each Key is listed below the line; a partner found by a later build pairs them back |
+| `rows_dropped_overlap` | rows a lower-ranked source (a PDF) printed on days a bank export already covers; each file is listed as `overlap:`. Their statement closings are still asserted |
+| `bridges` | holes bridged by a labelled `Equity:Gaps` pad, each listed as `gap bridged:` with its date range |
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
+
+## Drop every statement in: survivorship
+
+Put **every** statement file into the cache: QFX, CSV and PDF, overlapping or not, already
+synced or not. The cache is keyed by file sha256, so a file added twice is one file. The build
+decides, per account and per day (`lib/beancount_kit/survive.py`):
+
+| Situation | What the build does |
+|---|---|
+| Two bank exports overlap (re-download, "last 30 days") | Union; the bank's own IDs dedupe them, and a late-posted row is kept |
+| A PDF covers days a bank export covers | The export owns those days; the PDF's rows there are dropped and reported |
+| A PDF covers days nothing else covers | Its rows are kept: it fills exactly those days, cut at whole days |
+| The PDF and the export disagree about a day | The PDF's printed closing is still asserted, so the build **fails** |
+| Days no statement covers, between covered stretches | A pad from `Equity:Gaps` bridges the hole, labelled `gap: "not recorded: <from> to <to>"` |
+| A statement for an account `ledger.toml` does not map | The build **refuses**: map the account (a replaced card number is a new ref) |
+
+The name for this is **source precedence** (MDM "survivorship"): when sources overlap, a
+ranked rule picks which copy of a fact wins, and the bank's printed balances prove it.
+Rejected: matching rows across sources by a date window and amount (beangulp
+`heuristic_comparator`, beancount-import's matcher), because banks post identical charges on
+one day and a fuzzy matcher merges them; beancount-import also edits the journal, which here is
+derived.
 
 ## No gaps, no double counting (`coverage`)
 
@@ -55,17 +79,18 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 "$KIT" coverage <jsonl files or folders>      # exit 3 on a balance break or a conflicting Key
 ```
 
-- **Completeness:** per account, each statement's opening must equal the previous closing (a
-  **balance break** fails); date holes between periods are listed but do not fail, because a
-  statement boundary leaves such days and rows dated on them sit in the next statement.
+- **Completeness:** per account, each statement's opening must equal the previous ADJOINING
+  closing (a **balance break** fails); date holes between periods are listed but do not fail.
+  A balance that moves across a hole is **bridged** (the build pads it), not a break.
   Coverage per account shows where history starts: earlier history was never fetched.
 - **Occurrence:** a Key in several files (overlapping downloads) is counted once; one Key with
   two different date/amount values fails; look-alikes (same account, date, amount, description,
   different Keys) are listed. Banks post identical charges; a passing balance assertion over
   the period means the bank has every one.
-- **Doubled sources fail:** two statements of one account that print the same date and
-  amount under different Keys, inside dates both cover. Typical cause: a PDF kept for
-  reference beside the QFX for the same period. Keep one source per account and period.
+- **Survivorship first:** coverage judges the rows the build keeps, so a PDF over a QFX is
+  `rows_resolved_overlap`, not a failure.
+- **Doubled sources fail:** after survivorship, two statements of the SAME rank (two bank
+  exports keyed differently) that print the same date and amount under different Keys.
 - **No start date** (some PDFs print only the end): breaks are still checked in end-date
   order; holes and overlap fall back to the statement's own row dates.
 - Run it beside every build. No off-the-shelf Beancount plugin checks statement continuity
