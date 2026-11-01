@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a bare summary label with no amount printed below it is refused, never guessed"
+exit = 3
+stderr_has = "summary line 'interest' not found"
