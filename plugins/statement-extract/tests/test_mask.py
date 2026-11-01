@@ -78,6 +78,22 @@ class P5Findings(unittest.TestCase):
         self.assertEqual(keys.content_v1("TFR 123 0000123456"), "TFR ••3456")
 
 
+class P5LegacyDisplay(unittest.TestCase):
+    """Every real display diff the P5 gate found, reproduced synthetically by agentic-ledger:
+    the plugin must show exactly the legacy string, in the format the row came from."""
+
+    def test_every_case_matches_legacy(self):
+        import json
+        from helpers import GOLDEN
+        doc = json.loads((GOLDEN / "p5-display.json").read_text(encoding="utf-8"))
+        self.assertGreaterEqual(len(doc["cases"]), 17)
+        for c in doc["cases"]:
+            with self.subTest(finding=c["finding"], raw=c["raw"]):
+                got = mask.mask(c["raw"], grouped=c["format"] == "pdftext")
+                self.assertEqual(got, c["want"])
+                self.assertFalse(mask.leaks(got))
+
+
 class LeakGate(unittest.TestCase):
     def test_trips(self):
         for s in ("1234567", "0000 12*", "4500****2204", "**1", "•••1234"):

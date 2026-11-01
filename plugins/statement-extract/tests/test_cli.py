@@ -145,6 +145,29 @@ class StderrCarriesNoFigures(unittest.TestCase):
         self.assertNotIn("90.00", p.stderr)
 
 
+class GroupedDigitsByFormat(Tmp):
+    """Engine wiring for P5: grouped-digit masking is for PDF statements only. A QFX payee's
+    dashed reference stays readable (legacy display); a 7+ run is still masked."""
+
+    def test_qfx_keeps_dashed_references_and_masks_long_runs(self):
+        f = self.tmp / "refs.qfx"
+        f.write_bytes((TD / "clean-chequing.qfx").read_bytes()
+                      .replace(b"<NAME>COFFEE SHOP", b"<NAME>MOCK SHOP CO*AB1234-567-8")
+                      .replace(b"<NAME>PAYROLL DEP", b"<NAME>CALL CD5 555-010-0177"))
+        p = run("extract", f)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        descs = {r["description"] for r in records(p.stdout) if r["record"] == "transaction"}
+        self.assertIn("MOCK SHOP CO*AB1234-567-8", descs)
+        self.assertIn("CALL CD5 555-010-0177", descs)
+        self.assertIn("TO:••6789", descs)
+
+    def test_pdf_still_masks_grouped_account_numbers(self):
+        p = run("extract", SC / "chequing-regular.layout.txt")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        descs = " ".join(r["description"] for r in records(p.stdout) if r["record"] == "transaction")
+        self.assertIn("#••0123", descs)
+
+
 class Formats(Tmp):
     def test_csv_and_export_agree(self):
         f = TD / "clean-chequing.qfx"

@@ -82,6 +82,10 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
     res = FileResult(path, sha, adapter, fired)
     version = engine_version()
     file_label = mask.mask(path.name)
+    # Grouped-digit masking only where account numbers are printed grouped: PDF statements.
+    # QFX/OFX and CSV print them as unbroken runs (long-digit-run masks those), so their
+    # dashed store and reference numbers stay readable, as their legacy extractors showed them.
+    grouped = adapter.format == "pdftext"
     scheme = adapter.spec["keys"]["scheme"]
     fallbacks = adapter.spec["keys"].get("fallback", [])
     need = max(reconcile.rank(adapter.minimum), reconcile.rank(require or "structural"))
@@ -152,8 +156,8 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
                 "booking_date": t.booking_date, "transaction_date": t.transaction_date,
                 "amount": as_str(t.amount), "currency": d.currency,
                 "credit_debit": credit_debit(t.amount),
-                "description": mask.mask(t.description), "memo": mask.mask(t.memo),
-                "counterparty": mask.mask(t.counterparty) if t.counterparty else None,
+                "description": mask.mask(t.description, grouped), "memo": mask.mask(t.memo, grouped),
+                "counterparty": mask.mask(t.counterparty, grouped) if t.counterparty else None,
                 "source_type": t.source_type, "entry_ref": t.entry_ref,
                 "running_balance": as_str(t.running_balance),
                 "source": {"file": file_label, "sha256": sha, "locator": t.locator},
