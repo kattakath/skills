@@ -43,6 +43,20 @@ anything that categorises transactions.
 - **Unseen is 0% by construction.** It is the number that justifies fuzzy matching and the
   evidence adapters.
 
+### With `--fuzzy` (trigram fallback, same ledger, same splits)
+
+| Held out | Stratum | n | Conf ≥ 0.5: cov / prec | Conf ≥ 0.8: cov / prec |
+|---|---|---|---|---|
+| unseen | all | 1,690 | 56.4% / 82.9% | 7.3% / 89.5% |
+| unseen | decision | 58 | 8.6% / 60.0% | 0% / — |
+| seen | decision | 83 | 48.2% / 82.5% (exact alone: 38.6% / 84.4%) | 32.5% / 77.8% |
+
+- **Fuzzy recovers a lot of new-merchant coverage, but only at review-grade precision**
+  (~83% at ≥ 0.5). It is not good enough to auto-accept.
+- **The rows a human had to decide stay hard** (8.6% / 60%). That gap is what the evidence
+  adapters (mail receipts, context, web, an enum-bound LLM) must close.
+- **It is opt-in** (`--fuzzy`), and it runs in about 1 s on 6,385 rows.
+
 ## Why stdlib, not Pydantic
 
 - **The one hard constraint is "one of these names"**, and a JSON Schema `enum` states it
