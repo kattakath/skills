@@ -17,7 +17,7 @@ The journal is a **build artifact**. Every fact in it comes from an input the co
 |---|---|---|
 | canonical JSONL (`statement-extract/1`) | transactions, statement closings, loan snapshots | statement-extract, never by hand |
 | `ledger.toml` | account map, transfer settings, category→account overrides, gaps | the operator, rarely |
-| rules CSV | pattern rules → Plaid DETAILED category | the operator |
+| rules CSV | pattern rules → Plaid DETAILED category (checked against `plaid-pfc`'s pin; an invented name refuses) | the operator |
 | decisions CSV | one row per Key: category override, note, service link, accepted suggestion | the operator |
 | `accounts.toml` (optional) | figures read off the lender's screen | the operator |
 

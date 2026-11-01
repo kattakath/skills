@@ -109,6 +109,43 @@ class Build(unittest.TestCase):
         self.assertEqual(code, 3)
         self.assertIn("Bank|••0001|GONE", err)
 
+    def test_invented_category_in_a_rule_refuses(self):
+        # A real primary plus an invented rest used to pass the shape check and open an account.
+        rules = self.d / "rules.csv"
+        rules.write_text(rules.read_text() + "99,payee,PIZZA,,,,any,FOOD_AND_DRINK_PIZZA_PARTY,,,\n")
+        code, err = self.run_build("--check-only")
+        self.assertEqual(code, 2)
+        self.assertIn("99: FOOD_AND_DRINK_PIZZA_PARTY", err)
+
+    def test_invented_category_in_a_decision_refuses(self):
+        dec = self.d / "decisions.csv"
+        dec.write_text(dec.read_text().replace("GENERAL_MERCHANDISE_CONVENIENCE_STORES",
+                                               "GENERAL_MERCHANDISE_CORNER_SHOPS"))
+        code, err = self.run_build("--check-only")
+        self.assertEqual(code, 3)
+        self.assertIn("GENERAL_MERCHANDISE_CORNER_SHOPS", err)
+
+    def test_invented_category_key_in_ledger_toml_refuses(self):
+        led = self.d / "ledger.toml"
+        led.write_text(led.read_text().replace("[categories]\n", '[categories]\nINCOME_WAGES = "Income:Salary"\n', 1))
+        code, err = self.run_build("--check-only")
+        self.assertEqual(code, 2)
+        self.assertIn("INCOME_WAGES", err)
+
+    def test_missing_pin_refuses(self):
+        import os
+        from beancount_kit import pfc
+        old = os.environ.get("PLAID_PFC_DATA")
+        os.environ["PLAID_PFC_DATA"] = str(self.d / "nowhere.json")
+        pfc.pin.cache_clear()
+        try:
+            code, err = self.run_build("--check-only")
+        finally:
+            os.environ["PLAID_PFC_DATA"] = old or ""
+            pfc.pin.cache_clear()
+        self.assertEqual(code, 2)
+        self.assertIn("plaid-pfc pin unreadable", err)
+
     def test_wrong_balance_refuses_and_writes_nothing(self):
         # The FIRST figure only sizes the opening pad; a later one that disagrees must refuse.
         later = scenario.stmt("ffff", "Bank", "••0002", "card", "CAD", "-61.00", "2026-02-15")
