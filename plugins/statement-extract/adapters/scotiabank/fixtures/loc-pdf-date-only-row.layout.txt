@@ -1,0 +1,45 @@
+                                                                                                                               Statement Period       Feb 6, 2024 - Mar 6, 2024
+                                                                                                                               Statement date                         Mar 6, 2024
+                                                                                                                               Account #                  0000 000 000 005 678
+                                                                                                                               Page                                       1 of 2
+
+                                                                                                                               ScotiaLine® Personal
+                                                                                                                               Line of Credit
+
+                                  ALEX SAMPLE
+                                  SAMPLETON, ON A0A 0A0
+
+                                                                                                                               Previous balance, Feb 5/24              $10,000.00
+                                                                                                                               Total interest             +                $40.00
+                                                                                                                               Total payments/credits     -               $500.00
+                                                                                                                               Total purchases/charges    +               $160.00
+
+                                                                                                                               New balance                =             $9,700.00
+
+                                  Transactions since your last statement
+                                          TRANS. POST
+                                     REF.# DATE DATE           DETAILS                                    AMOUNT($)
+
+                                     001    Mar 6       Mar 6    INTEREST CHARGES-ADVANCE                     40.00
+
+                                     SUBTOTAL CREDITS                                                         $0.00
+                                     SUBTOTAL DEBITS                                                         $40.00
+
+
+                                  ALEX SAMPLE - 0000 000 000 005 678
+                                     002    Feb 9       Feb 9    SAMPLE GROCER #0012 SAMPLETON ON             60.00
+                                     003    Feb 20      Feb 20
+                                                                 SAMPLE ONLINE STORE LONDON GBR              100.00
+                                                                 58.00 GBP POUND STERLING
+
+
+000123
+
+                                     004    Mar 1       Mar 1
+
+                                                                 PAYMENT FROM - *****00*0001                500.00-
+                                     SUBTOTAL CREDITS - 0000 000 000 005 678                                $500.00 -
+                                     SUBTOTAL DEBITS - 0000 000 000 005 678                                 $160.00
+
+                                  Interest charges posted on statement date
+                                  Cash advances/cheques            $40.00

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a row printing only its dates runs straight into the subtotals, with no details line: refused, never guessed"
+exit = 3
+stderr_has = "not followed by its details line"
