@@ -60,6 +60,7 @@ The journal is rebuilt every time, so nothing is typed into it. Each feature has
 
 | Feature | Home | Written as |
 |---|---|---|
+| Fava extensions | `ledger.toml` `[[fava_extension]]` `name` (module) + optional `config` string, e.g. `name = "fava_dashboards"` (its `dashboards.tsx` sits next to the journal) | `custom "fava-extension" "<module>" ["<config>"]` |
 | Fava options | `ledger.toml` `[fava]`, e.g. `default-page = "income_statement"` | `custom "fava-option" "<key>" "<value>"` |
 | Saved queries (Query tab) | generic ones in `lib/beancount_kit/queries.toml`; personal ones in `ledger.toml` `[[query]]` `name` + `sql`; a personal query of the same name replaces a generic one | `query "<name>" "<sql>"` |
 | Budgets | a CSV with `from, account, period, amount[, currency]` (`--budgets`); period is daily, weekly, monthly, quarterly or yearly; a row with no amount is skipped | `custom "budget" <account> "<period>" <amount> <cur>` |
