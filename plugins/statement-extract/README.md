@@ -198,7 +198,9 @@ amount = "72.43"
   - star-masked payees (Scotiabank);
   - `dddd****dddd` (CIBC card memos as `CC#dddd****dddd`; Wise cards: first four dropped, last four kept);
   - a star run with a short tail, `****ddd` (CIBC HELOC memos, TD e-transfer references);
-  - grouped digits, with dates excluded.
+  - grouped digits, with dates and North-American phone numbers (`999-999-9999`) excluded. A
+    7+ digit run is masked on its own **before** grouping, so neither a short number beside it nor
+    the cents of an amount are glued into one tail.
 - Every output string then passes the leak gate:
   `\d{7,}|\d{4} ?\d{2}\*|\d{4}\*{4,}|\*{2,}\d|•{3,}`.
 - The gate skips two kinds of value:

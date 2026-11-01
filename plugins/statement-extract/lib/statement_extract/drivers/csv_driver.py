@@ -50,7 +50,7 @@ IDENT_FIELDS = {"header": "columns that must all be in the header row",
 # Columns no CSV adapter may ever read, whatever its TOML says: they hold third parties'
 # full account numbers (Wise, measured 2026-10-31).
 NEVER_READ = ("Payee Account Number",)
-CSV_KEYS = {"encoding", "drop", "currency", "order", "columns", "formats"}
+CSV_KEYS = {"encoding", "drop", "currency", "order", "columns", "formats", "require_filename"}
 SINGLE = ("id", "datetime", "date", "amount", "running_balance")
 TEXT = ("description", "counterparty", "memo", "source_type")
 ORDERS = ("newest-first", "oldest-first")
@@ -126,7 +126,10 @@ def _decode(raw: bytes, adapter) -> str:
 
 
 def identify(raw: bytes, adapter, path: Path | None = None) -> bool:
-    if _name_match(adapter, path) is None:
+    # `[csv] require_filename = false`: the file name stays a SOURCE (currency, period) when it
+    # matches, but a renamed export is still identified by its header; its period then comes
+    # from the rows, and an empty renamed file refuses for want of a currency.
+    if _name_match(adapter, path) is None and adapter.spec["csv"].get("require_filename", True):
         return False
     try:
         first = next(csv.reader(io.StringIO(_decode(raw, adapter), newline="")), None)
