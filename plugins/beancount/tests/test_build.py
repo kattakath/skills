@@ -341,7 +341,7 @@ class FavaFeatures(unittest.TestCase):
         st = self.d / "statements"; st.mkdir()
         recs = [json.loads(l) for l in self.files["card-a"].read_text().splitlines()]
         body = b"%PDF-1.4 card statement"
-        recs[0]["source"] = dict(recs[0]["source"], file="card.pdf",
+        recs[0]["source"] = dict(recs[0]["source"], file="card-••0002.pdf",
                                  sha256=hashlib.sha256(body).hexdigest())
         self.files["card-a"].write_text("".join(json.dumps(r) + "\n" for r in recs))
         (st / "card.pdf").write_bytes(body)
