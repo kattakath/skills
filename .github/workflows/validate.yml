@@ -211,6 +211,12 @@ jobs:
           command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null
           bash plugins/statement-extract/tests/run.sh --pdf-smoke
 
+      # plaid-pfc pins Plaid's taxonomy as data; the suite checks the pin's counts, strict
+      # refusal of an invented name, the crosswalk and the JSON Schema enum. Stdlib only, no
+      # network: refresh is tested on a synthetic CSV.
+      - name: plaid-pfc cases
+        run: bash plugins/plaid-pfc/tests/run.sh
+
       # beancount's builder is checked by Beancount itself: every golden must load with zero
       # errors, and a wrong balance must refuse. That needs beancount importable, so this step
       # makes a venv with the versions the plugin is tested at (cp312 manylinux wheels exist

@@ -1,0 +1,24 @@
+{
+  "source": "https://plaid.com/documents/pfc-taxonomy-all.csv",
+  "fetched": "2026-11-01",
+  "sha256": "c585fae8e48b834f78791c13c1fd013ae8594df337cf27f4de85bf9cae89f1bc",
+  "v1_to_v2": {
+    "INCOME_OTHER_INCOME": [
+      "INCOME_OTHER"
+    ],
+    "INCOME_WAGES": [
+      "INCOME_SALARY"
+    ],
+    "TRANSFER_IN_CASH_ADVANCES_AND_LOANS": [
+      "LOAN_DISBURSEMENTS_OTHER_DISBURSEMENT"
+    ],
+    "TRANSFER_IN_OTHER_TRANSFER_IN": [
+      "TRANSFER_IN_OTHER_TRANSFER_IN",
+      "OTHER_OTHER"
+    ],
+    "TRANSFER_OUT_OTHER_TRANSFER_OUT": [
+      "TRANSFER_OUT_OTHER_TRANSFER_OUT",
+      "OTHER_OTHER"
+    ]
+  }
+}
