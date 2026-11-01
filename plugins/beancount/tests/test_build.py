@@ -119,6 +119,14 @@ class Build(unittest.TestCase):
         self.assertIn("Balance failed", err)
         self.assertFalse(out.exists())
 
+    def test_one_cent_drift_refuses(self):
+        # Beancount's default tolerance would pass a figure one cent off; the build asserts exactly.
+        later = scenario.stmt("ffff", "Bank", "••0002", "card", "CAD", "-60.01", "2026-02-15")
+        (self.d / "card-b.jsonl").write_text(json.dumps(later) + "\n")
+        code, err = self.run_build("--check-only")
+        self.assertEqual(code, 3, err)
+        self.assertIn("Balance failed", err)
+
     def test_overlapping_statement_dates_set_the_assertion_aside(self):
         # The February statement prints a fee dated January 31, the January statement's last
         # day. No day boundary separates them, so January's figure is set aside, not padded.

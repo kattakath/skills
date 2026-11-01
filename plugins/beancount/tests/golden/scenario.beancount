@@ -21,7 +21,7 @@ option "operating_currency" "CAD"
 
 2025-12-31 pad Liabilities:Bank:Mortgage-0003 Equity:Opening-Balances
 
-2026-01-01 balance Liabilities:Bank:Mortgage-0003  -200000.00 CAD
+2026-01-01 balance Liabilities:Bank:Mortgage-0003  -200000.00 ~ 0.00 CAD
   origin: "position"
 
 2026-01-02 * "PAYROLL ACME" ""
@@ -152,17 +152,17 @@ option "operating_currency" "CAD"
 
 2026-01-31 pad Liabilities:Bank:Mortgage-0003 Expenses:Interest:Mortgage
 
-2026-02-01 balance Assets:Bank:Chequing-0001  1255.00 CAD
+2026-02-01 balance Assets:Bank:Chequing-0001  1255.00 ~ 0.00 CAD
   origin: "statement"
 
-2026-02-01 balance Assets:Wallet:CAD  0.00 CAD
+2026-02-01 balance Assets:Wallet:CAD  0.00 ~ 0.00 CAD
   origin: "statement"
 
-2026-02-01 balance Assets:Wallet:USD  490.00 USD
+2026-02-01 balance Assets:Wallet:USD  490.00 ~ 0.00 USD
   origin: "statement"
 
-2026-02-01 balance Liabilities:Bank:Card-0002  -60.00 CAD
+2026-02-01 balance Liabilities:Bank:Card-0002  -60.00 ~ 0.00 CAD
   origin: "statement"
 
-2026-02-01 balance Liabilities:Bank:Mortgage-0003  -199600.00 CAD
+2026-02-01 balance Liabilities:Bank:Mortgage-0003  -199600.00 ~ 0.00 CAD
   origin: "position"

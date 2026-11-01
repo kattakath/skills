@@ -17,7 +17,10 @@ A paired inflow carries the whole clearing amount, so the clearing account nets 
   cross-currency  own +b CURi @@ a CURo, transfers -a CURo   (also in-wallet conversions)
 
 Balance assertions are dated the day AFTER the figure's as-of date, because Beancount checks
-a balance at the start of its day. Each asserted account gets one opening pad from
+a balance at the start of its day. Every assertion is EXACT (`~ 0.00`): Beancount's default
+tolerance for a two-decimal balance is one cent (measured on 3.2.3: 0.01 off passes, 0.02
+fails), and a bank figure is exact, so a one-cent drift is a missing row that the default
+would hide. Each asserted account gets one opening pad from
 Equity:Opening-Balances; a position's later snapshots pad from the account's `interest`.
 A hole (days no statement covers, between covered stretches) is bridged by a pad from
 Equity:Gaps on its first day, labelled with the range: the rows there were never fetched, and
@@ -154,7 +157,7 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
         if k in seen:
             continue
         seen.add(k)
-        entries.append((on, 3, a.name, f"{on} balance {a.name}  {s.amount} {s.cur}\n"
+        entries.append((on, 3, a.name, f"{on} balance {a.name}  {s.amount} ~ 0.00 {s.cur}\n"
                                         f"  origin: {q(s.origin)}"))
         asserted_first[a.name] = min(asserted_first.get(a.name, on), on)
         use(a.name, s.as_of)
@@ -174,7 +177,7 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
                 if a.interest:
                     pads.append((as_of, name, a.interest))
                     use(a.interest, as_of)
-            entries.append((on, 3, name, f"{on} balance {name}  {amount} {cur}\n"
+            entries.append((on, 3, name, f"{on} balance {name}  {amount} ~ 0.00 {cur}\n"
                                          f"  origin: \"position\""))
             asserted_first[name] = min(asserted_first.get(name, on), on)
             use(name, as_of)
