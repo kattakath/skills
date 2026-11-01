@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "TOTAL INTEREST disagrees with the interest rows: refused"
+exit = 3
+stderr_has = "total_interest"

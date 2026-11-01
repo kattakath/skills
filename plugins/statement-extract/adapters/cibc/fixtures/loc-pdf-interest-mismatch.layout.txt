@@ -1,0 +1,50 @@
+               CIBC Personal Line of Credit (PLC)                                          Statement date
+                                                                                           October 21, 2025
+                                                                                           Bank reference number
+                                                                                           0000012345
+                                                                                           PLC account number
+                                                                                           00000-00-01234
+               Borrower(s):
+               ALEX SAMPLE
+
+
+
+
+               Your account at a glance                              Contact information
+               Previous balance                    $10,000.00        ( 1 800 465-CIBC (2422)
+               Total credits              –           $300.00
+               Total debits               +           $205.00
+
+               New balance                =         $9,905.00
+
+
+
+
+CIBC Personal Line of Credit
+                                                                 Statement date: October 21, 2025
+                                                                 Bank reference number: 0000012345
+Your transaction details                                         PLC account number: 00000-00-01234
+Date         Description                                                                         Amount
+
+STATEMENT PERIOD: SEP22/25 – OCT21/25 – 31 DAYS - PREVIOUS BALANCE: $10,000.00
+
+SEP25        INTERNET TRANSFER 000012345684                                                  $300.00CR
+             FROM ACCOUNT 00001/****123
+OCT02        E-TRANSFER 000012345685                                                           $150.00
+             SAMPLE FRIEND
+OCT21        PLC INTEREST CHARGED                                                               $55.00
+
+
+OCT21        PLC INTEREST CHARGED: SEP22/25 - OCT21/25 @ - CIBC PRIME 4.700% + 2.000% = 6.700%
+             PERIOD INTEREST: $55.00
+             TOTAL INTEREST:        $56.00
+             NEW BALANCE:           $9,905.00
+
+
+
+(0000) 00000-0000/00                                                                                   Page 2 of 3
+
+               CIBC Personal Line of Credit
+               Terms and conditions xxxxx xxxxxx xxxxxx xxxxxx xxxx xxxxxxx xxxxxx xxxxxxxxx xxxxxx xxxxxx xxxxxxx
+               Interest: Interest is calculated on the daily balance of your PLC Account at the end of each day.
+
