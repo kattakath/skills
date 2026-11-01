@@ -119,7 +119,9 @@ def load_hook(adapter_id: str, path: Path):
 
 def load(root: Path = ADAPTERS_DIR) -> list[Adapter]:
     out = []
-    for p in sorted(root.glob("*/*.toml")):
+    # Sort by adapter id (inst, name), not by path: "a-b.toml" sorts before "a.toml" as a path
+    # but after "a" as an id, and the CLI promises id order.
+    for p in sorted(root.glob("*/*.toml"), key=lambda q: (q.parent.name, q.stem)):
         raw = p.read_bytes()
         adapter_id = f"{p.parent.name}/{p.stem}"
         try:
