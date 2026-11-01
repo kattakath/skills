@@ -58,7 +58,9 @@ SE="${CLAUDE_PLUGIN_ROOT}/scripts/statement-extract"
 - edit a statement;
 - strip the failing rows;
 - loosen `--require`;
-- pass a different `last4` "to make it work".
+- pass a different `last4` "to make it work". (A **reissued card** is not a workaround: the
+  operator confirms the old and new numbers are one card account, then the entry gets
+  `reissued = true`; see the README.)
 
 A refusal is the tool telling you the data is not what it claims to be.
 
