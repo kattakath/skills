@@ -1,12 +1,24 @@
 # Design: `plaid-pfc` — a generic transaction-category plugin
 
-Status: **proposed** (2026-11-01). Nothing here is built yet. Review before code.
+Status: **accepted** (2026-11-01). Phase 0 done; phase 1 in #141. See § Decisions and spike results.
+
+## Decisions and spike results (2026-11-01)
+
+| Question | Decision | Evidence |
+|---|---|---|
+| Name | **`plaid-pfc`** | The standard is the contract |
+| Core library | **Stdlib only** (enum + dataclasses + generated JSON Schema), like `statement-extract`. Pydantic deferred to the suggest phase | `pydantic` is absent from the Beancount nix envs; the one hard constraint is an enum, which JSON Schema states directly; zero installs on any machine |
+| Code sharing | **A data-file contract**, the existing pattern (`statement-extract` writes JSONL, `beancount` reads it). `beancount` reads `plaid-pfc`'s `data/pfc-v2.json` from its install path (`installed_plugins.json`). One release rail, no nix step | Nix-packaging (option A1) would add a second release clock; a missing plugin refuses loudly |
+| v1 → v2 | Apply 1:1 renames; **list splits for review** | v2 is **not** a pure superset of v1: 3 renames (`INCOME_WAGES` → `INCOME_SALARY`, `INCOME_OTHER_INCOME` → `INCOME_OTHER`, `TRANSFER_IN_CASH_ADVANCES_AND_LOANS` → `LOAN_DISBURSEMENTS_OTHER_DISBURSEMENT`) and 2 splits (the v1 "other transfer" names → themselves + `OTHER_OTHER`) |
+| Blast radius of strict enforcement | **None today** | A live Sheet uses 78 distinct names, all valid v2 |
+| Existing pin to reuse? | **None** | `plaid-python` types `detailed` as a free string with no allowed values |
+| Pin | Fresh fetch, sha256 `c585fae8e48b…`, 127 detailed / 18 primary; `OTHER_OTHER` has no description in Plaid's CSV | `pfc refresh` against plaid.com matches |
 
 ## Verdict
 
 - **One generic plugin** owns the transaction-category standard: Plaid's Personal Finance
   Categories (PFC).
-- **The core is deterministic** and typed (Pydantic): the taxonomy, validation, merchant
+- **The core is deterministic** and typed (stdlib enum + dataclasses, see § Decisions): the taxonomy, validation, merchant
   cleaning, matching against your own history, and scoring.
 - **Evidence sources are optional adapters**, run by a skill: mail receipts, consumer
   context, web search. With none of them it still works.
@@ -72,7 +84,7 @@ plugins/plaid-pfc/
   tests/                      synthetic fixtures only
 ```
 
-## Data model (Pydantic)
+## Data model (stdlib; Pydantic deferred)
 
 - **`Category`:** an enum of the 127 v2 detailed names plus `NEEDS_REVIEW`. It is generated
   from `data/pfc-v2.json`, not typed by hand.
@@ -182,7 +194,7 @@ anything of the operator's, and it works.
 | B. `beancount` shells out to the `pfc` CLI | No packaging | A runtime dependency on another plugin's install path |
 | C. Copy the taxonomy file into `beancount` in CI | Simple | **Two copies: rejected** (one source of truth) |
 
-**Leaning A.** Settle it with a one-hour spike before building.
+**Decided: neither A nor B as written.** The data-file contract (§ Decisions) follows the existing plugin pattern.
 
 ## Prior art (searched 2026-11-01)
 
@@ -223,9 +235,4 @@ history is the asset.
 
 ## Open questions
 
-1. **Name:** `plaid-pfc` (names the standard) or a neutral `txn-category` (allows another
-   taxonomy later)? Leaning `plaid-pfc`, since the standard is the contract.
-2. **Sharing:** option A vs B (phase 0).
-3. **v2 adds `INCOME_CHILD_SUPPORT` and other income splits.** When the consumer moves to v2
-   names, should past v1 decisions be re-mapped automatically through the crosswalk, or listed
-   for review?
+None open. All three were settled on 2026-11-01 (§ Decisions).
