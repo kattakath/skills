@@ -23,8 +23,9 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
 - `.claude-plugin/marketplace.json` is the catalog: one entry per plugin, always
   `source: "./plugins/<name>"`, the list kept **alpha-sorted by `name`**. Adding a plugin
   means adding an entry here too.
-- `INDEX.md` is **generated** (`scripts/build-index.py`) from `index/{routes,sources,
-  curation}.json` plus `marketplace.json` — never hand-edit `INDEX.md`; edit the JSON and
+- `INDEX.md` and the plugin table in `README.md` (between the `plugins:` markers) are
+  **generated** (`scripts/build-index.py`) from `index/{routes,sources,curation}.json`,
+  `marketplace.json` and each plugin's own tree — never hand-edit them; edit the source and
   rerun the script. CI's `Index up to date` check fails a PR where they've drifted.
 - `mcp/` holds MCP server declarations (one `server.json` per the MCP registry schema) —
   documented, none declared yet.
@@ -55,7 +56,7 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
    you probably meant ("did you mean 'workflows'?"). Claude Code ignores unrecognised fields at load
    time. So do not avoid a legitimate new manifest field out of fear of the gate — but equally, do
    not trust the gate to catch a typo'd one. Start `version` at `1.0.0` (§ Versioning).
-4. Write `README.md` — **every plugin has one** (all 25, since #40). It is the page a reader
+4. Write `README.md` — **every plugin has one** (since #40). It is the page a reader
    lands on from the marketplace: what the plugin ships, the non-obvious facts and
    measurements it exists to carry, and what it requires. Source it from the `SKILL.md`;
    do not restate the frontmatter.
