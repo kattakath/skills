@@ -58,6 +58,7 @@ class TxnDraft:
     counterparty: str | None = None
     running_balance: Decimal | None = None
     key_date: str | None = None     # the date a frozen content key uses, when it differs
+    native_ts: str | None = None    # native-id-ts/1: the row's timestamp exactly as printed
     raw_amount_text: str = ""
 
 

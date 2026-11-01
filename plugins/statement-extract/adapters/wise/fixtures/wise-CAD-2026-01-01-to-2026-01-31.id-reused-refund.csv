@@ -1,0 +1,5 @@
+TransferWise ID,Date,Date Time,Amount,Currency,Description,Payment Reference,Running Balance,Exchange From,Exchange To,Exchange Rate,Payer Name,Payee Name,Payee Account Number,Merchant,Card Last Four Digits,Card Holder Full Name,Attachment,Note,Total fees,Exchange To Amount,Transaction Type,Transaction Details Type
+CARD-0000203,09-01-2026,09-01-2026 18:00:00.000,-9.99,CAD,Card transaction of 9.99 CAD issued by DEMO STREAMING,,145.01,,,,,,,DEMO STREAMING,0001,ALEX SAMPLE,,,0.00,,DEBIT,CARD
+CARD-0000202,07-01-2026,07-01-2026 10:20:00.200,15.00,CAD,Card transaction of 15.00 CAD refunded by SAMPLE STORE,,155.00,,,,,,,SAMPLE STORE,0001,ALEX SAMPLE,,,0.00,,CREDIT,CARD
+CARD-0000202,05-01-2026,05-01-2026 13:10:00.100,-40.00,CAD,Card transaction of 40.00 CAD issued by SAMPLE STORE,,140.00,,,,,,,SAMPLE STORE,0001,ALEX SAMPLE,,,0.00,,DEBIT,CARD
+BALANCE-0000201,02-01-2026,02-01-2026 09:00:00.000,80.00,CAD,Topped up balance,,180.00,,,,,,,,,,,,0.00,,CREDIT,DEPOSIT

@@ -1,0 +1,42 @@
+# Wise balance statement, PDF: one currency per statement. Shape measured 2026-10-31 on one
+# real 3-page CAD statement (fixture shape only): newest first; each row is a description
+# line ending in the signed amount and the running balance, optional continuation lines,
+# then a detail line "<d Month yyyy> | ... | Transaction: <TYPE>-<digits>". The detail line
+# also prints the card's last four and the holder's name: neither is read.
+institution = "Wise"
+format = "pdftext"
+description = "Wise balance statement PDF, one currency per statement"
+
+[identify]
+text = ['Wise Payments', '^\s*[A-Z]{3} statement\s*$', '^\s*Description\s{2,}.*Amount\s*$']
+
+[keys]
+# The PDF prints the Wise transaction id and the DATE, but not the millisecond Date Time that
+# native-id-ts/1 needs, so PDF keys cannot equal the CSV's. Content key instead, with the
+# frozen content-occurrence/1 normaliser every PDF adapter uses:
+# Wise|<CUR>|<date>|<amount 2dp>|<text>|<n>.
+# CONSEQUENCE: the same movement read from the PDF and from the CSV gets two different keys.
+# Feed one source per period (prefer the CSV); never both for the same dates.
+scheme = "content-occurrence/1"
+
+[account]
+ref = "currency"
+kind = "balance"
+
+[reconcile]
+minimum = "proven"
+# Every printed row is parsed (count_reconcile on the "Transaction:" detail lines), every
+# row chains on the printed running balance, and the newest balance equals the printed
+# closing. The opening is not printed: it is derived from the oldest row.
+proves = true
+
+[grammar]
+amt = '-?\d{1,3}(?:,\d{3})*\.\d{2}'
+date = '\d{1,2} (?:January|February|March|April|May|June|July|August|September|October|November|December) \d{4}'
+currency = '^\s*(?P<cur>[A-Z]{3}) statement\s*$'
+period = '^\s*(?P<start>{DATE}) \[[^\]]*\] - (?P<end>{DATE}) \[[^\]]*\]\s*$'
+closing = '^\s*(?P<cur>[A-Z]{3}) on (?P<date>{DATE}) \[[^\]]*\]\s{2,}(?P<amt>{AMT}) (?P=cur)\s*$'
+header = '^\s*Description\s{2,}.*Amount\s*$'
+row = '^\s{0,6}(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s{2,}(?P<bal>{AMT})\s*$'
+detail = '^\s*(?P<date>{DATE}) \|.*?Transaction: (?P<id>[A-Z][A-Z_]*-\S+)\s*$'
+footer = '^\S+:\S+\s{10,}\d+/\d+\s*$'

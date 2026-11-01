@@ -14,14 +14,14 @@ from . import SCHEMA, engine_version
 from . import accounts as accounts_mod
 from . import keys, mask, reconcile
 from .dedupe import Deduper
-from .drivers import ofx_driver, pdftext_driver
+from .drivers import csv_driver, ofx_driver, pdftext_driver
 from .model import Check, Exit, Refusal, StatementDraft
 from .money import as_str, credit_debit
 from .readers import pdftext
 from .registry import Adapter
 
 MAX_CYCLE_GAP_DAYS = 3  # see chain()
-DRIVERS = {"ofx": ofx_driver, "pdftext": pdftext_driver}
+DRIVERS = {"ofx": ofx_driver, "pdftext": pdftext_driver, "csv": csv_driver}
 
 # Output fields the leak gate does not read, each for a stated reason:
 # - hex digests: sha256 hex has a ~90% chance of holding a 7+ decimal-digit run by accident,
@@ -62,7 +62,12 @@ def _account_view(adapter: Adapter, d: StatementDraft, accts) -> tuple[str, str,
         raise Refusal(Exit.UNIDENTIFIED, (
             f"{adapter.id} needs an accounts-file entry with last4 for the account whose file "
             f"id ends {keys.last4_ref(d.acctid)}: the file's id is not the number on screen"))
-    ref = keys.last4_ref(acct.last4) if acct and acct.last4 else keys.last4_ref(d.acctid)
+    if adapter.spec.get("account", {}).get("ref") == "currency":
+        # One balance per currency, with no account number of its own (Wise): the ISO code
+        # is the account, exactly as the legacy keys spell it.
+        ref = d.currency
+    else:
+        ref = keys.last4_ref(acct.last4) if acct and acct.last4 else keys.last4_ref(d.acctid)
     kind = acct.kind if acct and acct.kind else d.kind
     return ref, kind, acct
 
@@ -92,6 +97,12 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
             d.checks.append(Check("header_last4", head == acct.last4,
                                   expected=f"••{acct.last4} (accounts file)",
                                   actual=f"••{head} (statement header)"))
+        if scheme == keys.NATIVE_ID_TS:
+            # Two rows sharing (id, timestamp) would share one key. Identical rows would even
+            # pass dedupe as dup_in_run, so refuse the file here instead.
+            n_rep = keys.repeated_pairs((t.entry_ref, t.native_ts) for t in d.transactions)
+            d.checks.append(Check("native_id_unique", n_rep == 0, expected="0 repeated",
+                                  actual=f"{n_rep} repeated (id, timestamp) pairs"))
         d.checks += reconcile.assertions(d, acct)
         failed = [c for c in d.checks if not c.ok]
         sid = hashlib.sha256(f"{sha}|{ref}|{d.index}".encode()).hexdigest()[:16]
@@ -113,6 +124,8 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
                     break
             if use == "fitid":
                 key = keys.fitid_key(adapter.institution, ref, t.entry_ref)
+            elif use == keys.NATIVE_ID_TS:
+                key = keys.native_id_ts_key(adapter.institution, ref, t.entry_ref, t.native_ts)
             elif use == "statement-line/1":
                 key = keys.statement_line_key(adapter.institution, ref, d.period_end, n)
             else:
@@ -196,6 +209,11 @@ def leak_scan(records: list[dict]) -> list[str]:
             if where == "key" and rec.get("key_scheme") == "fitid":
                 # institution|••1234|FITID: gate the prefix, exempt the institution's own id.
                 s = s.rsplit("|", 1)[0]
+            elif where == "key" and rec.get("key_scheme") == keys.NATIVE_ID_TS:
+                # institution|CUR|<native id>|<timestamp>: gate all but the institution's id
+                # (Wise ids are CARD-/TRANSFER- plus 7+ digits, every one of them).
+                parts = s.split("|")
+                s = "|".join(parts[:2] + parts[-1:])
             if mask.leaks(s):
                 hits.append(f"{rec['record']}#{n} {where}")
     return hits
@@ -251,6 +269,30 @@ def chain(results: list[FileResult]) -> None:
                 raise Refusal(Exit.REFUSED, f"{inst} {ref}: statement ending "
                               f"{nxt['period']['end']} does not continue the one ending "
                               f"{prev['period']['end']}", check=check)
+
+
+def one_source_per_period(results: list[FileResult]) -> None:
+    """Two ADAPTERS reading overlapping periods of one account would key the same movements
+    twice: their schemes differ (Wise PDF content keys vs Wise CSV native-id-ts/1), so dedupe
+    cannot see the overlap. Measured 2026-10-31 on a real September: the PDF's 49 rows match
+    the CSV's 49 by (id, date, amount), and a joint run emitted 188 rows instead of 139.
+    Refuse the whole run instead. The same adapter twice (overlapping exports) is fine."""
+    spans: dict[tuple, list[dict]] = {}
+    for r in results:
+        for s in r.statements:
+            if s["period"]["start"] and s["period"]["end"]:
+                spans.setdefault((s["institution"], s["account"]["ref"]), []).append(s)
+    for (inst, ref), stmts in spans.items():
+        for i, a in enumerate(stmts):
+            for b in stmts[i + 1:]:
+                ida, idb = a["source"]["adapter"]["id"], b["source"]["adapter"]["id"]
+                if ida != idb and a["period"]["start"] <= b["period"]["end"] \
+                        and b["period"]["start"] <= a["period"]["end"]:
+                    raise Refusal(Exit.REFUSED, f"{inst} {ref}: {ida} and {idb} both cover "
+                                  f"{max(a['period']['start'], b['period']['start'])}.."
+                                  f"{min(a['period']['end'], b['period']['end'])}; their keys "
+                                  "differ, so the overlap would be emitted twice. Pass one "
+                                  "source per period")
 
 
 def dedupe(results: list[FileResult], seen: set[str]) -> list[dict]:

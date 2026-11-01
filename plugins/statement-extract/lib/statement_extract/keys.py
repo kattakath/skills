@@ -63,9 +63,9 @@ FROZEN = {
     "content-occurrence/1": content_v1,
 }
 
-# Schemes this release can build. native-id-ts/1 (Wise) and content-hash/1 arrive with the
-# adapters that need them.
-SCHEMES = ("fitid", "statement-line/1", *FROZEN)
+# Schemes this release can build. content-hash/1 arrives with the adapter that needs it.
+NATIVE_ID_TS = "native-id-ts/1"
+SCHEMES = ("fitid", "statement-line/1", NATIVE_ID_TS, *FROZEN)
 
 
 def fitid_key(institution: str, acct_ref: str, fitid: str) -> str:
@@ -80,6 +80,24 @@ def statement_line_key(institution: str, acct_ref: str, period_end: str, n: int)
     pdf_rows_scotia_chequing.py (2026-10-31).
     """
     return f"{institution}|{acct_ref}|{period_end}|{n}"
+
+
+def native_id_ts_key(institution: str, acct_ref: str, native_id: str, ts: str) -> str:
+    """`Institution|<CUR>|<native id>|<timestamp as printed>`.
+
+    Wise reuses one id for several balance movements (a card charge and its refund or
+    reversal; a top-up and its reversal), so the id alone is not unique; the printed timestamp,
+    to the millisecond, separates them. Reproduces agentic-ledger wise_rows.py (2026-10-31)
+    byte for byte: the account segment is the balance's ISO currency, both values are the raw
+    cells, never reformatted. A file in which an (id, timestamp) pair repeats is refused
+    (`native_id_unique`), because two rows would share one key.
+    """
+    return f"{institution}|{acct_ref}|{native_id}|{ts}"
+
+
+def repeated_pairs(pairs) -> int:
+    """How many distinct (id, timestamp) pairs occur more than once."""
+    return sum(1 for n in Counter(pairs).values() if n > 1)
 
 
 class ContentKeyer:

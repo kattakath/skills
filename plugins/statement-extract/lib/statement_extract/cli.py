@@ -99,6 +99,7 @@ def cmd_extract(a, log: RunLog) -> int:
         results.append(res)
 
     try:
+        engine.one_source_per_period(results)
         engine.chain(results)
         kept = engine.dedupe(results, seen)
     except Refusal as e:

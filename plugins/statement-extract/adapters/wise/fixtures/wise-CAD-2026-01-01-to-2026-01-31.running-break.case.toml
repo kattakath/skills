@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "one running balance does not equal the previous one plus the amount"
+exit = 3
+stderr_has = "running_chain"

@@ -1,0 +1,3 @@
+synthetic = true
+quirk = "newest-first rows, the running balance chains, card/transfer/top-up rows; Payee Account Number present in the header and never read"
+exit = 0

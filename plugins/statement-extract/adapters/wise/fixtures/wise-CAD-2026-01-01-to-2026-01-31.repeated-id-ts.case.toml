@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an (ID, Date Time) pair repeats: two rows would share one key, so the file is refused"
+exit = 3
+stderr_has = "native_id_unique"

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "newest first across a page break; continuation lines fold into the row; an incoming card refund reuses its charge's Wise id; proven by the running balance and the printed closing"
+exit = 0
+pdf_smoke = true

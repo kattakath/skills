@@ -1,5 +1,5 @@
 {
- "_comment": "Keys emitted by agentic-ledger's own extractors (worktree-distributed-crafting-liskov @ b78340c) over these synthetic fixtures. QFX: qfx_rows.py under ofxtools 0.9.5, with --institution from the adapter, --acct-last4 from the case's accounts file and --known from its seen file. PDF: pdf_rows_desjardins.py / pdf_rows_scotia_chequing.py, fed the fixture's .layout.txt where they would have called pdftotext, with --acct-last4 from the accounts file (Scotiabank: the header's). The plugin must emit exactly these keys. Never edit by hand.",
+ "_comment": "Keys emitted by agentic-ledger's own extractors (worktree-distributed-crafting-liskov @ b78340c) over these synthetic fixtures. QFX: qfx_rows.py under ofxtools 0.9.5, with --institution from the adapter, --acct-last4 from the case's accounts file and --known from its seen file. PDF: pdf_rows_desjardins.py / pdf_rows_scotia_chequing.py, fed the fixture's .layout.txt where they would have called pdftotext, with --acct-last4 from the accounts file (Scotiabank: the header's). The plugin must emit exactly these keys. Wise: wise_rows.py (same commit), --screen-balance from the case's accounts file, else the fixture's own closing (0 for an empty export); a legacy refusal (exit 2) is recorded as []. Never edit by hand.",
  "cases": {
   "cibc/card-memo-first4": [
    "CIBC|••2204|0000202610050104"
@@ -112,6 +112,44 @@
   ],
   "td/tz-dtposted": [
    "TD|••1106|0000202610150010"
-  ]
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.bom": [
+   "Wise|CAD|BALANCE-0000101|02-01-2026 09:00:00.000",
+   "Wise|CAD|CARD-0000102|03-01-2026 12:30:15.250",
+   "Wise|CAD|CARD-0000104|15-01-2026 19:45:30.500",
+   "Wise|CAD|CARD-0000105|20-01-2026 07:00:01.001",
+   "Wise|CAD|TRANSFER-0000103|10-01-2026 08:05:00.000"
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.card-first4": [
+   "Wise|CAD|BALANCE-0000401|02-01-2026 09:00:00.000",
+   "Wise|CAD|CARD-0000402|06-01-2026 16:00:00.000",
+   "Wise|CAD|TRANSFER-0000403|08-01-2026 09:30:00.000"
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.id-reused-refund": [
+   "Wise|CAD|BALANCE-0000201|02-01-2026 09:00:00.000",
+   "Wise|CAD|CARD-0000202|05-01-2026 13:10:00.100",
+   "Wise|CAD|CARD-0000202|07-01-2026 10:20:00.200",
+   "Wise|CAD|CARD-0000203|09-01-2026 18:00:00.000"
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.mixed-currency": [],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.out-of-order": [],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.regular": [
+   "Wise|CAD|BALANCE-0000101|02-01-2026 09:00:00.000",
+   "Wise|CAD|CARD-0000102|03-01-2026 12:30:15.250",
+   "Wise|CAD|CARD-0000104|15-01-2026 19:45:30.500",
+   "Wise|CAD|CARD-0000105|20-01-2026 07:00:01.001",
+   "Wise|CAD|TRANSFER-0000103|10-01-2026 08:05:00.000"
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.repeated-id-ts": [],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.running-break": [],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.screen-balance-asserted": [
+   "Wise|CAD|BALANCE-0000101|02-01-2026 09:00:00.000",
+   "Wise|CAD|CARD-0000102|03-01-2026 12:30:15.250",
+   "Wise|CAD|CARD-0000104|15-01-2026 19:45:30.500",
+   "Wise|CAD|CARD-0000105|20-01-2026 07:00:01.001",
+   "Wise|CAD|TRANSFER-0000103|10-01-2026 08:05:00.000"
+  ],
+  "wise/wise-CAD-2026-01-01-to-2026-01-31.screen-balance-mismatch": [],
+  "wise/wise-EUR-2026-01-01-to-2026-01-31.empty": []
  }
 }
