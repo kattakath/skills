@@ -19,7 +19,7 @@ It **fails closed**: when something doesn't reconcile, it stops and says which c
 ## Run it
 
 ```bash
-SE="$(ls -td ~/.claude/plugins/cache/kattakath/statement-extract/*/ | head -1)scripts/statement-extract"
+SE="${CLAUDE_PLUGIN_ROOT}/scripts/statement-extract"
 "$SE" doctor                                   # python, adapters, pdftotext
 "$SE" identify FILES…                          # which adapter claims each file
 "$SE" extract FILES… --accounts accounts.toml --seen keys.txt --report run.json > out.jsonl
