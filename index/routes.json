@@ -5,12 +5,11 @@
       "goal": "Find a capability before building or installing one",
       "steps": [
         "capability-broker",
-        "mcp-utilities",
         "@community",
         "@skills-sh",
         "@mcp-registry"
       ],
-      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config. mcp-utilities' `mcpfinder` server searches the registries from inside the session, so the Official MCP Registry step is reachable without leaving it."
+      "note": "Inventory first; the lightest capability that works wins; adoption goes through nix-config."
     },
     {
       "goal": "Capture what a session figured out, so no session rediscovers it",
@@ -199,11 +198,11 @@
       "note": "~59 tools against PRODUCTION — update/delete/settings included, no staging behind it. Needs `nix-mcp-wordpress` on PATH from kattakath/nix-config (local.pluginMcp.servers), which reads the site URL, username and application password from the macOS Keychain at launch; a plugin .mcp.json cannot. NOT the WordPress MCP Adapter: that is a different endpoint (/wp-json/mcp/...) and it is dead — 404 rest_no_route. The core REST path (/wp-json/wp/v2) was verified live 2026-10-02."
     },
     {
-      "goal": "Get the keyless utility MCP servers: knowledge graph, step-by-step reasoning, Terraform registry docs, MCP discovery",
+      "goal": "Get the keyless utility MCP servers: knowledge graph, step-by-step reasoning",
       "steps": [
         "mcp-utilities"
       ],
-      "note": "Four upstream servers, no credentials, one plugin because all four were enabled together on the gateway this replaces. `terraform-mcp-server` and `nix-mcp-mcpfinder` must be on PATH from kattakath/nix-config — a plugin cannot carry a /nix/store path, and mcpfinder needs a Node newer than the fleet default. `memory` gets a wrapper so its graph lives under XDG instead of inside the npx cache."
+      "note": "Two pinned upstream servers, no credentials. Terraform and mcpfinder left 2026-11-01: both needed a PATH binary from kattakath/nix-config, so they never worked from this marketplace alone."
     },
     {
       "goal": "Run a command when the Bash tool refuses to (deleted worktree)",

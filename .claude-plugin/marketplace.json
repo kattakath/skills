@@ -389,7 +389,7 @@
     },
     {
       "name": "mcp-utilities",
-      "description": "The four keyless, domain-free MCP servers the retired fleet gateway carried: a persistent knowledge graph, a sequential-reasoning scaffold, Terraform registry lookup, and cross-registry MCP server discovery. No credentials, no account, nothing to configure.",
+      "description": "Two keyless, account-free MCP servers: a persistent knowledge graph (memory, stored under XDG data, not the npx cache) and a sequential-reasoning scaffold. Both pinned; nothing to configure.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -398,9 +398,7 @@
         "mcp",
         "memory",
         "knowledge-graph",
-        "reasoning",
-        "terraform",
-        "discovery"
+        "reasoning"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mcp-utilities",
       "license": "MIT",
