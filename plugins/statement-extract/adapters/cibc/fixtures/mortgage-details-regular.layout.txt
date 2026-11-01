@@ -1,0 +1,62 @@
+MORTGAGE DETAILS
+  Review the following in the "Help" sections that apply for a full overview here of your mortgage loan details, annual summary or
+  tax details.
+
+  For an explanation of any items seen on this page, select the question mark icon in the top right corner of the page.
+
+  Mortgage information available online covers the most recent on for mortgage discharge or prepayment requests.
+
+
+
+
+ 1 SAMPLE STREET (000012345.6) $245,678.90                                          Account Overview
+
+
+
+
+Home:    Mortgage Loan – Details
+
+
+
+  Mortgage Loan                Next Payment             Payment Frequency            Payment Amount               Interest Rate
+  Balance                      Date                     Monthly                      $1,956.78                    2.45% Variable
+  $245,678.90                  May 1, 2022
+
+
+  Maturity Date: April 1, 2027                                          Remaining Prepayment Privilege Amount at today
+  Maturity Balance: $201,234.56                                         Prepayment of: $49,135.78
+  Remaining Amortization: 23 Years 4 Months
+  Principal and Interest Amount: $1,623.45
+  Tax Payment: $333.33
+
+
+
+  MORTGAGE LOAN – PAYMENT HISTORY
+
+
+  Payment Date:                                             Apr 1, 2022              Mar 1, 2022               Feb 1, 2022         Jan 1, 2022   Dec 1, 2021
+
+
+
+  Principal Paid:                                             $1,120.11                 $1,118.00                $1,115.90          $1,113.81     $1,111.72
+
+
+
+  Interest Paid:                                                $503.34                   $505.45                   $507.55           $509.64       $511.73
+
+
+
+  Taxes Paid:                                                   $333.33                   $333.33                   $333.33           $333.33       $333.33
+
+
+
+  Total Paid:                                                 $1,956.78                 $1,956.78                $1,956.78          $1,956.78     $1,956.78
+
+
+
+
+Note:
+     The "Payment Date" reflects the date your payment was applied to your mortgage loan.
+     For information on tax installments, refer to the information on the Tax Information screen.
+     Mortgage loans are provided by CIBC Mortgages Inc.
+

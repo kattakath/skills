@@ -1,0 +1,36 @@
+# National Student Loans Service Centre (NSLSC): the "LOAN STATEMENT" PDF for a Canada
+# (integrated) student loan. It carries real dated rows with a running Principal Balance, so it
+# emits a STATEMENT with its transactions, AND a `position` snapshot as of the period end
+# (principal outstanding plus the interest outstanding the statement prints as a pseudo-row).
+institution = "NSLSC"
+format = "pdftext"
+description = "NSLSC student loan statement PDF (transactions + position snapshot)"
+
+[identify]
+text = ['National Student Loans Service Centre', '^LOAN STATEMENT\s',
+        'Loan Account Number:', '^\s*Date\s+Transaction Type\s+Principal\s+Interest']
+
+[position]
+kind = "loan"
+
+[keys]
+# No FITID in a PDF. Content key: NSLSC|••1234|<date>|<amount>|<text>|<n>.
+scheme = "content-occurrence/1"
+
+[reconcile]
+minimum = "proven"   # statements only; the position is structural (a snapshot is never proven)
+proves = true        # every row's printed Principal Balance chains from Opening to Closing
+
+# {AMT} -> pdfkit.AMOUNT, {DATE} -> pdfkit.LONG_DATE.
+[grammar]
+account = 'Loan Account Number:\s*\n\s*(\d[\d-]{4,}\d)\s*$'
+period = 'Statement Period:\s*{DATE} to {DATE}'
+# The column heading block, repeated at the top of every page.
+header = '^\s*Date\s+Transaction Type\s+Principal\s+Interest\s*$'
+page_header = '^National Student Loans Service Centre\s*$|^\s*Transaction\s+Principal\s*$|^\s*Amount\s+Balance\s*$'
+# A row's date: month and day on one line, the year on the same line or the line below.
+month_day = '^([A-Z][a-z]+) (\d{1,2}),(?:\s+(\d{4}))?'
+year = '^(\d{4})\b'
+opening_row = '^Opening Balance$'
+closing_row = '^Closing Balance$'
+interest_row = '^Interest Outstanding at Statement End Date$'

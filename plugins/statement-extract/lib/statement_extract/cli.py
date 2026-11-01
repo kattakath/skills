@@ -94,7 +94,15 @@ def cmd_extract(a, log: RunLog) -> int:
                          **{"statement.id": s["statement_id"], "check.name": c["name"],
                             "check.ok": c["ok"], "check.expected": c.get("expected"),
                             "check.actual": c.get("actual")})
+        for s in res.positions:
+            for c in s["reconcile"]["checks"]:
+                log.emit("check.result", "INFO" if c["ok"] else "ERROR",
+                         **{"position.id": s["position_id"], "check.name": c["name"],
+                            "check.ok": c["ok"], "check.expected": c.get("expected"),
+                            "check.actual": c.get("actual")})
         entry.update(adapter=res.adapter.id, repairs=res.repairs, statements=res.statements)
+        if res.positions:
+            entry["positions"] = res.positions
         report_files.append(entry)
         results.append(res)
 
@@ -102,13 +110,14 @@ def cmd_extract(a, log: RunLog) -> int:
         engine.one_source_per_period(results)
         engine.chain(results)
         kept = engine.dedupe(results, seen)
+        positions = engine.dedupe_positions(results)
     except Refusal as e:
         log.emit("refusal", "ERROR", **{"exit.code": int(e.code), "reason": e.reason})
         _err(_refusal_line(e))
         _write_report(a, report_files, int(e.code))
         return int(e.code)
 
-    records = engine.order([s for r in results for s in r.statements], kept)
+    records = engine.order([s for r in results for s in r.statements], kept, positions)
     hits = engine.leak_scan(records)
     if hits:
         log.emit("refusal", "ERROR", **{"exit.code": int(Exit.LEAK), "reason": "leak gate",
@@ -119,6 +128,12 @@ def cmd_extract(a, log: RunLog) -> int:
         return int(Exit.LEAK)
 
     for s in records:
+        if s["record"] == "position":
+            # Field COUNTS only: a position is all figures, so none of them reach stderr.
+            _err(f"{s['institution']} {s['account']['ref']} {s['as_of']} | "
+                 f"{s['reconcile']['status']} | position ({s['account']['kind']}): "
+                 f"{len(s['balances'])} balances, {len(s['terms'])} terms")
+            continue
         if s["record"] != "statement":
             break
         c = s["counts"]
@@ -141,7 +156,9 @@ def cmd_extract(a, log: RunLog) -> int:
     if a.emit_seen:
         append_seen(seen_path, [r["key"] for r in records if r["record"] == "transaction"])
     manifest.append(man_path, [{"sha256": r.sha256, "adapter": r.adapter.id,
-                                "statements": len(r.statements)} for r in results])
+                                "statements": len(r.statements),
+                                **({"positions": len(r.positions)} if r.positions else {})}
+                               for r in results])
     code = Exit.PARTIAL if refused else Exit.OK
     if refused and not results:
         code = refused[0].code
@@ -191,6 +208,10 @@ def cmd_explain(a, log) -> int:
             c.update(repairs=res.repairs, statements=[
                 {k: s[k] for k in ("statement_id", "account", "period", "balances", "reconcile",
                                    "counts")} for s in res.statements])
+            if res.positions:
+                c["positions"] = [{k: s[k] for k in ("position_id", "account", "as_of",
+                                                     "as_of_basis", "balances", "terms",
+                                                     "reconcile")} for s in res.positions]
         except Refusal as e:
             c["refusal"] = {"exit": int(e.code), "reason": e.reason, **e.detail}
         out["candidates"].append(c)
@@ -262,7 +283,10 @@ def cmd_corpus(a, log) -> int:
             res = engine.run_file(p, raw, sha, adapters, accts, None)
             now[sha] = {"adapter": res.adapter.id, "statements": len(res.statements),
                         "transactions": len(res.transactions),
-                        "status": sorted({s["reconcile"]["status"] for s in res.statements})}
+                        "status": sorted({s["reconcile"]["status"]
+                                          for s in res.statements + res.positions})}
+            if res.positions:  # only when present, so an existing lock does not drift
+                now[sha]["positions"] = len(res.positions)
         except Refusal as e:
             now[sha] = {"refused": int(e.code)}
     lock = Path(a.lock)

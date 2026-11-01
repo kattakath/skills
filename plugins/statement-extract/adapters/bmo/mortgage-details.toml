@@ -1,0 +1,42 @@
+# BMO mortgage, the online banking "Mortgage Details" page saved as a PDF (one page).
+# A balance SNAPSHOT, not a statement: it emits one `position` record and no transactions.
+# The page says its figures are "effective for the previous business day" but prints no date.
+# The only cycle date it prints is the Next Payment Date, so that is as_of
+# (as_of_basis = "next_payment_date"): the balance stands until that payment.
+institution = "BMO"
+format = "pdftext"
+description = "BMO mortgage, online Mortgage Details page (position snapshot)"
+
+[identify]
+text = ['^Mortgage Details', '^\s*Current Balance:\s+\$', 'BMO Prime Rate:',
+        '^\s*Total Mortgage Payment:', '^\s*Next Payment Date:']
+
+[position]
+kind = "mortgage"
+
+[keys]
+# Required by every adapter; unused, because a position page carries no rows.
+scheme = "content-occurrence/1"
+
+[reconcile]
+minimum = "structural"
+
+# {AMT} -> pdfkit.AMOUNT, {RATE} -> pdfkit.RATE, {DATE} -> pdfkit.LONG_DATE.
+[grammar]
+# The mortgage number stands alone on the line below the title.
+account = '^Mortgage Details\s*\n\s*(\d{7,})\s*$'
+balance = '^\s*Current Balance:\s+({AMT})'
+original = '^\s*Original Amount:\s+({AMT})'
+# The prime rate wraps below its label (the property address holds the label's line).
+prime = 'BMO Prime Rate:[^\n]*\n\s*({RATE})%'
+spread = '^\s*(?:\S.*?)?\s([A-Z][a-z]+) from BMO Prime:\s*(-?{RATE})%'
+rate = 'Current Interest Rate:\s*({RATE})%'
+term = '^\s*Term:\s+(\d+) months?'
+payment = '^\s*Total Mortgage Payment:\s+({AMT})'
+principal_interest = '^\s*Principal & Interest:\s+({AMT})'
+tax = '^\s*Property Tax:\s+({AMT})'
+frequency = '^\s*Payment Frequency:\s+(\S.*?)\s*$'
+next_payment = '^\s*Next Payment Date:\s+{DATE}'
+renewal = '^\s*Renewal Date:\s+{DATE}'
+amortization_end = '^\s*Original Amortization Date:\s+([A-Z][a-z]+) (\d{4})'
+lump_sum_ytd = '^\s*Year to Date Lump Sum Payments:\s+({AMT})'
