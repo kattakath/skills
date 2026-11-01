@@ -192,6 +192,27 @@ class Coverage(unittest.TestCase):
         self.assertEqual(a["balance_breaks"][0]["next_opening"], "-15.00")
         self.assertEqual(a["date_holes"][0]["days"], 28)
 
+    def test_break_checked_without_start_dates(self):
+        a = self.stmt("a1", None, "2026-01-31", "0.00", "-10.00")
+        b = self.stmt("a2", None, "2026-02-28", "-15.00", "-20.00")
+        code, c = self.run_cov([a, b])
+        self.assertEqual((code, c["balance_breaks"], c["accounts"][0]["periods_without_start"]),
+                         (3, 1, 2))
+
+    def test_second_source_for_same_dates_fails(self):
+        q = self.stmt("q", "2026-01-01", "2026-01-31", "0.00", "-10.00")
+        p = self.stmt("p", "2026-01-01", "2026-01-31", "0.00", "-10.00")
+        t = lambda sid, k, d, amt: scenario.txn(sid, "Bank", "••0002", "CAD", k, d, amt, "TIM")
+        code, c = self.run_cov([q, p, t("q", "FIT1", "2026-01-05", "-2.00"),
+                                t("q", "FIT2", "2026-01-05", "-2.00"),
+                                t("p", "2026-01-05|-2.00|TIM|1", "2026-01-05", "-2.00")])
+        self.assertEqual((code, c["doubled_rows"]), (3, 1))
+        # one statement with two identical charges, plus a same-Key re-export: not doubled
+        code, c = self.run_cov([q, p, t("q", "FIT1", "2026-01-05", "-2.00"),
+                                t("q", "FIT2", "2026-01-05", "-2.00"),
+                                t("p", "FIT1", "2026-01-05", "-2.00")])
+        self.assertEqual((code, c["doubled_rows"]), (0, 0))
+
     def test_overlap_counted_once_lookalike_listed_conflict_fails(self):
         s = self.stmt("a1", "2026-01-01", "2026-01-31", "0.00", "-10.00")
         t = lambda k, amt: scenario.txn("a1", "Bank", "••0002", "CAD", k, "2026-01-05", amt, "TIM")

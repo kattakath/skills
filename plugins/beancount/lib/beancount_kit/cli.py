@@ -2,7 +2,7 @@
 
   build   JSONL... --ledger L --rules R [--decisions D] [--accounts A] [--out J | --check-only]
           [--emit-rows F] [--emit-pairs F]
-  coverage JSONL... [--json]          no gaps, no double counting (exit 3 on a break/conflict)
+  coverage JSONL... [--json]          no gaps, no double counting (exit 3: break/conflict/doubled)
   groups  [--journal J] [--out F]   flagged entries grouped by merchant, with a rule pattern
   suggest [--journal J] [--out F | --evaluate]   category suggestions for flagged entries
   fava    start | stop | status   [--journal J]
@@ -99,7 +99,8 @@ def coverage_cmd(a) -> int:
         print(json.dumps(c, ensure_ascii=False))
     else:
         cv.report(c, sys.stdout)
-    return int(Exit.REFUSED) if c["balance_breaks"] or c["key_conflicts"] else 0
+    return int(Exit.REFUSED) if c["balance_breaks"] or c["key_conflicts"] or c["doubled_rows"] \
+        else 0
 
 
 def groups_cmd(a) -> int:
