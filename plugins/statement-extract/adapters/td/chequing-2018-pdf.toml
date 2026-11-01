@@ -1,0 +1,44 @@
+# TD chequing, the 2018 print of the "Statement of Account" PDF. Same table as chequing-pdf
+# (Description | Withdrawals | Deposits | Date | Balance) and the same hook, but the headings
+# are UPPERCASE, the list opens with "BALANCE FORWARD", a deposit amount can sit one space from
+# its date, the totals are bare amounts with no label (a zero total prints as ".00"), and a
+# page that continues the list opens with its own BALANCE FORWARD and closes with its own
+# totals. Measured on 3 real statements (May-July 2018, one of them two pages), shapes only.
+institution = "TD"
+format = "pdftext"
+description = "TD chequing monthly PDF statement, 2018 print (UPPERCASE headings)"
+hook = "chequing-pdf.py"
+
+[identify]
+# The UPPERCASE column row is what tells this print apart: chequing-pdf's marker is the
+# mixed-case row and is case-sensitive, so exactly one of the two claims any file.
+text = ['Statement of Account', 'Branch No\.\s+Account No\.',
+        'DESCRIPTION\s+WITHDRAWALS\s+DEPOSITS\s+DATE\s+BALANCE',
+        '(?i)Toronto-Dominion Bank']
+
+[keys]
+# No FITID in the PDF. Content key, the same scheme as chequing-pdf: TD|••1234|<date>|<amount>|<text>|<n>.
+scheme = "content-occurrence/1"
+
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # direction from the column; every printed balance chains, every page's
+                # column totals tie, and each continuation page opens with the carried balance
+
+[grammar]
+amt = '\d{1,3}(?:,\d{3})*\.\d{2}'
+date = '(?P<mon>[A-Z]{3})\s?(?P<day>\d{1,2})'
+header = '^\s*DESCRIPTION\s+WITHDRAWALS\s+DEPOSITS\s+DATE\s+BALANCE\s*$'
+withdrawals = 'WITHDRAWALS'
+deposits = 'DEPOSITS'
+opening = '^\s*(?P<desc>BALANCE FORWARD)\s{2,}{DATE}\s{2,}(?P<bal>{AMT}(?:\s?OD)?)\s*$'
+# One space is enough between an amount and its date: the Deposits column runs up to it.
+txn = '^\s*(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s+{DATE}(?:\s{2,}(?P<bal>{AMT}(?:\s?OD)?))?\s*$'
+# The totals: one or two bare amounts, nothing else on the line. A zero total is ".00".
+total_amt = '(?:\d{1,3}(?:,\d{3})*)?\.\d{2}'
+total = '^\s*(?P<rest>(?:\d{1,3}(?:,\d{3})*)?\.\d{2}(?:\s+(?:\d{1,3}(?:,\d{3})*)?\.\d{2})?)\s*$'
+period = '([A-Z]{3}) (\d{1,2})/(\d{2}) - ([A-Z]{3}) (\d{1,2})/(\d{2})'
+account = 'Branch No\.\s+Account No\.[^\n]*\n(?:[^\n]*\n){0,3}?\s*\d{4}\s+(\d{4}-\d{7})\b'

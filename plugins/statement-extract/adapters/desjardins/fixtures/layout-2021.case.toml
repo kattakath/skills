@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2021 print: a Transaction Number column (kept out of the description), Credit Charges split into purchase and cash-advance interest lines, a CR new balance, and an Accord D financing section that is not read"
+exit = 0
+pdf_smoke = true
