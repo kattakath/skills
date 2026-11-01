@@ -112,7 +112,7 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
             # The statement header prints the real account: an override that disagrees with it
             # is a wrong accounts entry, and would key the rows to someone else's account.
             head = d.acctid.strip()[-4:]
-            d.checks.append(Check("header_last4", head == acct.last4,
+            d.checks.append(Check("header_last4", acct.header_matches(head),
                                   expected=f"••{acct.last4} (accounts file)",
                                   actual=f"••{head} (statement header)"))
         if scheme == keys.NATIVE_ID_TS:
