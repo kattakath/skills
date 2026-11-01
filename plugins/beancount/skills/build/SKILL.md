@@ -30,7 +30,8 @@ columns are documented at the top of `lib/beancount_kit/rules.py` and `inputs.py
 ```bash
 KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 "$KIT" build <jsonl files or folders>... --ledger ledger.toml --rules rules.csv \
-  --decisions decisions.csv [--accounts accounts.toml] --out "$BEANCOUNT_JOURNAL"
+  --decisions decisions.csv [--accounts accounts.toml] [--budgets budgets.csv] \
+  [--statements <folder>] --out "$BEANCOUNT_JOURNAL"
 ```
 
 - `--check-only` builds and checks without writing.
@@ -49,7 +50,25 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `rows_dropped_overlap` | rows a lower-ranked source (a PDF) printed on days a bank export already covers; each file is listed as `overlap:`. Their statement closings are still asserted |
 | `bridges` | holes bridged by a labelled `Equity:Gaps` pad, each listed as `gap bridged:` with its date range |
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
+| `budgets` / `queries` / `documents` | Fava budgets, saved queries and statement links written (see below) |
+| `documents_missing` | statements with no matching file under `--statements` (by name **and** sha256) |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
+
+## Fava features, derived each build
+
+The journal is rebuilt every time, so nothing is typed into it. Each feature has one home:
+
+| Feature | Home | Written as |
+|---|---|---|
+| Fava options | `ledger.toml` `[fava]`, e.g. `default-page = "income_statement"` | `custom "fava-option" "<key>" "<value>"` |
+| Saved queries (Query tab) | generic ones in `lib/beancount_kit/queries.toml`; personal ones in `ledger.toml` `[[query]]` `name` + `sql`; a personal query of the same name replaces a generic one | `query "<name>" "<sql>"` |
+| Budgets | a CSV with `from, account, period, amount[, currency]` (`--budgets`); period is daily, weekly, monthly, quarterly or yearly; a row with no amount is skipped | `custom "budget" <account> "<period>" <amount> <cur>` |
+| Statement PDFs | `--statements <folder>`: each statement links to the file its extract recorded, matched by name **and** sha256 | `document <account> "<absolute path>"` at the statement's closing date |
+
+Every categorised entry also carries `rule: "<priority>"`, the Category rules row that decided
+it (absent when a decision row did). The generic "Rows by rule" query groups by it.
+Measured 2026-11-01 (Fava 1.30): a journal with all four loads with 0 errors, including paths
+that contain spaces.
 
 ## Drop every statement in: survivorship
 

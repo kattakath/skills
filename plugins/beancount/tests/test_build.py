@@ -288,6 +288,78 @@ class Build(unittest.TestCase):
                       '  gap: "not recorded: 2025-07-01 to 2026-01-02 (186 days)"', text)
 
 
+class FavaFeatures(unittest.TestCase):
+    """[fava] options, saved queries, budgets and statement documents, all derived each build."""
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.d = Path(self.tmp.name)
+        self.files = scenario.write(self.d)
+        self.out = self.d / "main.beancount"
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def build(self, *extra):
+        argv = ["build", *(str(f) for f in self.files.values()), "--ledger", str(self.d / "ledger.toml"),
+                "--rules", str(self.d / "rules.csv"), "--decisions", str(self.d / "decisions.csv"),
+                "--out", str(self.out), *extra]
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = main(argv)
+        return code, err.getvalue()
+
+    def test_options_and_queries_are_written_and_a_personal_query_overrides(self):
+        led = self.d / "ledger.toml"
+        led.write_text(led.read_text() + '\n[fava]\ndefault-page = "income_statement"\n'
+                       'show-closed-accounts = false\n\n[[query]]\nname = "Review queue"\n'
+                       'sql = "SELECT date WHERE flag = \'!\'"\n\n[[query]]\nname = "Mine"\n'
+                       'sql = "SELECT account"\n')
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        text = self.out.read_text(encoding="utf-8")
+        self.assertIn('custom "fava-option" "default-page" "income_statement"', text)
+        self.assertIn('custom "fava-option" "show-closed-accounts" "false"', text)
+        self.assertIn('query "Mine" "SELECT account"', text)
+        self.assertIn('query "Review queue" "SELECT date WHERE flag = \'!\'"', text)
+        self.assertEqual(text.count('query "Review queue"'), 1)
+
+    def test_budgets_are_written_and_a_bad_row_refuses(self):
+        b = self.d / "budgets.csv"
+        b.write_text("from,account,period,amount\n2026-01-01,Expenses:Food-And-Drink:Groceries,monthly,400\n"
+                     "2026-01-01,Expenses:Unbudgeted,monthly,\n")
+        code, err = self.build("--budgets", str(b))
+        self.assertEqual(code, 0, err)
+        self.assertIn('2026-01-01 custom "budget" Expenses:Food-And-Drink:Groceries "monthly" 400 CAD',
+                      self.out.read_text(encoding="utf-8"))
+        self.assertEqual(json.loads(next(l for l in err.splitlines() if l.startswith("{")))["budgets"], 1)
+        b.write_text("from,account,period,amount\n2026-01-01,Expenses:X,fortnightly,10\n")
+        code, err = self.build("--budgets", str(b))
+        self.assertEqual(code, 2, err)
+
+    def test_each_statement_links_to_its_file_by_sha256(self):
+        import hashlib
+        st = self.d / "statements"; st.mkdir()
+        recs = [json.loads(l) for l in self.files["card-a"].read_text().splitlines()]
+        body = b"%PDF-1.4 card statement"
+        recs[0]["source"] = dict(recs[0]["source"], file="card.pdf",
+                                 sha256=hashlib.sha256(body).hexdigest())
+        self.files["card-a"].write_text("".join(json.dumps(r) + "\n" for r in recs))
+        (st / "card.pdf").write_bytes(body)
+        (st / "decoy").mkdir(); (st / "decoy" / "card.pdf").write_bytes(b"%PDF-1.4 other bytes")
+        code, err = self.build("--statements", str(st))
+        self.assertEqual(code, 0, err)
+        text = self.out.read_text(encoding="utf-8")
+        self.assertIn(f'document Liabilities:Bank:Card-0002 "{(st / "card.pdf").resolve()}"', text)
+        self.assertNotIn("decoy", text)
+        rep = json.loads(next(l for l in err.splitlines() if l.startswith("{")))
+        self.assertEqual(rep["documents"], 1)
+        self.assertGreater(rep["documents_missing"], 0)   # the scenario's other statements have no file
+
+    def test_rule_provenance_is_on_ruled_entries(self):
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        self.assertIn('  rule: "', self.out.read_text(encoding="utf-8"))
+
 class Coverage(unittest.TestCase):
     def stmt(self, sid, start, end, opening, closing):
         s = scenario.stmt(sid, "Bank", "••0002", "card", "CAD", closing, end)
