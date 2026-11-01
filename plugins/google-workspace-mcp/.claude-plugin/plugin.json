@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "google-workspace-mcp",
+  "version": "1.0.0",
   "description": "Google Workspace as one stdio MCP server (workspace-mcp, pinned): Google Tasks by default, any other service opt-in. Credentials come from a credential command you name, then the environment, then a prompt, so a secret held elsewhere is never copied.",
   "author": {
     "name": "Ismail Kattakath"

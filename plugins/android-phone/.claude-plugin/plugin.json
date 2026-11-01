@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "android-phone",
+  "version": "1.0.0",
   "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring.",
   "author": {
     "name": "Ismail Kattakath"

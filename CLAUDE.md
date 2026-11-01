@@ -36,9 +36,8 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
   [`google-workspace-mcp`](plugins/google-workspace-mcp). A plugin that still names a bare
   launcher BINARY depends on a PATH package from nix-config (`local.pluginMcp`), so it
   works only on that fleet.
-- **Plugins here carry no `version` field: every commit on `main` is a new release**,
-  shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
-  on what merges to `main` — see § Shipping a change.
+- **Every plugin carries a semver `version` in its `plugin.json`, and CI forces it up on
+  every change** (§ Versioning). A merge to `main` is the release; auto-update ships it.
 
 ## Adding a plugin — a single skill is a plugin too
 
@@ -55,7 +54,7 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
    measured 2026-10-06, it is a **warning with exit 0**, and the validator even suggests the field
    you probably meant ("did you mean 'workflows'?"). Claude Code ignores unrecognised fields at load
    time. So do not avoid a legitimate new manifest field out of fear of the gate — but equally, do
-   not trust the gate to catch a typo'd one. And there is no `version` (see § Never add a `version`).
+   not trust the gate to catch a typo'd one. Start `version` at `1.0.0` (§ Versioning).
 4. Write `README.md` — **every plugin has one** (all 25, since #40). It is the page a reader
    lands on from the marketplace: what the plugin ships, the non-obvious facts and
    measurements it exists to carry, and what it requires. Source it from the `SKILL.md`;
@@ -105,8 +104,8 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
 - Branch off `main`, open a PR. `auto-merge.yml` arms squash-auto-merge on same-repo PRs
   (never forks) the moment they leave draft; `validate` is the required check that actually
   gates the merge.
-- Because there's no `version` field, a merge to `main` **is** the release — treat `main`
-  accordingly. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
+- A merge to `main` **is** the release — treat `main` accordingly. Bump the `version` of
+  every plugin the PR touches, or `validate` goes red. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
 - Fork PRs land un-armed on purpose — a human merges those after review.
 - **A merge is released, not delivered.** An installed copy moves only when Claude Code
   refreshes the marketplace on its own schedule. `/reload-plugins` re-reads the **local cache**
@@ -116,36 +115,30 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
   `claude plugin update <name>@kattakath`, then `/reload-plugins`. Verify by behaviour (or
   the cache dir a hook runs from), not by the merge.
 
-### Never add a `version` to fix the validate warnings
+### Versioning
 
-`claude plugin validate .` reports a warning per plugin for the missing `version`. **That
-warning is advisory and the answer is to leave it alone.** Omitting `version` is one of the
-two release models Anthropic documents, and it is the one this repo chose deliberately
-(`6dd2083`). Adding a version silently disables shipping:
+**Each `plugins/<name>/.claude-plugin/plugin.json` carries a semver `version`; the marketplace
+entry never does.** Operator ruling 2026-11-01, overturning the versionless model this section
+used to defend. That model's measured risk was real: with a `version` set, users stay on their
+cached copy **until the string changes**, so a push without a bump makes `claude plugin update`
+report `already at the latest version` while serving stale files — silent and unbounded
+(measured 2026-09-30). The answer now is a gate rather than no version at all:
 
-- With no `version`, the version Claude Code computes is the **repo HEAD commit SHA**, so
-  every merge to `main` is a new version that reaches users. Measured 2026-09-30: a hosted
-  install of `harvest` (then still a `source: "./"` entry) and `page-lab` (a `./plugins/*`
-  entry) both resolved to `908b76075a61`, exactly `origin/main`.
-- With a `version` set, users stay on their cached copy **until the string changes**. Push
-  content without bumping and `claude plugin update` reports
-  `<name> is already at the latest version (1.0.0)` and `"updateOutcome":"up_to_date"` while
-  serving stale files. Measured the same day: two generations of drift, reported as success.
-  There is no drift signal — the failure is silent and unbounded.
-- The cost is per entry, and there are 25 of them — 25 `plugin.json` strings to bump on
-  every commit that touches a shared file, each miss a silent freeze.
-- If a version is ever set, set it in **one** place. `plugin.json` wins over the marketplace
-  entry at install time (`calculatePluginVersion` precedence) and the entry value is ignored
-  without warning; `claude plugin validate` reports the mismatch, and `claude plugin tag`
-  refuses to tag until they agree.
+- **`Plugin version bumped`** (`scripts/check-version-bump.py`, in `validate`) fails a PR that
+  changes anything under `plugins/<name>/` unless that plugin's version rises. New plugins need
+  only a valid `MAJOR.MINOR.PATCH`. It also fails if a marketplace entry grows a `version`:
+  `plugin.json` wins over the entry at install time and the entry is ignored without warning.
+- **`release-tags`** runs on every merge to `main` and gives each new version a
+  `<plugin>--v<version>` tag via Claude Code's own `claude plugin tag`. A dependency's version
+  RANGE (`{"name": "x", "version": "^1.2"}`) resolves against those tags, not `plugin.json`.
+- Bump by impact: PATCH for fixes and docs, MINOR for new capability, MAJOR when a caller must
+  change (a renamed skill, tool or setting).
 
-Upstream precedent for versionless: `anthropics/skills`, whose `source: "./"` layout this
-repo copied until #31, sets no version on any of its entries either.
-
-One property to keep in mind rather than fix: the computed version is the **repo HEAD** SHA,
-not a per-directory one, so any commit revs all 25 entries. Since #31 each entry copies only
-its own `plugins/<name>` subtree rather than the whole repo (~1.7 MB), so the re-copy is now
-proportional to the plugin. Superseded versions are swept 14 days after replacement.
+What the versionless model bought, and why it no longer wins: every merge reached users with
+no bookkeeping, at the cost of every commit revving all plugins (the computed version was the
+repo HEAD SHA) and no way to name a release a dependency could rely on. Upstream precedent
+cuts both ways (`anthropics/skills` is versionless; `claude plugin tag` exists for the
+versioned model).
 
 ## Conventions
 

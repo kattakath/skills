@@ -1,6 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "brain-signals",
+  "version": "1.0.0",
   "description": "An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution.",
   "author": {
     "name": "Ismail Kattakath"

@@ -1,8 +1,8 @@
 name: validate
 
-# Every commit on main is a release: plugins here carry no `version`, so Claude
-# Code treats each commit SHA as a new version and auto-update ships it. This is
-# the gate in front of that.
+# A merge to main is a release: each plugin carries a semver `version` that the
+# `Plugin version bumped` step forces up on every change, and auto-update ships it.
+# This is the gate in front of that.
 #
 # Manifest/schema validation is delegated to Anthropic's own reusable action —
 # anthropics/claude-plugins-community/.github/actions/validate-plugins, "designed
@@ -218,6 +218,16 @@ jobs:
           python3 -m venv /tmp/bk
           /tmp/bk/bin/pip install -q beancount==3.2.3 beanquery==0.2.0 smart-importer==1.2
           PYTHON=/tmp/bk/bin/python bash plugins/beancount/tests/run.sh
+
+      # Plugins carry a semver `version`; an installed copy updates only when it changes.
+      # A plugin change without a bump would therefore reach nobody, silently. This makes it red.
+      - name: Plugin version bumped
+        if: github.event_name == 'pull_request'
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          python3 -I scripts/check-version-bump.py --self-test
+          python3 -I scripts/check-version-bump.py "origin/$BASE_REF"
 
       # An unpinned `npx -y foo` / `uvx foo` ships whatever the registry serves today to
       # every user, with no PR here. Dependabot cannot see these specs (it reads manifests,
