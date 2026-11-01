@@ -6,6 +6,9 @@
   pfc crosswalk V1_NAME [...]                                           identical | renamed | split
   pfc schema [category|txn|evidence|suggestion]                         JSON Schema (draft 2020-12)
   pfc refresh [--from CSV] [--write] [--accept-removals]                re-pin from Plaid's CSV
+  pfc merchant PAYEE [MEMO]                                             the merchant key a decision applies to
+  pfc suggest --history H.jsonl --input T.jsonl                         Suggestion JSONL from own history
+  pfc eval --history H.jsonl [--json] [--show]                          accuracy on held-out rows (counts)
 
 Exit codes: 0 ok · 2 usage · 3 refused (an unknown name, or a refresh that removes names).
 """
@@ -15,7 +18,7 @@ import json
 import sys
 from pathlib import Path
 
-from . import models, refresh as rf, taxonomy
+from . import evaluate, history, merchant, models, refresh as rf, taxonomy
 
 OK, USAGE, REFUSED = 0, 2, 3
 
@@ -101,6 +104,38 @@ def cmd_refresh(a) -> int:
     return OK
 
 
+def cmd_merchant(a) -> int:
+    print(merchant.key(a.payee, a.memo))
+    return OK
+
+
+def _provisional(a):
+    return None if a.no_provisional else a.provisional
+
+
+def cmd_suggest(a) -> int:
+    idx = history.Index(history.read(a.history), _provisional(a))
+    n = hit = 0
+    with open(a.input, encoding="utf-8") as fh:
+        for line in fh:
+            if not line.strip():
+                continue
+            t = json.loads(line)
+            n += 1
+            s = idx.suggest(t["key"], t.get("payee") or t.get("description", ""), t.get("memo", ""))
+            if s:
+                hit += 1
+                print(json.dumps(s.to_dict(), ensure_ascii=False))
+    print(f"pfc: {hit} of {n} rows have a suggestion", file=sys.stderr)
+    return OK
+
+
+def cmd_eval(a) -> int:
+    r = evaluate.score(history.read(a.history), _provisional(a), show=a.show)
+    print(json.dumps(r, indent=2) if a.json else evaluate.table(r))
+    return OK
+
+
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="pfc", description=__doc__.splitlines()[0])
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -115,9 +150,21 @@ def main(argv=None) -> int:
     r = sub.add_parser("refresh"); r.add_argument("--from", dest="src")
     r.add_argument("--write", action="store_true"); r.add_argument("--accept-removals", action="store_true")
     r.add_argument("--fetched", help="override the fetch date (tests, reproducible pins)")
+    m = sub.add_parser("merchant"); m.add_argument("payee"); m.add_argument("memo", nargs="?", default="")
+    for name in ("suggest", "eval"):
+        x = sub.add_parser(name); x.add_argument("--history", required=True)
+        x.add_argument("--provisional", default=history.DEFAULT_PROVISIONAL,
+                       help="regex on a label's note marking it a guess (weight 0.5, never scored)")
+        x.add_argument("--no-provisional", action="store_true")
+        if name == "suggest":
+            x.add_argument("--input", required=True)
+        else:
+            x.add_argument("--json", action="store_true")
+            x.add_argument("--show", action="store_true", help="list misses (contains row text)")
     try:
         a = p.parse_args(argv)
     except SystemExit as e:
         return USAGE if e.code else OK
     return {"validate": cmd_validate, "describe": cmd_describe, "list": cmd_list,
-            "crosswalk": cmd_crosswalk, "schema": cmd_schema, "refresh": cmd_refresh}[a.cmd](a)
+            "crosswalk": cmd_crosswalk, "schema": cmd_schema, "refresh": cmd_refresh,
+            "merchant": cmd_merchant, "suggest": cmd_suggest, "eval": cmd_eval}[a.cmd](a)

@@ -73,6 +73,19 @@ Rejected: matching rows across sources by a date window and amount (beangulp
 one day and a fuzzy matcher merges them; beancount-import also edits the journal, which here is
 derived.
 
+## Labelled history for plaid-pfc (`history`)
+
+```bash
+"$KIT" history <jsonl...> --ledger L --rules R --decisions D --out "$(dirname "$BEANCOUNT_JOURNAL")/history.jsonl"
+```
+
+- **What it writes:** one row per transaction, with its category and where the label came from:
+  - `decision` (a Review decisions row);
+  - `rule` (`ref` = the rule's priority, `note` = the rule's note);
+  - `none`.
+- **What reads it:** `plaid-pfc`'s `suggest` and `eval`.
+- **It carries row text:** keep it beside the journal, never in a repository.
+
 ## No gaps, no double counting (`coverage`)
 
 ```bash

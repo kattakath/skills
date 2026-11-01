@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 
-from plaid_pfc import models, refresh, taxonomy  # noqa: E402
+from plaid_pfc import evaluate, history, merchant, models, refresh, taxonomy  # noqa: E402
 from plaid_pfc.cli import main  # noqa: E402
 
 CSV = (
@@ -112,6 +112,70 @@ class Refresh(unittest.TestCase):
     def test_refresh_of_the_pinned_source_changes_nothing(self):
         p = taxonomy.pinned()
         self.assertEqual(refresh.diff(p, p), {"added": [], "removed": [], "redescribed": []})
+
+
+class Merchant(unittest.TestCase):
+    def test_golden_vectors(self):
+        vec = json.loads((taxonomy.DATA / "merchant-vectors.json").read_text())["vectors"]
+        self.assertGreaterEqual(len(vec), 10)
+        for v in vec:
+            self.assertEqual(merchant.key(v["payee"], v["memo"]), v["key"], v)
+
+
+def H(key, payee, cat, source="rule", note=""):
+    return history.History(key=key, payee=payee, memo="", category=cat, source=source, note=note)
+
+
+class History(unittest.TestCase):
+    def test_votes_weighted_by_label_source(self):
+        rows = [H("a", "TIM HORTONS #1", "FOOD_AND_DRINK_COFFEE", "decision"),
+                H("b", "TIM HORTONS #2", "FOOD_AND_DRINK_FAST_FOOD", "rule"),
+                H("c", "TIM HORTONS #3", "FOOD_AND_DRINK_FAST_FOOD", "rule", note="auto 2026 guess"),
+                H("d", "TIM HORTONS #4", "NEEDS_REVIEW", "none")]
+        s = history.Index(rows).suggest("x", "TIM HORTONS #9 TORONTO")
+        # coffee 2.0 vs fast food 1.0 + 0.5 (provisional): coffee wins with 2/3.5
+        self.assertEqual((s.category, s.confidence, s.method), ("FOOD_AND_DRINK_COFFEE", 0.5714, "history-exact"))
+        self.assertEqual([e.ref for e in s.evidence], ["a"])
+
+    def test_unseen_merchant_gets_no_suggestion(self):
+        idx = history.Index([H("a", "TIM HORTONS", "FOOD_AND_DRINK_COFFEE")])
+        self.assertIsNone(idx.suggest("x", "SECOND CUP"))
+        self.assertIsNone(idx.suggest("y", "#1234"))   # no text left: never matched
+
+
+class Eval(unittest.TestCase):
+    def rows(self):
+        out = []
+        for i in range(60):
+            m = f"SHOP{chr(65 + i % 12)} STORE"
+            out.append(H(f"k{i}", f"{m} #{i}", "GENERAL_MERCHANDISE_OTHER_GENERAL_MERCHANDISE",
+                         "decision" if i % 3 else "rule", note="auto guess" if i % 10 == 0 else ""))
+        return out
+
+    def test_split_is_deterministic_and_unseen_holds_out_whole_merchants(self):
+        rows = self.rows()
+        self.assertEqual(evaluate.split(rows, "unseen"), evaluate.split(rows, "unseen"))
+        train, test = evaluate.split(rows, "unseen")
+        self.assertFalse({h.merchant for h in train} & {h.merchant for h in test})
+        self.assertEqual(len(train) + len(test), len(rows))
+
+    def test_provisional_rows_are_never_scored(self):
+        r = evaluate.score(self.rows())
+        scored = r["modes"]["seen"]["all"]["n"]
+        held = [h for h in evaluate.split(self.rows(), "seen")[1] if "auto" not in h.note]
+        self.assertEqual(scored, len(held))
+        self.assertNotIn("misses", r)
+        unseen = r["modes"]["unseen"]["all"]
+        self.assertEqual(unseen[">=0.0"]["answered"], 0)   # exact match cannot know a new merchant
+
+    def test_cli_eval_prints_counts_not_text(self):
+        with tempfile.TemporaryDirectory() as d:
+            f = Path(d) / "h.jsonl"
+            f.write_text("".join(json.dumps(h.__dict__) + "\n" for h in self.rows()))
+            code, out, _ = run("eval", "--history", str(f))
+            self.assertEqual(code, 0)
+            self.assertIn("seen", out)
+            self.assertNotIn("SHOP", out)
 
 
 if __name__ == "__main__":

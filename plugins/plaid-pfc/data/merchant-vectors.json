@@ -1,0 +1,15 @@
+{
+  "about": "Golden vectors for the merchant key. plaid-pfc's merchant.key() and beancount's groups.merchant() must both reproduce every one. Synthetic inputs only.",
+  "vectors": [
+    {"payee": "Deposit ••0615 Free Interac E-Transfer", "memo": "", "key": "DEPOSIT FREE"},
+    {"payee": "SEND E-TFR ***vYR", "memo": "", "key": "SEND TFR"},
+    {"payee": "", "memo": "E-TRANSFER ••4049;NAME;Internet Banking", "key": "TRANSFER"},
+    {"payee": "MOBIL@ - 4180", "memo": "X", "key": "MOBIL"},
+    {"payee": "TIM HORTONS #1234 KITCHENER", "memo": "", "key": "TIM HORTONS"},
+    {"payee": "SQ *CAFE EXAMPLE Toronto", "memo": "", "key": "SQ CAFE"},
+    {"payee": "PAYPAL *EXAMPLESHOP 402-935-7733", "memo": "", "key": "PAYPAL EXAMPLESHOP"},
+    {"payee": "AMZN Mktp CA*AB12CD34", "memo": "", "key": "AMZN MKTP"},
+    {"payee": "", "memo": "", "key": "(no text)"},
+    {"payee": "12345 6789", "memo": "", "key": "(no text)"}
+  ]
+}

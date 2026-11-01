@@ -3,6 +3,9 @@
   build   JSONL... --ledger L --rules R [--decisions D] [--accounts A] [--out J | --check-only]
           [--emit-rows F] [--emit-pairs F]
   coverage JSONL... [--json]          no gaps, no double counting (exit 3: break/conflict/doubled)
+  history JSONL... --ledger L --rules R [--decisions D] --out F
+                                     one labelled row per line, with where the label came from
+                                     (decision | rule | none): the input plaid-pfc's suggest/eval read
   groups  [--journal J] [--out F]   flagged entries grouped by merchant, with a rule pattern
   suggest [--journal J] [--out F | --evaluate]   category suggestions for flagged entries
   fava    start | stop | status   [--journal J]
@@ -22,7 +25,7 @@ from .config import load as load_ledger
 from .errors import Exit, Refusal
 from .inputs import read_decisions, read_jsonl, read_screen_balances
 from .journal import render
-from .rules import categorise, load_rules
+from .rules import NEEDS_REVIEW, categorise, load_rules
 
 
 def _jsonl_paths(items: list[str]) -> list[Path]:
@@ -103,6 +106,29 @@ def build(a) -> int:
     with out.open("w", encoding="utf-8") as fh:
         fh.write(text)
     print(f"journal written: {len(text)} bytes", file=sys.stderr)
+    return 0
+
+
+def history_cmd(a) -> int:
+    """Labels and their provenance, for plaid-pfc. Carries row text: write it next to the
+    journal (the consumer's data folder), never into a repository."""
+    ledger = load_ledger(Path(a.ledger))
+    rows, *_ = read_jsonl(_jsonl_paths(a.jsonl))
+    decisions = read_decisions(Path(a.decisions)) if a.decisions else {}
+    categorise(rows, load_rules(Path(a.rules)), decisions, ledger.transfers)
+    n = {"decision": 0, "rule": 0, "none": 0}
+    with open(a.out, "w", encoding="utf-8") as fh:
+        for x in rows:
+            if x.decision and x.decision.get("override"):
+                src, ref, note = "decision", "", x.decision.get("note", "")
+            elif x.rule and x.cat != NEEDS_REVIEW:
+                src, ref, note = "rule", f"{x.rule['prio']:g}", x.rule.get("note", "")
+            else:
+                src, ref, note = "none", "", ""
+            n[src] += 1
+            fh.write(json.dumps({"key": x.key, "payee": x.payee, "memo": x.memo, "category": x.cat,
+                                 "source": src, "ref": ref, "note": note}, ensure_ascii=False) + "\n")
+    print(json.dumps({"rows": len(rows), **n}), file=sys.stderr)
     return 0
 
 
@@ -197,6 +223,12 @@ def main(argv=None) -> int:
     g.add_argument("--check-only", action="store_true")
     b.add_argument("--emit-rows")
     b.add_argument("--emit-pairs")
+    hp = sub.add_parser("history")
+    hp.add_argument("jsonl", nargs="+", help="canonical JSONL files, or folders of *.jsonl")
+    hp.add_argument("--ledger", required=True)
+    hp.add_argument("--rules", required=True)
+    hp.add_argument("--decisions")
+    hp.add_argument("--out", required=True)
     cp = sub.add_parser("coverage")
     cp.add_argument("jsonl", nargs="+", help="canonical JSONL files, or folders of *.jsonl")
     cp.add_argument("--json", action="store_true")
@@ -219,6 +251,8 @@ def main(argv=None) -> int:
             return build(a)
         if a.cmd == "doctor":
             return doctor(a)
+        if a.cmd == "history":
+            return history_cmd(a)
         if a.cmd == "coverage":
             return coverage_cmd(a)
         if a.cmd == "groups":
