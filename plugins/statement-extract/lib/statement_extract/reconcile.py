@@ -1,7 +1,8 @@
 """Turn a statement's checks into a reconcile status, and apply balance assertions.
 
 structural  every structural check passed (the OFX gate: all raw <STMTTRN> parsed, no unknown
-            tags, FITIDs unique, LEDGERBAL present, one currency)
+            tags, FITIDs unique, LEDGERBAL present, one currency; the CSV gate: rows
+            proven in order, one currency, native ids unique, the running balance chains)
 asserted    structural + an outside balance (accounts.toml) agrees with the file
 proven      the statement proves itself from printed totals (PDF adapters, later releases)
 """
@@ -64,3 +65,23 @@ def balance_equation(opening: Decimal, rows, closing: Decimal, note: str = "") -
 def printed_total(name: str, computed: Decimal, printed: Decimal, note: str = "") -> Check:
     return Check(name, computed == printed, expected=format(printed, "f"),
                  actual=format(computed, "f"), note=note)
+
+
+def running_chain(chron_rows) -> tuple[Check, Decimal | None, Decimal | None]:
+    """Every row, oldest first, must satisfy previous running balance + amount = its running
+    balance. The oldest row has no predecessor, so the opening is derived from it
+    (running balance - amount): a dropped OLDEST row cannot be seen here, a dropped middle row
+    always can, and a dropped newest row only by an outside assertion of the closing.
+    -> (check, opening, closing); opening and closing are None when there are no rows."""
+    rows = list(chron_rows)
+    if not rows:
+        return Check("running_chain", True, note="no rows"), None, None
+    opening = rows[0].running_balance - rows[0].amount
+    prev, breaks = opening, 0
+    for t in rows:
+        if prev + t.amount != t.running_balance:
+            breaks += 1
+        prev = t.running_balance
+    return (Check("running_chain", breaks == 0, expected="0 breaks", actual=f"{breaks} breaks",
+                  note="previous running balance + amount = running balance, oldest first"),
+            opening, prev)

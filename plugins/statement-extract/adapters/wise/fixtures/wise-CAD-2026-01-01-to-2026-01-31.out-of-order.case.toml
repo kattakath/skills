@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "rows oldest-first although the adapter declares newest-first: the order is proven, never assumed"
+exit = 3
+stderr_has = "order_proof"

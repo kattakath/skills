@@ -169,7 +169,7 @@ class Commands(unittest.TestCase):
     def test_adapters_and_doctor(self):
         ids = [json.loads(line)["id"] for line in run("adapters").stdout.splitlines()]
         self.assertEqual(ids, ["cibc/qfx", "desjardins/pdf", "scotiabank/chequing-pdf",
-                               "scotiabank/qfx", "tangerine/qfx", "td/qfx"])
+                               "scotiabank/qfx", "tangerine/qfx", "td/qfx", "wise/csv"])
         self.assertEqual(run("doctor").returncode, 0)
 
     def test_fixture_lint_clean(self):

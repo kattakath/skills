@@ -1,0 +1,57 @@
+# Wise balance statement, CSV: Statements and reports -> Statements -> CSV, one file per
+# currency (Wise zips them), "fees shown separately" OFF. Measured 2026-10-31 on 6 real
+# exports (counts only): 23 columns, no BOM, LF, newest first with 0 timestamp ties, one
+# currency per file, every id CARD-/TRANSFER-/BALANCE- plus 7+ digits.
+institution = "Wise"
+format = "csv"
+description = "Wise balance statement CSV, one file per currency"
+
+[identify]
+header = ["TransferWise ID", "Date", "Date Time", "Amount", "Currency", "Description",
+          "Payment Reference", "Running Balance", "Merchant", "Payee Name", "Payer Name"]
+# Wise names the file wise-<CUR>-<from>-to-<to>.csv. Anything after the end date and a
+# separator (a download's " (1)", a fixture's ".<case>") is allowed and ignored.
+filename = ['^wise-(?P<currency>[A-Z]{3})-(?P<start>\d{4}-\d{2}-\d{2})-to-(?P<end>\d{4}-\d{2}-\d{2})(?:[ ._].*)?\.csv$']
+
+[keys]
+# Wise|<CUR>|<TransferWise ID>|<Date Time as printed>, byte-identical to agentic-ledger
+# wise_rows.py (2026-10-31). Wise reuses one id for a charge and its refund or reversal; the
+# millisecond timestamp separates them (proven stable across two exports, 139/139). A file in
+# which an (id, Date Time) pair repeats is refused.
+scheme = "native-id-ts/1"
+
+# A Wise balance has no account number of its own: the currency is the account, in the key
+# and the label. accounts.toml selects it with `currency = "CAD"`.
+[account]
+ref = "currency"
+kind = "balance"
+
+[reconcile]
+# Structural: in order, one currency, ids unique, the running balance chains. The screen
+# balance on export day, given in accounts.toml as of the file name's end date, upgrades it
+# to asserted. Not "proven": the oldest row's opening is derived from that row.
+minimum = "structural"
+
+[csv]
+encoding = "utf-8-sig"   # a BOM is accepted and stripped
+# "Payee Account Number" holds RECIPIENTS' FULL ACCOUNT NUMBERS. The driver never reads it
+# (NEVER_READ); it is listed here too so the rule is visible where the columns are.
+# The card holder's name is the operator's own and is never needed.
+drop = ["Payee Account Number", "Card Holder Full Name"]
+currency = "Currency"    # a header-only file takes the file name's currency
+order = "newest-first"   # proven on every file (order_proof), never assumed
+
+[csv.columns]
+id = "TransferWise ID"
+datetime = "Date Time"
+date = "Date"
+amount = "Amount"        # signed, balance view: + = money in
+running_balance = "Running Balance"
+description = ["Description"]
+counterparty = ["Merchant", "Payee Name", "Payer Name"]
+memo = ["Payment Reference"]
+source_type = ["Transaction Details Type", "Transaction Type"]
+
+[csv.formats]
+date = "%d-%m-%Y"
+datetime = "%d-%m-%Y %H:%M:%S.%f"

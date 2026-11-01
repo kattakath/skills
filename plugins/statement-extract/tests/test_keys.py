@@ -58,7 +58,7 @@ class LegacyDifferential(unittest.TestCase):
 
     def test_keys_match_legacy_extractor(self):
         doc = json.loads((GOLDEN / "legacy-keys.json").read_text(encoding="utf-8"))
-        self.assertGreaterEqual(len(doc["cases"]), 28)
+        self.assertGreaterEqual(len(doc["cases"]), 40)
         by_case = {case_name(p): p for p in cases()}
         for case, legacy in doc["cases"].items():
             with self.subTest(case=case):
