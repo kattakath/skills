@@ -29,7 +29,7 @@ plugin name stuttering against the server name — for no gain.
 A plugin's `.mcp.json` can only name a **bare command**; it cannot carry a `/nix/store`
 path, which rotates on every rebuild. So the two servers that are not a plain `npx`
 fetch name a binary that **`kattakath/nix-config` installs**, the same arrangement
-`claude-code-nix` has with `mcp-nixos` and `gmail` has with its launchers:
+`claude-code-nix` has with `mcp-nixos`:
 
 | command | comes from |
 |---|---|

@@ -198,13 +198,6 @@
       "note": "~59 tools against PRODUCTION — update/delete/settings included, no staging behind it. Needs `nix-mcp-wordpress` on PATH from kattakath/nix-config (local.pluginMcp.servers), which reads the site URL, username and application password from the macOS Keychain at launch; a plugin .mcp.json cannot. NOT the WordPress MCP Adapter: that is a different endpoint (/wp-json/mcp/...) and it is dead — 404 rest_no_route. The core REST path (/wp-json/wp/v2) was verified live 2026-10-02."
     },
     {
-      "goal": "Work across several Gmail accounts in one session without them colliding",
-      "steps": [
-        "gmail"
-      ],
-      "note": "One MCP server per account, each its own per-session process — no proxy and nothing shared. Each needs its launcher on PATH from kattakath/nix-config (local.gmailMcp.accounts), because the OAuth client secret is read from the macOS Keychain at launch and must not live in this repo. Replaces the central gateway retired 2026-10-01; Claude Desktop loads no plugins, so it gains nothing here."
-    },
-    {
       "goal": "Get the keyless utility MCP servers: knowledge graph, step-by-step reasoning, Terraform registry docs, MCP discovery",
       "steps": [
         "mcp-utilities"
