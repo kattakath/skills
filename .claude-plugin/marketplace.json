@@ -256,6 +256,23 @@
       "source": "./plugins/github-release-gate"
     },
     {
+      "name": "google-workspace-mcp",
+      "description": "Google Workspace as one stdio MCP server (workspace-mcp, pinned): Google Tasks by default, any other service opt-in. Credentials come from a credential command, then the environment, then a prompt.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "mcp",
+        "google-workspace",
+        "google-tasks",
+        "workspace-mcp"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/google-workspace-mcp",
+      "license": "MIT",
+      "source": "./plugins/google-workspace-mcp"
+    },
+    {
       "name": "harvest",
       "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
       "author": {

@@ -31,9 +31,11 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
 - **MCP servers live in the owning plugin's `.mcp.json`** (`plugins/*/.mcp.json`) — the
   only lane since nix-config's gateway was purged on 2026-10-02. (The old `mcp-clients/`
   catalog the gateway read was deleted once nothing read it.) A server needing a
-  credential names a launcher BINARY there, because
-  `.mcp.json` `env` takes literals and passthroughs only and cannot run a Keychain read —
-  that half is a PATH package in nix-config (`local.pluginMcp`).
+  credential gets it from the plugin's own launcher script, which resolves a
+  `credential_command` userConfig, then the environment, then prompted userConfig — see
+  [`google-workspace-mcp`](plugins/google-workspace-mcp). A plugin that still names a bare
+  launcher BINARY depends on a PATH package from nix-config (`local.pluginMcp`), so it
+  works only on that fleet.
 - **Plugins here carry no `version` field: every commit on `main` is a new release**,
   shipped automatically to anyone with marketplace auto-update enabled. That raises the bar
   on what merges to `main` — see § Shipping a change.
