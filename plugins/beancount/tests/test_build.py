@@ -131,6 +131,21 @@ class Build(unittest.TestCase):
         self.assertEqual(json.loads(err.splitlines()[0])["assertions_skipped_overlap"], 2)
         self.assertIn("not asserted (a later statement has rows dated <= 2026-01-31)", err)
 
+    def test_overlapping_reexport_keeps_the_assertion(self):
+        # A later "last 30 days" export repeats January's rows (same Keys) and adds one in
+        # February. January's closing must still be asserted: nothing new is dated <= Jan 31.
+        stmt = scenario.stmt("hhhh", "Bank", "••0002", "card", "CAD", "-65.00", "2026-02-10")
+        rows = [dict(r, statement_id="hhhh") for r in scenario.CARD_A[1:]]
+        rows.append(scenario.txn("hhhh", "Bank", "••0002", "CAD", "Bank|••0002|C4", "2026-02-05",
+                                 "-5.00", "FEB FEE"))
+        (self.d / "card-last30.jsonl").write_text("".join(json.dumps(r) + "\n" for r in [stmt, *rows]))
+        # Re-export FIRST: dedupe then keeps its copy of the January rows, the order that made
+        # the old provenance-blind check set January aside.
+        files = [self.d / "card-last30.jsonl", *self.files.values()]
+        code, err = self.run_build("--check-only", files=files)
+        self.assertEqual(code, 0, err)
+        self.assertEqual(json.loads(err.splitlines()[0])["assertions_skipped_overlap"], 0)
+
     def test_gap_pads_from_equity_gaps(self):
         led = self.d / "ledger.toml"
         led.write_text(led.read_text() + '\n[[gap]]\naccount = "Liabilities:Bank:Card-0002"\n'

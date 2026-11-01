@@ -79,6 +79,7 @@ def read_jsonl(paths: list[Path]):
     """Every record of every file. Rows dedupe by Key across files; two records with one Key
     that disagree on date, amount, currency or account refuse the build."""
     rows: dict[str, Row] = {}
+    stmts_of: dict[str, set] = {}   # Key -> every statement that prints it (dedupe keeps one row)
     asserts, positions, conflicts = [], [], []
     for p in paths:
         try:
@@ -124,6 +125,7 @@ def read_jsonl(paths: list[Path]):
                           acct=label_of(r["account"], st["account"]["kind"]),
                           cur=r["currency"], sha=r["source"]["sha256"],
                           statement_id=r["statement_id"])
+                stmts_of.setdefault(row.key, set()).add(row.statement_id)
                 old = rows.get(row.key)
                 if old is None:
                     rows[row.key] = row
@@ -135,25 +137,32 @@ def read_jsonl(paths: list[Path]):
     out = sorted(rows.values(), key=lambda x: (x.iso, x.key))
     for n, x in enumerate(out):
         x.n = n
-    return out, *split_overlaps(asserts, out), positions
+    return out, *split_overlaps(asserts, out, stmts_of), positions
 
 
-def split_overlaps(asserts, rows):
+def split_overlaps(asserts, rows, stmts_of=None):
     """A statement closing is asserted at the start of the day after its as-of date. When a LATER
     statement of the same account prints a row dated on or before that as-of date (a bank that
     posts next period's fee on this period's last day, measured 2026-11-01), no day boundary
     separates the two statements, so the figure cannot be asserted at day granularity. Those
     assertions are set aside and counted, never adjusted: an adjusted figure is one no
-    statement printed. Every other figure stays a strict assertion."""
+    statement printed. Every other figure stays a strict assertion.
+
+    A row counts as a clash only if THIS statement does not print it and every statement that
+    does print it ends after this one. An overlapping re-export (a "last 30 days" download
+    repeating rows an earlier statement already holds) is therefore no clash: dedupe keeps one
+    copy of each row, but provenance remembers all of them (measured 2026-11-01: without this, a
+    top-up export set aside the previous statement's closing for no reason)."""
     end_of = {a.statement_id: a.as_of for a in asserts if a.statement_id}
+    stmts_of = stmts_of or {x.key: {x.statement_id} for x in rows}
     by_acct = {}
     for x in rows:
         by_acct.setdefault((x.inst, x.acct), []).append(x)
     keep, skipped = [], []
     for a in asserts:
         if a.origin == "statement":
-            clash = any(x.statement_id != a.statement_id and x.iso <= a.as_of
-                        and end_of.get(x.statement_id, "") > a.as_of
+            clash = any(x.iso <= a.as_of and a.statement_id not in stmts_of[x.key]
+                        and all(end_of.get(s, "") > a.as_of for s in stmts_of[x.key])
                         for x in by_acct.get((a.inst, a.acct), ()))
             if clash:
                 skipped.append(a)
