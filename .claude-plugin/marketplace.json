@@ -469,6 +469,25 @@
       "source": "./plugins/pgp-ops"
     },
     {
+      "name": "plaid-pfc",
+      "description": "Plaid's Personal Finance Category (PFC) taxonomy, pinned and strictly enforced: the 127 v2 detailed names with Plaid's descriptions, a v1-to-v2 crosswalk (renames and splits), validation that refuses any invented name, standard I/O records with JSON Schema for enum-bound LLM output, and a refresh that diffs Plaid's published CSV. Stdlib Python only; holds no data.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "plaid",
+        "personal-finance",
+        "transaction-categorization",
+        "taxonomy",
+        "budgeting",
+        "json-schema"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/plaid-pfc",
+      "license": "MIT",
+      "source": "./plugins/plaid-pfc"
+    },
+    {
       "name": "prior-art-recon",
       "description": "Before building, standardising or publishing anything meant to fill a perceived gap: find out whether it already exists, whether anyone wants it, whether the ecosystem is moving away from it, and whether the gap is an artifact of your own design.",
       "author": {
