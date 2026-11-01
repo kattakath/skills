@@ -1,4 +1,4 @@
-# claude-code-nix
+# nix-flake-kit
 
 Hooks for working on **Nix flakes** with Claude Code. Two `PostToolUse` hooks on
 `Write|Edit`, both **no-ops in a repo with no `.nix` files** — so enabling this
@@ -47,7 +47,7 @@ synced 2026-09-16, nix-config PR #532).
 ## Tests
 
 ```bash
-node --test plugins/claude-code-nix/tests/nix-home-path-lint.test.js
+node --test plugins/nix-flake-kit/tests/nix-home-path-lint.test.js
 ```
 
 The fixtures mirror the ast-grep rule's own `valid:`/`invalid:` test file, so
@@ -57,7 +57,7 @@ both halves are proven against the same inputs.
 
 ```bash
 /plugin marketplace add kattakath/skills
-/plugin install claude-code-nix@kattakath
+/plugin install nix-flake-kit@kattakath
 ```
 
 The hooks are declared in `hooks/hooks.json` against `${CLAUDE_PLUGIN_ROOT}`, so

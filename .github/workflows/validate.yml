@@ -13,20 +13,13 @@ name: validate
 # SHA-pin on any externally-sourced plugin, no shell metacharacters or hidden
 # Unicode in names/descriptions.
 #
-# `claude-cli-version` IS PINNED, 2026-10-02, and it was NOT before. Leaving it at
-# "latest" imported an upstream policy change unannounced and broke EVERY open PR at
-# once: the CLI grew a reserved-name rule and now rejects
+# `claude-cli-version` IS PINNED, and stays pinned. Leaving it at "latest" imported an
+# upstream policy change unannounced on 2026-10-02 and broke EVERY open PR at once: the
+# CLI grew a reserved-name rule and rejected
 #   plugins[].name "claude-code-nix" is reserved: it passes as one of Anthropic's own
-# Last green `main`: 2026-10-01T04:02Z. #48, #49, #50 and #51 then failed identically,
-# none of them having touched that plugin. CLI 2.1.268 accepts the marketplace; the
-# newer one does not.
-#
-# THIS PIN IS A TOURNIQUET, NOT A FIX. The rule is correct — the name does read as
-# Anthropic's — and the real repair is renaming `claude-code-nix`, which is a
-# cross-repo change (nix-config's `alwaysOnNames` assertion, its guardrails'
-# `mcp__plugin_claude-code-nix_nixos__nix` allow-rule, superhook's hook-by-convention
-# resolution) and reinstallation for anyone holding it, since the plugin cache is keyed
-# by name. Raising this pin before that rename re-breaks the repo.
+# The rule was correct, so the plugin was RENAMED to `nix-flake-kit` (2026-11-01) and the
+# pin raised from that tourniquet (2.1.268) to a current CLI. Raise it deliberately, on a
+# PR of its own, so a new validator rule shows up as one red PR rather than all of them.
 #
 # The argument for "latest" was that Anthropic's own claude-plugins-official repo does
 # it. That argument is sound for THEIR repo and was wrong here: they own the reserved
@@ -56,9 +49,8 @@ jobs:
         uses: anthropics/claude-plugins-community/.github/actions/validate-plugins@a727be1c7bd6064419b6f60d71993a19198adc17
         with:
           marketplace-path: .claude-plugin/marketplace.json
-          # See the header: pinned to the last version that accepts this marketplace.
-          # Raise it only together with the `claude-code-nix` rename.
-          claude-cli-version: 2.1.268
+          # See the header: pinned on purpose; raise it on a PR of its own.
+          claude-cli-version: 2.1.296
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
