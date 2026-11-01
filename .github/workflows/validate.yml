@@ -227,6 +227,13 @@ jobs:
           python3 -I scripts/check-pins.py --self-test
           python3 -I scripts/check-pins.py
 
+      # rag and wordpress start a launcher the operator names (no fleet default). The cases
+      # pin the precedence (setting > env) and that an unset one fails loud, not silent.
+      - name: rag + wordpress launcher cases
+        run: |
+          bash plugins/rag/tests/launcher-cases.sh
+          bash plugins/wordpress/tests/launcher-cases.sh
+
       # The launcher's credential precedence is the plugin's whole contract, and an empty
       # userConfig value (what an UNSET one substitutes to) blanking the environment is the
       # bug it exists to prevent. A stub uvx records argv + env, so no network or uv is needed.
