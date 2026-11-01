@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "Total debits disagrees with the rows: refused"
+exit = 3
+stderr_has = "summary_debits"

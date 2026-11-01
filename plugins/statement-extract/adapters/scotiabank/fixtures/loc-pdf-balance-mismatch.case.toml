@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the printed Account Balance disagrees with previous balance + rows: refused"
+exit = 3
+stderr_has = "balance_equation"

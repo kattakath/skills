@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the header prints the real account: an accounts-file last4 that disagrees with it is refused"
+exit = 3
+stderr_has = "header_last4"

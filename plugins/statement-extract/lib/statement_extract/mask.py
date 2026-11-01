@@ -47,6 +47,9 @@ RULES: tuple[Rule, ...] = (
          lambda s: re.sub(r"(?<![\d*])\*{2,}[\d*]*(\d{4})\b", r"••\1", s)),
     Rule("first4-stars-last4", "CIBC (2026-10-31) card memos 'CC#dddd********dddd'; Wise cards",
          lambda s: re.sub(r"\d{4}\*{4,}(\d{4})", r"••\1", s)),
+    Rule("star-short-tail", "CIBC (2026-10-31) HELOC memos 'ddddd/****ddd': a star run "
+         "ending in fewer than four digits",
+         lambda s: re.sub(r"\*{2,}[\d*]*\d", lambda m: "••" + re.sub(r"\D", "", m.group(0))[-4:], s)),
     Rule("grouped-digits", "space/dash grouped account numbers (>=7 digits), dates excluded",
          _grouped),
     Rule("long-digit-run", "TD (2026-10-31) transfer payees 'TO:<number>': any 7+ digit run",

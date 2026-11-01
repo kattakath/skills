@@ -1,0 +1,47 @@
+# CIBC line of credit, monthly PDF statement. The unsecured personal LOC and the secured
+# (home-equity) LOC print one layout, measured on the operator's statements from 2021 to 2026
+# (fixture shape, oldest and newest of each account): one adapter serves both.
+institution = "CIBC"
+format = "pdftext"
+description = "CIBC personal or secured line of credit, monthly PDF statement"
+
+[identify]
+text = ['CIBC .*Line of Credit', 'STATEMENT PERIOD: [A-Z]{3}\d{2}/\d{2}',
+        '^\s*New balance\s+=', 'Your transaction details']
+
+[keys]
+# No FITID in a PDF. Content key over (posting date, signed amount, first description line):
+#   CIBC|••1234|<date>|<amount>|<text>|<n>
+scheme = "content-occurrence/1"
+
+# The header prints the LOC account number ("... account number: ddddd-dd-ddddd"). An
+# accounts-file last4 that disagrees with it is refused (header_last4).
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # credits and debits each tie to a printed total, plus the balance equation
+
+# {AMT} is substituted with pdfkit.AMOUNT before compiling. Amounts print with a "$" and a
+# credit carries a "CR" suffix; a balance owed prints positive (LOC view).
+[grammar]
+account = 'account number:?\s*(\d+(?:-\d+)+)\b'
+period = 'STATEMENT PERIOD: ([A-Z]{3})(\d{2})/(\d{2}) . ([A-Z]{3})(\d{2})/(\d{2})'
+previous = '^\s*Previous balance\s+({AMT})(?!\S)'
+total_credits = '^\s*Total credits\s+\S\s+({AMT})(?!\S)'
+total_debits = '^\s*Total debits\s+\+\s+({AMT})(?!\S)'
+new = '^\s*New balance\s+=\s+({AMT})(?!\S)'
+detail_previous = 'PREVIOUS BALANCE:\s+({AMT})(?!\S)'
+detail_new = '^\s*NEW BALANCE:\s+({AMT})(?!\S)'
+total_interest = '^\s*TOTAL INTEREST:\s+({AMT})(?!\S)'
+# A transaction row: "OCT03  description  $1,234.56" or "$1,234.56CR" at the line end. A
+# dated line WITHOUT an amount at its end is the interest-rate note, not a row.
+row = '^([A-Z]{3})(\d{2})\s{2,}(\S.*?)\s{2,}({AMT})\s*$'
+dated = '^[A-Z]{3}\d{2}\s'
+interest_row = '\bINTEREST\b'
+# A "... CREDIT LIMIT ...**" line reports a limit change (secured LOC, footnoted **) and
+# prints $0.00 (2 of 2 real occurrences): not money moving, so it is not a row. One with a
+# non-zero amount stays a row, and the printed totals decide.
+limit_row = '\bCREDIT LIMIT\b.*\*\*$'
+end = '^\s*NEW BALANCE:'

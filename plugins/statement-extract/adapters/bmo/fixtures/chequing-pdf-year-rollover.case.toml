@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a January statement's December rows take the previous year; the period starts at the Opening balance row"
+exit = 0
+pdf_smoke = true

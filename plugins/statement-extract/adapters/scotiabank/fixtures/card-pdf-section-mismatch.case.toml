@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a holder section's printed DEBITS subtotal disagrees with its rows: refused"
+exit = 3
+stderr_has = "section_debits"

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "purchases with a spend-category column (kept as memo); a contactless icon glyph before the merchant is dropped; the card's Total ties"
+exit = 0
+pdf_smoke = true
