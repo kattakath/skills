@@ -1,0 +1,54 @@
+                                                                                                                             Statement of Account
+
+                                                                                                                      Account Number
+
+ VISA DESJARDINS CASH BACK                                                                               4500 00** **** 8001
+  Statement    Day      Month    Year                             Due            Day    Month     Year                       Minimum                 New Regular Balance
+                                                                                                        payment on regular
+  Date                                              Date                                                   transactions
+                15       06     2026
+                                                                   07      07     2026                                                   6.00
+
+ ALEX SAMPLE
+ 1 SAMPLE STREET UNIT 0
+ SAMPLETON ON A0A 0A0
+
+ STATEMENT DATE          Day 15 Month 06 Year 2026                                                              VISA DESJARDINS CASH BACK
+                                                                                                                                Page: 1 of 1
+
+                                                                          Available Credit Limit :           1,000               Annual Interest Rate
+     REGULAR TRANSACTION SUMMARY                                          Authorized Credit Limit :         10,000               Purchases:           20.99 %
+
+ Previous Balance                                  0.00
+
+ Purchases / Debits                             +            7.00
+
+ Cash Advances                                  +            0.00
+
+ Credit Charges                                 +            0.00
+
+ Accord D financing Instalment                  +            0.00
+
+ Payments / Credits                             -            0.00
+
+ New Regular Balance                            = 6.00
+
+     REGULAR TRANSACTION DETAILS
+ Transactions made with the card of: ALEX SAMPLE                                                                         Card: 4500 00** **** 5001
+  Transaction Date       Posting Date
+                                                                          Description                                     Cash back              Amount
+      D      M            D      M
+     02      06           03       06          SAMPLE TRANSIT           SAMPLETON                     ON             1%               6.00
+
+                                                                                                       Total                          6.00
+
+ Account Operations                         4500 00** **** 5001
+  Transaction Date        Posting Date
+
+      CASH BACK EARNED SINCE PREVIOUS ACCOUNT
+       Previous                         Earned                        Used this                Adjustment                      Total
+        12.34            +              1.23          -              5.00-        +            0.00                =           8.57
+
+   Grocery purchases                       2%                0.80
+   Recurring payments                      1%                0.43
+   Cash back earned                                         1.23

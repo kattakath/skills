@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a January statement carries December postings (year - 1); FX detail folds into the row above; the rewards table is excluded; every row tied to the printed summary"
+exit = 0
+pdf_smoke = true

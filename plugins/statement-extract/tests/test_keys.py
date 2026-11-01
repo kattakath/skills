@@ -5,7 +5,7 @@ import json
 import unittest
 from decimal import Decimal
 
-from helpers import GOLDEN, cases, golden_path
+from helpers import GOLDEN, case_name, cases, golden_path
 
 from statement_extract import keys
 
@@ -58,8 +58,8 @@ class LegacyDifferential(unittest.TestCase):
 
     def test_keys_match_legacy_extractor(self):
         doc = json.loads((GOLDEN / "legacy-keys.json").read_text(encoding="utf-8"))
-        self.assertGreaterEqual(len(doc["cases"]), 20)
-        by_case = {f"{p.parent.parent.name}/{p.stem}": p for p in cases()}
+        self.assertGreaterEqual(len(doc["cases"]), 28)
+        by_case = {case_name(p): p for p in cases()}
         for case, legacy in doc["cases"].items():
             with self.subTest(case=case):
                 lines = golden_path(by_case[case]).read_text(encoding="utf-8").splitlines()

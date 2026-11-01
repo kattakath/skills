@@ -29,24 +29,33 @@ def run(*args, env=None, cwd=None) -> subprocess.CompletedProcess:
                           text=True, env=env or clean_env(), cwd=cwd)
 
 
+from statement_extract.fixtures import case_stem  # noqa: E402
+
+
 def cases() -> list[Path]:
-    """Every fixture input, sorted."""
-    return sorted(p for p in ADAPTERS.glob("*/fixtures/*") if p.suffix in (".qfx", ".ofx"))
+    """Every fixture input (.qfx/.ofx, .layout.txt), sorted."""
+    return sorted(p for p in ADAPTERS.glob("*/fixtures/*") if case_stem(p) is not None)
+
+
+def case_name(inp: Path) -> str:
+    return f"{inp.parent.parent.name}/{case_stem(inp)}"
+
+
+def sibling(inp: Path, suffix: str) -> Path:
+    return inp.with_name(case_stem(inp) + suffix)
 
 
 def case_args(inp: Path) -> tuple[list[str], dict]:
-    stem = inp.with_suffix("")
-    spec = tomllib.loads(stem.with_name(stem.name + ".case.toml").read_text(encoding="utf-8"))
+    spec = tomllib.loads(sibling(inp, ".case.toml").read_text(encoding="utf-8"))
     args = ["extract", str(inp), *spec.get("args", [])]
-    acc = stem.with_name(stem.name + ".accounts.toml")
+    acc = sibling(inp, ".accounts.toml")
     if acc.exists():
         args += ["--accounts", str(acc)]
-    seen = stem.with_name(stem.name + ".seen.txt")
+    seen = sibling(inp, ".seen.txt")
     if seen.exists():
         args += ["--seen", str(seen)]
     return args, spec
 
 
 def golden_path(inp: Path) -> Path:
-    stem = inp.with_suffix("")
-    return stem.with_name(stem.name + ".expected.jsonl")
+    return sibling(inp, ".expected.jsonl")

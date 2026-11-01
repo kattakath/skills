@@ -7,7 +7,7 @@ import os
 import re
 import unittest
 
-from helpers import case_args, cases, golden_path, run
+from helpers import case_args, case_name, cases, golden_path, run
 
 UPDATE = os.environ.get("STATEMENT_EXTRACT_UPDATE_GOLDENS") == "1"
 # The engine's own content hash moves with every code edit; everything else must not.
@@ -23,7 +23,7 @@ class FixtureCases(unittest.TestCase):
         found = cases()
         self.assertGreater(len(found), 0)
         for inp in found:
-            with self.subTest(case=f"{inp.parent.parent.name}/{inp.stem}"):
+            with self.subTest(case=case_name(inp)):
                 args, spec = case_args(inp)
                 p = run(*args)
                 self.assertEqual(p.returncode, spec["exit"], p.stderr)

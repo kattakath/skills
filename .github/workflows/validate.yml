@@ -199,9 +199,17 @@ jobs:
       # vectors made BY the legacy extractor itself, a source hash per normaliser, and an exact
       # stdout golden per synthetic fixture, plus count floors so a moved directory cannot pass
       # as zero cases. System python3 only (3.12 here): the plugin is stdlib-only by design.
-      # The poppler-backed "pdf reader smoke" step lands with the PDF adapters (release 3).
       - name: statement-extract cases
         run: bash plugins/statement-extract/tests/run.sh
+
+      # The PDF adapters read text through poppler's `pdftotext -layout`, an external binary
+      # the unit suite never touches (its fixtures are text). This step generates PDFs in-run
+      # from those fixtures, so no PDF is ever committed, and requires poppler to read them
+      # back into the same records. Same apt pattern as the pgp-ops step.
+      - name: statement-extract pdf reader smoke
+        run: |
+          command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null
+          bash plugins/statement-extract/tests/run.sh --pdf-smoke
 
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which

@@ -1,0 +1,45 @@
+# Desjardins Visa (credit card), monthly PDF statement from AccèsD. AccèsD offers no QFX/CSV
+# for cards (measured 2026-10-31), so the PDF text layer is the source.
+institution = "Desjardins"
+format = "pdftext"
+description = "Desjardins Visa monthly PDF statement (English layout)"
+
+[identify]
+text = ['VISA DESJARDINS', 'STATEMENT DATE\s+Day\s+\d{2}\s+Month\s+\d{2}\s+Year\s+\d{4}',
+        'REGULAR TRANSACTION SUMMARY']
+
+[keys]
+# No FITID. Content key, operator-approved 2026-10-31, with the frozen Desjardins normaliser:
+#   Desjardins|••card|<posting date>|<amount 2dp, ledger sign>|<text>|<n>
+scheme = "content-occurrence/legacy-collapse-v0"
+
+# The header prints the ACCOUNT number, whose last four differ from the card on screen. The
+# consumer's accounts file maps it to the card's last four, the same value on every run.
+[account]
+require_override = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # every row is tied to the printed summary, section total and balance
+
+# The agentic-ledger pdf_rows_desjardins.py grammar (2026-10-31), unchanged. {AMT} is
+# substituted before compiling.   /   are the no-break spaces of French amounts.
+[grammar]
+amt = '\d{1,3}(?:[ ,  ]\d{3})*[.,]\d{2}'
+txn = '^\s*(\d{2})\s+(\d{2})\s+(\d{2})\s+(\d{2})\s+(?P<desc>\S.*?)\s+(?:(?P<cb>\d+(?:[.,]\d+)?\s?%)\s+)?(?P<amt>{AMT})\s*(?P<cr>CR|-)?\s*$'
+fx = '^\s{20,}(\d[\d,.]*\s+[A-Z][A-Z ]+?DOLLAR\b.*|\d[\d,.]*\s+[A-Z]{3}\b.*XRT.*)$'
+stmt_date = 'STATEMENT DATE\s+Day\s+(\d{2})\s+Month\s+(\d{2})\s+Year\s+(\d{4})'
+account = 'Account Number\s*\n.*?\d{4} ?\d{2}\*\* ?\*{4} ?(\d{4})'
+total = '^\s+Total\s+({AMT})\s*(CR|-)?\s*$'
+section_regular = 'REGULAR TRANSACTION DETAILS|DÉTAIL DES TRANSACTIONS'
+section_operations = '^\s*Account Operations|Opérations au compte'
+section_done = 'CASH BACK EARNED|REMISE EN ARGENT'
+
+[grammar.summary]
+previous = 'Previous Balance|Solde précédent'
+purchases = 'Purchases / Debits|Achats / débits'
+cash_advances = 'Cash Advances|Avances de fonds'
+charges = 'Credit Charges|Frais de crédit'
+instalment = 'Accord D financing Instalment|Versement Accord D'
+credits = 'Payments / Credits|Paiements / crédits'
+new = 'New Regular Balance|Nouveau solde régulier'

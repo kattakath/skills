@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a scanned PDF has (almost) no text layer: refused, never guessed"
+exit = 3
+stderr_has = "a scan"
