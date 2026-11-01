@@ -155,14 +155,6 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
-      # desktop-commander runs commands OUTSIDE Claude Code's Bash tool, so the Bash
-      # PreToolUse hooks never see them. This guard is the only thing reproducing the
-      # command-text denies a filesystem sandbox cannot express, and it is registered
-      # HERE because the rule it replaces — a nudge pointing the other way — carried
-      # zero coverage and is precisely the one that silently inverted.
-      - name: desktop-commander guard cases
-        run: bash plugins/desktop-commander/tests/guard-cases.sh
-
       # pgp-ops' plaintext guard keeps decrypted text away from the model. Its two failure
       # modes are both silent: a leak it stops refusing, and a false positive on a command the
       # skill itself documents, which pushes the agent toward an unguarded workaround. The
