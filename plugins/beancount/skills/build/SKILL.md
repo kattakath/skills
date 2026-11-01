@@ -45,7 +45,7 @@ KIT="${CLAUDE_PLUGIN_ROOT}/scripts/beancount-kit"
 | `pairs` | matched transfer pairs by kind: exact, fee, conversion, cross-currency |
 | `review` | entries flagged `!` on `Expenses:Uncategorized` |
 | `unpaired_must_pair` | rows whose rule required a partner and found none (now in review) |
-| `transfer_residue` | own-account legs with no partner; each Key is listed below the line |
+| `transfer_residue` | own-account legs with no partner. They post to `transfers.external` (so `Assets:Transfers` always nets to zero) and each Key is listed below the line; a partner found by a later build pairs them back |
 | `assertions_skipped_overlap` | statement closings not asserted because a later statement prints a row dated on or before them (no day boundary separates the two); each is listed. Never padded or adjusted |
 | `check_errors` | Beancount errors; non-zero means **nothing was written** |
 

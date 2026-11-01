@@ -7,6 +7,7 @@ option "operating_currency" "CAD"
 2026-01-09 open Assets:Wallet:CAD
 2026-01-12 open Assets:Wallet:USD
 2025-12-01 open Equity:Opening-Balances
+2025-12-01 open Equity:Transfers:External
 2025-12-01 open Expenses:Fees:Wallet
 2025-12-01 open Expenses:Food-And-Drink:Groceries
 2025-12-01 open Expenses:General-Merchandise:Convenience-Stores
@@ -140,7 +141,7 @@ option "operating_currency" "CAD"
   category: "TRANSFER_OUT_ACCOUNT_TRANSFER"
   source: "aaaaaaaaaaaa"
   Assets:Bank:Chequing-0001  -500.00 CAD
-  Assets:Transfers  500.00 CAD
+  Equity:Transfers:External  500.00 CAD
 
 2026-01-28 ! "SEND TO SELF CAD" ""
   key: "Wallet|USD|4"

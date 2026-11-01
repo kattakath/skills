@@ -72,6 +72,14 @@ class Build(unittest.TestCase):
                           rep["unpaired_must_pair"]), (0, 15, 2, 1, 1))
         self.assertIn("unpaired transfer leg: Bank|••0001|F6", err)
 
+    def test_clearing_account_nets_to_zero(self):
+        from beancount import loader
+        from beancount.core import realization
+        entries, errors, _ = loader.load_file(str(GOLDEN))
+        self.assertEqual(errors, [])
+        real = realization.realize(entries)
+        self.assertTrue(realization.get(real, "Assets:Transfers").balance.is_empty())
+
     def test_wrong_schema_is_usage(self):
         bad = self.d / "bad.jsonl"
         bad.write_text('{"schema": "statement-extract/0", "record": "statement"}\n')
