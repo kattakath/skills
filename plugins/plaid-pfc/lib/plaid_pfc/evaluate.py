@@ -38,13 +38,14 @@ def split(rows: list[History], mode: str) -> tuple[list[History], list[History]]
     return [h for h in rows if h.key not in held], test
 
 
-def score(rows: list[History], provisional: str | None = DEFAULT_PROVISIONAL, show: bool = False) -> dict:
+def score(rows: list[History], provisional: str | None = DEFAULT_PROVISIONAL, show: bool = False,
+          fuzzy: bool = False) -> dict:
     rx = re.compile(provisional) if provisional else None
-    out = {"rows": len(rows), "labelled": sum(_labelled(h) for h in rows),
+    out = {"rows": len(rows), "labelled": sum(_labelled(h) for h in rows), "fuzzy": fuzzy,
            "provisional_excluded_from_test": 0, "modes": {}, "misses": []}
     for mode in ("seen", "unseen"):
         train, test = split(rows, mode)
-        idx = Index(train, provisional)
+        idx = Index(train, provisional, fuzzy=fuzzy)
         strata = {}
         for h in test:
             if not _labelled(h):
@@ -78,7 +79,7 @@ def score(rows: list[History], provisional: str | None = DEFAULT_PROVISIONAL, sh
 
 def table(result: dict) -> str:
     lines = [f"rows {result['rows']}, labelled {result['labelled']}, provisional (not scored) "
-             f"{result['provisional_excluded_from_test']}",
+             f"{result['provisional_excluded_from_test']}, fuzzy {'on' if result.get('fuzzy') else 'off'}",
              f"{'mode':7s} {'stratum':9s} {'n':>6s}  " + "  ".join(f"{'>=' + str(t):>15s}" for t in THRESHOLDS),
              f"{'':7s} {'':9s} {'':>6s}  " + "  ".join(f"{'cov / prec':>15s}" for _ in THRESHOLDS)]
     for mode, strata in result["modes"].items():
