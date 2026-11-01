@@ -14,6 +14,7 @@ anything that categorises transactions.
 | `lib/plaid_pfc/merchant.py` + `data/merchant-vectors.json` | The merchant key a decision applies to; the same algorithm as beancount's `groups`, pinned by shared golden vectors |
 | `pfc suggest` / `pfc eval` | Suggest from the consumer's own labelled history (exact merchant key); measure coverage and precision on held-out rows, seen vs unseen merchants |
 | Skill `plaid-pfc` | When and how to use it, including enum-bound LLM output |
+| Skill `categorize` | Pre-fills suggestions for flagged rows: exact history → fuzzy → an LLM limited to the 127 names, validated, written for a human to accept |
 
 ## Facts it exists to carry (measured 2026-11-01)
 
@@ -56,6 +57,18 @@ anything that categorises transactions.
 - **The rows a human had to decide stay hard** (8.6% / 60%). That gap is what the evidence
   adapters (mail receipts, context, web, an enum-bound LLM) must close.
 - **It is opt-in** (`--fuzzy`), and it runs in about 1 s on 6,385 rows.
+
+### A blind LLM, text only (287 hand-decided merchant rows, truth hidden from the model)
+
+| Confidence ≥ | Answered | Exact category | Same primary group |
+|---|---|---|---|
+| 0.5 | 80.5% | 58.0% | 85.7% |
+| 0.8 | 34.5% | 65.7% | 91.9% |
+| 0.9 | 17.1% | 55.1% | 89.8% |
+
+- **Its self-rated confidence is not calibrated:** 0.9 scored below 0.8. The `categorize`
+  skill caps LLM confidence at 0.5 and never auto-accepts.
+- **Many misses are neighbouring names in one group**, e.g. transit vs parking.
 
 ## Why stdlib, not Pydantic
 
