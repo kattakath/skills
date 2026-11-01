@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a Payments & Credits figure the credit rows do not add up to is refused"
+exit = 3
+stderr_has = "summary_credits"
