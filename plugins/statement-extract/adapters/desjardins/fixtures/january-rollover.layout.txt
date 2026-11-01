@@ -1,0 +1,60 @@
+                                                                                                                             Statement of Account
+
+                                                                                                                      Account Number
+
+ VISA DESJARDINS CASH BACK                                                                               4500 00** **** 8001
+  Statement    Day      Month    Year                             Due            Day    Month     Year                       Minimum                 New Regular Balance
+                                                                                                        payment on regular
+  Date                                              Date                                                   transactions
+                15       01     2026
+                                                                   07      02     2026                                                   1,066.28
+
+ ALEX SAMPLE
+ 1 SAMPLE STREET UNIT 0
+ SAMPLETON ON A0A 0A0
+
+ STATEMENT DATE          Day 15 Month 01 Year 2026                                                              VISA DESJARDINS CASH BACK
+                                                                                                                                Page: 1 of 1
+
+                                                                          Available Credit Limit :           1,000               Annual Interest Rate
+     REGULAR TRANSACTION SUMMARY                                          Authorized Credit Limit :         10,000               Purchases:           20.99 %
+
+ Previous Balance                                500.00
+
+ Purchases / Debits                             +        1,065.05
+
+ Cash Advances                                  +            0.00
+
+ Credit Charges                                 +            1.23
+
+ Accord D financing Instalment                  +            0.00
+
+ Payments / Credits                             -          500.00
+
+ New Regular Balance                            = 1,066.28
+
+     REGULAR TRANSACTION DETAILS
+ Transactions made with the card of: ALEX SAMPLE                                                                         Card: 4500 00** **** 5001
+  Transaction Date       Posting Date
+                                                                          Description                                     Cash back              Amount
+      D      M            D      M
+     30      12           31       12          SAMPLE GROCER #00012     SAMPLETON                     ON             2%              10.00
+     02      01           03       01          SAMPLE PHARMACY - 0001   SAMPLETON                     ON             1%              20.50
+     05      01           06       01          SAMPLE ONLINE STORE      SEATTLE                       ON             1.5%            34.55
+                                                              25.00 US DOLLAR              XRT: 1.382000
+     08      01           08       01          SAMPLE HARDWARE          SAMPLETON                     ON             1%           1,000.00
+     10      01           11       01          PAYMENT THANK YOU / PAIEMENT                           ON             0%             500.00 CR
+
+                                                                                                       Total                        565.05
+
+ Account Operations                         4500 00** **** 5001
+  Transaction Date        Posting Date
+     15      01           15       01          INTEREST CHARGES - PURCHASES                           ON             0%               1.23
+
+      CASH BACK EARNED SINCE PREVIOUS ACCOUNT
+       Previous                         Earned                        Used this                Adjustment                      Total
+        12.34            +              1.23          -              5.00-        +            0.00                =           8.57
+
+   Grocery purchases                       2%                0.80
+   Recurring payments                      1%                0.43
+   Cash back earned                                         1.23

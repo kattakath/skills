@@ -1,18 +1,21 @@
 """Adapter discovery. An adapter is adapters/<institution>/<format>.toml (+ fixtures/)."""
 import hashlib
+import importlib.util
 import tomllib
 from dataclasses import dataclass
 from pathlib import Path
 
 from . import ADAPTERS_DIR
-from .drivers.ofx_driver import IDENT_FIELDS
+from .drivers import ofx_driver, pdftext_driver
 from .keys import SCHEMES
 from .model import STATUSES
 from .repairs.ofx import BY_NAME
 
-FORMATS = ("ofx",)  # csv and pdftext drivers arrive in later releases
+FORMATS = ("ofx", "pdftext")  # the csv driver arrives with Wise
+# The only functions a Python hook may define, each because TOML cannot express it.
+HOOKS = ("parse_lines", "post_drafts", "extra_checks")
 KNOWN_TOP = {"institution", "format", "description", "identify", "repairs", "keys", "account",
-             "reconcile", "skip", "sign"}
+             "reconcile", "skip", "sign", "grammar"}
 
 
 @dataclass
@@ -21,6 +24,7 @@ class Adapter:
     path: Path
     sha256: str
     spec: dict
+    hook: object = None
 
     @property
     def institution(self) -> str:
@@ -58,10 +62,11 @@ def check_spec(adapter_id: str, spec: dict) -> None:
         raise AdapterError(f"{adapter_id}: identify needs at least one non-empty list")
     # A key written after a [table] header lands INSIDE that table in TOML, so a misplaced
     # `repairs = [...]` would silently become an identify field. Reject anything unknown.
-    bad_ident = set(ident) - set(IDENT_FIELDS)
+    allowed = {"ofx": ofx_driver, "pdftext": pdftext_driver}[spec["format"]].IDENT_FIELDS
+    bad_ident = set(ident) - set(allowed)
     if bad_ident:
         raise AdapterError(f"{adapter_id}: unknown identify field(s) {sorted(bad_ident)}; "
-                           f"allowed {sorted(IDENT_FIELDS)}")
+                           f"allowed {sorted(allowed)}")
     if not isinstance(spec.get("repairs", []), list):
         raise AdapterError(f"{adapter_id}: repairs must be a list")
     unknown = [r for r in spec.get("repairs", []) if r not in BY_NAME]
@@ -75,6 +80,30 @@ def check_spec(adapter_id: str, spec: dict) -> None:
     minimum = spec.get("reconcile", {}).get("minimum", "structural")
     if minimum not in STATUSES:
         raise AdapterError(f"{adapter_id}: reconcile.minimum {minimum!r} not in {STATUSES}")
+    if "statement-line/1" in schemes and spec["keys"].get("immutable") is not True:
+        raise AdapterError(f"{adapter_id}: statement-line/1 keys need keys.immutable = true "
+                           "(a statement that can be reissued would change every key)")
+
+
+def load_hook(adapter_id: str, path: Path):
+    """Import <format>.py beside the TOML. Only HOOKS may be defined, each with a docstring
+    that starts 'Why not TOML:' so a reviewer sees the case for code over data."""
+    spec = importlib.util.spec_from_file_location(
+        "statement_extract_hook_" + adapter_id.replace("/", "_").replace("-", "_"), path)
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    public = [n for n in vars(mod) if not n.startswith("_") and callable(getattr(mod, n))
+              and getattr(getattr(mod, n), "__module__", None) == mod.__name__]
+    extra = sorted(set(public) - set(HOOKS))
+    if extra:
+        raise AdapterError(f"{adapter_id}: hook defines {extra}; only {HOOKS} are allowed "
+                           "(prefix helpers with _)")
+    for name in HOOKS:
+        fn = getattr(mod, name, None)
+        if fn is not None and not (fn.__doc__ or "").lstrip().startswith("Why not TOML:"):
+            raise AdapterError(f"{adapter_id}: hook {name} needs a docstring starting "
+                               "'Why not TOML:'")
+    return mod
 
 
 def load(root: Path = ADAPTERS_DIR) -> list[Adapter]:
@@ -87,5 +116,13 @@ def load(root: Path = ADAPTERS_DIR) -> list[Adapter]:
         except tomllib.TOMLDecodeError as e:
             raise AdapterError(f"{adapter_id}: {e}") from None
         check_spec(adapter_id, spec)
-        out.append(Adapter(adapter_id, p, hashlib.sha256(raw).hexdigest(), spec))
+        h = hashlib.sha256(raw)
+        hook = None
+        hook_path = p.with_suffix(".py")
+        if hook_path.exists():
+            h.update(b"\0" + hook_path.read_bytes())
+            hook = load_hook(adapter_id, hook_path)
+        if spec["format"] == "pdftext" and (hook is None or not hasattr(hook, "parse_lines")):
+            raise AdapterError(f"{adapter_id}: a pdftext adapter needs a parse_lines hook")
+        out.append(Adapter(adapter_id, p, h.hexdigest(), spec, hook))
     return out

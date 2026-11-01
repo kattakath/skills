@@ -1,0 +1,28 @@
+----
+|
+
+                                                                   00000
+                                                                   0000 SAMPLE STREET SUITE 0, BOX 000
+                                                                   SAMPLETON ONTARIO A0A 0A0
+
+                                                                   ALEX SAMPLE
+                                                                   1 SAMPLE STREET                                                                             Your account number:
+                                                                   SAMPLETON ON                                                                                00000 01234 56
+                                                                   A0A 0A0                                                                                     Questions?
+                                                                                                                                                               Call 1 800 4-SCOTIA
+                                                                   Your Basic Banking account summary
+
+                                                                   Opening Balance on March 1, 2026                                       $100.00
+                                                                      Minus total withdrawals                                              $10.00
+                                                                      Plus total deposits                                                   $0.00
+
+                                                                   Closing Balance on March 31, 2026                                       $90.00
+
+                                                                   Here's what happened in your account this statement period
+                                                                                                                     Amounts        Amounts
+                                                                   Date       Transactions              withdrawn ($)   deposited ($)   Balance ($)
+
+                                                                   Mar 1      Opening Balance                                                 100.00
+                                                                   Mar 2      Service charge                      10.00                        80.00
+                                                                   Mar 3      Deposit                                            10.00         90.00
+                                                                   Mar 31     Closing Balance                                                  90.00

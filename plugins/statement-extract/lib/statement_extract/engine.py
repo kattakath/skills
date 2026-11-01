@@ -6,6 +6,7 @@ for every institution and a contributor cannot weaken them from an adapter.
 """
 import hashlib
 import re
+from datetime import date
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -13,19 +14,22 @@ from . import SCHEMA, engine_version
 from . import accounts as accounts_mod
 from . import keys, mask, reconcile
 from .dedupe import Deduper
-from .drivers import ofx_driver
-from .model import Exit, Refusal, StatementDraft
+from .drivers import ofx_driver, pdftext_driver
+from .model import Check, Exit, Refusal, StatementDraft
 from .money import as_str, credit_debit
+from .readers import pdftext
 from .registry import Adapter
 
-DRIVERS = {"ofx": ofx_driver}
+MAX_CYCLE_GAP_DAYS = 3  # see chain()
+DRIVERS = {"ofx": ofx_driver, "pdftext": pdftext_driver}
 
 # Output fields the leak gate does not read, each for a stated reason:
 # - hex digests: sha256 hex has a ~90% chance of holding a 7+ decimal-digit run by accident,
 #   and a digest cannot carry an account number;
 # - the institution's own transaction id (entry_ref, and the id segment of a fitid key):
 #   numeric FITIDs are routine, and the key bytes are frozen, so masking them is not an option.
-EXEMPT_FIELDS = {"statement_id", "sha256", "extractor_version", "entry_ref"}
+EXEMPT_FIELDS = {"statement_id", "previous_statement_id", "sha256", "extractor_version",
+                 "entry_ref"}
 
 
 @dataclass
@@ -45,8 +49,8 @@ def sha256_file(path: Path) -> tuple[bytes, str]:
     return raw, hashlib.sha256(raw).hexdigest()
 
 
-def candidates(raw: bytes, adapters: list[Adapter]) -> list[Adapter]:
-    return [a for a in adapters if DRIVERS[a.format].identify(raw, a.spec)]
+def candidates(raw: bytes, adapters: list[Adapter], path: Path | None = None) -> list[Adapter]:
+    return [a for a in adapters if DRIVERS[a.format].identify(raw, a, path)]
 
 
 def _account_view(adapter: Adapter, d: StatementDraft, accts) -> tuple[str, str, object]:
@@ -66,7 +70,7 @@ def _account_view(adapter: Adapter, d: StatementDraft, accts) -> tuple[str, str,
 def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: str | None
           ) -> FileResult:
     """One file through one adapter -> records, or a Refusal."""
-    drafts, fired = DRIVERS[adapter.format].extract(raw, adapter.spec)
+    drafts, fired = DRIVERS[adapter.format].extract(raw, adapter, path)
     res = FileResult(path, sha, adapter, fired)
     version = engine_version()
     file_label = mask.mask(path.name)
@@ -74,8 +78,20 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
     fallbacks = adapter.spec["keys"].get("fallback", [])
     need = max(reconcile.rank(adapter.minimum), reconcile.rank(require or "structural"))
 
+    proves = bool(adapter.spec.get("reconcile", {}).get("proves", False))
+    backend = None
+    if adapter.format == "pdftext":
+        backend = pdftext.backend_version() if pdftext.is_pdf(raw) else "layout.txt"
+
     for d in drafts:
         ref, kind, acct = _account_view(adapter, d, accts)
+        if adapter.spec.get("account", {}).get("verify_last4") and acct and acct.last4:
+            # The statement header prints the real account: an override that disagrees with it
+            # is a wrong accounts entry, and would key the rows to someone else's account.
+            head = d.acctid.strip()[-4:]
+            d.checks.append(Check("header_last4", head == acct.last4,
+                                  expected=f"••{acct.last4} (accounts file)",
+                                  actual=f"••{head} (statement header)"))
         d.checks += reconcile.assertions(d, acct)
         failed = [c for c in d.checks if not c.ok]
         sid = hashlib.sha256(f"{sha}|{ref}|{d.index}".encode()).hexdigest()[:16]
@@ -83,13 +99,13 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
             raise Refusal(Exit.REFUSED, f"{ref}: check(s) failed: "
                           + ", ".join(c.name for c in failed),
                           checks=[c.as_dict() for c in failed])
-        status = reconcile.status(d.checks)
+        status = reconcile.status(d.checks, proves)
         if reconcile.rank(status) < need:
             raise Refusal(Exit.REFUSED, f"{ref}: reconcile status {status!r} is below the "
                           f"required {reconcile.STATUSES[need]!r}")
         keyers = {}
         txns = []
-        for t in d.transactions:
+        for n, t in enumerate(d.transactions, 1):
             use = scheme
             for fb in fallbacks:
                 if re.fullmatch(fb["fitid_pattern"], t.entry_ref or ""):
@@ -97,6 +113,8 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
                     break
             if use == "fitid":
                 key = keys.fitid_key(adapter.institution, ref, t.entry_ref)
+            elif use == "statement-line/1":
+                key = keys.statement_line_key(adapter.institution, ref, d.period_end, n)
             else:
                 keyer = keyers.setdefault(use, keys.ContentKeyer(use, adapter.institution, ref))
                 key = keyer.key(t.key_date or t.booking_date, t.amount, t.description)
@@ -123,7 +141,8 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
             "source": {"file": file_label, "sha256": sha, "format": adapter.format,
                        "extractor_version": version,
                        "adapter": {"id": adapter.id, "sha256": adapter.sha256},
-                       "repairs": fired},
+                       "repairs": fired,
+                       **({"text_backend": backend} if backend else {})},
             "reconcile": {"status": status, "checks": [c.as_dict() for c in d.checks]},
             "counts": {"parsed": d.raw_txn_count, "skipped": d.skipped, "emitted": 0,
                        "seen": 0, "dup_in_run": 0},
@@ -135,8 +154,10 @@ def build(path: Path, raw: bytes, sha: str, adapter: Adapter, accts, require: st
 def run_file(path: Path, raw: bytes, sha: str, adapters: list[Adapter], accts,
              require: str | None) -> FileResult:
     """Identify, then fail closed: exactly one claiming adapter must reconcile."""
-    claim = candidates(raw, adapters)
+    claim = candidates(raw, adapters, path)
     if not claim:
+        if pdftext.is_pdf(raw) or path.name.endswith(pdftext.LAYOUT_SUFFIX):
+            pdftext.text_of(path, raw)  # a scan with no text layer refuses here, by name
         raise Refusal(Exit.UNIDENTIFIED, "no adapter identifies this file")
     ok, errors = [], []
     for a in claim:
@@ -189,6 +210,47 @@ def order(statements: list[dict], txns: list[dict]) -> list[dict]:
         t["institution"], t["account"], t["booking_date"], t["source"]["sha256"],
         t["source"]["locator"]))
     return statements + txns
+
+
+def chain(results: list[FileResult]) -> None:
+    """chain_across_statements: when one account's statements in this run are back to back,
+    the next opening must equal the previous closing. The same period delivered twice must
+    carry the same balances. A month missing from the run is not judged.
+
+    "Back to back" is a start 1-3 days after the previous end: statement cycles that end on
+    a weekend or holiday leave 2-3 day gaps (measured 2026-10-31 on 28 consecutive real
+    Scotiabank hand-overs: 21 x 1 day, 6 x 2, 1 x 3, balances equal across all 28). A
+    missing month is a gap of 28+ days, so it can never be judged by mistake."""
+    by_acct: dict[tuple, list[dict]] = {}
+    for r in results:
+        for s in r.statements:
+            p, b = s["period"], s["balances"]
+            if p["start"] and p["end"] and b["opening"] is not None and b["closing"] is not None:
+                by_acct.setdefault((s["institution"], s["account"]["ref"]), []).append(s)
+    for (inst, ref), stmts in by_acct.items():
+        stmts.sort(key=lambda s: (s["period"]["start"], s["period"]["end"],
+                                  s["source"]["sha256"]))
+        for prev, nxt in zip(stmts, stmts[1:]):
+            same = prev["period"] == nxt["period"]
+            if same:
+                ok = prev["balances"] == nxt["balances"]
+                expected, actual = prev["balances"]["closing"], nxt["balances"]["closing"]
+            else:
+                gap = (date.fromisoformat(nxt["period"]["start"])
+                       - date.fromisoformat(prev["period"]["end"])).days
+                if not 1 <= gap <= MAX_CYCLE_GAP_DAYS:
+                    continue
+                expected, actual = prev["balances"]["closing"], nxt["balances"]["opening"]
+                ok = expected == actual
+            check = {"name": "chain_across_statements", "ok": ok, "expected": expected,
+                     "actual": actual, "previous_statement_id": prev["statement_id"],
+                     "note": "same period delivered again" if same else
+                     "opening = closing of the statement before"}
+            nxt["reconcile"]["checks"].append(check)
+            if not ok:
+                raise Refusal(Exit.REFUSED, f"{inst} {ref}: statement ending "
+                              f"{nxt['period']['end']} does not continue the one ending "
+                              f"{prev['period']['end']}", check=check)
 
 
 def dedupe(results: list[FileResult], seen: set[str]) -> list[dict]:

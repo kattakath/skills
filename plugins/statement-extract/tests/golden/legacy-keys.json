@@ -1,5 +1,5 @@
 {
- "_comment": "Keys emitted by agentic-ledger's own qfx_rows.py (worktree-distributed-crafting-liskov @ b78340c, ofxtools 0.9.5) over these synthetic fixtures, with --institution from the adapter, --acct-last4 from the case's accounts file and --known from its seen file. The plugin must emit exactly these keys. Never edit by hand.",
+ "_comment": "Keys emitted by agentic-ledger's own extractors (worktree-distributed-crafting-liskov @ b78340c) over these synthetic fixtures. QFX: qfx_rows.py under ofxtools 0.9.5, with --institution from the adapter, --acct-last4 from the case's accounts file and --known from its seen file. PDF: pdf_rows_desjardins.py / pdf_rows_scotia_chequing.py, fed the fixture's .layout.txt where they would have called pdftotext, with --acct-last4 from the accounts file (Scotiabank: the header's). The plugin must emit exactly these keys. Never edit by hand.",
  "cases": {
   "cibc/card-memo-first4": [
    "CIBC|••2204|0000202610050104"
@@ -16,6 +16,30 @@
   ],
   "cibc/real-cp1252": [
    "CIBC|••2202|0000202610030102"
+  ],
+  "desjardins/identical-rows": [
+   "Desjardins|••5001|2026-06-03|-3.00|SAMPLE TRANSIT SAMPLETON ON|1",
+   "Desjardins|••5001|2026-06-03|-3.00|SAMPLE TRANSIT SAMPLETON ON|2"
+  ],
+  "desjardins/january-rollover": [
+   "Desjardins|••5001|2025-12-31|-10.00|SAMPLE GROCER #00012 SAMPLETON ON|1",
+   "Desjardins|••5001|2026-01-03|-20.50|SAMPLE PHARMACY - 0001 SAMPLETON ON|1",
+   "Desjardins|••5001|2026-01-06|-34.55|SAMPLE ONLINE STORE SEATTLE ON — 25.00 US DOLLAR XRT: 1.382000|1",
+   "Desjardins|••5001|2026-01-08|-1000.00|SAMPLE HARDWARE SAMPLETON ON|1",
+   "Desjardins|••5001|2026-01-11|500.00|PAYMENT THANK YOU / PAIEMENT ON|1",
+   "Desjardins|••5001|2026-01-15|-1.23|INTEREST CHARGES - PURCHASES ON|1"
+  ],
+  "desjardins/no-activity": [],
+  "scotiabank/chequing-regular": [
+   "Scotiabank|••3456|2026-02-28|1",
+   "Scotiabank|••3456|2026-02-28|2",
+   "Scotiabank|••3456|2026-02-28|3",
+   "Scotiabank|••3456|2026-02-28|4",
+   "Scotiabank|••3456|2026-02-28|5",
+   "Scotiabank|••3456|2026-02-28|6"
+  ],
+  "scotiabank/chequing-year-rollover": [
+   "Scotiabank|••3456|2026-01-31|1"
   ],
   "scotiabank/counter-fitid": [
    "Scotiabank|••4401|0000202610020201",

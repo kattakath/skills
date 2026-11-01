@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "printed Purchases / Debits disagree with the rows: refused, nothing emitted"
+exit = 3
+stderr_has = "summary_purchases"

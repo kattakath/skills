@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the header prints the account, not the card: without an accounts-file last4, refused"
+exit = 4
+stderr_has = "needs an accounts-file entry"

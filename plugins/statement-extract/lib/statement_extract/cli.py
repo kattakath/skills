@@ -12,7 +12,7 @@ from . import registry
 from .dedupe import append_seen, load_seen
 from .exporters import csv_export
 from .model import STATUSES, Exit, Refusal
-from .readers import ofx
+from .readers import ofx, pdftext
 from .telemetry import RunLog, default_log_path, otlp_url
 
 
@@ -89,6 +89,7 @@ def cmd_extract(a, log: RunLog) -> int:
         results.append(res)
 
     try:
+        engine.chain(results)
         kept = engine.dedupe(results, seen)
     except Refusal as e:
         log.emit("refusal", "ERROR", **{"exit.code": int(e.code), "reason": e.reason})
@@ -157,7 +158,7 @@ def cmd_identify(a, log) -> int:
             print(_dump({"file": name, **{k: ids.get(k, []) for k in
                                          ("ORG", "FID", "INTU.BID", "CURDEF")}}))
             continue
-        hits = [x.id for x in engine.candidates(raw, adapters)]
+        hits = [x.id for x in engine.candidates(raw, adapters, path)]
         print(f"{name}\t{','.join(hits) or '-'}")
         if len(hits) != 1:
             code = Exit.UNIDENTIFIED
@@ -171,7 +172,7 @@ def cmd_explain(a, log) -> int:
     out = {"file": mask.mask(path.name), "sha256": sha,
            "identifiers": {k: v for k, v in ofx.identifiers(raw).items() if k != "CURDEF"},
            "candidates": []}
-    for ad in engine.candidates(raw, adapters):
+    for ad in engine.candidates(raw, adapters, path):
         c = {"adapter": ad.id}
         try:
             res = engine.build(path, raw, sha, ad, accts, None)
@@ -227,6 +228,13 @@ def cmd_fixture(a, log) -> int:
         print(p)
     print(f"fixture lint: {len(problems)} problem(s)", file=sys.stderr)
     return int(Exit.REFUSED) if problems else 0
+
+
+def cmd_shape(a, log) -> int:
+    path = Path(a.file)
+    raw = path.read_bytes()
+    print(fixtures.shape(pdftext.text_of(path, raw)))
+    return 0
 
 
 def cmd_corpus(a, log) -> int:
@@ -305,6 +313,10 @@ def parser() -> argparse.ArgumentParser:
     fl = fsub.add_parser("lint", help="keep real data out of the plugin tree")
     fl.add_argument("root", nargs="?")
     fl.set_defaults(fn=cmd_fixture)
+    fs = fsub.add_parser("shape", help="a real statement's layout with every value blanked "
+                         "(digits -> 9, non-label words -> x); run locally, share only this")
+    fs.add_argument("file")
+    fs.set_defaults(fn=cmd_shape)
 
     c = sub.add_parser("corpus", help="private-corpus drift lock")
     csub = c.add_subparsers(dest="corpus_cmd", required=True)

@@ -8,15 +8,16 @@ run with a distinct exit code and emits nothing.
 The plugin ends at canonical JSONL (and a CSV exporter). Writing to a Sheet or a ledger stays
 with the consumer.
 
-## Status: release 1 (QFX/OFX)
+## Status: releases 1 and 3 (QFX/OFX, PDF)
 
 | Ships now | Later releases |
 |---|---|
-| Core engine, CLI contract, run log, CSV exporter, fixture lint | R2: Wise via a declarative CSV driver |
-| MIT OFX 1.x/2.x reader + 4 named repairs | R3: PDF text-layer reader, Desjardins and closed-chequing adapters |
-| Adapters: **TD, CIBC, Scotiabank, Tangerine** | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+| Core engine, CLI contract, run log, CSV exporter, fixture lint and shape | R2: Wise via a declarative CSV driver |
+| MIT OFX 1.x/2.x reader + 4 named repairs | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+| QFX adapters: **TD, CIBC, Scotiabank, Tangerine** | |
+| PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing** | |
 
-There are **no skills in this release**: drive the CLI directly.
+There are **no skills yet** (R4): drive the CLI directly.
 
 ## Run it
 
@@ -38,6 +39,7 @@ SE=$(ls -td ~/.claude/plugins/cache/kattakath/statement-extract/*/ | head -1)scr
 | `adapters`, `doctor` | List adapters; check the runtime |
 | `export [F]` | Canonical JSONL → CSV (transactions) |
 | `fixture lint` | Keep real data out of this tree |
+| `fixture shape FILE` | A real statement's layout with every value blanked, safe to share with an agent |
 | `corpus check DIR --lock F` | Drift lock over a private corpus: hashes and counts only |
 
 ### Exit codes
@@ -79,7 +81,7 @@ shuffled arguments, produce identical bytes.
 |---|---|
 | `structural` | Every raw `<STMTTRN>` parsed, no unknown tags, FITIDs unique, LEDGERBAL present, one currency |
 | `asserted` | Structural **and** a balance from `accounts.toml` agrees with the file |
-| `proven` | The statement proves itself from printed totals (PDF adapters, later) |
+| `proven` | The statement proves itself from printed totals: every row tied to the printed summary or running balance (the PDF adapters) |
 
 `--require asserted` refuses anything weaker.
 
@@ -89,14 +91,18 @@ shuffled arguments, produce identical bytes.
 |---|---|---|
 | `fitid` | TD, CIBC, Scotiabank, Tangerine | `Institution\|••1234\|FITID` |
 | `content-occurrence/legacy-qfx-v0` | Scotiabank counter FITIDs (`undefined`, `undefined-1`, …) | `Institution\|••1234\|date\|amount\|text\|n` |
-| `content-occurrence/legacy-collapse-v0` | Reserved for Desjardins (R3) | same, whitespace collapsed |
+| `content-occurrence/legacy-collapse-v0` | Desjardins Visa (PDF) | same, whitespace collapsed, ledger sign |
+| `statement-line/1` | Scotiabank closed chequing (PDF); needs `keys.immutable = true` | `Institution\|••1234\|period end\|line n` |
 
 - The two content normalisers are **frozen** copies of the extractors that made keys already
   stored downstream. Three tests pin them:
   - golden vectors produced by running the legacy code itself (`tests/golden/normalisers.json`);
   - a source hash per function (`tests/golden/frozen.json`);
-  - the legacy extractor's own keys over every fixture (`tests/golden/legacy-keys.json`).
-- Measured on 24 fixture cases: **identical keys**. Display fields differ in two cases only:
+  - the legacy extractors' own keys over every fixture (`tests/golden/legacy-keys.json`).
+- Measured on 29 fixture cases (24 QFX, 5 PDF): **identical keys**.
+- Measured on the operator's **58 real PDF statements**, locally and counts only: **identical
+  key sets** for 24/24 Desjardins (654 keys) and 34/34 Scotiabank chequing (776 keys).
+- QFX display fields differ in two cases only:
   - whitespace is collapsed for display;
   - a timezone-bearing date shows the day as written. The key keeps the legacy UTC day.
 - A normaliser never changes in place. A change is a new scheme name plus a consumer
@@ -156,10 +162,35 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 - An OTLP collector listening on **gRPC only** will not receive this. Give it an `http`
   receiver, or a `filelog` receiver on `runs.jsonl`.
 
+## PDF statements
+
+- Text comes from poppler's `pdftotext -layout`, the same invocation the legacy extractors
+  used. `doctor` shows whether it is installed. A file with under 500 characters of text is
+  refused as **a scan**.
+- A PDF adapter is TOML (identify markers, regex grammar, key scheme) plus a hook
+  (`adapters/<inst>/<format>.py`). It may define only `parse_lines`, `post_drafts` or
+  `extra_checks`, and each needs a docstring starting `Why not TOML:`. The loader enforces both.
+- **Desjardins Visa:** the header prints the account, not the card, so an accounts entry is
+  required. Rows are tied to five printed figures. FX detail lines fold into the row above
+  with ` — `. A January statement's December rows take the previous year. A month with no
+  activity is a proven statement with zero rows.
+- **Scotiabank closed chequing:** direction comes from the running balance, and every row
+  must chain. Detail lines attach by indentation. An accounts-file last4 that disagrees with
+  the header is refused (`header_last4`).
+- **`chain_across_statements`:** one account's back-to-back statements in a run must hand
+  over the balance exactly. "Back to back" means a gap of 1–3 days, because cycles end on
+  weekends and holidays (28 real hand-overs measured). The same month delivered twice is
+  counted once (`dup_in_run`), and both copies must agree.
+
 ## Privacy
 
 - Fixtures are **synthetic only**, one per quirk.
 - Every synthetic account or FITID digit run starts `0000`.
+- PDF fixtures are synthetic `*.layout.txt` text, written from `fixture shape` output. Shape
+  turns digits into `9` and every word outside a fixed lexicon of generic labels into `x`s,
+  keeping the columns. Only shapes ever enter an agent's context.
+- CI generates PDFs **in-run** from those fixtures (`tests/make_pdf.py`) and reads them back
+  through poppler. No PDF is committed.
 - `fixture lint` refuses:
   - a 7+ digit run outside that reserved pattern;
   - a case without `synthetic = true`;
@@ -169,19 +200,22 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 
 ## Adding an institution (until the R4 skill lands)
 
-1. Run `identify --print-identifiers` on a real file **locally**. Copy its ORG/FID into
-   `adapters/<institution>/<format>.toml`.
-2. Write one synthetic fixture per quirk: `<case>.qfx`, `<case>.case.toml` (`synthetic = true`,
+1. QFX: run `identify --print-identifiers` on a real file **locally** and copy its
+   ORG/FID/INTU.BID into `adapters/<institution>/<format>.toml`. PDF: run `fixture shape`
+   locally and write the grammar from the shape.
+2. Write one synthetic fixture per quirk: `<case>.qfx` or `<case>.layout.txt`,
+   `<case>.case.toml` (`synthetic = true`,
    `quirk`, `exit`), and optionally `<case>.accounts.toml` / `<case>.seen.txt`.
 3. Generate the goldens: `STATEMENT_EXTRACT_UPDATE_GOLDENS=1 python3 -m unittest test_fixtures`,
    run from `tests/`. Then review the diff.
-4. `bash tests/run.sh`.
+4. `bash tests/run.sh`, plus `bash tests/run.sh --pdf-smoke` for a PDF adapter.
 
 TOML trap: a key written after a `[table]` header lands inside that table. The loader rejects
 unknown `identify` fields for exactly that reason.
 
 ## Requires
 
+- **poppler** (`pdftotext`) for PDF statements only.
 - Python **≥ 3.11**, standard library only. No uv, no ofxtools: ofxtools is GPL-3.0, and this
   reader is MIT.
 - The launcher re-execs under `python3 -I`, so `PYTHONPATH` and the working directory cannot

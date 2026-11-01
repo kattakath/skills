@@ -41,10 +41,26 @@ def assertions(draft: StatementDraft, account: Account | None) -> list[Check]:
     return out
 
 
-def status(checks: list[Check]) -> str:
-    """Caller guarantees all checks passed. Asserted needs a real (non-skipped) agreement."""
+def status(checks: list[Check], proves: bool = False) -> str:
+    """Caller guarantees all checks passed. Asserted needs a real (non-skipped) agreement;
+    proven is for adapters whose own checks tie every row to printed totals."""
+    if proves:
+        return "proven"
     for c in checks:
         if c.name in ("external_assertion", "balance_equation") and c.ok \
                 and not c.note.startswith("skipped"):
             return "asserted"
     return "structural"
+
+
+# --- helpers for adapters whose statements print their own totals ------------------------
+
+def balance_equation(opening: Decimal, rows, closing: Decimal, note: str = "") -> Check:
+    total = opening + sum((t.amount for t in rows), Decimal(0))
+    return Check("balance_equation", total == closing, expected=format(closing, "f"),
+                 actual=format(total, "f"), note=note or "opening + rows = closing")
+
+
+def printed_total(name: str, computed: Decimal, printed: Decimal, note: str = "") -> Check:
+    return Check(name, computed == printed, expected=format(printed, "f"),
+                 actual=format(computed, "f"), note=note)

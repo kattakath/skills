@@ -40,13 +40,23 @@ FROZEN = {
     "content-occurrence/legacy-collapse-v0": legacy_collapse_v0,
 }
 
-# Schemes this release can build. The others named in the plan (statement-line/1,
-# native-id-ts/1, content-hash/1) arrive with the adapters that need them.
-SCHEMES = ("fitid", *FROZEN)
+# Schemes this release can build. native-id-ts/1 (Wise) and content-hash/1 arrive with the
+# adapters that need them.
+SCHEMES = ("fitid", "statement-line/1", *FROZEN)
 
 
 def fitid_key(institution: str, acct_ref: str, fitid: str) -> str:
     return f"{institution}|{acct_ref}|{fitid}"
+
+
+def statement_line_key(institution: str, acct_ref: str, period_end: str, n: int) -> str:
+    """`Institution|••1234|<statement period end>|<n>`, n = 1-based line in the statement.
+
+    Only sound for a statement that can never be reissued (a closed account): the adapter
+    must declare `keys.immutable = true`. Reproduces agentic-ledger
+    pdf_rows_scotia_chequing.py (2026-10-31).
+    """
+    return f"{institution}|{acct_ref}|{period_end}|{n}"
 
 
 class ContentKeyer:

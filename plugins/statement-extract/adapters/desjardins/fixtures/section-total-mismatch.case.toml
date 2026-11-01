@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "the printed section Total disagrees with the regular rows: refused"
+exit = 3
+stderr_has = "section_total"
