@@ -2,12 +2,12 @@
 option "title" "Test household"
 option "operating_currency" "CAD"
 
-2025-12-01 query "Interest and fees by month" "SELECT year, month, account, sum(cost(position)) AS total WHERE account ~ '^Expenses:Bank-Fees' GROUP BY year, month, account ORDER BY year, month"
+2025-12-01 query "Interest & fees" "SELECT year, month, account, sum(cost(position)) AS total WHERE account ~ '^Expenses:Bank-Fees' GROUP BY year, month, account ORDER BY year, month"
 2025-12-01 query "Review queue" "SELECT date, account, payee, narration, position WHERE flag = '!' ORDER BY date"
 2025-12-01 query "Rows by rule" "SELECT any_meta('rule') AS rule, account, count(*) AS n WHERE account ~ '^(Expenses|Income)' GROUP BY rule, account ORDER BY n DESC"
-2025-12-01 query "Spending by category, this year" "SELECT account, sum(cost(position)) AS total WHERE account ~ '^Expenses' AND year = year(today()) GROUP BY account ORDER BY total DESC"
 2025-12-01 query "Spending by month" "SELECT year, month, sum(cost(position)) AS total WHERE account ~ '^Expenses' GROUP BY year, month ORDER BY year, month"
-2025-12-01 query "Unpaired transfer legs" "SELECT date, payee, narration, position WHERE account ~ '^Equity:Transfers' ORDER BY date"
+2025-12-01 query "Spending this year" "SELECT account, sum(cost(position)) AS total WHERE account ~ '^Expenses' AND year = year(today()) GROUP BY account ORDER BY total DESC"
+2025-12-01 query "Unpaired transfers" "SELECT date, payee, narration, position WHERE account ~ '^Equity:Transfers' ORDER BY date"
 2025-12-01 query "Unrecorded gaps" "SELECT date, account, position WHERE account ~ '^Equity:Gaps' ORDER BY date"
 
 2025-12-01 open Assets:Bank:Chequing-0001

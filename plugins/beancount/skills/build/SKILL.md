@@ -66,6 +66,15 @@ The journal is rebuilt every time, so nothing is typed into it. Each feature has
 | Budgets | a CSV with `from, account, period, amount[, currency]` (`--budgets`); period is daily, weekly, monthly, quarterly or yearly; a row with no amount is skipped | `custom "budget" <account> "<period>" <amount> <cur>` |
 | Statement PDFs | `--statements <folder>`: each statement links to the file whose sha256 its extract recorded (by content: recorded names are masked) | `document <account> "<absolute path>"` at the statement's closing date |
 
+### Prices, snapshots, loans and scoped categories
+
+| Need | `ledger.toml` / flag | Effect |
+|---|---|---|
+| Exchange rates | `--prices <folder>` of `*.beancount` price lines (e.g. `pricehist fetch bankofcanada USD/CAD -o beancount`); `[pegs] AED = { base = "USD", rate = 3.6725 }` derives a pegged currency | `price` directives; Fava converts every currency to the operating one |
+| An asset no statement covers (a house) | `[[snapshot]]` `account`, `date`, `amount` [, `currency`, `revalue`] | first figure opens from opening balances; each later change books to `revalue` |
+| A loan read as screen snapshots (a mortgage) | `interest = "<expense account>"` on its `[[account]]` | the gap between two snapshots that payments do not explain books to interest |
+| Payments that reduce a loan, not spending | `[categories]` key scoped to the paying account: `"LOAN_PAYMENTS_MORTGAGE_PAYMENT@<label>" = "<liability account>"` | the payment moves money to the liability; the same category elsewhere is unchanged |
+
 Every categorised entry also carries `rule: "<priority>"`, the Category rules row that decided
 it (absent when a decision row did). The generic "Rows by rule" query groups by it.
 Measured 2026-11-01 (Fava 1.30): a journal with all four loads with 0 errors, including paths

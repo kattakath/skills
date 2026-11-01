@@ -69,6 +69,9 @@ def day_after(iso: str) -> str:
 
 def other_account(x, ledger) -> str:
     tr = ledger.transfers
+    scoped = f"{x.cat}@{x.acct}"     # e.g. a mortgage payment from one chequing account
+    if scoped in ledger.categories:
+        return ledger.categories[scoped]
     if x.cat in ledger.categories:
         return ledger.categories[x.cat]
     if x.cps:
@@ -81,7 +84,7 @@ def other_account(x, ledger) -> str:
 
 
 def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
-           bridges=(), budgets=(), documents=()) -> tuple[str, dict]:
+           bridges=(), budgets=(), documents=(), prices=()) -> tuple[str, dict]:
     own_of, unmapped = {}, set()
     for x in rows:
         a = ledger.account_for(x.inst, x.acct)
@@ -143,6 +146,7 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
     # Balance assertions: statements and screen figures, then positions (with their pads).
     seen = set()
     asserted_first: dict[str, str] = {}
+    pads = []   # (date, account, source)
     for s in sorted(asserts, key=lambda s: (s.as_of, s.inst, s.acct, s.origin, s.amount)):
         a = ledger.account_for(s.inst, s.acct)
         if not a.asserts:
@@ -152,15 +156,34 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
         if k in seen:
             continue
         seen.add(k)
+        if a.interest and a.name in asserted_first and asserted_first[a.name] < on:
+            # A loan read as snapshots: what payments do not explain between two figures is
+            # interest, booked to the account's interest expense (not to opening balances).
+            pads.append((s.as_of, a.name, a.interest))
+            use(a.interest, s.as_of)
         entries.append((on, 3, a.name, f"{on} balance {a.name}  {s.amount} ~ 0.00 {s.cur}\n"
                                         f"  origin: {q(s.origin)}"))
         asserted_first[a.name] = min(asserted_first.get(a.name, on), on)
         use(a.name, s.as_of)
 
+    # Snapshots of things no statement covers (a house): first figure opens it from opening
+    # balances; each later figure's change books to its `revalue` account.
+    for i, (acct, as_of, amount, cur, revalue) in enumerate(ledger.snapshots):
+        on = day_after(as_of)
+        if acct in asserted_first and revalue:
+            pads.append((as_of, acct, revalue))
+            use(revalue, as_of)
+        entries.append((on, 3, acct, f"{on} balance {acct}  {amount} ~ 0.00 {cur}\n"
+                                     f"  origin: \"snapshot\""))
+        asserted_first[acct] = min(asserted_first.get(acct, on), on)
+        use(acct, as_of)
+
+    for d_, cur, rate, quote in prices:
+        entries.append((d_, 0, cur, f"{d_} price {cur} {rate} {quote}"))
+
     by_acct = defaultdict(list)
     for s in positions:
         by_acct[ledger.account_for(s.inst, s.acct).name].append(s)
-    pads = []   # (date, account, source)
     for name, snaps in sorted(by_acct.items()):
         a = next(a for a in ledger.accounts if a.name == name)
         if not a.asserts:
@@ -247,5 +270,6 @@ def render(rows, asserts, positions, ledger, skip_pads=frozenset(),
     return text, {"entries": len(rows), "assertions": sum(1 for e in entries if e[1] == 3),
                   "pads": len(pads), "transfer_residue": residue,
                   "budgets": len(budgets), "documents": n_docs, "queries": len(ledger.queries),
+                  "prices": len(prices), "snapshots": len(ledger.snapshots),
                   "bridges": [f"{a} {note[(d_, a, s)]}" for d_, a, s in pads
                               if (d_, a, s) in note]}
