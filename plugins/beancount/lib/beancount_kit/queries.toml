@@ -11,15 +11,15 @@ name = "Spending by month"
 sql = "SELECT year, month, sum(cost(position)) AS total WHERE account ~ '^Expenses' GROUP BY year, month ORDER BY year, month"
 
 [[query]]
-name = "Spending by category, this year"
+name = "Spending this year"
 sql = "SELECT account, sum(cost(position)) AS total WHERE account ~ '^Expenses' AND year = year(today()) GROUP BY account ORDER BY total DESC"
 
 [[query]]
-name = "Interest and fees by month"
+name = "Interest & fees"
 sql = "SELECT year, month, account, sum(cost(position)) AS total WHERE account ~ '^Expenses:Bank-Fees' GROUP BY year, month, account ORDER BY year, month"
 
 [[query]]
-name = "Unpaired transfer legs"
+name = "Unpaired transfers"
 sql = "SELECT date, payee, narration, position WHERE account ~ '^Equity:Transfers' ORDER BY date"
 
 [[query]]

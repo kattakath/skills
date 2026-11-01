@@ -39,7 +39,8 @@ def _jsonl_paths(items: list[str]) -> list[Path]:
 def build(a) -> int:
     ledger = load_ledger(Path(a.ledger))
     from . import pfc
-    bad = pfc.unknown(ledger.categories)
+    # A key may be scoped to one paying account, `CATEGORY@<label>`: the category part is checked.
+    bad = pfc.unknown({k.split("@", 1)[0] for k in ledger.categories})
     if bad:
         raise Refusal(Exit.USAGE, "ledger.toml [categories]: not a pinned Plaid PFC v2 name", bad)
     rows, asserts, overlapped, positions, survival = read_jsonl(_jsonl_paths(a.jsonl))
@@ -65,7 +66,9 @@ def build(a) -> int:
     from .inputs import read_budgets
     budgets = read_budgets(Path(a.budgets), ledger.operating_currency) if a.budgets else []
     documents, docs_missing = _documents(survival["statements"], ledger, a.statements)
-    extra = dict(bridges=survival["holes"], budgets=budgets, documents=documents)
+    from .inputs import read_prices
+    prices = read_prices(Path(a.prices), ledger.pegs) if a.prices else []
+    extra = dict(bridges=survival["holes"], budgets=budgets, documents=documents, prices=prices)
     text, rstats = render(rows, asserts, positions, ledger, **extra)
     errs, unused = check(text)
     if unused:
@@ -249,6 +252,7 @@ def main(argv=None) -> int:
     b.add_argument("--accounts", help="statement-extract accounts.toml: screen balances")
     b.add_argument("--budgets", help="Budgets tab as CSV: from, account, period, amount[, currency]")
     b.add_argument("--statements", help="folder of the statement files: each gets a `document` link")
+    b.add_argument("--prices", help="folder of *.beancount price files (e.g. pricehist output)")
     g = b.add_mutually_exclusive_group(required=True)
     g.add_argument("--out", help="journal path, or - for stdout")
     g.add_argument("--check-only", action="store_true")
