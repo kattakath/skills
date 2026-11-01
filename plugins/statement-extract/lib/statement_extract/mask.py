@@ -32,7 +32,20 @@ _GROUPED = re.compile(r"(?<![\d•.,])\d+(?:[ -]\d+)+(?!\d)")
 _PHONE = re.compile(r"(?:1-)?\d{3}-\d{3}-\d{4}")
 
 
+_PHONE_ANY = re.compile(r"(?<![\d-])(?:1-)?\d{3}-\d{3}-\d{4}(?![\d-])")
+
+
 def _grouped(s: str) -> str:
+    # Shield phone numbers first, so a neighbouring digit ("CD5 555-010-0177") cannot drag
+    # one into a group (P5 finding F1).
+    phones: list[str] = []
+
+    def shield(m: re.Match) -> str:
+        phones.append(m.group(0))
+        return f"\x00{len(phones) - 1}\x00"
+
+    s = _PHONE_ANY.sub(shield, s)
+
     def sub(m: re.Match) -> str:
         text = m.group(0)
         digits = re.sub(r"\D", "", text)
@@ -40,7 +53,8 @@ def _grouped(s: str) -> str:
             return text
         return _last4(digits)
 
-    return _GROUPED.sub(sub, s)
+    s = _GROUPED.sub(sub, s)
+    return re.sub("\x00(\\d+)\x00", lambda m: phones[int(m.group(1))], s)
 
 
 RULES: tuple[Rule, ...] = (
@@ -64,9 +78,16 @@ RULES: tuple[Rule, ...] = (
 )
 
 
-def mask(s: str | None) -> str:
+def mask(s: str | None, grouped: bool = True) -> str:
+    """Display mask. `grouped=False` skips the grouped-digit rule: QFX/OFX and CSV statements
+    print account numbers as unbroken runs, which long-digit-run masks, and their legacy
+    extractors never grouped; their dashed store and reference numbers stay readable
+    (P5, 2026-11-01). PDF statements print grouped account numbers ("ddddd ddddd dd"), so
+    PDF adapters keep it."""
     out = s or ""
     for rule in RULES:
+        if rule.name == "grouped-digits" and not grouped:
+            continue
         out = rule.apply(out)
     return out
 
