@@ -1,0 +1,49 @@
+# Scotiabank ScotiaLine line of credit, monthly PDF statement. The same layout family as the
+# Visa card (card-pdf.toml), measured 2026-10-31 on 2022, 2025 and 2026 statements; the hook
+# runs card-pdf.py's parser. A joint line prints one section per holder, each with its own
+# CREDITS/DEBITS subtotals.
+institution = "Scotiabank"
+format = "pdftext"
+description = "Scotiabank line of credit monthly PDF statement"
+
+[identify]
+text = ['Statement Period\s+[A-Z][a-z]{2} \d{1,2}, \d{4} - [A-Z][a-z]{2} \d{1,2}, \d{4}',
+        'Previous balance, [A-Z][a-z]{2} \d{1,2}/\d{2}',
+        # The product title alone on its line in the header column. The card statement's
+        # legal text says "Line of Credit accounts" only mid-line.
+        '^\s+Line of Credit\s*$']
+
+[keys]
+# No FITID, and no legacy keys to stay compatible with: the frozen content-occurrence/1 key,
+#   Scotiabank|••line|<posting date>|<amount 2dp, holder sign>|<text>|<n>
+scheme = "content-occurrence/1"
+
+# The header prints the line's number (in full on 2022 statements, first and last four
+# later). An accounts-file last4 that disagrees with it is refused (header_last4).
+[account]
+verify_last4 = true
+
+[reconcile]
+minimum = "proven"
+proves = true   # every row is tied to its section subtotal, the summary and the balance
+
+[grammar]
+# Scotiabank's own QFX for this line is a credit-card statement (<CCSTMTRS>), so the QFX
+# adapter labels it "creditcard"; the same label here keeps one kind per account.
+kind = "creditcard"
+amt = '-?\$?\d{1,3}(?:,\d{3})*\.\d{2}-?'
+period = 'Statement Period\s+([A-Z][a-z]{2}) (\d{1,2}), (\d{4}) - ([A-Z][a-z]{2}) (\d{1,2}), (\d{4})'
+account = 'Account #\s+(\d{4}(?:\s+[0-9A-Za-z*]{3,4}){2,4})'
+row = '^\s*(?P<ref>\d{3})\s+(?P<tmon>[A-Z][a-z]{2})\s+(?P<tday>\d{1,2})\s+(?P<pmon>[A-Z][a-z]{2})\s+(?P<pday>\d{1,2})\s+'
+row_amount = '\$?\d{1,3}(?:,\d{3})*\.\d{2}-?(?![\d%])'
+amount_heading = 'AMOUNT\(\$\)'
+amount_slack = 8
+subtotal = '^\s*\S+ (?P<dir>CREDITS|DEBITS)\b.*?\$(?P<amt>\d{1,3}(?:,\d{3})*\.\d{2})'
+
+[grammar.summary]
+previous = 'Previous balance, [A-Z][a-z]{2} \d{1,2}/\d{2}\s+({AMT})'
+interest = '(?:Total )?[Ii]nterest\s+\+\s+({AMT})'
+credits = '(?:Total )?[Pp]ayments/credits\s+-\s+({AMT})'
+# 2025+ prints "Advances/charges"; the 2022 statement printed "Total purchases/charges".
+charges = '(?:Total )?(?:[Pp]urchases|[Aa]dvances)/charges\s+\+\s+({AMT})'
+closing = ['Account Balance\S*\s+=\s+({AMT})', 'New balance\s+=\s+({AMT})']

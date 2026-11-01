@@ -1,0 +1,31 @@
+                                                                                           Statement Period        Dec 4, 2025 - Jan 3, 2026
+                                                                                           Statement Date                        Jan 3, 2026
+                                                                                           Account #                0000 XXXX XXXX 1234
+                                                                                           Page                                       1 of 2
+
+                                                                                           Scotia Momentum VISA Infinite* Card
+
+ALEX SAMPLE                                                                                Payment Due Date                 Oct 28, 2025
+1 SAMPLE STREET                                                                            Total Minimum Payment                 $10.00
+SAMPLETON ON A0A 0A0                                                                       New Balance       =            $95.25
+
+This statement shows transactions posted to your account during the Statement Period.      Account Summary
+
+                                                                                           Previous balance, Dec 3/25           $200.00
+                                                                                           Interest                     +          $0.00
+                                                                                           Payments/credits             -        $200.00
+                                                                                           Purchases/charges            +         $95.25
+
+                                                                                           Account Balance‡‡ =         $95.25
+
+Transactions since your last statement
+         TRANS. POST
+   REF.# DATE   DATE       DETAILS                                             AMOUNT($)
+
+ALEX SAMPLE - 0000 XXXX XXXX 1234
+   001      Dec 10    Dec 11   PAYMENT FROM - *****00*0001                        200.00-
+   002      Dec 30    Jan 2    SAMPLE GROCER #0012     SAMPLETON ON                 45.25
+   003      Jan 2     Jan 2    SAMPLE BOOKSHOP        SAMPLETON ON                  50.00
+   SUBTOTAL CREDITS - 0000 XXXX XXXX 1234                                         $200.00 -
+   SUBTOTAL DEBITS - 0000 XXXX XXXX 1234                                           $95.25
+

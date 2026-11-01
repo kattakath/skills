@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2025+ layout: amount column located from the page's AMOUNT($) heading (it moves between pages); a description holding its own amount; a wrapped description line; a trailing-minus credit; the summary column sharing lines; footnote marks on 'Account Balance'"
+exit = 0
+pdf_smoke = true
