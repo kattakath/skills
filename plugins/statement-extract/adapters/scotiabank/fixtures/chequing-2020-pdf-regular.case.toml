@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2020 business chequing print: MM/DD/YYYY dates, direction from the Withdrawals/Debits or Deposits/Credits column, a balance on every row, the Account Summary (counts and totals) printed above and below the list"
+exit = 0
+pdf_smoke = true

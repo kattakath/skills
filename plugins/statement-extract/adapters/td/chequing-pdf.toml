@@ -24,7 +24,8 @@ minimum = "proven"
 proves = true   # direction from the column, then every printed balance must chain, and both
                 # column totals and the balance equation must tie
 
-# {AMT} and {DATE} are substituted before compiling. A balance may carry TD's OD suffix.
+# {AMT} and {DATE} are substituted before compiling. A balance may carry TD's OD suffix
+# (attached now, spaced in the 2021 print).
 [grammar]
 amt = '\d{1,3}(?:,\d{3})*\.\d{2}'
 date = '(?P<mon>[A-Z]{3})\s?(?P<day>\d{1,2})'
@@ -32,8 +33,13 @@ header = '^\s*Description\s+Withdrawals\s+Deposits\s+Date\s+Balance\s*$'
 withdrawals = 'Withdrawals'
 deposits = 'Deposits'
 # The first table row: "<WORD> BALANCE", a date and a balance, no amount.
-opening = '^\s*(?P<desc>[A-Z]+ BALANCE)\s{2,}{DATE}\s{2,}(?P<bal>{AMT}(?:OD)?)\s*$'
-txn = '^\s*(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s{2,}{DATE}(?:\s{2,}(?P<bal>{AMT}(?:OD)?))?\s*$'
+opening = '^\s*(?P<desc>[A-Z]+ BALANCE)\s{2,}{DATE}\s{2,}(?P<bal>{AMT}(?:\s?OD)?)\s*$'
+txn = '^\s*(?P<desc>\S.*?)\s{2,}(?P<amt>{AMT})\s{2,}{DATE}(?:\s{2,}(?P<bal>{AMT}(?:\s?OD)?))?\s*$'
 total = '^\s*Total\s{2,}(?P<rest>.*\S)\s*$'
+# The 2021 print ends the list with a CLOSING BALANCE row, then the two column totals as bare
+# amounts with no label. A bare line counts as totals ONLY after that row, so the current
+# print (no closing row) can never take this path.
+closing = '^\s*(?P<desc>CLOSING BALANCE)\s{2,}{DATE}\s{2,}(?P<bal>{AMT}(?:\s?OD)?)\s*$'
+total_after_closing = '^\s*(?P<rest>{AMT}(?:\s+{AMT})?)\s*$'
 period = '([A-Z]{3}) (\d{1,2})/(\d{2}) - ([A-Z]{3}) (\d{1,2})/(\d{2})'
 account = 'Branch No\.\s+Account No\.[^\n]*\n(?:[^\n]*\n){0,3}?\s*\d{4}\s+(\d{4}-\d{7})\b'
