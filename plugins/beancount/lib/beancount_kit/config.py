@@ -39,6 +39,7 @@ import re
 import tomllib
 from dataclasses import dataclass, field
 from datetime import date
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from .errors import Exit, Refusal
@@ -89,6 +90,8 @@ class Ledger:
     fava_options: dict = field(default_factory=dict)
     queries: list = field(default_factory=list)     # [(name, sql)], generic + personal
     fava_extensions: list = field(default_factory=list)  # [(module, config or "")]
+    snapshots: list = field(default_factory=list)   # [(account, date, amount, cur, revalue)]
+    pegs: dict = field(default_factory=dict)        # {CUR: (base CUR, units of CUR per base)}
 
     def account_for(self, institution: str, label: str) -> Account | None:
         for a in self.accounts:
@@ -164,11 +167,28 @@ def load(path: Path) -> Ledger:
         if not isinstance(cfg, str):
             raise Refusal(Exit.USAGE, f"fava_extension[{i}]: config is one string (Fava passes it verbatim)")
         extensions.append((name, cfg))
+    snapshots = []
+    for i, x in enumerate(raw.get("snapshot", [])):
+        where = f"snapshot[{i}]"
+        try:
+            amt = str(Decimal(str(x.get("amount"))))
+        except (InvalidOperation, ValueError):
+            raise Refusal(Exit.USAGE, f"{where}: amount must be a number") from None
+        snapshots.append((_name(x.get("account"), where), _date(x.get("date"), where), amt,
+                          str(x.get("currency") or raw.get("operating_currency", "CAD")),
+                          _name(x["revalue"], where) if x.get("revalue") else None))
+    pegs = {}
+    for cur, x in raw.get("pegs", {}).items():
+        try:
+            pegs[str(cur)] = (str(x["base"]), Decimal(str(x["rate"])))
+        except (KeyError, TypeError, InvalidOperation):
+            raise Refusal(Exit.USAGE, f"pegs.{cur}: needs base and a numeric rate") from None
     queries = dict(_queries(Path(__file__).resolve().parent / "queries.toml", "queries.toml"))
     queries.update(_queries_raw(raw.get("query", []), "ledger.toml"))
     return Ledger(operating_currency=raw.get("operating_currency", "CAD"),
                   title=raw.get("title", "Ledger"), transfers=transfers, categories=categories,
                   accounts=accounts, gaps=gaps, fava_options=fava, fava_extensions=extensions,
+                  snapshots=sorted(snapshots), pegs=pegs,
                   queries=sorted(queries.items()))
 
 

@@ -217,6 +217,32 @@ def read_screen_balances(path: Path, default_cur: str) -> list[Assertion]:
     return out
 
 
+PRICE_RE = re.compile(r"^(\d{4}-\d{2}-\d{2})\s+price\s+([A-Z][A-Z0-9'._-]*)\s+(-?[\d.]+)\s+([A-Z][A-Z0-9'._-]*)\s*$")
+
+
+def read_prices(folder: Path, pegs: dict) -> list[tuple]:
+    """`price` lines from *.beancount files under `folder` (pricehist's beancount output), plus
+    derived prices for pegged currencies: a CUR pegged at `rate` units per `base` costs
+    base-price / rate. Other lines (comments, blanks) are ignored; a malformed price refuses."""
+    out, bad = {}, []
+    for p in sorted(folder.rglob("*.beancount")):
+        for i, line in enumerate(p.read_text(encoding="utf-8").splitlines(), 1):
+            if " price " not in line:
+                continue
+            m = PRICE_RE.match(line.strip())
+            if not m:
+                bad.append(f"{p.name}:{i}"); continue
+            d, cur, rate, quote = m.groups()
+            out[(d, cur, quote)] = Decimal(rate)
+    if bad:
+        raise Refusal(Exit.USAGE, "prices: lines not understood", bad[:20])
+    for cur, (base, units) in pegs.items():
+        for (d, c, quote), rate in list(out.items()):
+            if c == base and (d, cur, quote) not in out:
+                out[(d, cur, quote)] = (rate / units).quantize(Decimal("0.000001"))
+    return sorted((d, c, r, q_) for (d, c, q_), r in out.items())
+
+
 BUDGET_FIELDS = ("from", "account", "period", "amount")
 BUDGET_PERIODS = {"daily", "weekly", "monthly", "quarterly", "yearly"}
 

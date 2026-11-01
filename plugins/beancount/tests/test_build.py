@@ -3,6 +3,7 @@ import csv
 import io
 import json
 import sys
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
@@ -365,6 +366,59 @@ class FavaFeatures(unittest.TestCase):
                          r'(?m)^\d{4}-\d{2}-\d{2} custom "fava-extension" "fava_dashboards"$')
         led.write_text(base + '\n[[fava_extension]]\nname = "not a module"\n')
         code, err = self.build()
+        self.assertEqual(code, 2, err)
+
+    def test_category_override_scoped_to_one_account(self):
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        text = self.out.read_text(encoding="utf-8")
+        m = re.search(r'(?ms)^\S+ \* .*?\n  key: "[^"]*"\n  category: "([A-Z_]+)"\n(?:  .*\n)*?  Assets:Bank:Chequing-0001 ', text)
+        self.assertIsNotNone(m, "no categorised chequing entry in the scenario")
+        cat = m.group(1)
+        led = self.d / "ledger.toml"
+        body = led.read_text()
+        body = body.replace("[categories]", f'[categories]\n"{cat}@••0001" = "Expenses:Scoped"', 1) \
+            if "[categories]" in body else body + f'\n[categories]\n"{cat}@••0001" = "Expenses:Scoped"\n'
+        led.write_text(body)
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        self.assertIn("Expenses:Scoped", self.out.read_text(encoding="utf-8"))
+
+    def test_interest_between_screen_snapshots_of_a_loan(self):
+        led = self.d / "ledger.toml"
+        led.write_text(led.read_text().replace('name = "Liabilities:Bank:Card-0002"',
+                                               'name = "Liabilities:Bank:Card-0002"\ninterest = "Expenses:Interest:Card"', 1))
+        acc = self.d / "accounts.toml"
+        acc.write_text('[[account]]\ninstitution = "Bank"\nacctid_last4 = "0002"\nlast4 = "0002"\n\n'
+                       '[[account.balance]]\nas_of = "2026-02-15"\namount = "-65.00"\n')
+        code, err = self.build("--accounts", str(acc))
+        self.assertEqual(code, 0, err)
+        self.assertRegex(self.out.read_text(encoding="utf-8"),
+                         r"(?m)^2026-02-15 pad Liabilities:Bank:Card-0002 Expenses:Interest:Card$")
+
+    def test_snapshot_asset_opens_then_revalues(self):
+        led = self.d / "ledger.toml"
+        led.write_text(led.read_text() + '\n[[snapshot]]\naccount = "Assets:Property:Home"\ndate = "2026-01-01"\n'
+                       'amount = 500000\n\n[[snapshot]]\naccount = "Assets:Property:Home"\ndate = "2026-06-01"\n'
+                       'amount = 520000\nrevalue = "Income:Revaluation:Property"\n')
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        text = self.out.read_text(encoding="utf-8")
+        self.assertIn("2026-06-01 pad Assets:Property:Home Income:Revaluation:Property", text)
+        self.assertIn("balance Assets:Property:Home  520000 ~ 0.00 CAD", text)
+
+    def test_prices_and_a_pegged_currency(self):
+        pr = self.d / "prices"; pr.mkdir()
+        (pr / "usd.beancount").write_text("; pricehist output\n2026-01-02 price USD 1.3500 CAD\n")
+        led = self.d / "ledger.toml"
+        led.write_text(led.read_text() + '\n[pegs]\nAED = { base = "USD", rate = 3.6725 }\n')
+        code, err = self.build("--prices", str(pr))
+        self.assertEqual(code, 0, err)
+        text = self.out.read_text(encoding="utf-8")
+        self.assertIn("2026-01-02 price USD 1.3500 CAD", text)
+        self.assertIn("2026-01-02 price AED 0.367597 CAD", text)
+        (pr / "bad.beancount").write_text("2026-01-03 price USD lots CAD\n")
+        code, err = self.build("--prices", str(pr))
         self.assertEqual(code, 2, err)
 
     def test_rule_provenance_is_on_ruled_entries(self):
