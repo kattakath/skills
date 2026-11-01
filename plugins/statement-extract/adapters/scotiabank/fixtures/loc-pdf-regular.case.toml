@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2026 layout, joint line: two holder sections each tied to its own subtotals; the heading split over three lines; rows and subtotals sharing lines with the summary and the interest-rate table (amounts and percentages on the right)"
+exit = 0
+pdf_smoke = true
