@@ -14,6 +14,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "INDEX.md"
+README = ROOT / "README.md"
 
 
 def load(rel):
@@ -22,7 +23,8 @@ def load(rel):
 
 def main():
     check = "--check" in sys.argv[1:]
-    local = {p["name"]: p for p in load(".claude-plugin/marketplace.json")["plugins"]}
+    market = load(".claude-plugin/marketplace.json")
+    local = {p["name"]: p for p in market["plugins"]}
     sources = {s["id"]: s for s in load("index/sources.json")["sources"]}
     routes = load("index/routes.json")["routes"]
 
@@ -83,15 +85,55 @@ def main():
         errors.append("no route reaches: " + ", ".join(unrouted))
 
     text = "\n".join(lines) + "\n"
+    readme_old = README.read_text()
+    readme_new = render_readme(readme_old, market)
     if errors:
         sys.exit("index: " + "\n       ".join(errors))
     if check:
         if not OUT.exists() or OUT.read_text() != text:
             sys.exit("index: INDEX.md is stale; run python3 scripts/build-index.py")
+        if readme_new != readme_old:
+            sys.exit("index: README.md plugin table is stale; run python3 scripts/build-index.py")
         print("index: up to date")
     else:
         OUT.write_text(text)
-        print(f"index: wrote {OUT.relative_to(ROOT)} ({len(routes)} routes, {len(sources)} sources)")
+        README.write_text(readme_new)
+        print(f"index: wrote {OUT.relative_to(ROOT)} ({len(routes)} routes, {len(sources)} sources)"
+              f" and README.md's table ({len(market['plugins'])} plugins)")
+
+
+def ships(name):
+    """What a plugin needs from the surface it runs on, read from its own tree."""
+    d = ROOT / "plugins" / name
+    out = []
+    mcp = d / ".mcp.json"
+    if mcp.exists():
+        n = len(json.loads(mcp.read_text()).get("mcpServers", {}))
+        out.append(f"{n} MCP server" + ("s" if n != 1 else ""))
+    if (d / "hooks" / "hooks.json").exists():
+        out.append("hooks")
+    if not out:
+        out.append("skills only")
+    return ", ".join(out)
+
+
+def render_readme(readme, market):
+    begin = readme.index("<!-- plugins:begin")
+    begin = readme.index("-->", begin) + 3
+    end = readme.index("<!-- plugins:end -->")
+    rows = ["", "| Plugin | What it does | Ships | Depends on |", "|---|---|---|---|"]
+    for e in market["plugins"]:
+        name = e["name"]
+        pj = json.loads((ROOT / "plugins" / name / ".claude-plugin" / "plugin.json").read_text())
+        deps = ", ".join(
+            f"`{d if isinstance(d, str) else d['name']}`" for d in pj.get("dependencies", [])
+        ) or "—"
+        desc = e["description"].replace("|", "\\|")
+        rows.append(f"| [`{name}`](plugins/{name}) | {desc} | {ships(name)} | {deps} |")
+    rows += ["", f"{len(market['plugins'])} plugins. An MCP server or hook runs as a local process, so"
+             " it needs a surface that runs local processes (Claude Code); a skills-only plugin"
+             " needs only the skill loader.", ""]
+    return readme[:begin] + "\n".join(rows) + readme[end:]
 
 
 if __name__ == "__main__":
