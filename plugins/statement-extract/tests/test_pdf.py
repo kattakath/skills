@@ -59,7 +59,7 @@ class HookRules(Tmp):
 
     def test_shipped_hooks_load(self):
         hooks = {a.id for a in registry.load() if a.hook is not None}
-        self.assertEqual(hooks, {"desjardins/pdf", "scotiabank/chequing-pdf"})
+        self.assertEqual(hooks, {"desjardins/pdf", "scotiabank/chequing-pdf", "wise/pdf"})
 
 
 def _next_month(dst: Path, opening: str, closing: str) -> Path:

@@ -271,6 +271,30 @@ def chain(results: list[FileResult]) -> None:
                               f"{prev['period']['end']}", check=check)
 
 
+def one_source_per_period(results: list[FileResult]) -> None:
+    """Two ADAPTERS reading overlapping periods of one account would key the same movements
+    twice: their schemes differ (Wise PDF content keys vs Wise CSV native-id-ts/1), so dedupe
+    cannot see the overlap. Measured 2026-10-31 on a real September: the PDF's 49 rows match
+    the CSV's 49 by (id, date, amount), and a joint run emitted 188 rows instead of 139.
+    Refuse the whole run instead. The same adapter twice (overlapping exports) is fine."""
+    spans: dict[tuple, list[dict]] = {}
+    for r in results:
+        for s in r.statements:
+            if s["period"]["start"] and s["period"]["end"]:
+                spans.setdefault((s["institution"], s["account"]["ref"]), []).append(s)
+    for (inst, ref), stmts in spans.items():
+        for i, a in enumerate(stmts):
+            for b in stmts[i + 1:]:
+                ida, idb = a["source"]["adapter"]["id"], b["source"]["adapter"]["id"]
+                if ida != idb and a["period"]["start"] <= b["period"]["end"] \
+                        and b["period"]["start"] <= a["period"]["end"]:
+                    raise Refusal(Exit.REFUSED, f"{inst} {ref}: {ida} and {idb} both cover "
+                                  f"{max(a['period']['start'], b['period']['start'])}.."
+                                  f"{min(a['period']['end'], b['period']['end'])}; their keys "
+                                  "differ, so the overlap would be emitted twice. Pass one "
+                                  "source per period")
+
+
 def dedupe(results: list[FileResult], seen: set[str]) -> list[dict]:
     """Apply --seen and in-run dedupe; fill each statement's counts. -> kept transactions."""
     d = Deduper(seen)

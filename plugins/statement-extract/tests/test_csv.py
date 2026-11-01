@@ -67,6 +67,25 @@ class Spec(unittest.TestCase):
             registry.check_spec("wise/csv", spec)
 
 
+class OneSourcePerPeriod(unittest.TestCase):
+    """Wise PDF and CSV key the same movements differently: a joint run must refuse, not
+    emit them twice (measured on a real September: 188 rows instead of 139)."""
+    FX = ADAPTERS / "wise" / "fixtures"
+
+    def test_pdf_and_csv_for_one_period_refuse(self):
+        p = run("extract", self.FX / "pdf-regular.layout.txt",
+                self.FX / "wise-CAD-2026-01-01-to-2026-01-31.regular.csv")
+        self.assertEqual(p.returncode, 3, p.stderr)
+        self.assertIn("one source per period", p.stderr)
+        self.assertEqual(p.stdout, "")
+
+    def test_two_csv_exports_of_one_adapter_are_fine(self):
+        p = run("extract", self.FX / "wise-CAD-2026-01-01-to-2026-01-31.regular.csv",
+                self.FX / "wise-CAD-2026-01-01-to-2026-01-31.bom.csv")
+        self.assertEqual(p.returncode, 0, p.stderr)
+        self.assertIn("5 dup", p.stderr)
+
+
 class Accounts(unittest.TestCase):
     def _load(self, text):
         with tempfile.NamedTemporaryFile("w", suffix=".toml", delete=False) as f:
