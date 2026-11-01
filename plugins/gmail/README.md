@@ -31,6 +31,18 @@ secret path stays in one place, in Nix, where it is reviewed.
 Without the launchers on PATH the servers simply fail to start. Nothing here can fix
 that; install them from nix-config.
 
+## Using it on another machine
+
+The launcher and the account are environment overrides with the owner's values as defaults
+(Claude Code expands `${VAR:-default}` in a plugin's `.mcp.json` `command` and `args`):
+
+| Variable | Default | Set it to |
+|---|---|---|
+| `GMAIL_MCP_COMMAND` | `nix-mcp-gmail` | any stdio Gmail MCP launcher that takes the account address as its one argument |
+| `GMAIL_MCP_ACCOUNT` | the owner's address | your Gmail address |
+
+Export both before starting Claude Code. With neither set, the plugin behaves exactly as before.
+
 ## First run needs a browser, once per account
 
 The OAuth client id/secret are shared across every account, but each account stores its own
