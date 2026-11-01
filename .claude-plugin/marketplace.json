@@ -532,7 +532,7 @@
     },
     {
       "name": "statement-extract",
-      "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, and PDF via poppler) into canonical, masked, deduplicated JSONL: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
+      "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, declarative CSV, and PDF via poppler) into canonical, masked, deduplicated JSONL: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
       "author": {
         "name": "Ismail Kattakath"
       },

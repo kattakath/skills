@@ -254,7 +254,7 @@
       "steps": [
         "statement-extract"
       ],
-      "note": "Fails closed (exit 3/4/5) rather than emit an unreconciled or unmasked row. QFX/OFX adapters for TD, CIBC, Scotiabank and Tangerine; PDF adapters for Desjardins Visa and a closed Scotiabank chequing account; CSV (Wise) arrives later. Sinks (a Sheet, a ledger) stay with the consumer."
+      "note": "Fails closed (exit 3/4/5) rather than emit an unreconciled or unmasked row. QFX/OFX adapters for TD, CIBC, Scotiabank and Tangerine; PDF adapters for Desjardins Visa, a closed Scotiabank chequing account and Wise; a declarative CSV driver with a Wise adapter (keys byte-identical to the legacy extractor). Sinks (a Sheet, a ledger) stay with the consumer."
     }
   ]
 }

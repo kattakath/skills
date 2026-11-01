@@ -8,14 +8,15 @@ run with a distinct exit code and emits nothing.
 The plugin ends at canonical JSONL (and a CSV exporter). Writing to a Sheet or a ledger stays
 with the consumer.
 
-## Status: releases 1 and 3 (QFX/OFX, PDF)
+## Status: releases 1, 2 and 3 (QFX/OFX, CSV, PDF)
 
 | Ships now | Later releases |
 |---|---|
-| Core engine, CLI contract, run log, CSV exporter, fixture lint and shape | R2: Wise via a declarative CSV driver |
-| MIT OFX 1.x/2.x reader + 4 named repairs | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+| Core engine, CLI contract, run log, CSV exporter, fixture lint and shape | R4: the `extract` and `adapter` skills, an adapter-author agent, a commit guard |
+| MIT OFX 1.x/2.x reader + 4 named repairs | |
 | QFX adapters: **TD, CIBC, Scotiabank, Tangerine** | |
-| PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing** | |
+| Declarative CSV driver (R2) + adapter: **Wise** balance statements | |
+| PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing**, **Wise** | |
 
 There are **no skills yet** (R4): drive the CLI directly.
 
@@ -79,7 +80,7 @@ shuffled arguments, produce identical bytes.
 
 | Status | Means |
 |---|---|
-| `structural` | Every raw `<STMTTRN>` parsed, no unknown tags, FITIDs unique, LEDGERBAL present, one currency |
+| `structural` | QFX: every raw `<STMTTRN>` parsed, no unknown tags, FITIDs unique, LEDGERBAL present, one currency. CSV: every record the header's width, order proven, one currency, native ids unique, running balance chains |
 | `asserted` | Structural **and** a balance from `accounts.toml` agrees with the file |
 | `proven` | The statement proves itself from printed totals: every row tied to the printed summary or running balance (the PDF adapters) |
 
@@ -93,15 +94,29 @@ shuffled arguments, produce identical bytes.
 | `content-occurrence/legacy-qfx-v0` | Scotiabank counter FITIDs (`undefined`, `undefined-1`, …) | `Institution\|••1234\|date\|amount\|text\|n` |
 | `content-occurrence/legacy-collapse-v0` | Desjardins Visa (PDF) | same, whitespace collapsed, ledger sign |
 | `statement-line/1` | Scotiabank closed chequing (PDF); needs `keys.immutable = true` | `Institution\|••1234\|period end\|line n` |
+| `native-id-ts/1` | Wise (CSV) | `Wise\|CAD\|<TransferWise ID>\|<Date Time as printed>` |
+
+- **`native-id-ts/1`:** Wise reuses one id for a charge and its refund or reversal, so the
+  millisecond `Date Time` is part of the key. A file in which an (id, Date Time) pair repeats
+  is refused (`native_id_unique`, exit 3). The account segment is the **currency**: a Wise
+  balance has no number of its own, and the legacy keys spell it that way.
+- **Wise PDF** prints the id and the date but not the time, so it cannot build
+  `native-id-ts/1`. It uses the frozen `content-occurrence/legacy-collapse-v0`, and its keys
+  **differ** from the CSV's for the same movement. A run holding both for overlapping dates
+  is refused (`one source per period`, exit 3). Across runs nothing can catch it: feed one
+  source per period, and prefer the CSV.
 
 - The two content normalisers are **frozen** copies of the extractors that made keys already
   stored downstream. Three tests pin them:
   - golden vectors produced by running the legacy code itself (`tests/golden/normalisers.json`);
   - a source hash per function (`tests/golden/frozen.json`);
   - the legacy extractors' own keys over every fixture (`tests/golden/legacy-keys.json`).
-- Measured on 29 fixture cases (24 QFX, 5 PDF): **identical keys**.
+- Measured on 40 fixture cases (24 QFX, 5 PDF, 11 Wise CSV): **identical keys**.
 - Measured on the operator's **58 real PDF statements**, locally and counts only: **identical
   key sets** for 24/24 Desjardins (654 keys) and 34/34 Scotiabank chequing (776 keys).
+- Measured on the operator's **6 real Wise CSV exports** (2 empty), counts only: **identical
+  key sets**, 6/6 files, 1,440 keys. A shorter CAD export's 139 keys and payloads are all
+  identical to the matching rows of the full export.
 - QFX display fields differ in two cases only:
   - whitespace is collapsed for display;
   - a timezone-bearing date shows the day as written. The key keeps the legacy UTC day.
@@ -133,19 +148,32 @@ amount = "-12.34"       # in the file's sign: a card balance owed is negative
 Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an entry
 (exit 4 without one). Keep `last4` identical on every run, or the keys change.
 
+A Wise balance is selected by currency, and takes no `last4`:
+
+```toml
+[[account]]
+institution = "Wise"
+currency = "CAD"
+
+[[account.balance]]     # the balance on Wise's screen on export day
+as_of = "2026-10-31"    # = the file name's end date (wise-CAD-…-to-2026-10-31.csv)
+amount = "72.43"
+```
+
 ## Masking and the leak gate
 
 - Display masking keeps the **last four** of anything account-shaped:
   - long digit runs (TD `TO:`/`FRM:` payees);
   - star-masked payees (Scotiabank);
-  - `CC#dddd****dddd` (CIBC card memos);
+  - `dddd****dddd` (CIBC card memos; Wise cards: first four dropped, last four kept);
   - grouped digits, with dates excluded.
 - Every output string then passes the leak gate:
   `\d{7,}|\d{4} ?\d{2}\*|\d{4}\*{4,}|\*{2,}\d|•{3,}`.
 - The gate skips two kinds of value:
   - **hex digests**: a sha256 has ~90% odds of a 7-digit run by chance;
-  - **the institution's own transaction id** (`entry_ref`, and the FITID segment of a
-    `fitid` key): numeric FITIDs are routine, and key bytes are frozen.
+  - **the institution's own transaction id** (`entry_ref`, the FITID segment of a `fitid`
+    key, the id segment of a `native-id-ts/1` key): numeric ids are routine (every Wise id
+    carries 7+ digits), and key bytes are frozen.
 
 ## Run log and OpenTelemetry
 
@@ -186,7 +214,36 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 - **Not yet exercised:** the Desjardins grammar carries the French labels from the legacy
   extractor, but every real statement measured was English, and no fixture covers French.
 
+## CSV statements
+
+- A CSV adapter is **TOML only**: no hook is needed. The `[csv]` table declares:
+  - `encoding` (`utf-8-sig` accepts a BOM);
+  - `drop`: columns removed by name as each record is split;
+  - `currency`: a column, falling back to the file name's `(?P<currency>)` group;
+  - `order` (`newest-first` / `oldest-first`), **proven** on every file (`order_proof`);
+  - `[csv.columns]`: `id`, `datetime`, `date`, `amount`, `running_balance`, and text fields
+    (`description`, `counterparty`, `memo`, `source_type`) as first-non-empty lists;
+  - `[csv.formats]`: `strptime` patterns for `date` and `datetime`.
+- `identify` takes `header` (columns that must all be present) and `filename` (regexes; the
+  groups `currency`, `start`, `end` give the currency and the period).
+- The loader refuses a spec that reads a column it drops, reads a column outside
+  `identify.header`, or chains a running balance without a proven order.
+- **Wise:** one file per currency, newest first. The running balance must chain, and the
+  screen balance in `accounts.toml` upgrades the statement to `asserted`. Not `proven`: the
+  oldest row's opening is derived from that row.
+- **An empty (header-only) export** is a statement with **zero rows**. Its currency and period
+  come from the file name; its balances are **null**, because an export with no movements says
+  nothing about a balance that sat idle through it. It stays `structural`, so
+  `--require asserted` refuses it.
+- **Wise PDF:** proven. Every `Transaction:` detail line becomes a row, every row chains on the
+  printed running balance, and the newest equals the printed closing.
+
 ## Privacy
+
+- **"Payee Account Number"** (Wise CSV) holds **recipients' full account numbers**. No CSV
+  adapter can read it, whatever its TOML says (`csv_driver.NEVER_READ`): its cell is dropped as
+  each record is split. `fixture lint` refuses a fixture with a value in that column; an empty
+  column is fine. The Wise adapter also drops the card holder's name.
 
 - Fixtures are **synthetic only**, one per quirk.
 - Every synthetic account or FITID digit run starts `0000`.
@@ -196,7 +253,8 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 - CI generates PDFs **in-run** from those fixtures (`tests/make_pdf.py`) and reads them back
   through poppler. No PDF is committed.
 - `fixture lint` refuses:
-  - a 7+ digit run outside that reserved pattern;
+  - a 7+ digit run outside that reserved pattern (`.qfx`, `.csv`, `.layout.txt`, case files);
+  - a value under "Payee Account Number" in a `.csv` fixture;
   - a case without `synthetic = true`;
   - any PDF or other binary in this tree.
 - Real statements never enter this repo. A private corpus is checked consumer-side with
@@ -207,7 +265,10 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 1. QFX: run `identify --print-identifiers` on a real file **locally** and copy its
    ORG/FID/INTU.BID into `adapters/<institution>/<format>.toml`. PDF: run `fixture shape`
    locally and write the grammar from the shape.
-2. Write one synthetic fixture per quirk: `<case>.qfx` or `<case>.layout.txt`,
+   CSV: print the header row (column names only) and write the `[csv]` table. A CSV
+   fixture's name must satisfy the adapter's `identify.filename`, e.g.
+   `wise-CAD-2026-01-01-to-2026-01-31.<case>.csv`.
+2. Write one synthetic fixture per quirk: `<case>.qfx`, `<case>.csv` or `<case>.layout.txt`,
    `<case>.case.toml` (`synthetic = true`,
    `quirk`, `exit`), and optionally `<case>.accounts.toml` / `<case>.seen.txt`.
 3. Generate the goldens: `STATEMENT_EXTRACT_UPDATE_GOLDENS=1 python3 -m unittest test_fixtures`,
