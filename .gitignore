@@ -4,3 +4,5 @@ Thumbs.db
 
 # Claude Code agent worktrees (EnterWorktree / isolation: worktree) — local scratch, never content
 .claude/worktrees/
+__pycache__/
+*.pyc

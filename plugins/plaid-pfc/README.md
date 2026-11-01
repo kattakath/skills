@@ -11,6 +11,8 @@ anything that categorises transactions.
 | `data/crosswalk-v1-v2.json` | v1 → v2 renames and splits, from Plaid's own CSV columns (identity is implied) |
 | `scripts/pfc` | `validate` (exit 3 on any unknown name), `describe`, `list`, `crosswalk`, `schema`, `refresh` |
 | `lib/plaid_pfc/models.py` | Standard I/O records (`Txn`, `Evidence`, `Suggestion`) and their JSON Schema; `category` is an enum of the pin |
+| `lib/plaid_pfc/merchant.py` + `data/merchant-vectors.json` | The merchant key a decision applies to; the same algorithm as beancount's `groups`, pinned by shared golden vectors |
+| `pfc suggest` / `pfc eval` | Suggest from the consumer's own labelled history (exact merchant key); measure coverage and precision on held-out rows, seen vs unseen merchants |
 | Skill `plaid-pfc` | When and how to use it, including enum-bound LLM output |
 
 ## Facts it exists to carry (measured 2026-11-01)
@@ -25,6 +27,21 @@ anything that categorises transactions.
 - **Plaid's own SDK does not pin the names.** `plaid-python` types `detailed` as a free string
   with no allowed values, which is why this plugin exists.
 - **`OTHER_OTHER` has no description** in Plaid's CSV.
+
+## Measured on a real ledger (2026-11-01, 6,385 rows; counts only)
+
+| Held out | Stratum | n | At confidence ≥ 0.9: coverage / precision |
+|---|---|---|---|
+| seen | all | 1,203 | 72.7% / 99.5% |
+| seen | decision (rows a human chose) | 83 | 24.1% / 90.0% |
+| seen | rule | 1,120 | 76.3% / 99.8% |
+| unseen | all | 1,690 | 0% / — (exact match cannot know a new merchant) |
+
+- **The "rule" stratum flatters the method:** history re-learns what a pattern rule already
+  decides from the same text.
+- **The "decision" row is the honest one for hard cases.**
+- **Unseen is 0% by construction.** It is the number that justifies fuzzy matching and the
+  evidence adapters.
 
 ## Why stdlib, not Pydantic
 

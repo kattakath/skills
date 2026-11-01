@@ -222,7 +222,7 @@ history is the asset.
 | 0 | Spike: plugin code sharing (A vs B) | Decision recorded here |
 | 1 | `plaid-pfc` core: pinned v2 list, crosswalk, Pydantic models, `validate` / `describe` / `schema` / `refresh` | Tests green; `refresh` diff reproducible |
 | 2 | `beancount` strict validation through it; drop its own PFC copy | An unknown name refuses; the real ledger's rules all pass |
-| 3 | `clean` + `history` + `suggest` (deterministic) + `eval` | Accuracy measured on held-out decisions |
+| 3 | `clean` + `history` + `suggest` (deterministic) + `eval` | **Done 2026-11-01, measured on 6,385 real rows:** seen merchants 72.7% coverage / 99.5% precision at confidence ≥ 0.9 (rows a human decided: 24.1% / 90.0%, n=83); **unseen merchants 0%** by construction. The rule stratum flatters exact match (it re-learns rules); the decision and unseen numbers drive phases 3b–5 |
 | 4 | `categorize` skill with `mail` / `context` / `web` adapters, enum-bound LLM step | Each adapter's lift measured |
 | 5 | Auto-accept above the measured threshold | Threshold set from `eval`, not guessed |
 

@@ -54,7 +54,8 @@ def load_rules(path: Path) -> list[dict]:
             acct=set(filter(None, (ru.get("account") or "").split("|"))),
             sign=(ru.get("sign") or "any").strip(),
             df=(ru.get("date_from") or "").strip(), dt=(ru.get("date_to") or "").strip(),
-            must_pair=cp.endswith("!"), cp=cp.rstrip("!")))
+            must_pair=cp.endswith("!"), cp=cp.rstrip("!"),
+            note=(ru.get("note") or "").strip()))
     if bad:
         raise Refusal(Exit.USAGE, "rules: category is not a pinned Plaid PFC v2 name "
                                   f"(plaid-pfc, fetched {pfc.pin()['fetched']}); priority: name", bad)

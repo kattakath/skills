@@ -146,6 +146,29 @@ class Build(unittest.TestCase):
         self.assertEqual(code, 2)
         self.assertIn("plaid-pfc pin unreadable", err)
 
+    def test_history_exports_each_label_with_its_source(self):
+        out = self.d / "history.jsonl"
+        argv = ["history", *(str(f) for f in self.files.values()), "--ledger", str(self.d / "ledger.toml"),
+                "--rules", str(self.d / "rules.csv"), "--decisions", str(self.d / "decisions.csv"),
+                "--out", str(out)]
+        with redirect_stderr(io.StringIO()):
+            self.assertEqual(main(argv), 0)
+        rows = [json.loads(l) for l in out.read_text().splitlines()]
+        by = {r["key"]: r for r in rows}
+        self.assertEqual(by["Bank|••0001|F5"]["source"], "decision")
+        self.assertEqual(by["Bank|••0001|F5"]["note"], "checked receipt")
+        self.assertTrue(any(r["source"] == "rule" and r["ref"] for r in rows))
+        self.assertTrue(all(set(r) == {"key", "payee", "memo", "category", "source", "ref", "note"}
+                            for r in rows))
+
+    def test_merchant_key_matches_plaid_pfc_golden_vectors(self):
+        # One algorithm in two plugins: both must reproduce plaid-pfc's shared vectors.
+        import os
+        from beancount_kit.groups import merchant
+        vec = Path(os.environ["PLAID_PFC_DATA"]).with_name("merchant-vectors.json")
+        for v in json.loads(vec.read_text())["vectors"]:
+            self.assertEqual(merchant(v["payee"], v["memo"])[0], v["key"], v)
+
     def test_wrong_balance_refuses_and_writes_nothing(self):
         # The FIRST figure only sizes the opening pad; a later one that disagrees must refuse.
         later = scenario.stmt("ffff", "Bank", "••0002", "card", "CAD", "-61.00", "2026-02-15")
