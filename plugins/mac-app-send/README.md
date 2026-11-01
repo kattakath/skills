@@ -36,6 +36,9 @@ means a throw would fail **open** and silently disarm every rule above it.
 
 ## Requires
 
+- **Node.js (`npx`)**: the plugin's `.mcp.json` launches `@steipete/macos-automator-mcp@0.4.7`
+  through `npx` on first use (pinned version).
+
 **The `computer-use` MCP server.** This plugin does **not** ship or install one — on this fleet
 an MCP server is declared in its owning plugin's `.mcp.json`, adopted through `nix-config`'s `mcp-scout`.
 If the computer-use tools are absent, the skill and commands still explain the method but
