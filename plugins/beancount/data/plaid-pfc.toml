@@ -1,0 +1,24 @@
+# Plaid Personal Finance Category PRIMARY values, PFCv2 (a superset of PFCv1).
+# Source: https://plaid.com/documents/pfc-taxonomy-all.csv, column "PFCv2 Primary",
+# fetched 2026-11-01. A DETAILED value is its PRIMARY plus "_" plus the rest, so the default
+# account is derived from these by prefix: no per-DETAILED table to drift.
+primary = [
+  "BANK_FEES",
+  "ENTERTAINMENT",
+  "FOOD_AND_DRINK",
+  "GENERAL_MERCHANDISE",
+  "GENERAL_SERVICES",
+  "GOVERNMENT_AND_NON_PROFIT",
+  "HOME_IMPROVEMENT",
+  "INCOME",
+  "LOAN_DISBURSEMENTS",
+  "LOAN_PAYMENTS",
+  "MEDICAL",
+  "OTHER",
+  "PERSONAL_CARE",
+  "RENT_AND_UTILITIES",
+  "TRANSFER_IN",
+  "TRANSFER_OUT",
+  "TRANSPORTATION",
+  "TRAVEL",
+]

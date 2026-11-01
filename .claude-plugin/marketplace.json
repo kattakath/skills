@@ -28,6 +28,26 @@
       "source": "./plugins/android-phone"
     },
     {
+      "name": "beancount",
+      "description": "Double-entry accounting as a derived artifact: build a Beancount journal from statement-extract JSONL, a category-rules CSV and a per-transaction decisions CSV — transfers paired through a clearing account (exact, fee band, FX, in-wallet conversion), statement and screen balances as assertions, loan snapshots with interest pads — written only when Beancount's own check passes. Plus bean-query recipes and Fava on demand, read-only, on 127.0.0.1.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "beancount",
+        "fava",
+        "double-entry",
+        "accounting",
+        "personal-finance",
+        "budgeting",
+        "transfers"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/beancount",
+      "license": "MIT",
+      "source": "./plugins/beancount"
+    },
+    {
       "name": "brag-dossier",
       "description": "Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from.",
       "author": {

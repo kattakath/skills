@@ -211,6 +211,16 @@ jobs:
           command -v pdftotext >/dev/null || sudo apt-get install -y -qq poppler-utils >/dev/null
           bash plugins/statement-extract/tests/run.sh --pdf-smoke
 
+      # beancount's builder is checked by Beancount itself: every golden must load with zero
+      # errors, and a wrong balance must refuse. That needs beancount importable, so this step
+      # makes a venv with the versions the plugin is tested at (cp312 manylinux wheels exist
+      # for both, so nothing compiles). The suite has a test-count floor, like the others.
+      - name: beancount cases
+        run: |
+          python3 -m venv /tmp/bk
+          /tmp/bk/bin/pip install -q beancount==3.2.3 beanquery==0.2.0
+          PYTHON=/tmp/bk/bin/python bash plugins/beancount/tests/run.sh
+
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which
       # matters more than the flags: this hook is enabled in every repo, so a rule that

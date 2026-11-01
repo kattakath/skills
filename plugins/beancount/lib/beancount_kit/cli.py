@@ -1,0 +1,145 @@
+"""beancount-kit CLI.
+
+  build   JSONL... --ledger L --rules R [--decisions D] [--accounts A] [--out J | --check-only]
+          [--emit-rows F] [--emit-pairs F]
+  fava    start | stop | status   [--journal J]
+  doctor
+
+Exit codes: 0 ok · 1 bug · 2 usage (bad input, wrong schema) · 3 refused (a check failed;
+nothing written).
+"""
+import argparse
+import json
+import os
+import sys
+from pathlib import Path
+
+from . import fava
+from .config import load as load_ledger
+from .errors import Exit, Refusal
+from .inputs import read_decisions, read_jsonl, read_screen_balances
+from .journal import render
+from .rules import categorise, load_rules
+
+
+def _jsonl_paths(items: list[str]) -> list[Path]:
+    out = []
+    for s in items:
+        p = Path(s)
+        out += sorted(p.glob("*.jsonl")) if p.is_dir() else [p]
+    return out
+
+
+def build(a) -> int:
+    ledger = load_ledger(Path(a.ledger))
+    rows, asserts, positions = read_jsonl(_jsonl_paths(a.jsonl))
+    if a.accounts:
+        asserts += read_screen_balances(Path(a.accounts), ledger.operating_currency)
+    rules = load_rules(Path(a.rules))
+    decisions = read_decisions(Path(a.decisions)) if a.decisions else {}
+    stats = categorise(rows, rules, decisions, ledger.transfers)
+
+    if a.emit_rows:   # the oracle's input: Sheet columns A-L, in Row.n order
+        Path(a.emit_rows).write_text(json.dumps(
+            [[x.iso, x.amt, x.payee, x.memo, x.inst, x.acct, "", "", x.key, "", "", x.cur]
+             for x in rows], ensure_ascii=False), encoding="utf-8")
+    if a.emit_pairs:
+        Path(a.emit_pairs).write_text(json.dumps(
+            [[x.key, x.pair.key, x.pair_kind] for x in rows if x.pair and x.amt < 0],
+            ensure_ascii=False), encoding="utf-8")
+
+    # An opening or interest pad whose difference is zero is "unused" to Beancount. Which ones
+    # are zero is Beancount's arithmetic, not ours: render, drop exactly the pads it reports
+    # unused, render once more. Any error left after that is real.
+    from .check import check
+    text, rstats = render(rows, asserts, positions, ledger)
+    errs, unused = check(text)
+    if unused:
+        text, rstats = render(rows, asserts, positions, ledger, skip_pads=unused)
+        errs, _ = check(text)
+    report = {"rows": len(rows), **stats, **{k: v for k, v in rstats.items()
+                                             if k != "transfer_residue"},
+              "transfer_residue": len(rstats["transfer_residue"]), "check_errors": len(errs)}
+    print(json.dumps(report), file=sys.stderr)
+    for k in rstats["transfer_residue"]:
+        print(f"  unpaired transfer leg: {k}", file=sys.stderr)
+    if errs:
+        for e in errs[:50]:
+            print(f"  {e}", file=sys.stderr)
+        raise Refusal(Exit.REFUSED, f"journal fails its check ({len(errs)} errors); "
+                                    "nothing written")
+    if a.check_only:
+        return 0
+    if a.out == "-":
+        sys.stdout.write(text)
+        return 0
+    out = Path(a.out)
+    if out.exists() and out.read_text(encoding="utf-8") == text:
+        print("journal unchanged", file=sys.stderr)
+        return 0
+    # Write in place (truncate, same file): a synced folder keeps one file and its history,
+    # where a rename would make a new file each build.
+    with out.open("w", encoding="utf-8") as fh:
+        fh.write(text)
+    print(f"journal written: {len(text)} bytes", file=sys.stderr)
+    return 0
+
+
+def doctor(_a) -> int:
+    ok = True
+
+    def line(good: bool, what: str):
+        nonlocal ok
+        ok &= good
+        print(f"{'ok  ' if good else 'FAIL'} {what}")
+
+    line(sys.version_info >= (3, 11), f"python {sys.version.split()[0]} at {sys.executable}")
+    for mod in ("beancount", "beanquery", "fava"):
+        try:
+            m = __import__(mod)
+            line(True, f"import {mod} {getattr(m, '__version__', '')}".rstrip())
+        except ImportError:
+            line(False, f"import {mod}")
+    j = os.environ.get("BEANCOUNT_JOURNAL")
+    line(bool(j), f"BEANCOUNT_JOURNAL={'set' if j else 'unset'}")
+    if j:
+        line(Path(j).parent.exists(), f"journal folder reachable: {Path(j).parent}")
+    line(bool(fava.fava_bin()), f"fava binary: {fava.fava_bin()}")
+    return 0 if ok else 3
+
+
+def main(argv=None) -> int:
+    ap = argparse.ArgumentParser(prog="beancount-kit", description=__doc__,
+                                 formatter_class=argparse.RawDescriptionHelpFormatter)
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    b = sub.add_parser("build")
+    b.add_argument("jsonl", nargs="+", help="canonical JSONL files, or folders of *.jsonl")
+    b.add_argument("--ledger", required=True)
+    b.add_argument("--rules", required=True)
+    b.add_argument("--decisions")
+    b.add_argument("--accounts", help="statement-extract accounts.toml: screen balances")
+    g = b.add_mutually_exclusive_group(required=True)
+    g.add_argument("--out", help="journal path, or - for stdout")
+    g.add_argument("--check-only", action="store_true")
+    b.add_argument("--emit-rows")
+    b.add_argument("--emit-pairs")
+    f = sub.add_parser("fava")
+    f.add_argument("action", choices=("start", "stop", "status"))
+    f.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
+    sub.add_parser("doctor")
+    a = ap.parse_args(argv)
+    try:
+        if a.cmd == "build":
+            return build(a)
+        if a.cmd == "doctor":
+            return doctor(a)
+        if a.action == "start":
+            if not a.journal:
+                raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
+            return fava.start(a.journal)
+        return fava.stop() if a.action == "stop" else fava.status()
+    except Refusal as e:
+        print(f"beancount-kit: {e.reason}", file=sys.stderr)
+        for item in e.items[:50]:
+            print(f"  {item}", file=sys.stderr)
+        return int(e.code)

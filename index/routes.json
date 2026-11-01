@@ -255,6 +255,14 @@
         "statement-extract"
       ],
       "note": "Fails closed (exit 3/4/5) rather than emit an unreconciled or unmasked row. QFX/OFX adapters for TD, CIBC, Scotiabank and Tangerine; PDF adapters for the same banks plus Desjardins Visa, Wise and closed Scotiabank and BMO chequing accounts; a declarative CSV driver with a Wise adapter (keys byte-identical to the legacy extractor); loan and mortgage balance snapshots (TD, CIBC, BMO, NSLSC) as opt-in position records. Sinks (a Sheet, a ledger) stay with the consumer."
+    },
+    {
+      "goal": "Keep double-entry books from bank statements: journal, review, reports",
+      "steps": [
+        "statement-extract",
+        "beancount"
+      ],
+      "note": "statement-extract turns statements into canonical JSONL; beancount builds the journal from it plus rules and decisions, checks it, and serves it read-only in Fava. The journal is derived, never edited. Walked end to end on synthetic data 2026-11-01."
     }
   ]
 }
