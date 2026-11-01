@@ -1,7 +1,0 @@
-{
-  "mcpServers": {
-    "github": {
-      "command": "nix-mcp-github"
-    }
-  }
-}

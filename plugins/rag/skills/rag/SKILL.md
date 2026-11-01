@@ -30,7 +30,7 @@ You do **not** create the table or the function — they exist. Just use them.
 
 1. **Get the text.** For files/URLs, extract text first with the right tool — the `fetch`
    MCP server (web pages), the `pdf` / `docx` / `pptx` / `xlsx` skills (documents), or
-   `desktop-commander` (local files).
+   the Read tool (local files).
 2. **Chunk it.** Split into ~500–1000 character passages on paragraph/sentence boundaries,
    with a little overlap. One row per chunk. Embedding quality degrades on very long text,
    so don't insert whole documents as a single row.
