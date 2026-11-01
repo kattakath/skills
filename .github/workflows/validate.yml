@@ -218,7 +218,7 @@ jobs:
       - name: beancount cases
         run: |
           python3 -m venv /tmp/bk
-          /tmp/bk/bin/pip install -q beancount==3.2.3 beanquery==0.2.0
+          /tmp/bk/bin/pip install -q beancount==3.2.3 beanquery==0.2.0 smart-importer==1.2
           PYTHON=/tmp/bk/bin/python bash plugins/beancount/tests/run.sh
 
       # Both halves of silent-instruments, and they test different things. The lint

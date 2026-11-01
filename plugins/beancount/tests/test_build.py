@@ -1,4 +1,5 @@
 """beancount-kit build: golden, pairs, refusals, idempotence. Needs an interpreter with beancount."""
+import csv
 import io
 import json
 import sys
@@ -161,6 +162,56 @@ class Build(unittest.TestCase):
         self.assertIn("2026-01-04 pad Liabilities:Bank:Card-0002 Equity:Gaps",
                       out.read_text(encoding="utf-8"))
 
+
+class Groups(unittest.TestCase):
+    def test_merchant_key_strips_masks_and_numbers(self):
+        from beancount_kit.groups import merchant, pattern
+        self.assertEqual(merchant("Deposit ••0615 Free Interac E-Transfer", "")[0], "DEPOSIT FREE")
+        self.assertEqual(merchant("SEND E-TFR ***vYR", "")[0], "SEND TFR")
+        self.assertEqual(merchant("", "E-TRANSFER ••4049;NAME;Internet Banking")[0], "TRANSFER")
+        self.assertEqual(merchant("MOBIL@ - 4180", "X")[0], "MOBIL")
+        self.assertEqual(pattern(["GOOGLE", "CLOUD"]), r"\bGOOGLE\b.*\bCLOUD\b")
+
+    def test_groups_cover_every_flagged_entry_and_leave_the_journal(self):
+        before = GOLDEN.read_bytes()
+        from beancount_kit.groups import groups
+        rows = groups(GOLDEN)
+        self.assertEqual(sum(r["count"] for r in rows), 2)
+        self.assertEqual({r["group"] for r in rows}, {"MYSTERY MERCHANT", "SEND TO"})
+        self.assertEqual(GOLDEN.read_bytes(), before)
+
+
+try:
+    import smart_importer  # noqa: F401
+    HAVE_SI = True
+except ImportError:
+    HAVE_SI = False
+
+
+@unittest.skipUnless(HAVE_SI, "smart_importer not installed (optional dependency)")
+class Suggest(unittest.TestCase):
+    def test_one_suggestion_per_flagged_entry_and_journal_untouched(self):
+        before = GOLDEN.read_bytes()
+        out = io.StringIO()
+        from beancount_kit import suggest
+        rep = suggest.suggest(GOLDEN, out)
+        rows = list(csv.reader(io.StringIO(out.getvalue())))
+        self.assertEqual(rows[0], ["key", "suggestion"])
+        self.assertEqual([r[0] for r in rows[1:]], ["Wallet|USD|3", "Wallet|USD|4"])
+        trained = {"INCOME_SALARY", "FOOD_AND_DRINK_GROCERIES", "LOAN_PAYMENTS_MORTGAGE_PAYMENT",
+                   "GENERAL_MERCHANDISE_CONVENIENCE_STORES", "TRANSFER_OUT_ACCOUNT_TRANSFER"}
+        self.assertTrue(all(r[1] in trained for r in rows[1:]), rows)
+        self.assertEqual((rep["trained_on"], rep["suggested"]), (5, 2))
+        self.assertEqual(GOLDEN.read_bytes(), before)
+
+    def test_cli_refuses_a_journal_with_errors(self):
+        with tempfile.TemporaryDirectory() as d:
+            bad = Path(d) / "bad.beancount"
+            bad.write_text("2026-01-01 balance Assets:Nope  1 CAD\n")
+            err = io.StringIO()
+            with redirect_stderr(err):
+                code = main(["suggest", "--journal", str(bad)])
+            self.assertEqual(code, 3, err.getvalue())
 
 if __name__ == "__main__":
     unittest.main()
