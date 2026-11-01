@@ -127,6 +127,24 @@ class RunDedupe(Tmp):
         self.assertEqual(len(records(run("extract", f, "--manifest", man, "--force").stdout)), 5)
 
 
+class StderrCarriesNoFigures(unittest.TestCase):
+    """Agents verify REAL statements by reading stderr: it must never carry a balance."""
+
+    def test_summary_line_has_no_balance(self):
+        p = run("extract", TD / "clean-chequing.qfx")  # closing 1337.50
+        self.assertEqual(p.returncode, 0)
+        self.assertNotIn("1337.50", p.stderr)
+        self.assertIn("structural", p.stderr)
+
+    def test_refusal_names_checks_without_figures(self):
+        p = run("extract", TD / "assert-mismatch.qfx",
+                "--accounts", TD / "assert-mismatch.accounts.toml")
+        self.assertEqual(p.returncode, 3)
+        self.assertIn("external_assertion", p.stderr)
+        self.assertNotIn("91.00", p.stderr)
+        self.assertNotIn("90.00", p.stderr)
+
+
 class Formats(Tmp):
     def test_csv_and_export_agree(self):
         f = TD / "clean-chequing.qfx"
@@ -168,8 +186,9 @@ class Commands(unittest.TestCase):
 
     def test_adapters_and_doctor(self):
         ids = [json.loads(line)["id"] for line in run("adapters").stdout.splitlines()]
-        self.assertEqual(ids, ["cibc/qfx", "desjardins/pdf", "scotiabank/chequing-pdf",
-                               "scotiabank/qfx", "tangerine/qfx", "td/qfx"])
+        on_disk = sorted(f"{p.parent.name}/{p.stem}" for p in ADAPTERS.glob("*/*.toml"))
+        self.assertEqual(ids, on_disk)  # the CLI lists every adapter in the tree, sorted
+        self.assertGreaterEqual(len(ids), 6)
         self.assertEqual(run("doctor").returncode, 0)
 
     def test_fixture_lint_clean(self):
