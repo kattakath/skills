@@ -7,9 +7,6 @@ from statement_extract.model import Exit, Refusal, StatementDraft, TxnDraft
 from statement_extract.reconcile import balance_equation, printed_total
 
 _ZERO = Decimal(0)
-# Detail lines print the source account as "ddddd/****ddd": a star run before a 3-digit tail,
-# which no display-mask rule of this release shortens, so the leak gate would refuse the run.
-_STARRED = re.compile(r"\*{2,}[\d*]*\d")
 
 
 def _rx(g: dict, name: str) -> re.Pattern:
@@ -70,8 +67,8 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
             cur = None
             continue
         if cur is not None:
-            cur["memo"].append(_STARRED.sub(
-                lambda m: "••" + re.sub(r"\D", "", m.group())[-4:], line.strip()))
+            # "ddddd/****ddd" source accounts are masked by the engine (mask.py star-short-tail).
+            cur["memo"].append(line.strip())
     if not started:
         raise Refusal(Exit.REFUSED, "CIBC line of credit: no STATEMENT PERIOD line")
 
