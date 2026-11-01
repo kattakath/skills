@@ -1,5 +1,6 @@
 """The declarative CSV driver's guard rails: never-read columns, spec validation, accounts."""
 import copy
+import shutil
 import tempfile
 import tomllib
 import unittest
@@ -104,3 +105,47 @@ class Accounts(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class RenamedAndCorpus(unittest.TestCase):
+    """P5 asks: a renamed Wise export still identifies; corpus check covers PDFs."""
+
+    def setUp(self):
+        import tempfile, shutil
+        self.tmp = Path(tempfile.mkdtemp(prefix="se-p5-"))
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def test_renamed_wise_export_keeps_its_keys(self):
+        import json
+        src = ADAPTERS / "wise" / "fixtures" / "wise-CAD-2026-01-01-to-2026-01-31.id-reused-refund.csv"
+        renamed = self.tmp / "statement (1).csv"
+        renamed.write_bytes(src.read_bytes())
+        a, b = run("extract", src), run("extract", renamed)
+        self.assertEqual((a.returncode, b.returncode), (0, 0), b.stderr)
+        keys = lambda out: [json.loads(l)["key"] for l in out.splitlines()
+                            if json.loads(l)["record"] == "transaction"]
+        self.assertTrue(keys(a.stdout))
+        self.assertEqual(keys(a.stdout), keys(b.stdout))
+
+    def test_renamed_empty_export_refuses_without_a_currency(self):
+        src = next((ADAPTERS / "wise" / "fixtures").glob("*empty*.csv"))
+        renamed = self.tmp / "export.csv"
+        renamed.write_bytes(src.read_bytes())
+        p = run("extract", renamed)
+        self.assertEqual(p.returncode, 3, p.stderr)
+        self.assertIn("no currency", p.stderr)
+
+    @unittest.skipUnless(shutil.which("pdftotext"), "poppler not installed")
+    def test_corpus_check_counts_pdfs(self):
+        import json, sys
+        sys.path.insert(0, str(Path(__file__).parent))
+        from make_pdf import build
+        lay = ADAPTERS / "scotiabank" / "fixtures" / "chequing-year-rollover.layout.txt"
+        (self.tmp / "c").mkdir()
+        (self.tmp / "c" / "s.pdf").write_bytes(build(lay.read_text(encoding="utf-8")))
+        lock = self.tmp / "lock.json"
+        p = run("corpus", "check", self.tmp / "c", "--lock", lock)
+        self.assertEqual(p.returncode, 0, p.stderr)
+        entries = list(json.loads(lock.read_text()).values())
+        self.assertEqual(len(entries), 1)
+        self.assertEqual(entries[0].get("adapter"), "scotiabank/chequing-pdf")

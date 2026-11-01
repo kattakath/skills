@@ -270,12 +270,16 @@ def cmd_shape(a, log) -> int:
     return 0
 
 
+# Every format an adapter reads. A real corpus holds PDFs too (fixtures never do).
+CORPUS_INPUTS = fixtures.INPUTS | {".pdf"}
+
+
 def cmd_corpus(a, log) -> int:
     """Hashes + counts only, so the lock is safe to keep next to a private corpus."""
     adapters = registry.load()
     accts = accounts.load(Path(a.accounts) if a.accounts else None)
     files = sorted(p for p in Path(a.dir).rglob("*")
-                   if p.is_file() and p.suffix.lower() in fixtures.INPUTS)
+                   if p.is_file() and p.suffix.lower() in CORPUS_INPUTS)
     now = {}
     for p in files:
         raw, sha = engine.sha256_file(p)

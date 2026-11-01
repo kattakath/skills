@@ -34,6 +34,9 @@ minimum = "structural"
 
 [csv]
 encoding = "utf-8-sig"   # a BOM is accepted and stripped
+# A renamed export is still a Wise export: identify it by its (very specific) header. The
+# file name, when it matches, still supplies the currency and the period.
+require_filename = false
 # "Payee Account Number" holds RECIPIENTS' FULL ACCOUNT NUMBERS. The driver never reads it
 # (NEVER_READ); it is listed here too so the rule is visible where the columns are.
 # The card holder's name is the operator's own and is never needed.
