@@ -25,6 +25,7 @@ import re
 from pathlib import Path
 
 from .errors import Exit, Refusal
+from . import pfc
 from .inputs import CATEGORY_RE, Row
 
 NEEDS_REVIEW = "NEEDS_REVIEW"
@@ -42,8 +43,8 @@ def load_rules(path: Path) -> list[dict]:
         if not (ru.get("pattern") or "").strip():
             continue
         cat = ru["category"].strip()
-        if not CATEGORY_RE.match(cat):
-            bad.append(ru.get("priority", "?"))
+        if not CATEGORY_RE.match(cat) or pfc.unknown([cat]):
+            bad.append(f"{ru.get('priority', '?')}: {cat}")
             continue
         cp = (ru.get("counterparty") or "").strip()
         rules.append(dict(
@@ -55,7 +56,8 @@ def load_rules(path: Path) -> list[dict]:
             df=(ru.get("date_from") or "").strip(), dt=(ru.get("date_to") or "").strip(),
             must_pair=cp.endswith("!"), cp=cp.rstrip("!")))
     if bad:
-        raise Refusal(Exit.USAGE, "rules: category is not a Plaid DETAILED value (priority)", bad)
+        raise Refusal(Exit.USAGE, "rules: category is not a pinned Plaid PFC v2 name "
+                                  f"(plaid-pfc, fetched {pfc.pin()['fetched']}); priority: name", bad)
     rules.sort(key=lambda r: r["prio"])
     return rules
 

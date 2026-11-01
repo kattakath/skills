@@ -32,6 +32,10 @@ accounts.toml (screen) ──┘
 - Python ≥ 3.11 with **beancount 3.2.3**, **beanquery 0.2.0** and **fava 1.30.16** in **one**
   interpreter, named by `$BEANCOUNT_PYTHON`. Tested at those versions.
 - `$BEANCOUNT_JOURNAL` (the journal path) and `$FAVA_PORT` (default 5000).
+- The **`plaid-pfc`** plugin installed: category names are checked against its pinned PFC v2
+  list (found via Claude Code's `installed_plugins.json`, or `$PLAID_PFC_DATA` naming its
+  `data/pfc-v2.json`). An invented name in rules, decisions or `[categories]` refuses the
+  build. The two plugins share data, not code, the same way statement-extract and this one do.
 - The tests: `bash tests/run.sh` (set `PYTHON` to an interpreter that has beancount).
 
 ## Licences

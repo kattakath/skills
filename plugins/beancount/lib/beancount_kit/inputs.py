@@ -9,6 +9,7 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 
 from . import SCHEMA
+from . import pfc
 from .errors import Exit, Refusal
 
 CATEGORY_RE = re.compile(r"^[A-Z][A-Z0-9_]*$")
@@ -232,11 +233,12 @@ def read_decisions(path: Path) -> dict[str, dict]:
         d = {f: ws(r.get(f)) for f in DECISION_FIELDS}
         accepted = d["accept"].upper() in ("TRUE", "YES", "Y", "1", "X")
         d["override"] = d["category"] or (d["suggestion"] if accepted else "")
-        if d["override"] and not CATEGORY_RE.match(d["override"]):
-            bad.append(k)
+        if d["override"] and (not CATEGORY_RE.match(d["override"]) or pfc.unknown([d["override"]])):
+            bad.append(f"{k}: {d['override']}")
         if k in out:
             raise Refusal(Exit.REFUSED, "decisions: a Key appears twice", [k])
         out[k] = d
     if bad:
-        raise Refusal(Exit.REFUSED, "decisions: category is not a Plaid DETAILED value", bad)
+        raise Refusal(Exit.REFUSED, "decisions: category is not a pinned Plaid PFC v2 name "
+                                    f"(plaid-pfc, fetched {pfc.pin()['fetched']})", bad)
     return out
