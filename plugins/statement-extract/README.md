@@ -180,7 +180,11 @@ Scotiabank's `<ACCTID>` is an internal reference, so its adapter **requires** an
 - **`chain_across_statements`:** one account's back-to-back statements in a run must hand
   over the balance exactly. "Back to back" means a gap of 1–3 days, because cycles end on
   weekends and holidays (28 real hand-overs measured). The same month delivered twice is
-  counted once (`dup_in_run`), and both copies must agree.
+  counted once (`dup_in_run`), and both copies must agree. A broken hand-over refuses the
+  **whole run**, even with `--keep-going`, as a key collision does: either file could be
+  the wrong one.
+- **Not yet exercised:** the Desjardins grammar carries the French labels from the legacy
+  extractor, but every real statement measured was English, and no fixture covers French.
 
 ## Privacy
 

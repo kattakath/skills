@@ -31,12 +31,12 @@
   ],
   "desjardins/no-activity": [],
   "scotiabank/chequing-regular": [
-   "Scotiabank|••3456|2026-02-28|1",
-   "Scotiabank|••3456|2026-02-28|2",
-   "Scotiabank|••3456|2026-02-28|3",
-   "Scotiabank|••3456|2026-02-28|4",
-   "Scotiabank|••3456|2026-02-28|5",
-   "Scotiabank|••3456|2026-02-28|6"
+   "Scotiabank|••3456|2025-02-28|1",
+   "Scotiabank|••3456|2025-02-28|2",
+   "Scotiabank|••3456|2025-02-28|3",
+   "Scotiabank|••3456|2025-02-28|4",
+   "Scotiabank|••3456|2025-02-28|5",
+   "Scotiabank|••3456|2025-02-28|6"
   ],
   "scotiabank/chequing-year-rollover": [
    "Scotiabank|••3456|2026-01-31|1"

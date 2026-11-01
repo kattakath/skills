@@ -17,7 +17,8 @@ TD = ADAPTERS / "td" / "fixtures"
 SC = ADAPTERS / "scotiabank" / "fixtures"
 OK_FILES = [TD / "clean-chequing.qfx", TD / "multi-account.qfx", TD / "identical-rows.qfx",
             ADAPTERS / "cibc" / "fixtures" / "card-memo-first4.qfx",
-            ADAPTERS / "tangerine" / "fixtures" / "posted-fragments.qfx"]
+            ADAPTERS / "tangerine" / "fixtures" / "posted-fragments.qfx",
+            SC / "chequing-regular.layout.txt", SC / "chequing-year-rollover.layout.txt"]
 
 
 def records(stdout: str) -> list[dict]:
