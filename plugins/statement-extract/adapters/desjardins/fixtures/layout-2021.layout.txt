@@ -1,0 +1,85 @@
+                                                                                                                              Statement of Account
+
+
+                                                                                                                        Account Number
+
+ VISA DESJARDINS CLASSIC                                                                                  4500 01** **** 8021
+  Statement    Day    Month      Year     Cycle      Due             Day   Month     Year                     Minimum              New Regular Balance
+                                          day                                                            payment on regular          including Accord D
+  Date                                               Date                                                   transactions            financing instalment
+                15     03      2021       C15
+                                                                                                                       0.00                 82.50CR
+
+ ALEX SAMPLE
+ 1 SAMPLE STREET
+ SAMPLETON ON A0A 0A0
+
+
+
+STATEMENT DATE         Day 15 Month 03 Year 2021                                                                        VISA DESJARDINS CLASSIC
+                                                                                                                                     Page: 1 of 3
+
+
+                                                                           Available Credit Limit :           1,000               Annual Interest Rate
+     REGULAR TRANSACTION SUMMARY                                           Authorized Credit Limit :          1,000                    19.90%
+
+ Previous Balance                                       120.00
+
+ Purchases / Debits                              +           45.50
+
+ Cash Advances                                   +            0.00
+
+ Credit Charges (Interest on Purchases)          +            1.25
+
+ Credit Charges (Interest on Cash Advances)      +            0.75
+
+ Accord D financing Instalment                   +           50.00         See Accord D financing transaction summary
+
+ Payments / Credits                              -          300.00                                     Due Date:
+
+ New Regular Balance                             =       82.50CR                                                                    Amount paid
+                                                                                                                                                     .
+
+     REGULAR TRANSACTION DETAILS
+ Transactions made with the card of: ALEX SAMPLE                                                                          Card: 4500 01** **** 5021
+  Transaction Date          Posting Date        Transaction
+                                                                                              Description                                   Amount
+      D      M               D      M             Number
+     02      02             03      02               001             SAMPLE GROCER                           SAMPLETON    ON                    30.00
+     10      02             11      02               002             SAMPLE CAFE                             SAMPLETON    ON                    10.00CR
+     01      03             02      03               003             SAMPLE BOOKS                            SAMPLETON    ON                    15.50
+
+                                                                                                                        Total                   35.50
+
+                                                                                                   Statement of Account
+
+STATEMENT DATE      Day 15 Month 03 Year 2021                                                 VISA DESJARDINS CLASSIC
+                                                                                                           Page: 2 of 3
+
+ Account Operations                      4500 01** **** 8021
+ Transaction Date         Posting Date     Transaction
+                                                                             Description                        Amount
+     D      M              D      M          Number
+    20    02              20      02          004          PAYMENT CAISSE/BRANCH                                 150.00CR
+    05    03              05      03          005          PAYMENT CAISSE/BRANCH                                 140.00CR
+    15    03              15      03          006          ACCORD D FINANCING INSTALMENT                          50.00
+                                                         - See Accord D FINANCING transaction summary
+    15    03              15      03          007          INTEREST ON PURCHASES                                   1.25
+    15    03              15      03          008          INTEREST ON CASH ADVANCES                               0.75
+
+STATEMENT DATE         Day 15 Month 03 Year 2021                                                                 VISA DESJARDINS CLASSIC
+                                                                                                                              Page : 3 of 3
+     ACCORD D FINANCING TRANSACTION SUMMARY
+
+                Previous              Payments/                 Current Monthly Instalment
+  Plan          Balance /            Adjustments
+ Number            New               On financing        Principal       Interest       Total               New Balance
+                Financing
+    001           1,000.00     +           0.00     -           50.00        0.00        50.00       =                950.00
+
+  Total           1,000.00     +           0.00     -           50.00        0.00        50.00       =                950.00
+
+     ACCORD D FINANCING TRANSACTION DETAILS
+  Plan                     Initial       Posting             Due                                                                                     Annual
+ Number       Type       Amount           Date               Date                                    Description                                     Interest
+    001        EPF        1,000.00      15 01 2021      15 01 2023        SAMPLE STORE                SAMPLETON          ON                            0.00%

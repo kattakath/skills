@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2018 print: UPPERCASE headings, BALANCE FORWARD, a deposit one space from its date, bare totals; page 2 opens with its own BALANCE FORWARD (= the carried balance) and closes with its own totals, a zero total printed as .00; a sort-code line mid-list is ignored"
+exit = 0
+pdf_smoke = true

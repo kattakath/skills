@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2018 print: a continuation page whose BALANCE FORWARD differs from the balance carried from the page before is refused"
+exit = 3
+stderr_has = "page_handover"

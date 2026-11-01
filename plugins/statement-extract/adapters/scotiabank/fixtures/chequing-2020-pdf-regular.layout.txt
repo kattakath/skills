@@ -1,0 +1,21 @@
+1 SAMPLE STREET. SUITE 1, BOX 00000
+SAMPLETON ON A0A 0A0
+SAMPLE CO INC
+1 SAMPLE STREET
+SAMPLETON ON A0A0A0
+Statement Of:                            Account Number:                          From:                                     To:
+Business Account                         00000 01234 56                           Jan 31 2020                               Feb 28 2020
+Account Summary for this Period:
+No. of Debits                            Total Amount - Debits                    No. of Credits                            Total Amount - Credits
+2                                        $54.95                                   1                                         $500.00
+Account Details:
+Date                Description                                            Withdrawals/Debits ($)             Deposits/Credits ($)                     Balance ($)
+01/31/2020          BALANCE FORWARD                                                                                                                     1,000.00
+02/03/2020          DEPOSIT                                                                                                      500.00                 1,500.00
+02/10/2020          CHEQUE 012                                                               50.00                                                      1,450.00
+02/28/2020          SERVICE CHARGE                                                            4.95                                                      1,445.05
+No. of Debits                            Total Amount - Debits                    No. of Credits                            Total Amount - Credits
+2                                        $54.95                                   1                                         $500.00
+Total service fees and/or charges:                                                                                                                           $4.95
+Registered trademark of The Bank of Nova Scotia
+                                                                                                                                                         1 of 1

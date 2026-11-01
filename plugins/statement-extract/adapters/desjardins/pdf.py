@@ -18,10 +18,16 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
     operations / the rewards table, which must be excluded), a foreign-currency detail line
     folds into the row above it, the year is inferred per row (a January statement carries
     December postings), and the five printed summary figures are each tied to a different
-    subset of rows. That is control flow over a line stream, not a grammar."""
+    subset of rows. The 2021 print adds a Transaction Number column and splits Credit Charges
+    into two lines: which row grammar applies is decided from the column header, and the second
+    charges line joins the operations total. That is control flow over a line stream, not a
+    grammar."""
     g = spec["grammar"]
     amt = g["amt"]
-    txn_re = re.compile(g["txn"].replace("{AMT}", amt))
+    # The 2021 print's Transaction Number column: a separate row grammar, chosen only when its
+    # column header is present, so the frozen 2022+ path is byte-for-byte the same.
+    numbered = "numbered" in g and re.search(g["numbered"], text, re.M)
+    txn_re = re.compile(g["txn_numbered" if numbered else "txn"].replace("{AMT}", amt))
     fx_re = re.compile(g["fx"])
     total_re = re.compile(g["total"].replace("{AMT}", amt))
 
@@ -35,7 +41,11 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
         raise Refusal(Exit.REFUSED, "no account number in the statement header")
 
     def summary(label: str) -> Decimal | None:
-        s = re.search(rf"(?:{label})\s*[+=\-]?\s*({amt})\s*(CR|-)?", text, re.I)
+        # The CR marker sits on the amount's own line. `\s*(CR|-)?` under re.I once reached
+        # across the newline into the next label ("Credit Charges", "Cr…") and negated a
+        # non-zero Cash Advances or 2021 purchase-interest figure; summary figures only, so
+        # no row or key ever depended on it.
+        s = re.search(rf"(?:{label})\s*[+=\-]?\s*({amt})[ \t]*(CR(?![A-Za-z])|-)?", text, re.I)
         return _to_dec(s.group(1), s.group(2)) if s else None
 
     s = {k: summary(v) for k, v in g["summary"].items()}
@@ -75,7 +85,8 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
     reg = [r["amt"] for r in rows if r["section"] == "regular"]
     ops = [r["amt"] for r in rows if r["section"] == "operations"]
     credits = -sum((r["amt"] for r in rows if r["amt"] < 0), Decimal(0))
-    other = (s["cash_advances"] or 0) + (s["instalment"] or 0)
+    # 2021 splits Credit Charges into purchase and cash-advance interest lines.
+    other = (s["cash_advances"] or 0) + (s["instalment"] or 0) + (s.get("charges_cash") or 0)
     printed_credits = -s["credits"] if s["credits"] < 0 else s["credits"]
     checks = [
         printed_total("summary_purchases", sum((a for a in reg if a > 0), Decimal(0)),

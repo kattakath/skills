@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2020 business chequing print: a No. of Debits that disagrees with the rows is refused, even though the totals tie"
+exit = 3
+stderr_has = "summary_counts"

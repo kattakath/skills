@@ -18,6 +18,7 @@ with the consumer.
 | Declarative CSV driver (R2) + adapter: **Wise** balance statements | |
 | PDF text-layer reader (poppler) + adapters: **Desjardins Visa**, **Scotiabank closed chequing**, **Wise** | |
 | PDF adapters (R3b): **TD** chequing, Visa, LOC · **CIBC** chequing, Visa, LOC/HELOC · **Scotiabank** Visa, LOC · **Tangerine** chequing · **BMO** chequing (closed) | |
+| Older prints: **Desjardins Visa** 2021 · **TD** chequing 2021 and 2018 (`td/chequing-2018-pdf`) · **Scotiabank** business chequing 2020 (`scotiabank/chequing-2020-pdf`) | |
 | **Positions** (loan and mortgage balance snapshots, opt-in `record: "position"`): **CIBC** and **BMO** online mortgage details, **TD** annual mortgage statement, **NSLSC** student loan statement (also a proven statement with its rows) | Scanned mortgage statements (they refuse as a scan) |
 
 There are **no skills yet** (R4): drive the CLI directly.
@@ -213,6 +214,10 @@ amount = "72.43"
   required. Rows are tied to five printed figures. FX detail lines fold into the row above
   with ` — `. A January statement's December rows take the previous year. A month with no
   activity is a proven statement with zero rows.
+  The **2021 print** adds a 3-digit Transaction Number column (kept out of the description, so
+  out of the key) and splits Credit Charges into purchase and cash-advance interest lines. Its
+  row grammar is chosen only when that column header is present, so the frozen 2022+ path is
+  unchanged: 24/24 real statements keep identical key sets (654 keys).
 - **Scotiabank closed chequing:** direction comes from the running balance, and every row
   must chain. Detail lines attach by indentation. An accounts-file last4 that disagrees with
   the header is refused (`header_last4`).
@@ -235,6 +240,19 @@ amount = "72.43"
   (gap 0), so its hand-overs are not judged yet: no consecutive months were available to measure. A broken hand-over refuses the
   **whole run**, even with `--keep-going`, as a key collision does: either file could be
   the wrong one.
+- **TD chequing, older prints** share one hook. **2021** (`td/chequing-pdf`): a `CLOSING
+  BALANCE` row, then the totals as bare amounts (accepted only after that row), and a spaced
+  `OD`. **2018** (`td/chequing-2018-pdf`, told apart by its UPPERCASE column row): `BALANCE
+  FORWARD`, bare totals (zero as `.00`), and each continuation page opens with its own BALANCE
+  FORWARD, which must equal the carried balance (`page_handover`), and closes with its own totals.
+- **Scotiabank business chequing, 2020 print** (`scotiabank/chequing-2020-pdf`): MM/DD/YYYY
+  dates, direction from the column, a balance on every row, and the Account Summary's **counts**
+  as well as totals tied (`summary_counts`). Keyed `content-occurrence/1`: `statement-line/1`
+  stays reserved for the closed personal account.
+- **Measured on the operator's older real PDFs (counts only):** 7/7 proven, one claimant each
+  (Desjardins 2021 ×2, TD 2021 ×1, TD 2018 ×3, Scotiabank 2020 ×1). The 72 statements the touched
+  adapters already read (24 Desjardins, 8 TD, 40 Scotiabank) keep the same status, row count and
+  key set.
 - **Not yet exercised:** the Desjardins grammar carries the French labels from the legacy
   extractor, but every real statement measured was English, and no fixture covers French.
 
