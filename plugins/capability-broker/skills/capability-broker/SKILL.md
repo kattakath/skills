@@ -67,8 +67,7 @@ two sessions: one to adopt, one to execute. Say so up front.
    `SKILL.md` repos (`gh search code 'filename:SKILL.md <term>'`).
 2. **Plugins:** `/plugin` → Discover across added marketplaces; the official marketplace
    (`claude-plugins-official`) before the community one (`claude-plugins-community`).
-3. **MCP servers:** a registry search tool if one is wired (e.g. `mcpfinder`'s
-   `search_mcp_servers`), else the Official MCP Registry
+3. **MCP servers:** a registry search tool if one is wired, else the Official MCP Registry
    (`https://registry.modelcontextprotocol.io/v0/servers?search=<term>`), then Smithery
    (`https://registry.smithery.ai/servers?q=<term>`). Both answer without a key as of
    2026-09; Glama's API needs one.
