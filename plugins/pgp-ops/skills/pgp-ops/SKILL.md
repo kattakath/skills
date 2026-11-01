@@ -216,7 +216,7 @@ The key lives in `~/.gnupg`, and GnuPG writes the **revocation certificate in th
 | Self-recipient everywhere | `encrypt-to <own fingerprint>` in a **local, hand-placed** `~/.gnupg/gpg.conf`, so every encryption from any tool (CLI, GpgFrontend) includes the user. Never declared in a repo, because a key id in a public tree links the key to its owner. `--no-encrypt-to` opts out per command |
 | Store | `set-secret pgp:<uid>:secret-key` from stdin. A `:` in the name fails the env-var grammar, so the item is stored **unbound**; `set-secret` prints "NOT exported" |
 | Read-back | `secret exec V=pgp:<uid>:secret-key -- sh -c 'printf %s "$V" \| shasum -a 256'`. Not `secret fp`: its digest is an HMAC under a machine-local salt, so it never equals a sha256 |
-| Durable copy | `secrets-push pgp:<uid>:secret-key`, then `secrets-status` must read `in-sync`. Run both with `CLOUDSDK_CONFIG=~/.config/gcloud-nix-config`, because the global gcloud config can hold a client identity |
+| Durable copy | `secrets-push pgp:<uid>:secret-key`, then `secrets-status` must read `in-sync`. Run both with `CLOUDSDK_CONFIG=~/.config/gcloud-nix-config`, because the global gcloud config can hold a client identity. `secrets-push` is **capped** at the free tier (6 billable versions per billing account): a refusal means trim something re-issuable, not `--force` |
 | Restore | `secrets-resolve <secret-id> \| base64 -d \| gpg --batch --show-keys --with-colons` |
 
 ## Pitfalls
