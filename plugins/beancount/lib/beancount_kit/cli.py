@@ -2,6 +2,8 @@
 
   build   JSONL... --ledger L --rules R [--decisions D] [--accounts A] [--out J | --check-only]
           [--emit-rows F] [--emit-pairs F]
+  groups  [--journal J] [--out F]   flagged entries grouped by merchant, with a rule pattern
+  suggest [--journal J] [--out F | --evaluate]   category suggestions for flagged entries
   fava    start | stop | status   [--journal J]
   doctor
 
@@ -89,6 +91,37 @@ def build(a) -> int:
     return 0
 
 
+def groups_cmd(a) -> int:
+    from . import groups as gr
+    if not a.journal:
+        raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
+    rows = gr.groups(Path(a.journal))
+    if a.out and a.out != "-":
+        with open(a.out, "w", newline="", encoding="utf-8") as fh:
+            gr.write(rows, fh)
+    else:
+        gr.write(rows, sys.stdout)
+    print(json.dumps({"groups": len(rows), "entries": sum(r["count"] for r in rows),
+                      "singletons": sum(r["count"] == 1 for r in rows)}), file=sys.stderr)
+    return 0
+
+
+def suggest_cmd(a) -> int:
+    from . import suggest as sg
+    if not a.journal:
+        raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
+    if a.evaluate:
+        print(json.dumps(sg.evaluate(Path(a.journal))))
+        return 0
+    if a.out and a.out != "-":
+        with open(a.out, "w", newline="", encoding="utf-8") as fh:
+            rep = sg.suggest(Path(a.journal), fh)
+    else:
+        rep = sg.suggest(Path(a.journal), sys.stdout)
+    print(json.dumps(rep), file=sys.stderr)
+    return 0
+
+
 def doctor(_a) -> int:
     ok = True
 
@@ -98,6 +131,11 @@ def doctor(_a) -> int:
         print(f"{'ok  ' if good else 'FAIL'} {what}")
 
     line(sys.version_info >= (3, 11), f"python {sys.version.split()[0]} at {sys.executable}")
+    try:
+        import smart_importer  # noqa: F401  optional: only `suggest` needs it
+        print("ok   import smart_importer (suggest available)")
+    except ImportError:
+        print("--   smart_importer not importable (suggest unavailable; optional)")
     for mod in ("beancount", "beanquery", "fava"):
         try:
             m = __import__(mod)
@@ -127,6 +165,15 @@ def main(argv=None) -> int:
     g.add_argument("--check-only", action="store_true")
     b.add_argument("--emit-rows")
     b.add_argument("--emit-pairs")
+    gp = sub.add_parser("groups")
+    gp.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
+    gp.add_argument("--out", help="CSV (default stdout)")
+    s = sub.add_parser("suggest")
+    s.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
+    g2 = s.add_mutually_exclusive_group()
+    g2.add_argument("--out", help="CSV key,suggestion (default stdout)")
+    g2.add_argument("--evaluate", action="store_true",
+                    help="report holdout accuracy on categorised entries instead")
     f = sub.add_parser("fava")
     f.add_argument("action", choices=("start", "stop", "status"))
     f.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
@@ -137,6 +184,10 @@ def main(argv=None) -> int:
             return build(a)
         if a.cmd == "doctor":
             return doctor(a)
+        if a.cmd == "groups":
+            return groups_cmd(a)
+        if a.cmd == "suggest":
+            return suggest_cmd(a)
         if a.action == "start":
             if not a.journal:
                 raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
