@@ -1,0 +1,73 @@
+                                                                                                                              Statement of Account
+
+
+                                                                                                                       Account Number
+
+ VISA DESJARDINS CLASSIC                                                                                  4500 01** **** 8021
+  Statement    Day    Month      Year     Cycle      Due            Day    Month     Year                     Minimum              New Regular Balance
+                                          day                                                            payment on regular          including Accord D
+  Date                                               Date                                                   transactions            financing instalment
+               15      12      2019       C15
+                                                                    09      01     2020
+                                                                                                                     0.00                    50.00
+
+ ALEX SAMPLE
+ 1 SAMPLE STREET
+ SAMPLETON ON A0A 0A0
+
+
+
+STATEMENT DATE         Day 15 Month 12 Year 2019                                                                       VISA DESJARDINS CLASSIC
+                                                                                                                                    Page: 1 of 2
+
+
+                                                                           Available Credit Limit :           1,000               Annual Interest Rate
+     REGULAR TRANSACTION SUMMARY                                           Authorized Credit Limit :          1,000                    19.90%
+
+ Previous Balance                                            0.00
+
+ Purchases / Debits                              +           0.00
+
+ Cash Advances                                   +           0.00
+
+ Credit Charges (Interest on Purchases)          +           0.00
+
+ Credit Charges (Interest on Cash Advances)      +           0.00
+
+ Accord D financing Instalment                   +          50.00          See Accord D financing transaction summary
+
+ Payments / Credits                              -           0.00                                      Due Date: Day 09 Month 01 Year 2020
+
+ New Regular Balance                             =          50.00                                                                   Amount Paid
+                                                                                                                                                     .
+
+     REGULAR TRANSACTION DETAILS
+ Account Operations                         4500 01** **** 8021
+  Transaction Date          Posting Date        Transaction
+                                                                                              Description                                   Amount
+      D      M               D      M             Number
+     15      12             15      12               001            ACCORD D FINANCING INSTALMENT                                               50.00
+                                                                  - See Accord D FINANCING transaction summary
+
+STATEMENT DATE         Day 15 Month 12 Year 2019                                                                    VISA DESJARDINS CLASSIC
+                                                                                                                                 Page : 2 of 2
+     ACCORD D FINANCING TRANSACTION SUMMARY
+
+               Previous                Payments/                   Current Monthly Instalment
+  Plan         Balance /              Adjustments
+ Number           New                 On Principal          Principal       Interest       Total               New Balance
+               Financing
+    001            1,000.00      +            0.00     -           50.00        0.00        50.00       =                950.00
+
+  Total            1,000.00      +            0.00     -           50.00        0.00        50.00       =                950.00
+
+     ACCORD D FINANCING TRANSACTION DETAILS
+  Plan                     Initial           Posting            Due                                                                                     Annual
+ Number       Type       Amount               Date              Date                                    Description                                     Interest
+    001       EPF         1,000.00          15 11 2019     15 11 2021        SAMPLE STORE                SAMPLETON          ON                            0.00%
+
+     ACCORD D FINANCING ACCOUNT OPERATIONS
+  Transaction Date            Posting Date       Transaction
+                                                                                          Description                                            Amount
+      D      M                 D      M            Number
+      15      11               15      11            001             EPF001-SAMPLE STORE                    SAMPLETON                              1 000.00

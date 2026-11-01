@@ -33,7 +33,16 @@ account = 'Account Number\s*\n.*?\d{4} ?\d{2}\*\* ?\*{4} ?(\d{4})'
 total = '^\s+Total\s+({AMT})\s*(CR|-)?\s*$'
 section_regular = 'REGULAR TRANSACTION DETAILS|DÉTAIL DES TRANSACTIONS'
 section_operations = '^\s*Account Operations|Opérations au compte'
-section_done = 'CASH BACK EARNED|REMISE EN ARGENT'
+# The Accord D financing tables (summary, plan details and their own ACCOUNT OPERATIONS) are a
+# separate balance: the regular balance carries only the instalment. A plan's first statement
+# prints the disbursement there, and a principal prepayment prints there as a CR; both look
+# like card rows. The heading is anchored at line start because the regular pages carry
+# "See Accord D financing transaction summary" mid-line, which must not end a section.
+section_done = 'CASH BACK EARNED|REMISE EN ARGENT|^\s*ACCORD D FINANCING (?:TRANSACTION SUMMARY|TRANSACTION DETAILS|ACCOUNT OPERATIONS)\s*$'
+# An Account Operations debit that the bank books under Purchases / Debits rather than Credit
+# Charges: the PAYMENT ADJUSTMENT that moves a payment onto the Accord D balance (2021). A
+# narrow allowlist: any other operations debit still has to tie to Credit Charges.
+ops_purchase = '^PAYMENT ADJUSTMENT$'
 # The 2021 print adds a 3-digit "Transaction Number" column after the posting date. It is
 # only parsed where the column header says so (`numbered`), so the 2022+ grammar above,
 # whose keys are frozen, never sees this variant. The number is a per-statement sequence,

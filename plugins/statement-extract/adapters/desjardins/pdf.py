@@ -83,14 +83,24 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
             rows[-1]["desc"] += " — " + fx.group(1)
 
     reg = [r["amt"] for r in rows if r["section"] == "regular"]
-    ops = [r["amt"] for r in rows if r["section"] == "operations"]
+    # An allowlisted operations debit (PAYMENT ADJUSTMENT) is printed in Purchases / Debits,
+    # not Credit Charges. It stays out of the regular section's printed Total.
+    ops_purchase = re.compile(g["ops_purchase"]) if "ops_purchase" in g else None
+
+    def as_purchase(r: dict) -> bool:
+        return bool(ops_purchase and r["section"] == "operations" and r["amt"] > 0
+                    and ops_purchase.match(r["desc"]))
+
+    ops = [r["amt"] for r in rows if r["section"] == "operations" and not as_purchase(r)]
+    purchases = reg + [r["amt"] for r in rows if as_purchase(r)]
     credits = -sum((r["amt"] for r in rows if r["amt"] < 0), Decimal(0))
     # 2021 splits Credit Charges into purchase and cash-advance interest lines.
     other = (s["cash_advances"] or 0) + (s["instalment"] or 0) + (s.get("charges_cash") or 0)
     printed_credits = -s["credits"] if s["credits"] < 0 else s["credits"]
     checks = [
-        printed_total("summary_purchases", sum((a for a in reg if a > 0), Decimal(0)),
-                      s["purchases"], "regular-section debits = Purchases / Debits"),
+        printed_total("summary_purchases", sum((a for a in purchases if a > 0), Decimal(0)),
+                      s["purchases"],
+                      "regular-section debits = Purchases / Debits"),
         printed_total("summary_charges", sum((a for a in ops if a > 0), Decimal(0)),
                       s["charges"] + other,
                       "operations debits = Credit Charges + Cash Advances + Instalment"),

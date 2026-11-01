@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "an Accord D plan's first statement: no regular card rows and no printed Total, only the instalment under Account Operations, and the plan disbursement printed as a row under ACCORD D FINANCING ACCOUNT OPERATIONS, which belongs to the Accord D balance and is not read"
+exit = 0
+pdf_smoke = true
