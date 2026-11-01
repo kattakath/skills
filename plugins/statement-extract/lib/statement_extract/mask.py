@@ -24,14 +24,19 @@ def _last4(digits: str) -> str:
 _DATE_SHAPES = re.compile(
     r"\d{4}[-/ ]\d{2}[-/ ]\d{2}|\d{2}[-/ ]\d{2}[-/ ]\d{4}|\d{2}[-/ ]\d{2}[-/ ]\d{2}"
 )
-_GROUPED = re.compile(r"(?<![\d•])\d+(?:[ -]\d+)+(?!\d)")
+# Never start a group right after a decimal point or comma: "$9.99 1234567" must not glue the
+# cents onto the account number (P5 finding F4, 2026-11-01).
+_GROUPED = re.compile(r"(?<![\d•.,])\d+(?:[ -]\d+)+(?!\d)")
+# North-American phone shapes stay readable (operator decision, P5 finding F1): a bank's
+# customer-service number is not an account number, and legacy extractors left it alone.
+_PHONE = re.compile(r"(?:1-)?\d{3}-\d{3}-\d{4}")
 
 
 def _grouped(s: str) -> str:
     def sub(m: re.Match) -> str:
         text = m.group(0)
         digits = re.sub(r"\D", "", text)
-        if len(digits) < 7 or _DATE_SHAPES.fullmatch(text):
+        if len(digits) < 7 or _DATE_SHAPES.fullmatch(text) or _PHONE.fullmatch(text):
             return text
         return _last4(digits)
 
@@ -50,10 +55,12 @@ RULES: tuple[Rule, ...] = (
     Rule("star-short-tail", "CIBC (2026-10-31) HELOC memos 'ddddd/****ddd': a star run "
          "ending in fewer than four digits",
          lambda s: re.sub(r"\*{2,}[\d*]*\d", lambda m: "••" + re.sub(r"\D", "", m.group(0))[-4:], s)),
-    Rule("grouped-digits", "space/dash grouped account numbers (>=7 digits), dates excluded",
-         _grouped),
     Rule("long-digit-run", "TD (2026-10-31) transfer payees 'TO:<number>': any 7+ digit run",
          lambda s: re.sub(r"\d{7,}", lambda m: _last4(m.group(0)), s)),
+    # Runs BEFORE grouped-digits, as the legacy extractors ordered it: a 7+ run is masked on its
+    # own, so a short number beside it ("x 999 1234567") is never glued into one tail (P5 F2).
+    Rule("grouped-digits", "space/dash grouped account numbers (>=7 digits), dates excluded",
+         _grouped),
 )
 
 

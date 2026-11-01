@@ -42,6 +42,42 @@ class Rules(unittest.TestCase):
                 self.assertFalse(mask.leaks(mask.mask(given)))
 
 
+class P5Findings(unittest.TestCase):
+    """The agentic-ledger equivalence gate's display findings (2026-11-01), as synthetic shapes.
+    Each pins what the operator decided; each also stays leak-free."""
+
+    CASES = [
+        # F4 (defect): cents were glued onto the account number that followed them.
+        ("PAID $9.99 0000123456", "PAID $9.99 ••3456"),
+        ("FEE 12,50 0000123456", "FEE 12,50 ••3456"),
+        # F1 (tighten): phone shapes stay readable; a 7+ run beside a short group is masked alone.
+        ("CALL 416-555-0199", "CALL 416-555-0199"),
+        ("CALL 1-800-555-0199 NOW", "CALL 1-800-555-0199 NOW"),
+        ("REF 999-0001234567", "REF 999-••4567"),
+        # F2 (tighten): a short number before a tail is kept; two tails stay two.
+        ("TFR 123 0000123456", "TFR 123 ••3456"),
+        ("A 0001234567 0007654321", "A ••4567 ••4321"),
+        ("TO 12 *****4567", "TO 12 ••4567"),
+        # Still masked: grouped account numbers made only of short groups.
+        ("ACCT 0000 1234 567", "ACCT ••4567"),
+        ("Transfer from 00000 01234 56", "Transfer from ••3456"),
+        ("Mortgage #000012-3", "Mortgage #••0123"),
+        ("CARD 0000-1234-5678-9012", "CARD ••9012"),
+    ]
+
+    def test_shapes(self):
+        for given, want in self.CASES:
+            with self.subTest(given=given):
+                got = mask.mask(given)
+                self.assertEqual(got, want)
+                self.assertFalse(mask.leaks(got))
+
+    def test_keys_unaffected(self):
+        # Display masking changed; the frozen key normaliser did not.
+        from statement_extract import keys
+        self.assertEqual(keys.content_v1("TFR 123 0000123456"), "TFR ••3456")
+
+
 class LeakGate(unittest.TestCase):
     def test_trips(self):
         for s in ("1234567", "0000 12*", "4500****2204", "**1", "•••1234"):
