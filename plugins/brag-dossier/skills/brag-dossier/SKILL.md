@@ -61,7 +61,9 @@ Put BRIEF.md and FACTS.md in one scratch directory, then run the pipeline:
 
 - **With multi-agent orchestration opted in** (the user said so, or ultracode is on): run
   `assets/dossier-workflow.js` with the Workflow tool, `args: {dir: "<scratch dir>", out:
-  "<repo>/docs/<name>.md"}` (optionally `sections: [...]` to change the default 9-way split).
+  "<repo>/docs/<name>.md", repo: "<absolute path of the repo the dossier describes>"}`
+  (`repo` defaults to the current working directory's repository; optionally `sections: [...]`
+  to change the default 9-way split).
 - **Otherwise:** the same stages with the Agent tool — writers in parallel, then one
   fact-checker per section, then one assembler, then one critic — or say what it would cost
   and ask.

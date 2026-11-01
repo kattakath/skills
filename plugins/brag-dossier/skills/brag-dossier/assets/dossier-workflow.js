@@ -11,7 +11,9 @@ export const meta = {
 
 const D = args.dir
 const OUT = args.out
-const COMMON = `Read ${D}/BRIEF.md and ${D}/FACTS.md in full first. FACTS.md is the only source of truth for events, numbers, dates, PRs, stars and links; the repo at /workspaces/skills may be read for file contents (skills/*/SKILL.md, INDEX.md, index/*.json, scripts/, .github/workflows/). Follow the BRIEF's format rules exactly: ASCII/box-drawing diagrams first (<=70 cols, captioned), mermaid only when ASCII can't carry it, evidence tags [measured]/[source]/[inferred] on factual claims, full URLs, absolute dates, one-line italic summary under each section heading. Do NOT use the network except to read files already referenced; do NOT modify anything under /workspaces/skills.`
+// The repository the dossier describes; agents read its files for facts and never modify it.
+const REPO = args.repo || 'the repository at the current working directory'
+const COMMON = `Read ${D}/BRIEF.md and ${D}/FACTS.md in full first. FACTS.md is the only source of truth for events, numbers, dates, PRs, stars and links; the repo at ${REPO} may be read for file contents (skills/*/SKILL.md, INDEX.md, index/*.json, scripts/, .github/workflows/). Follow the BRIEF's format rules exactly: ASCII/box-drawing diagrams first (<=70 cols, captioned), mermaid only when ASCII can't carry it, evidence tags [measured]/[source]/[inferred] on factual claims, full URLs, absolute dates, one-line italic summary under each section heading. Do NOT use the network except to read files already referenced; do NOT modify anything under ${REPO}.`
 
 // args.sections overrides this split; keep ids zero-padded and in document order.
 const DEFAULT_SECTIONS = [
@@ -43,7 +45,7 @@ ${s.extra}
 Write the section(s) as final-quality Markdown (starting at the H2 heading(s), numbered as in the BRIEF's required structure; the front-matter writer also produces the H1 title and the YAML block). Save it to ${D}/sections/${s.id}.md using the Write tool (create the directory if needed). Return just the path.`, { label: `write:${s.id}`, phase: 'Write' }),
   (_, s) => agent(`${COMMON}
 
-You are an adversarial fact-checker for ${D}/sections/${s.id}.md (${s.title}). Assume it contains errors. Check EVERY number, date, time, PR number, commit hash, star count, version, threshold, quote, link and file path against FACTS.md and the actual files in /workspaces/skills. Check that [measured] is only used for things FACTS marks measured, that no [inferred] claim is presented as fact, that diagrams are ASCII-first, <=70 columns and captioned, and that every section heading has a one-line italic summary. Fix every problem IN PLACE in that file with the Edit tool (remove anything you cannot trace to FACTS.md or a repo file). Then return the path, the list of corrections you made, and the list of unverifiable claims you removed.`, { label: `verify:${s.id}`, phase: 'Verify', schema: ISSUES }),
+You are an adversarial fact-checker for ${D}/sections/${s.id}.md (${s.title}). Assume it contains errors. Check EVERY number, date, time, PR number, commit hash, star count, version, threshold, quote, link and file path against FACTS.md and the actual files in ${REPO}. Check that [measured] is only used for things FACTS marks measured, that no [inferred] claim is presented as fact, that diagrams are ASCII-first, <=70 columns and captioned, and that every section heading has a one-line italic summary. Fix every problem IN PLACE in that file with the Edit tool (remove anything you cannot trace to FACTS.md or a repo file). Then return the path, the list of corrections you made, and the list of unverifiable claims you removed.`, { label: `verify:${s.id}`, phase: 'Verify', schema: ISSUES }),
 )
 const ok = verified.filter(Boolean)
 log(`verified ${ok.length}/${SECTIONS.length} sections; ${ok.reduce((n, v) => n + v.corrections.length, 0)} corrections, ${ok.reduce((n, v) => n + v.unverifiable_removed.length, 0)} removals`)
