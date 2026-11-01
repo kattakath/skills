@@ -157,4 +157,4 @@ No agent here uses `bypassPermissions`.
 
 Claude Code. Nix only where a flake is involved — the Senate never needs it, the Minister degrades
 to an ordinary coding agent without it, and the General declines rather than writing a flake he
-cannot evaluate. Claude Desktop loads no plugins, so this is a Claude Code artefact.
+cannot evaluate. Desktop chat ignores a plugin's hooks and local MCP (claude.com/docs/plugins/platform-support), so this is a Claude Code artefact — the CLI or Desktop's Code tab.
