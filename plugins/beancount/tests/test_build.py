@@ -355,6 +355,18 @@ class FavaFeatures(unittest.TestCase):
         self.assertEqual(rep["documents"], 1)
         self.assertGreater(rep["documents_missing"], 0)   # the scenario's other statements have no file
 
+    def test_fava_extension_is_declared_and_a_bad_name_refuses(self):
+        led = self.d / "ledger.toml"
+        base = led.read_text()
+        led.write_text(base + '\n[[fava_extension]]\nname = "fava_dashboards"\n')
+        code, err = self.build()
+        self.assertEqual(code, 0, err)
+        self.assertRegex(self.out.read_text(encoding="utf-8"),
+                         r'(?m)^\d{4}-\d{2}-\d{2} custom "fava-extension" "fava_dashboards"$')
+        led.write_text(base + '\n[[fava_extension]]\nname = "not a module"\n')
+        code, err = self.build()
+        self.assertEqual(code, 2, err)
+
     def test_rule_provenance_is_on_ruled_entries(self):
         code, err = self.build()
         self.assertEqual(code, 0, err)
