@@ -224,6 +224,7 @@ history is the asset.
 | 2 | `beancount` strict validation through it; drop its own PFC copy | An unknown name refuses; the real ledger's rules all pass |
 | 3 | `clean` + `history` + `suggest` (deterministic) + `eval` | **Done 2026-11-01, measured on 6,385 real rows:** seen merchants 72.7% coverage / 99.5% precision at confidence ≥ 0.9 (rows a human decided: 24.1% / 90.0%, n=83); **unseen merchants 0%** by construction. The rule stratum flatters exact match (it re-learns rules); the decision and unseen numbers drive phases 3b–5 |
 | 3b | Fuzzy fallback (character-trigram cosine, IDF-weighted, opt-in `--fuzzy`) | **Done 2026-11-01:** unseen merchants 0% → 56.4% coverage at 82.9% precision (≥ 0.5), 7.3% / 89.5% (≥ 0.8); human-decided unseen rows 8.6% / 60%. Review-grade, not auto-accept; phase 4 targets the decided rows |
+| 4a | Evidence coverage check + blind LLM measurement + `categorize` review-aid skill | **Done 2026-11-01.** Of 416 hand-decided rows: 129 are e-transfers (only consumer context can decide them), 4 PayPal (the PayPal CSVs matched 0), about 283 named merchants. A blind text-only LLM (fresh subagents, truth hidden) on 287 of them: 80.5% answered at ≥ 0.5, 58.0% exact, 85.7% same group; self-rated confidence uncalibrated (0.9 < 0.8). The PayPal matcher is dropped; Gmail is unmeasured; the LLM is a capped review aid |
 | 4 | `categorize` skill with `mail` / `context` / `web` adapters, enum-bound LLM step | Each adapter's lift measured |
 | 5 | Auto-accept above the measured threshold | Threshold set from `eval`, not guessed |
 

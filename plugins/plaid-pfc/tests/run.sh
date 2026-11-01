@@ -15,12 +15,12 @@ echo "== compile"
 
 echo "== minimum counts"
 # Floors, so a broken pin or a renamed test file cannot turn this into a green no-op.
-# Pin: PFC v2 as fetched 2026-11-01 (127 detailed, 18 primary). Tests: 12 at first release; 18 with phase 3 (suggest, eval); 20 with 3b (fuzzy).
+# Pin: PFC v2 as fetched 2026-11-01 (127 detailed, 18 primary). Tests: 12 at first release; 18 with phase 3 (suggest, eval); 20 with 3b (fuzzy); 22 with the categorize pipeline.
 names=$("$py" -I -c 'import json; print(len(json.load(open("data/pfc-v2.json"))["detailed"]))')
 tests=$(grep -c '    def test_' tests/test_pfc.py)
 echo "names=$names tests=$tests"
 [ "$names" -ge 127 ] || { echo "expected >= 127 pinned names, found $names" >&2; exit 1; }
-[ "$tests" -ge 20 ] || { echo "expected >= 20 tests, found $tests" >&2; exit 1; }
+[ "$tests" -ge 22 ] || { echo "expected >= 22 tests, found $tests" >&2; exit 1; }
 
 echo "== unit"
 (cd tests && "$py" -m unittest -q)
