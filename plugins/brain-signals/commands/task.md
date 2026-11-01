@@ -74,11 +74,8 @@ While executing:
   That is what survives a long session.
 - Long-running or external state (CI, deploy, a boot): use `Monitor` rather than
   polling loops or foreground sleeps.
-- Verifying a real app behaves: the `run` skill. Nix changes landing on `nix-config`:
-  `activate` (from any directory) / `nixos-rebuild switch --flake .#nixpi`. The CLI that
-  was retired 2026-09-15 was nix-personal's FRESHNESS-GATED one, which reconciled two
-  checkouts; there is only one checkout now, and nix-config's own `activate`
-  (packages/activate.nix) is live and is what CLAUDE.md names.
+- Verifying a real app behaves: the `run` skill. A change that must be deployed or
+  activated is not done until it is; the repo's own CLAUDE.md names how.
 - Genuinely stuck after two real attempts: say so and offer `grok-build:grok-delegate`
   for a second diagnosis. Do not silently keep grinding.
 

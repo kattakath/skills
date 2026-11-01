@@ -1,7 +1,10 @@
 {
   "mcpServers": {
     "postgres": {
-      "command": "nix-mcp-postgres"
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/launch.sh",
+      "env": {
+        "RAG_LAUNCHER": "${user_config.launcher}"
+      }
     }
   }
 }

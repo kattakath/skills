@@ -13,23 +13,16 @@ There is no staging site behind it. The tool list includes `wp_update_post`,
 Read before you write, and prefer a revision-creating update (`wp_update_post`) over a
 delete.
 
-## It needs a companion on PATH
+## You name the launcher
 
-`.mcp.json` names a binary, not a package:
+The plugin ships no WordPress server. `scripts/launch.sh` starts the one you name: set
+`launcher` (`/plugin configure wordpress`), or export `WORDPRESS_MCP_COMMAND` (the older
+override, still honoured). It must start a stdio WordPress MCP server that finds its own
+site URL and credentials. With neither set, the server does not start and says why.
 
-```json
-{ "wordpress": { "command": "nix-mcp-wordpress" } }
-```
-
-That launcher comes from **`kattakath/nix-config`** — `modules/home/plugin-mcp.nix`
-builds it when `local.pluginMcp.servers` includes `"wordpress"`. Same arrangement
-`claude-code-nix` has with `mcp-nixos` and `page-lab` with `page-lab-pick`: the plugin
-declares, Nix installs. Without it on PATH the server simply fails to start.
-
-**Using it on another machine.** The launcher is an environment override:
-`WORDPRESS_MCP_COMMAND` (default `nix-mcp-wordpress`) names any stdio WordPress MCP launcher that
-finds its own site URL and credentials. Claude Code expands `${VAR:-default}` in a plugin's
-`.mcp.json` `command`, so with it unset nothing changes.
+On the kattakath fleet that launcher is `nix-mcp-wordpress`, built by `kattakath/nix-config`
+(`modules/home/plugin-mcp.nix`). Until 2026-11-01 it was the built-in default, so the server
+only ever started on that fleet.
 
 **Why the credential work is not in this repo.** The launcher reads three values from the
 macOS login Keychain at launch — the site URL, the username and an **application

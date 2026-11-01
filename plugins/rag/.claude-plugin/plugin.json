@@ -15,5 +15,12 @@
     "embeddings",
     "ollama",
     "local"
-  ]
+  ],
+  "userConfig": {
+    "launcher": {
+      "type": "string",
+      "title": "Postgres MCP launcher",
+      "description": "Command that starts a stdio Postgres MCP server already pointed at your RAG database, split on spaces (e.g. `nix-mcp-postgres` on the kattakath fleet). Falls back to $RAG_POSTGRES_COMMAND; with neither, the server does not start and says why."
+    }
+  }
 }

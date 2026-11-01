@@ -1,7 +1,10 @@
 {
   "mcpServers": {
     "wordpress": {
-      "command": "${WORDPRESS_MCP_COMMAND:-nix-mcp-wordpress}"
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/launch.sh",
+      "env": {
+        "WP_LAUNCHER": "${user_config.launcher}"
+      }
     }
   }
 }
