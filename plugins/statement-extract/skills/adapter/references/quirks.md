@@ -23,6 +23,8 @@ Read before writing a new adapter. Most new banks repeat one of these.
 | A wrapped row prints its amount alone below the wrap | TD card 2021 | hook holds the row open until an amount under AMOUNT($); refuses otherwise |
 | An additional cardholder's section with its own net activity | TD card 2022 | `net_activity` tied per section |
 | A bank-masked reference "***4ab" (stars, then a digit) | TD chequing 2026 | frozen key text would trip the leak gate: `engine._key_text` reduces it to "••4ab" first |
+| A row prints its dates alone; its details and amount sit on the next line | Scotiabank card and LOC 2023/2024 | hook holds the row open for the next non-blank line, refuses anything else |
+| A six-digit print-sequence number in the left margin shares a row's line | Scotiabank card and LOC 2023/2024 | `row` grammar allows an optional leading 5+ digit run (a REF.# is 3 digits) |
 | A month with no activity prints no table | Desjardins, Scotiabank card | a proven statement with zero rows |
 | Two prints of one product across years | Desjardins 2021, TD 2018/2021, Scotiabank 2020 | grammar alternatives, or a sibling adapter sharing the hook |
 | Statement periods 1–3 days apart (weekend cycles) | Scotiabank chequing | `chain_across_statements` judges gaps of 1–3 days |

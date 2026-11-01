@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "2024 layout: a row prints its dates alone, its details and amount on the next line (after a blank line too), with an FX line folded under it; a margin print-sequence number alone between rows"
+exit = 0
+pdf_smoke = true

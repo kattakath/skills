@@ -37,13 +37,15 @@ echo "== minimum counts"
 # Positions: + CIBC/BMO mortgage details, TD annual mortgage, NSLSC loan (9 cases): 24 / 121 with older prints.
 # TD repairs: card credit balance, summary and row amounts below, two cardholders; LOC split
 # month; chequing star-digit reference (9 cases): 24 / 130.
+# Scotiabank card/LOC repairs: a row printing only its dates, a margin print-sequence number
+# on a row's line (4 cases): 24 / 134.
 adapters=$(find adapters -mindepth 2 -maxdepth 2 -name '*.toml' | wc -l | tr -d ' ')
 cases=$(find adapters -path '*/fixtures/*.case.toml' | wc -l | tr -d ' ')
 repairs=$("$py" -I -c 'import sys; sys.path.insert(0, "lib")
 from statement_extract.repairs.ofx import REPAIRS; print(len(REPAIRS))')
 echo "adapters=$adapters cases=$cases repairs=$repairs"
 [ "$adapters" -ge 24 ] || { echo "expected >= 24 adapters, found $adapters" >&2; exit 1; }
-[ "$cases" -ge 130 ] || { echo "expected >= 130 fixture cases, found $cases" >&2; exit 1; }
+[ "$cases" -ge 134 ] || { echo "expected >= 134 fixture cases, found $cases" >&2; exit 1; }
 [ "$repairs" -ge 4 ] || { echo "expected >= 4 repairs, found $repairs" >&2; exit 1; }
 
 echo "== unit + golden"
