@@ -34,7 +34,8 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
     totals are matched to their labels by horizontal position, because the amount sits on a
     later line, under the label in one year's layout and in an interleaved two-column block in
     another. Months in the period line arrive split by the text layer and are re-joined, and
-    the year is inferred per row from the period end."""
+    the year is inferred per row from the period end. A row's month can arrive split the same
+    way ("M ay" on the OPENING and CLOSING BALANCE rows of March and May statements)."""
     g = spec["grammar"]
     txn_re = re.compile(g["txn"].replace("{AMT}", g["amt"]))
     dollar = re.compile(g["dollar"])
@@ -67,7 +68,7 @@ def parse_lines(lines: list[str], spec: dict, text: str) -> list[StatementDraft]
         if desc == g["closing"]:
             closing = amt
             continue
-        mon = pdfkit.month(tm.group("mon"))
+        mon = pdfkit.month(join(tm.group("mon")))
         rows.append({"date": pdfkit.iso(pdfkit.infer_year(mon, end_month, end_year), mon,
                                         int(tm.group("day"))), "desc": desc, "owed": amt})
     if opening is None or closing is None:

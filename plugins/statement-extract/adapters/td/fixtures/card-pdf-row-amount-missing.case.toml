@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a dated row with no amount, and none printed alone below it before the next row, is refused rather than dropped"
+exit = 3
+stderr_has = "amount not found below it"

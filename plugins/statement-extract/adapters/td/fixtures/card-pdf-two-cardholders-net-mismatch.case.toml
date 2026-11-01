@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a card section whose rows do not add up to its own net amount of activity is refused, even when the whole statement balances"
+exit = 3
+stderr_has = "net_activity"

@@ -1,0 +1,4 @@
+synthetic = true
+quirk = "a row whose description wraps prints its amount alone below the wrapped line, under AMOUNT($): the row takes it, and the rows still tie to the summary"
+exit = 0
+pdf_smoke = true
