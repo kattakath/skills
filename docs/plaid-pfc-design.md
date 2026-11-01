@@ -139,7 +139,7 @@ plugins/plaid-pfc/
 
 | Adapter | Capability asked for | Example backend | Sends outward? |
 |---|---|---|---|
-| `mail` | "receipts near date D for amount A" | the `gmail` plugin's server; Outlook; a local mbox | No (read-only connector) |
+| `mail` | "receipts near date D for amount A" | the claude.ai Gmail connector; Outlook; a local mbox | No (read-only connector) |
 | `context` | "consumer facts about this payee" | a file or Sheet the consumer names in config | No |
 | `web` | "what business is this merchant" | the agent's web search | **The cleaned merchant name only** |
 | `enrich` (optional) | a vendor's categorisation | Plaid Enrich API | **Yes**, so it stays off by default |
