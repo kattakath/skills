@@ -35,24 +35,18 @@ corpus re-ingested cleanly.
 
 ## Requires
 
-Ollama serving `nomic-embed-text`, the provisioned store above, and the **`postgres` MCP
-server** — which **this plugin now declares itself**, in its own `.mcp.json`:
+Ollama serving `nomic-embed-text`, the provisioned store above, and a **`postgres` MCP
+server** that this plugin starts itself, through `scripts/launch.sh`.
 
-```json
-{ "postgres": { "command": "nix-mcp-postgres" } }
-```
+**You name the launcher; the plugin ships none.** Set `launcher` (`/plugin configure rag`)
+to a command that starts a stdio Postgres MCP server already pointed at your database, or
+export `RAG_POSTGRES_COMMAND`. With neither, the server does not start and says why. A
+launcher, not a connection string, because it is what knows the database coordinates and
+version pins; the plugin cannot, and should not, hardcode a machine's database.
 
-That changed on 2026-10-02. The server used to arrive through nix-config's central MCP
-gateway; the gateway and its Cloudflare portal were purged, so the capability moved to the
-plugin that was already built on it. This README said the opposite until then — "MCP servers
-are adopted through nix-config's gateway, never a plugin `.mcp.json`" — which is now false.
-
-It names a **binary**, not a package. `nix-mcp-postgres` comes from
-[`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s
-`modules/home/plugin-mcp.nix` (`local.pluginMcp.servers` includes `"postgres"`), the same
-arrangement `claude-code-nix` has with `mcp-nixos`. The launcher is what knows the loopback
-connection URI and the version pins the server needs; the plugin cannot, and should not,
-hardcode a machine's database coordinates. Without it on PATH the server fails to start.
+On the kattakath fleet the launcher is `nix-mcp-postgres`, built by `kattakath/nix-config`
+(`modules/home/plugin-mcp.nix`), which also seeds this setting. Until 2026-11-01 the
+`.mcp.json` named that binary directly, so the server only ever started on that fleet.
 
 Unlike the sibling `wordpress` launcher, this one reads **no secret**: the
 store is loopback-only with `trust` auth and a role scoped to `ragdb` alone, so there is

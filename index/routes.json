@@ -115,7 +115,7 @@
       "steps": [
         "rag"
       ],
-      "note": "Declares the `postgres` MCP server itself since 2026-10-02 (it used to come from nix-config's purged gateway). Needs `nix-mcp-postgres` on PATH from kattakath/nix-config (local.pluginMcp.servers) — the launcher knows the loopback URI and the version pins; no secret, the store is trust auth scoped to one database."
+      "note": "Declares the `postgres` MCP server itself since 2026-10-02 (it used to come from nix-config's purged gateway). Starts the launcher you name in its `launcher` setting (on the kattakath fleet, `nix-mcp-postgres`) — the launcher knows the loopback URI and the version pins; no secret, the store is trust auth scoped to one database."
     },
     {
       "goal": "Tailor a resume to a job posting",
@@ -195,7 +195,7 @@
       "steps": [
         "wordpress"
       ],
-      "note": "~59 tools against PRODUCTION — update/delete/settings included, no staging behind it. Needs `nix-mcp-wordpress` on PATH from kattakath/nix-config (local.pluginMcp.servers), which reads the site URL, username and application password from the macOS Keychain at launch; a plugin .mcp.json cannot. NOT the WordPress MCP Adapter: that is a different endpoint (/wp-json/mcp/...) and it is dead — 404 rest_no_route. The core REST path (/wp-json/wp/v2) was verified live 2026-10-02."
+      "note": "~59 tools against PRODUCTION — update/delete/settings included, no staging behind it. Starts the launcher you name in its `launcher` setting (on the kattakath fleet, `nix-mcp-wordpress`, which reads the site URL, username and application password from the macOS Keychain at launch; a plugin .mcp.json cannot). NOT the WordPress MCP Adapter: that is a different endpoint (/wp-json/mcp/...) and it is dead — 404 rest_no_route. The core REST path (/wp-json/wp/v2) was verified live 2026-10-02."
     },
     {
       "goal": "Get the keyless utility MCP servers: knowledge graph, step-by-step reasoning",
