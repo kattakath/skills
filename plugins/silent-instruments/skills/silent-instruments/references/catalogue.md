@@ -349,8 +349,12 @@ still being calculated."*
 "No rows match" and "my filter, field or repo was wrong" are the same observation: `[]`, exit 0.
 Also measured: `gh pr list` defaults to **30** rows and `gh run list` to **20**, so an
 empty-looking answer can be a windowing artifact.
+A filter value that is *almost* right is the sharpest case: `gh run list --commit` matches the
+**full 40-character SHA only**. Measured 2026-11-01 on the same push: `--commit 9f58f88` → `0`
+runs, exit 0; `--commit <full sha>` → `1`. A CI wait built on `git rev-parse --short HEAD`
+therefore watches nothing and "passes".
 **Correct:** make the query prove itself — assert a known-present control row also returns — and
-always pass `--limit` explicitly.
+always pass `--limit` explicitly. For a commit filter, pass `git rev-parse HEAD`, never `--short`.
 `MEASURED`
 
 ### C11 · A wrong `jq` path is `null`, not an error, and `--jq` passes it through as exit 0
@@ -371,6 +375,18 @@ flows downstream as data. `jq -e` catches null and false but **not** empty conta
 `{}` both exit **0**. `// empty` swallows `false` as well as null.
 **Correct:** `has("key")` separates absent from null; `length > 0` for containers; `// "DEFAULT"`
 only where `false` is not a legal value.
+`MEASURED`
+
+### C13 · `gh pr checks --watch` can return while a later-registering check is still pending
+`--watch` follows the checks that exist when it polls. A workflow that registers a little later
+(a second workflow file, a job queued behind another) can still be **pending** when the watch
+returns. Measured 2026-11-01 on two PRs: `gh pr checks --watch` returned, and a plain
+`gh pr checks` **40 s later** still listed `validate  pending` and exited **8**. A script that
+treats the watch's return as "CI finished" moves on before the required check has run. The cause
+— registration lagging the first poll — is inferred from the timing, not observed directly.
+**Correct:** after the watch, re-read `gh pr checks` and branch on its exit code (0 all passed,
+1 failed, 8 pending); or watch the specific run (`gh run watch <id> --exit-status`) once it
+exists; or, where auto-merge is armed, wait on `mergedAt` instead.
 `MEASURED`
 
 ---
