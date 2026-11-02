@@ -52,6 +52,7 @@ guesses a selector does not fail loudly — it mangles the page.
 | `skills/userscript-author/` | The authoring method, `patterns.md`, `probes.md`, `greasyfork.md`, `gm-api.md` |
 | `skills/site-redesign/` | Whole-site redesign: the M1-M13 survey, the `keep-list.md` default shape, `topbar.md`, `theming.md`, `acceptance.md` |
 | `skills/page-diagnose/` | Symptom-first diagnosis, `attaching.md`, `tools.md` |
+| `skills/supervised-driving/` | The agent drives the operator's Chromium behind a take-over-with-Esc overlay; `need-human` for logins, captchas, payments; no focus stealing — evidence in `references/supervised-driving.md` |
 | `references/facts.md` | **Every falsifiable claim, once**, with an ID, a date and a re-measure recipe |
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
 | `references/pick-protocol.md` + `pick-envelope.schema.json` | The pick contract |
@@ -74,6 +75,9 @@ scripts/redesign-acceptance.mjs <config>   # does the WHOLE redesign work? (docu
 scripts/redesign-acceptance.mjs --diagnose <config>   # facts per URL shape, no verdicts
 scripts/stylesheet-media-extract.mjs <url> # does the site already ship a compact layout?
 node scripts/pick-element.mjs              # arm the picker (or the page-lab-pick CLI)
+node scripts/supervise.mjs start|state|wait|need-human|stop   # supervised driving (skills/supervised-driving)
+node scripts/supervise-selftest.mjs --browser-url <throwaway-chromium>   # 35 trusted-input checks
+node scripts/supervise-measure.mjs  --browser-url <throwaway-chromium>   # focus table + MCP passthrough
 ```
 
 `userscript-acceptance.mjs` is the gate the linter is not. Lint says the file is publishable
