@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 /**
- * staging-guard.js — PreToolUse(Bash) gate: never commit a real statement.
+ * staging-guard.js — PreToolUse(Bash) gate: never commit a real statement without a confirm.
  *
  * A QFX/OFX export carries the FULL account number in <ACCTID>; a real PDF or CSV statement
  * carries names, balances and counterparties. This plugin's fixtures are synthetic by rule
  * (see README § Privacy), so a real statement reaching a commit is always a mistake, and a
  * pushed commit is close to unrecoverable (history-scrub exists because it happens).
  *
- * It blocks a `git commit` (exit 2, reason on stderr) when what that commit would contain has:
+ * It asks the operator to confirm a `git commit` (hook JSON on stdout, permissionDecision "ask",
+ * exit 0) when what that commit would contain has:
  *   1. OFX content (an OFXHEADER: line or an <OFX> element, sniffed from the content, not
  *      the extension) or a .qfx/.ofx/.qbo file, outside a `fixtures/` directory — in ANY repo;
  *   2. a .pdf, .csv, .xlsx or .xls file inside `plugins/statement-extract/` outside `fixtures/`
@@ -19,13 +20,13 @@
  *
  * DELIBERATELY NARROW: it runs on every Bash call in every repo with the plugin enabled, so it
  * returns at once unless the command contains `git … commit`, it never inspects anything
- * else, and it never blocks a CSV or PDF outside this plugin.
+ * else, and it never asks about a CSV or PDF outside this plugin.
  *
  * LIMITS: it reads command text. A commit made by a script, an alias, or another tool is
  * opaque to it. It is a floor under the skill's rule, not a sandbox.
  *
- * FAIL OPEN: a malformed payload or an internal error approves (exit 0) with a note on stderr.
- * A guard that threw and denied would stall every Bash call in every session.
+ * FAIL OPEN: a malformed payload or an internal error approves (exit 0, nothing on stdout) with
+ * a note on stderr. A guard that threw and denied would stall every Bash call in every session.
  * tests/guard-cases.sh asserts both directions and the fail-open path.
  */
 "use strict";
@@ -46,15 +47,30 @@ function allow(note) {
   process.exit(0);
 }
 
-function block(lines) {
-  process.stderr.write(
-    "statement-extract staging-guard: refusing this commit — it would add real statement data:\n" +
-      lines.map((l) => `  - ${l}`).join("\n") +
-      "\nStatement fixtures must be synthetic and live under a fixtures/ directory " +
-      "(README § Privacy). Unstage the file (git restore --staged <path>) and keep the real " +
-      "statement where it lives (e.g. Drive), never in a repo.\n"
+// ONE line of hook JSON on stdout, exit 0: the operator gets a confirm prompt, and the reason
+// is also what Claude reads if the call is declined or nobody is present. Written with
+// writeSync: process.stdout.write to a pipe is async on macOS and process.exit can truncate
+// it, and an empty stdout reads as ALLOW.
+function ask(lines) {
+  const reason = (
+    "statement-extract: this commit would add real statement data (" +
+    lines.join("; ") +
+    ") — fixtures must be synthetic and under fixtures/; unstage with git restore --staged <path> " +
+    "and keep the statement out of the repo (e.g. Drive). Allow anyway?"
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+  fs.writeSync(
+    1,
+    JSON.stringify({
+      hookSpecificOutput: {
+        hookEventName: "PreToolUse",
+        permissionDecision: "ask",
+        permissionDecisionReason: reason,
+      },
+    }) + "\n"
   );
-  process.exit(2);
+  process.exit(0);
 }
 
 function git(cwd, args, binary) {
@@ -198,7 +214,7 @@ function main(payload) {
     }
     for (const msg of problems(r, entries)) if (!seen.has(msg)) (seen.add(msg), found.push(msg));
   }
-  if (found.length) block(found);
+  if (found.length) ask(found);
   allow();
 }
 

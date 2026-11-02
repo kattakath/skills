@@ -28,10 +28,10 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/mac-app-doctor.sh" "WhatsApp"
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/file-manifest.sh" <file>...
 ```
 
-A **PreToolUse guard** also ships here. It blocks an `osascript`/`cliclick` workaround, a
-multi-line `app_type` without `element_index`, and `request_access` on the panel service —
-each with the working alternative in the refusal. If you see one of those blocks, the message
-is the instruction; do not try to satisfy it another way.
+A **PreToolUse guard** also ships here. It asks the operator to confirm an `osascript`/`cliclick`
+workaround, a multi-line `app_type` without `element_index`, and `request_access` on the panel
+service — each with the working alternative in the one-line prompt reason. If the call is
+declined, that reason is the instruction; do not try to satisfy it another way.
 
 ## 0. Tier check first
 

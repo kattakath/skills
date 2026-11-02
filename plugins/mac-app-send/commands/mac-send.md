@@ -34,7 +34,7 @@ Build the whole message as one string with real newlines, then:
 - `app_type element_index=N mode=replace` → confirm it reports **"set AXValue (whole-field replace)"**
 - **Screenshot the draft and read it back** before sending
 
-Never type a multi-line message at a coordinate — the plugin's guard blocks that, because
+Never type a multi-line message at a coordinate — the plugin's guard asks before that, because
 Enter sends and the message would arrive one bubble per line.
 
 ## 4. Attachments

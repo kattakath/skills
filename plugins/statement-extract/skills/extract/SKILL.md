@@ -71,6 +71,6 @@ A refusal is the tool telling you the data is not what it claims to be.
   engine refuses the mix (`one_source_per_period`).
 - **`accounts.toml` belongs to the consumer.** It names real accounts, so it never goes into
   this plugin or into a public repo.
-- **Never commit a real statement.** The plugin's commit guard blocks it, and it is right to.
+- **Never commit a real statement.** The plugin's commit guard asks before it; decline.
 - **Never print stdout records of real statements into a conversation.** Summarise counts
   instead.
