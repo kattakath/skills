@@ -54,7 +54,7 @@ real `chrome-devtools-mcp@1.12.0`, `supervise-measure.mjs`:
 
 ## Intervention (`need-human`)
 
-Layer off, banner with the reason, `osascript` notification with a sound, raise the window
+Layer off, banner with the reason, `osascript` notification plus a Glass sound via backgrounded `afplay` (`say` only if that fails), raise the window
 **once**, then poll every 500 ms for `--until` (any tab's URL, or a selector in any tab) or the
 Done button; on return the layer is back on. Exit 20 on timeout (default 540 s, under the Bash
 tool's 600 s cap) with the banner left up.
