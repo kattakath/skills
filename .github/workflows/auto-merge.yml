@@ -3,13 +3,18 @@ name: auto-merge
 # Arms squash auto-merge on every PR whose branch lives in this repo. A fork's
 # PR is never armed: it waits for a human merge.
 #
-# Arming is not merging. GitHub merges once the branch's required checks pass,
-# so this relies on `validate` being a required check on main. Without that,
-# an armed PR merges immediately and skips the gate in front of every release.
+# Arming is not merging. GitHub acts once the branch's required checks pass, so
+# this relies on `gate` (validate.yml) being a required check on main. Without
+# that, an armed PR merges immediately and skips the gate in front of every release.
+# With the merge queue on, "auto-merge" means "add to the queue when green", so this
+# file needs no change. `gate` goes green on a PR in seconds (the full suite runs in
+# the queue), so open work in progress as a DRAFT: an armed branch you are still
+# pushing to can be queued and merged mid-stream (kattakath/nix-config #567).
 #
 # WHY AN APP TOKEN, NOT `GITHUB_TOKEN`. Auto-merge attributes the merge to
 # whoever armed it, and events produced by `GITHUB_TOKEN` start no workflow runs,
-# so `validate`'s `push: main` leg never fired after the auto-merges of #5 and #7.
+# so push:main workflows (validate then, release-tags now) never fired after the
+# auto-merges of #5 and #7.
 # The CI bot App's installation token carries no such suppression. Same App and
 # org-wide `vars.CI_BOT_CLIENT_ID` + `secrets.CI_BOT_APP_PRIVATE_KEY` as
 # kattakath/nix-config's auto-merge.yml; see its docs/auto-merge-and-merge-queue.md.

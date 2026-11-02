@@ -8,7 +8,7 @@
 #   Dependabot secrets." So `secrets.CI_BOT_APP_PRIVATE_KEY` resolves EMPTY and the
 #   token step fails. Measured here on #92 (2026-10-22): "The 'private-key' input
 #   must be set to a non-empty string".
-# - Arming with `GITHUB_TOKEN` attributes the merge to it, and then `validate`'s
+# - Arming with `GITHUB_TOKEN` attributes the merge to it, and then `release-tags`'s
 #   `push: main` leg never fires (see auto-merge.yml's header).
 # - Copying the App key into a Dependabot secret creates a second copy of one
 #   private key that must rotate in lockstep with the first.
