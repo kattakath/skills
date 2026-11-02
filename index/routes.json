@@ -249,6 +249,14 @@
         "plaid-pfc"
       ],
       "note": "Plaid's PFC v2 (127 detailed names) pinned with descriptions and a v1-to-v2 crosswalk; validate refuses invented names; JSON Schema binds LLM output to the list. Stdlib only, no data."
+    },
+    {
+      "goal": "Render a PDF that ATS parsers, copy-paste and screen readers read in the right order",
+      "steps": [
+        "ats-safe-pdf"
+      ],
+      "note": "Typst + PDF/UA-1, one column, measured text-layer rules; verify with pdftotext, pdftotext -raw and veraPDF, not by eye.",
+      "gap": true
     }
   ]
 }

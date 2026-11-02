@@ -28,6 +28,26 @@
       "source": "./plugins/android-phone"
     },
     {
+      "name": "ats-safe-pdf",
+      "description": "Produce PDFs whose text layer reads correctly for ATS parsers, copy-paste and screen readers: Typst with PDF/UA-1 instead of HTML print-to-PDF, single-column layout, measured text-layer rules, and a multi-reader order/completeness check.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "pdf",
+        "ats",
+        "resume",
+        "typst",
+        "pdf-ua",
+        "accessibility",
+        "tagged-pdf"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/ats-safe-pdf",
+      "license": "MIT",
+      "source": "./plugins/ats-safe-pdf"
+    },
+    {
       "name": "beancount",
       "description": "Double-entry accounting as a derived artifact: build a Beancount journal from statement-extract JSONL, a category-rules CSV and a per-transaction decisions CSV — transfers paired through a clearing account (exact, fee band, FX, in-wallet conversion), statement and screen balances as assertions, loan snapshots with interest pads — written only when Beancount's own check passes. Plus bean-query recipes and Fava on demand, read-only, on 127.0.0.1.",
       "author": {

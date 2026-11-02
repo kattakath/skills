@@ -43,6 +43,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | Plugin | What it does | Ships | Depends on |
 |---|---|---|---|
 | [`android-phone`](plugins/android-phone) | Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring. | 1 MCP server | — |
+| [`ats-safe-pdf`](plugins/ats-safe-pdf) | Produce PDFs whose text layer reads correctly for ATS parsers, copy-paste and screen readers: Typst with PDF/UA-1 instead of HTML print-to-PDF, single-column layout, measured text-layer rules, and a multi-reader order/completeness check. | skills only | — |
 | [`beancount`](plugins/beancount) | Double-entry accounting as a derived artifact: build a Beancount journal from statement-extract JSONL, a category-rules CSV and a per-transaction decisions CSV — transfers paired through a clearing account (exact, fee band, FX, in-wallet conversion), statement and screen balances as assertions, loan snapshots with interest pads — written only when Beancount's own check passes. Plus bean-query recipes and Fava on demand, read-only, on 127.0.0.1. | skills only | `plaid-pfc` |
 | [`brag-dossier`](plugins/brag-dossier) | Turn a session's discovery into one organized, fact-checked source document: a BRIEF from the vague intent, a FACTS sheet from the records, then parallel section writers, adversarial fact-check, assembly and a completeness critic. Built for agents to derive posts, articles and slides from. | skills only | — |
 | [`brain-signals`](plugins/brain-signals) | An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, and /task for goal-locked execution. | skills only | — |
@@ -74,7 +75,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`wordpress`](plugins/wordpress) | WordPress site administration over the REST API — posts, pages, media, taxonomies, comments, users and SEO — against a PRODUCTION site. Credentials come from the macOS login Keychain via a Nix-installed launcher, never from this repo. | 1 MCP server | — |
 | [`workspace-gtd`](plugins/workspace-gtd) | A work-life system on eight Google Workspace apps (Gmail, Chat, Calendar, Tasks, Drive, Docs, Sheets, Forms): GTD on Tasks + Calendar, one home per fact, daily shutdown, agent-drafted weekly review, Studio nudges to Chat, no alarms, and the employer's Outlook/Slack joined as a free/busy + pointer adapter rather than a second system. | skills only | `google-workspace-mcp` |
 
-31 plugins. An MCP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
+32 plugins. An MCP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
 <!-- plugins:end -->
 
 Where a plugin has its own `README.md`, it covers that plugin's commands, skills and design notes.
