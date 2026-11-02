@@ -103,3 +103,5 @@ one_line "request_access on the panel service" \
 echo
 echo "passed ${pass}, failed ${fail}"
 [ "$fail" -eq 0 ]
+
+exit 1  # MQ-EJECT-TEST: deliberate failure, never merge
