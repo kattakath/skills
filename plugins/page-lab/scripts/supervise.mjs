@@ -289,10 +289,21 @@ function debugBrowserApp() {
   }
   return null;
 }
+// The sound is separate from the banner: a notification posts as Script Editor and is silent
+// when that app's notifications are blocked, so afplay carries the alert. Backgrounded, so it
+// never blocks the watch loop; `say` only if afplay itself fails.
+function playAlert() {
+  const say = () => spawn('/usr/bin/say', ['-v', 'Samantha', 'Claude needs you'], { stdio: 'ignore', detached: true }).on('error', () => {}).unref();
+  const p = spawn('/usr/bin/afplay', ['/System/Library/Sounds/Glass.aiff'], { stdio: 'ignore', detached: true });
+  p.on('error', say);
+  p.on('close', (code) => { if (code) say(); });
+  p.unref();
+}
 function notify(title, body) {
   if (process.platform !== 'darwin' || process.env.PAGE_LAB_SUPERVISE_NO_OSASCRIPT) return;
+  playAlert();
   try {
-    execFileSync('/usr/bin/osascript', ['-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title (item 2 of argv) sound name "Glass"', '-e', 'end run', body, title], { stdio: 'ignore', timeout: 8000 });
+    execFileSync('/usr/bin/osascript', ['-e', 'on run argv', '-e', 'display notification (item 1 of argv) with title (item 2 of argv)', '-e', 'end run', body, title], { stdio: 'ignore', timeout: 8000 });
   } catch (e) {
     log(`[supervise] notification failed: ${e?.message || e}`);
   }
