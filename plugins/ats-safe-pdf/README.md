@@ -26,9 +26,19 @@ single column 99; section detection on Jobalytics went from 70 to 100.
 | Path | What |
 |---|---|
 | `skills/ats-safe-pdf/SKILL.md` | The procedure: engine, layout, text-layer rules, verification, pitfalls |
-| `skills/ats-safe-pdf/scripts/pdf-text-check.py` | Order + exactly-once + split-word check over `pdftotext` and `pdftotext -raw`; exit 1 on failure |
+| `skills/ats-safe-pdf/scripts/pdf-text-check.py` | Order + exactly-once + split-word check over `pdftotext`, `pdftotext -raw` and the tag tree (`pdfinfo -struct-text`); exit 1 on failure |
+| `commands/pdf-check.md` | `/pdf-check <file>`: fonts, veraPDF, and the three-order check on a PDF from any generator |
 | `skills/ats-safe-pdf/scripts/pdfkit-text.swift` | What macOS Preview's copy yields (macOS only) |
 | `skills/ats-safe-pdf/references/evidence.md` | Every measurement behind the rules |
+
+## What it does not do
+
+- **Certify accessibility.** 47 of PDF/UA's 136 failure conditions need a human (Matterhorn
+  1.1), including whether the reading order is *logical*. This plugin checks order against an
+  order you supply.
+- **Gate automatically.** No hook: a session's PDF writes come from many tools (Bash, browsers,
+  scripts) with no reliable trigger to hang a hook on, so `/pdf-check` is explicit instead.
+- **Retag PDFs you did not author.** That is remediation — a different tool class.
 
 ## Install
 
