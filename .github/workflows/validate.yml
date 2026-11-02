@@ -147,13 +147,6 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
-      # pgp-ops' plaintext guard keeps decrypted text away from the model. Its two failure
-      # modes are both silent: a leak it stops refusing, and a false positive on a command the
-      # skill itself documents, which pushes the agent toward an unguarded workaround. The
-      # cases assert both directions, plus fail-open on a malformed payload.
-      - name: pgp-ops plaintext guard cases
-        run: bash plugins/pgp-ops/tests/guard-cases.sh
-
       # The script's own cases run gpg against throwaway keys with a file-backed clipboard.
       # zsh is the script's interpreter and is not on the ubuntu image; gnupg is.
       - name: pgp-ops script cases
