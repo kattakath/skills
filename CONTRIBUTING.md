@@ -13,4 +13,5 @@ Pull requests from forks are welcome.
   and a maintainer re-queues it.
 - The required check is `gate`. It passes only when every other job ended as expected.
 
-The details are in [`CLAUDE.md`](CLAUDE.md) § Shipping a change.
+To run the same checks before you push, see [`CLAUDE.md`](CLAUDE.md) § Validating before you
+push. The landing details are in § Shipping a change.
