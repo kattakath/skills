@@ -11,7 +11,7 @@
 // "succeed" against a control the user cannot actually operate.
 //
 // Not an entrypoint. Importers: userscript-acceptance.mjs, redesign-acceptance.mjs,
-// lib/redesign-checks.mjs, and (documentStartSource only) supervise.mjs.
+// lib/redesign-checks.mjs.
 
 import { attach, browserSocket, connect } from './cdp.mjs';
 
