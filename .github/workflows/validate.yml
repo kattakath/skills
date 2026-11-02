@@ -86,19 +86,15 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 2
     steps:
-      - name: Every leg ended as this event expects
-        env:
-          NEEDS: ${{ toJSON(needs) }}
-          WANT_QUICK: ${{ github.event_name == 'pull_request' }}
-          # A deliberate SECOND copy of `validate`'s `if:`. If the two ever disagree, the
-          # strict match below goes red in both directions, so a bad edit fails closed
-          # instead of quietly skipping the suite.
-          WANT_VALIDATE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || vars.QUEUE_ENABLED != 'true' }}
-        run: |
-          echo "$NEEDS" | jq -c 'map_values(.result)'
-          jq -e --arg q "$WANT_QUICK" --arg v "$WANT_VALIDATE" '
-            def want($x): if $x == "true" then "success" else "skipped" end;
-            .quick.result == want($q) and .validate.result == want($v)' <<<"$NEEDS"
+      # Shared assertion (kattakath/.github). `expect` holds a deliberate SECOND copy of
+      # `validate`'s `if:`; if the two ever disagree, gate goes red in both directions, so a
+      # bad edit fails closed instead of quietly skipping the suite.
+      - uses: kattakath/.github/actions/gate@60981e562aec38c13e15be1b6307b23a42f5b8d3
+        with:
+          needs: ${{ toJSON(needs) }}
+          expect: >-
+            {"quick": ${{ github.event_name == 'pull_request' }},
+             "validate": ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || vars.QUEUE_ENABLED != 'true' }}}
 
   validate:
     if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || vars.QUEUE_ENABLED != 'true'
