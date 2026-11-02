@@ -28,7 +28,7 @@ happens on a copy named for the role.
 |---|---|
 | Fetch the canonical resume | `jsonresume download` |
 | Validate against the schema | `jsonresume validate --path FILE` |
-| Render a PDF | `jsonresume print --path FILE --theme even` |
+| Render a PDF (HTML theme — check its text layer; for ATS see `ats-safe-pdf`) | `jsonresume print --path FILE` |
 | ATS-pasteable plain text | `jsonresume text --path FILE` |
 | Scrape a posting | `jobspy --search "…" --location "…" --output jobs.json` |
 

@@ -103,11 +103,20 @@ jsonresume validate --path resume.<company>-<role>.json
 Prefers `resumed validate` (schema v1.x). Fix any error before rendering — an
 invalid resume won't render and won't host on the registry.
 
-### 6. Render
+### 6. Render — and check the TEXT, not the look
 ```
 jsonresume print --path resume.<company>-<role>.json --destination <dir>
-# → <dir>/resume.pdf   (theme from meta.theme, or add --theme even)
+# → <dir>/resume.pdf   (theme from meta.theme)
 ```
+`print` renders an HTML theme through a browser. Measured 2026-11-02, that path is
+**not ATS-safe by default**: no HTML theme trialled had a clean text layer AND correct dates
+(one, `even`, fails export outright); letter-spaced headings hid every section from a parser;
+variable web fonts embed as Type 3; two-column themes interleave the sidebar into the text.
+For a PDF a machine will parse, render with Typst (PDF/UA-1, one column) and verify the
+extracted text in more than one reader — the procedure is the `ats-safe-pdf` skill.
+Whichever renderer: extract the PDF with `pdftotext` and confirm the sections read in order
+before sending it, and name the file `<Name>-<Role>.pdf` (one checker scores the filename).
+
 For a plain-text/ATS-paste copy: `jsonresume text --path <file>` (stdout) or
 `jsonresume markdown --path <file>`.
 
@@ -135,7 +144,7 @@ For a plain-text/ATS-paste copy: `jsonresume text --path <file>` (stdout) or
 |------|---------|
 | Fetch canonical resume | `jsonresume download` |
 | Validate (schema v1.x) | `jsonresume validate --path FILE` |
-| Render PDF | `jsonresume print --path FILE --theme even` |
+| Render PDF (HTML theme; verify the text) | `jsonresume print --path FILE` |
 | ATS-plain text | `jsonresume text --path FILE` |
 | Scrape a posting | `jobspy --search "…" --location "…" --output jobs.json` |
 | Posting details (Indeed) | `mcp__claude_ai_Indeed__get_job_details` |
