@@ -10,7 +10,7 @@ description: >-
   when I copy it", "two-column PDF reads out of order", "render this as a proper/tagged/
   accessible PDF", "PDF/UA", "print to PDF breaks the ATS", or is about to generate any
   document PDF that a machine will parse.
-version: 1.0.0
+version: 1.1.0
 ---
 
 # ATS-safe PDF — render the text layer, not just the look
@@ -79,14 +79,29 @@ Evidence for every rule below (measurements, readers, scores): [`references/evid
    - `markers.txt`: one line per heading/entry title **in the order they must read**; each must
      START a line of extracted text (anchoring stops "…on AWS:" in a summary matching an
      "AWS:" group). `items.txt`: strings that must appear exactly once (each bullet).
-   - The script checks both `pdftotext` (position) and `pdftotext -raw` (drawing order), and
-     counts split compounds. **Check:** exit 0. Prove it can fail once: run it against the
-     wrong document and expect exit 1.
+   - The script checks three orders: `pdftotext` (position), `pdftotext -raw` (drawing) and
+     `pdfinfo -struct-text` (the **tag tree** — what screen readers follow), and counts split
+     compounds. **Check:** exit 0. Prove it can fail once: run it against the wrong document
+     (or swap two markers) and expect exit 1.
+   - The tag leg exists because veraPDF validates tag *structure* but has **no rule about
+     order**, and Typst once shipped valid tags in the wrong order (typst#7763, fixed in 0.15).
+   - **Never derive the expected order from the PDF under test** — take it from the source.
+   - For a PDF from any generator, `/pdf-check <file>` runs this whole step.
 
 6. **Optional — score on real ATS checkers.** Reactive Resume's free checker (parse quality)
    and Jobalytics (keyword match + sections). **Human gate:** uploading a résumé to a third
    party shares personal data — ask first. Upload under a real name like
    `<Name>-<Role>.pdf`: Jobalytics scores the **filename** ("…Final.pdf" cost 8 points).
+
+## What no tool settles (scope)
+
+- PDF/UA's test catalogue (Matterhorn 1.1) has 136 failure conditions; **47 need a human** —
+  among them "tags in logical reading order" (09-001), whether a tag is the right kind, and
+  whether alt text and language are appropriate. This skill checks the machine half plus text
+  and tag ORDER against an expected order you supply; it does not certify accessibility.
+- Content beyond text, headings, lists and links — tables with header cells, images with alt
+  text, figures, math — is Typst's job: with `--pdf-standard ua-1` it **refuses to compile**
+  an image or figure without alt text. Follow Typst's accessibility guide for those.
 
 ## Pitfalls
 
@@ -103,6 +118,7 @@ Evidence for every rule below (measurements, readers, scores): [`references/evid
 - **Blank lines between sections are not in a PDF.** Preview's copy never emits them, even for
   the PDF Association's reference two-column file; `pdftotext` infers them from gaps. Do not
   try to fake them with invisible text — ATS treat hidden text as keyword stuffing.
+- **`pdfinfo -struct-text` emits raw UTF-16 attribute bytes**: decode leniently or it crashes.
 - **An order checker can lie both ways.** A marker matched anywhere (not at line start) gave a
   false FAIL; read the reported order before trusting a PASS or a FAIL.
 
@@ -111,7 +127,13 @@ Evidence for every rule below (measurements, readers, scores): [`references/evid
 - PDF Association, technique G4_03 *Content in columns correctly ordered* (PDF/UA-1, CC-BY) —
   the reference for a correctly ordered two-column PDF; pdfa.org is Cloudflare-gated, so fetch
   it in a real browser.
-- Typst docs: PDF export / `pdf-standard`, `sys.inputs`, `json`.
+- Typst docs: PDF export / `pdf-standard`, `sys.inputs`, `json`, and the accessibility guide
+  (tables, alt text, `pdf.artifact`, language). Typst 0.14 made tagging the default and checks
+  PDF/UA-1 at export; Posit's Quarto team found veraPDF caught nothing Typst had not.
+- Matterhorn Protocol 1.1 (PDF Association) — which PDF/UA checks are machine vs human.
+- Adjacent prior art, not used here: Inclusio (LaTeX tagpdf + veraPDF + MCP server; no machine
+  order check), the Community-Access veraPDF MCP server, layout-derived reading-order
+  remediation skills (for retagging PDFs you did not author).
 - veraPDF (PDF/UA-1 validation), poppler `pdftotext`/`pdffonts`.
 - Worked example — a JSON Resume theme built this way, with its gate in CI:
   `github.com/ismailkattakath/agentic-jobseek` (`theme/`, `scripts/theme-check.py`,
