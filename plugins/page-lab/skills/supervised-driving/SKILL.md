@@ -73,7 +73,8 @@ supervise need-human --tab accounts.google.com --reason "Approve the passkey pro
   sanctioned raise (`Target.activateTarget`, once per reason per 10 min; a repeat only switches
   tabs when the browser is already frontmost). Every other tab is held (`pass` refuses) with no
   banner. A background tab opened by `open` is not visible, so without this the operator sees the
-  prompt's banner on the wrong page.
+  prompt's banner on the wrong page. `--no-alert` drops the sound and notification only; the
+  tab is still brought forward.
 - **Resolve with `--until`** — `url:<regex>` or `sel:<css>` (bare: URL regex if it has `://` or
   starts with `^`, else a selector), judged on **that tab only**. Pick the page state that proves
   the step is done (the post-login URL, the element that only exists once signed in). The

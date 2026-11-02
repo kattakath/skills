@@ -50,6 +50,7 @@ const HELP = `Usage: supervise.mjs <command> [options]
   --until: 'url:<regex>' | 'sel:<css>', evaluated on THAT tab only; bare = url regex if it has '://'
            or starts with ^, else a selector. This is the default resolution; the banner's Done button
            is only the fallback.
+  --no-alert: no sound or notification. The tab is STILL brought forward (that is the point).
   need-human is for steps only a human can do (MFA/TOTP, passkey/Touch ID, Google re-auth, captcha).
   Never use it to confirm a decision already taken in conversation.
 
