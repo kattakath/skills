@@ -28,16 +28,80 @@ name: validate
 # plugins today, so the clone-and-validate-external step is a no-op; leaving it
 # enabled costs nothing and future-proofs the day one is added.
 
+#
+# ONE FULL RUN PER PR. The required check is `gate`, not `validate`. `gate` always runs and
+# asserts that each job it `needs` ended EXACTLY as this event expects. The full `validate`
+# suite runs once: in the merge queue when the repo variable QUEUE_ENABLED is 'true', otherwise
+# on the PR. Fork PRs always get it on the PR too, so a contributor sees a real failure before
+# review instead of a queue ejection only a maintainer can retry. `quick` gives own-branch PRs an
+# early red on the cheapest common failures. Measured before this change, on the last 40 runs:
+# `validate` ran twice per PR (pull_request ~96 s, then push:main ~101 s on the same tree).
+#
+# Why an aggregator: "A job that is skipped will report its status as Success", and a dependent
+# job skipped after a failure "may not block merging" (GitHub docs). So a skipped job must
+# never BE the required check. Prior art: indexmap, DeterminateSystems/magic-nix-cache-action.
+#
+# No `push: main` leg. In the queue, the merge-group commit IS the commit main gets (measured on
+# kattakath/nix-config #558). Without a queue, push:main could only ever report a bad merge AFTER
+# it had shipped (a merge is the release); the queue is what closes that gap, before the merge.
+# release-tags.yml keeps its own push:main trigger.
+
 on:
   pull_request:
-  push:
-    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.event.pull_request.number || github.ref }}
+  # Supersede stale PR runs; never cancel a queue run (the queue would eject the PR).
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
 
 jobs:
+  # Not required. The cheap checks behind the most common red, on every PR.
+  quick:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - name: Plugin version bumped
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: python3 -I scripts/check-version-bump.py "origin/$BASE_REF"
+      - name: Runner specs pinned
+        run: python3 -I scripts/check-pins.py
+      - name: Index up to date
+        run: python3 scripts/build-index.py --check
+
+  # THE ONLY REQUIRED CHECK. Its job name is part of every ruleset; never rename it.
+  gate:
+    if: ${{ !cancelled() }}
+    needs: [quick, validate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    steps:
+      - name: Every leg ended as this event expects
+        env:
+          NEEDS: ${{ toJSON(needs) }}
+          WANT_QUICK: ${{ github.event_name == 'pull_request' }}
+          # A deliberate SECOND copy of `validate`'s `if:`. If the two ever disagree, the
+          # strict match below goes red in both directions, so a bad edit fails closed
+          # instead of quietly skipping the suite.
+          WANT_VALIDATE: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || vars.QUEUE_ENABLED != 'true' }}
+        run: |
+          echo "$NEEDS" | jq -c 'map_values(.result)'
+          jq -e --arg q "$WANT_QUICK" --arg v "$WANT_VALIDATE" '
+            def want($x): if $x == "true" then "success" else "skipped" end;
+            .quick.result == want($q) and .validate.result == want($v)' <<<"$NEEDS"
+
   validate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name != github.repository || vars.QUEUE_ENABLED != 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
@@ -206,13 +270,14 @@ jobs:
 
       # Plugins carry a semver `version`; an installed copy updates only when it changes.
       # A plugin change without a bump would therefore reach nobody, silently. This makes it red.
+      # In the queue the base is the merge group's base commit; on a PR it is the target branch.
       - name: Plugin version bumped
-        if: github.event_name == 'pull_request'
+        if: github.event_name != 'workflow_dispatch'
         env:
-          BASE_REF: ${{ github.base_ref }}
+          BASE_REF: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
           python3 -I scripts/check-version-bump.py --self-test
-          python3 -I scripts/check-version-bump.py "origin/$BASE_REF"
+          python3 -I scripts/check-version-bump.py "$BASE_REF"
 
       # An unpinned `npx -y foo` / `uvx foo` ships whatever the registry serves today to
       # every user, with no PR here. Dependabot cannot see these specs (it reads manifests,

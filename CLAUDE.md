@@ -103,11 +103,14 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
 ## Shipping a change
 
 - Branch off `main`, open a PR. `auto-merge.yml` arms squash-auto-merge on same-repo PRs
-  (never forks) the moment they leave draft; `validate` is the required check that actually
-  gates the merge.
+  (never forks) the moment they leave draft. `gate` is the ONLY required check: it asserts
+  every job in `validate.yml` ended as the event expects. The full `validate` suite runs
+  **once**, in the merge queue (own-branch PRs get the cheap `quick` job instead); fork PRs
+  run it on the PR too. Open work in progress as a **draft**: `gate` is green in seconds, so
+  an armed PR is queued almost at once. Never rename the `gate` job; every ruleset names it.
 - A merge to `main` **is** the release — treat `main` accordingly. Bump the `version` of
   every plugin the PR touches, or `validate` goes red. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
-- Fork PRs land un-armed on purpose — a human merges those after review.
+- Fork PRs land un-armed on purpose — a maintainer adds them to the merge queue after review.
 - **A merge is released, not delivered.** An installed copy moves only when Claude Code
   refreshes the marketplace on its own schedule. `/reload-plugins` re-reads the **local cache**
   and fetches nothing — measured 2026-10-18: after #87 merged, a reload still ran the
