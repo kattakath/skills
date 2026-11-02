@@ -14,7 +14,7 @@ passphrase prompt can draw, and how to *prove* each answer.
 
 - **Decrypted text goes to the clipboard ONLY. The AI never prints it and never reads it — not even
   when asked.** Report metadata instead: bytes, lines, signed or unsigned, nested or not. If the user
-  wants to see it, they paste it themselves. The plugin's PreToolUse hook enforces this (§ Guard).
+  wants to see it, they paste it themselves.
 - **Every decrypt runs in [`scripts/gpg-in-window.zsh`](scripts/gpg-in-window.zsh)**, never as
   `gpg -d` in the agent's own shell — even with the passphrase cached, that would print plaintext
   into the agent's output.
@@ -110,7 +110,7 @@ filled it. The window route has no such cap.
   a first line ending in a newline is included. Use the one the user's words name.
 - **Check the clipboard independently** of the script's own report, by count or digest only:
   `pbpaste | wc -c`, `pbpaste | shasum -a 256`. Anything else that reads the clipboard (`grep`,
-  `head`, a bare `pbpaste`, `$(pbpaste)`) is a read of the plaintext, and the guard refuses it.
+  `head`, a bare `pbpaste`, `$(pbpaste)`) is a read of the plaintext.
 - **Nested armor:** if the plaintext is itself `-----BEGIN PGP MESSAGE-----`, the user received a
   second layer, often addressed to someone else. Run § 1 on the inner message and say whose it is.
 - **Signed or not:** read `.diag`. No `Good signature` / `Signature made` line means unsigned, so the
@@ -154,24 +154,6 @@ gpg --batch --yes --armor --encrypt --no-encrypt-to --recipient-file THEIRS.asc 
   channel** (a call, in person). A swapped key means the swapper reads it.
 - The clipboard holds one item. Copying a second ciphertext replaces the first, so keep each one as
   a file and re-copy on request.
-
-## Guard — the mechanical floor under the clipboard-only rule
-
-The plugin ships a PreToolUse hook, `scripts/plaintext-guard.js`, on the Bash tool, a fallback
-shell server's exec tools and computer-use `read_clipboard`. It **refuses**:
-
-- `gpg`/`gpg2`/`gpgtar` that decrypt (`-d`, `--decrypt*`, a short-option cluster with `d`), and a
-  `gpg` call with **no explicit command**. Its default action on an encrypted file decrypts and
-  writes the plaintext next to it (measured: `gpg m.asc` printed nothing and created `m`).
-- `pbpaste` unless it is piped straight into a count or digest (`wc`, `shasum`/`sha*sum`, `md5`,
-  `openssl dgst`, `cmp`), into `pbcopy`, or into a gpg stage that can only encrypt, list packets,
-  show or import keys, or dearmor. After a decrypt the clipboard **is** the plaintext.
-- osascript reading the clipboard, NSPasteboard, pyperclip, xclip/xsel `-o`, wl-paste, and
-  computer-use `read_clipboard`.
-
-**Its limit:** it reads command text, so a script the agent writes and then runs is opaque to it.
-The rule above binds regardless. `tests/guard-cases.sh` asserts 68 cases, including every command
-this skill tells the agent to run, so the guard never pushes the agent toward a workaround.
 
 ## 5. Generating a key — decisions for the user, not defaults
 
