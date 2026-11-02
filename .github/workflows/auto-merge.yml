@@ -1,31 +1,8 @@
 name: auto-merge
 
-# Arms squash auto-merge on every PR whose branch lives in this repo. A fork's
-# PR is never armed: it waits for a human merge.
-#
-# Arming is not merging. GitHub acts once the branch's required checks pass, so
-# this relies on `gate` (validate.yml) being a required check on main. Without
-# that, an armed PR merges immediately and skips the gate in front of every release.
-# With the merge queue on, "auto-merge" means "add to the queue when green", so this
-# file needs no change. `gate` goes green on a PR in seconds (the full suite runs in
-# the queue), so open work in progress as a DRAFT: an armed branch you are still
-# pushing to can be queued and merged mid-stream (kattakath/nix-config #567).
-#
-# WHY AN APP TOKEN, NOT `GITHUB_TOKEN`. Auto-merge attributes the merge to
-# whoever armed it, and events produced by `GITHUB_TOKEN` start no workflow runs,
-# so push:main workflows (validate then, release-tags now) never fired after the
-# auto-merges of #5 and #7.
-# The CI bot App's installation token carries no such suppression. Same App and
-# org-wide `vars.CI_BOT_CLIENT_ID` + `secrets.CI_BOT_APP_PRIVATE_KEY` as
-# kattakath/nix-config's auto-merge.yml; see its docs/auto-merge-and-merge-queue.md.
-#
-# `pull_request`, not `pull_request_target`: the job never checks out or runs PR
-# code, and the fork guard means a fork's run never reaches the App-token step,
-# which needs a secret a fork cannot read.
-#
-# Dependabot PRs are skipped here: a Dependabot-triggered run gets only Dependabot
-# secrets, so `CI_BOT_APP_PRIVATE_KEY` resolves EMPTY and the token step fails
-# (#92, 2026-10-22). arm-dependabot.yml arms them from a schedule instead.
+# Thin caller. The logic, and why it needs an App token rather than GITHUB_TOKEN, lives in
+# kattakath/.github/.github/workflows/auto-merge.yml. With the merge queue on, arming means
+# "queue once `gate` is green", so open work in progress as a DRAFT (nix-config #567).
 
 on:
   pull_request:
@@ -33,29 +10,16 @@ on:
 
 concurrency:
   group: auto-merge-${{ github.event.pull_request.number }}
-  # false: `true` let a later event cancel the ready_for_review arm run, leaving the PR unarmed (kattakath/nix-config #750).
+  # false: `true` let a later event cancel the ready_for_review arm run (kattakath/nix-config #750).
   cancel-in-progress: false
 
-# The App token carries the merge rights; the default token needs none.
 permissions:
   contents: read
 
 jobs:
   arm:
-    if: github.event.pull_request.head.repo.full_name == github.repository && !github.event.pull_request.draft && github.event.pull_request.user.login != 'dependabot[bot]'
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    steps:
-      - id: app-token
-        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
-        with:
-          client-id: ${{ vars.CI_BOT_CLIENT_ID }}
-          private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
-
-      # Idempotent: re-arming an armed PR is a no-op, so `synchronize` re-arms a PR
-      # GitHub disarmed (a conflict, a failed required check) once the fix lands.
-      - uses: peter-evans/enable-pull-request-automerge@a660677d5469627102a1c1e11409dd063606628d # v3.0.0
-        with:
-          token: ${{ steps.app-token.outputs.token }}
-          pull-request-number: ${{ github.event.pull_request.number }}
-          merge-method: squash
+    uses: kattakath/.github/.github/workflows/auto-merge.yml@60981e562aec38c13e15be1b6307b23a42f5b8d3
+    with:
+      client-id: ${{ vars.CI_BOT_CLIENT_ID }}
+    secrets:
+      app-private-key: ${{ secrets.CI_BOT_APP_PRIVATE_KEY }}
