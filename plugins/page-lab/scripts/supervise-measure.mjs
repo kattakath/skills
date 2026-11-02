@@ -144,7 +144,7 @@ try {
 } catch { /* best effort */ }
 
 // ---- 2. DRIVING through MCP ----------------------------------------------------------------------------
-const sup = (...a) => spawn(process.execPath, ['--experimental-websocket', SUP, ...a, ...(a[0] === 'start' ? ['--browser-url', browserUrl] : [])], { stdio: ['ignore', 'pipe', 'inherit'] });
+const sup = (...a) => spawn(process.execPath, [SUP, ...a, ...(a[0] === 'start' ? ['--browser-url', browserUrl] : [])], { stdio: ['ignore', 'pipe', 'inherit'], env: (({ PAGE_LAB_CDP_WS_REEXEC: _d, ...e }) => e)(process.env) });
 const supRun = (...a) => new Promise((r) => { let o = ''; const c = sup(...a); c.stdout.on('data', (d) => (o += d)); c.on('close', (code) => r({ code, o })); });
 await supRun('start');
 const results = [];
@@ -181,6 +181,34 @@ check('MCP click lands inside the window', ps4.n === '1', `clicks=${ps4.n}`);
 check('MCP fill lands inside the window', ps4.v.startsWith('passed'), `value="${ps4.v}"`);
 check('MCP press_key lands inside the window', /X$/i.test(ps4.v) || ps4.v.length > 'passed'.length, `value="${ps4.v}"`);
 process.stdout.write(`arm→click→fill→press_key took ${Date.now() - t0} ms of MCP round trips (excludes model think time)\n`);
+
+// ---- 3. TAB VISIBILITY: "did the window rise" is not "is the operator looking at my tab" ----------
+const visOf = async (marker) => {
+  const t = (await cdpTargets()).find((x) => x.url.includes(marker));
+  const sess = await attach(client, t.targetId);
+  const r = await client.send('Runtime.evaluate', { expression: 'document.visibilityState', returnByValue: true }, sess);
+  return r.result.value;
+};
+await tool('new_page', { url: `${base}/index.html?tabA` });
+await sleep(500);
+await tool('new_page', { url: `${base}/index.html?tabB`, background: true });
+await sleep(500);
+const after1 = { a: await visOf('tabA'), b: await visOf('tabB'), front: front().name };
+const pgs = await pages();
+const pageB = pgs[pgs.length - 1].id; // B was created last
+await tool('select_page', { pageId: pageB, bringToFront: true });
+await sleep(600);
+const after2 = { a: await visOf('tabA'), b: await visOf('tabB'), front: front().name };
+process.stdout.write(`visibility after new_page(A) then new_page(B,background): A=${after1.a} B=${after1.b} frontmost=${after1.front}\n`);
+process.stdout.write(`visibility after select_page(B,bringToFront:true):       A=${after2.a} B=${after2.b} frontmost=${after2.front}\n`);
+// OBSERVATION, not a check. chrome-devtools-mcp (puppeteer) turns focus emulation on for every page
+// it manages, so all of its pages read visible/focused and visibilityState cannot say which tab the
+// operator is looking at. A raw background target reads hidden/false, and visible/true once focus
+// emulation is on [F-FOCUS-EMULATION]; which tab is selected in the window is not readable over CDP.
+for (let k = 0; k < 2; k += 1) {
+  const all = await pages();
+  if (all.length > 1) await tool('close_page', { pageId: all[all.length - 1].id }).catch(() => {});
+}
 
 await supRun('stop');
 await tool('close_page', { pageId: pT }).catch(() => {});

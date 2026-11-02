@@ -70,14 +70,21 @@ carry on. Do not ask the operator to say anything. Exit **20** means they still 
 run the same command again. Never type into the page during it, and never put a secret value
 in `--reason` (it appears in a notification).
 
-## 5. No focus stealing
+## 5. No focus stealing — which tab, and how to get it
 
-Two calls raise the window and switch Spaces; use the alternative [F-SUPERVISE-FOCUS-TABLE]:
+Drive the tab the operator is already looking at: any tool call on it is quiet. A **new** tab
+the operator must see needs one raise; choose it, do not stumble into it [F-SUPERVISE-FOCUS-TABLE]:
 
-| Do not | Do instead |
-|---|---|
-| `new_page` (default) | `new_page` with `background: true`, or `supervise open <url>` |
-| `select_page` with `bringToFront: true` | `select_page` with `bringToFront: false`, or pass `pageId` to each tool |
+| Goal | Call | Raises the window? |
+|---|---|---|
+| Work in a tab they do not need to watch | `new_page {background:true}` or `supervise open <url>` | no |
+| Show them a new tab | `new_page` (default), or `select_page {bringToFront:true}` | **yes** — switches Space too |
+| Anything on an existing page | `pageId` on each tool; `select_page {bringToFront:false}` | no |
+
+A raise is harmless only while Chromium is already frontmost (the operator is watching). Check
+first with `supervise state` plus what the operator told you; when unsure, stay in the visible
+tab. A background-driven tab still has a live clock, because the MCP turns on focus emulation
+for its pages [F-FOCUS-EMULATION].
 
 ## 6. Finish
 

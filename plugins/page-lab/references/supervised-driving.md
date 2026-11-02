@@ -70,7 +70,7 @@ tool's 600 s cap) with the banner left up.
 ## Focus stealing — measured
 
 Throwaway-profile Chromium 152 (`open -g -n`), a non-Chromium app frontmost before every probe,
-`lsappinfo front` after 900 ms; 3 identical runs [F-SUPERVISE-FOCUS-TABLE].
+`lsappinfo front` after 900 ms; 4 identical runs [F-SUPERVISE-FOCUS-TABLE].
 
 | Call | Chromium frontmost? |
 |---|---|
@@ -83,10 +83,34 @@ Throwaway-profile Chromium 152 (`open -g -n`), a non-Chromium app frontmost befo
 `AppleSpacesSwitchOnActivate` read `1`, so a steal also switches Space when the window is on
 another one. The Space switch itself was not observed (one Space under test).
 
+**Quiet is not the same as visible.** `new_page {background:true}` opens a tab that is *not
+selected*, so the operator keeps looking at the old one. `chrome-devtools-mcp` (puppeteer) turns
+focus emulation on for every page it manages, so all of its pages read `visibilityState
+visible` and the tab the operator sees is **not readable over CDP**. Measured on raw targets:
+foreground `visible/true`, background `hidden/false`, background plus
+`Emulation.setFocusEmulationEnabled` `visible/true`. Hence the skill's rule: drive the visible
+tab; raise on purpose, only to show a new one; a background tab is for work they need not
+watch, and it keeps a live clock without any help of ours [F-BG-TAB-FREEZES-ANIM].
+
+## Deviations from the brief, for the lead to overrule
+
+- **Esc does not end an intervention by default.** Opt-in `--esc-ends` (ignored inside inputs).
+  Reason above; one flag flips it.
+- **Esc inside an open window still barges in.** The brief had no rule; chosen so the operator's
+  Esc is never lost to an agent that never sends one.
+
 ## Not solved, on purpose
 
 - Cross-origin iframes: the layer covers the top frame only.
 - Two agents on one browser share one stamp and one state.
-- The live notification sound and `activate` were not exercised, to avoid taking the
-  operator's focus; their argv and guard were.
+- The alert, partly. The un-stubbed `osascript display notification … sound name "Glass"` exited
+  0 with empty stderr on 2026-11-02, but whether a banner or sound appeared was not observable
+  from here, and on current macOS it posts as **Script Editor**, which needs its own notification
+  permission. Recipe: `node -e` the call in `notify()` and watch the screen. `activate` was never
+  run live (it would take the operator's focus); its argv and once-per-reason guard were tested stubbed.
+- **Main-world exposure.** The payload runs in the page's world so `evaluate_script` can call
+  `__pageLab.pass`. Site JS can therefore call `__pageLab._set`/`pass` and `__pageLabSignal`
+  (`done`, `hand-back`), ending an intervention or the operator's pause on its own. The fix is an
+  isolated world (`worldName`) with `pass` reachable only through the CLI; not built, because
+  the brief asked for a page function.
 - Screenshots include the ~12 % tint.

@@ -132,20 +132,24 @@ async function broadcast() {
 
 async function daemon(opts) {
   const client = await connect(await browserSocket(opts.browserUrl));
-  const sessions = new Map(); // sessionId -> {targetId, url}
+  const sessions = new Map(); // sessionId -> {targetId, scriptId}
+  const seen = new Set(); // targetIds already attached: discovery replays existing targets
 
   const attachTab = async (targetId, url) => {
-    if (/^(devtools|chrome|chrome-extension):/.test(url || '')) return;
+    if (seen.has(targetId) || /^(devtools|chrome|chrome-extension):/.test(url || '')) return;
+    seen.add(targetId);
     const sessionId = await attach(client, targetId);
-    sessions.set(sessionId, { targetId });
+    const slot = { targetId, scriptId: null };
+    sessions.set(sessionId, slot);
     await client.send('Page.enable', {}, sessionId);
     await client.send('Runtime.enable', {}, sessionId);
     await client.send('Runtime.addBinding', { name: '__pageLabSignal' }, sessionId);
-    await client.send(
+    const added = await client.send(
       'Page.addScriptToEvaluateOnNewDocument',
       { source: documentStartSource(OVERLAY) },
       sessionId,
     );
+    slot.scriptId = added.identifier;
     // The script above runs on the NEXT document only [F-DOCSTART-NEXT-NAV]; this is the open one.
     await evalIn(client, sessionId, documentStartSource(OVERLAY));
     await evalIn(client, sessionId, setExpr(readStamp() ?? { state: 'pending' }));
@@ -154,7 +158,11 @@ async function daemon(opts) {
   client.on('Target.targetCreated', ({ targetInfo: t }) => {
     if (t.type === 'page') attachTab(t.targetId, t.url).catch((e) => log(`attach: ${e.message}`));
   });
-  client.on('Target.detachedFromTarget', ({ sessionId }) => sessions.delete(sessionId));
+  client.on('Target.detachedFromTarget', ({ sessionId }) => {
+    const slot = sessions.get(sessionId);
+    if (slot) seen.delete(slot.targetId);
+    sessions.delete(sessionId);
+  });
 
   client.on('Runtime.bindingCalled', ({ name, payload }, sessionId) => {
     if (name !== '__pageLabSignal') return;
@@ -191,9 +199,14 @@ async function daemon(opts) {
 
   const hardStop = Date.now() + opts.ttlMin * 60000;
   const teardown = async () => {
-    for (const sid of sessions.keys()) {
-      // Every clear independently guarded; the overlay also fails open on its own in 15 s.
+    // Every override ships with its clear, each guarded alone: relying on the socket close to
+    // undo them is exactly what facts.md forbids [F-UNMEASURED-DISCONNECT-RESET].
+    for (const [sid, slot] of sessions) {
       await evalIn(client, sid, 'window.__pageLab&&window.__pageLab._destroy()').catch(() => {});
+      if (slot.scriptId) {
+        await client.send('Page.removeScriptToEvaluateOnNewDocument', { identifier: slot.scriptId }, sid).catch(() => {});
+      }
+      await client.send('Runtime.removeBinding', { name: '__pageLabSignal' }, sid).catch(() => {});
     }
     try {
       unlinkSync(STAMP);

@@ -29,10 +29,13 @@ const check = (name, ok, detail = '') => {
   process.stdout.write(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  — ${detail}` : ''}\n`);
 };
 
+// cdp.mjs re-execs once and marks the child with PAGE_LAB_CDP_WS_REEXEC=1; a child that INHERITS it
+// refuses to re-exec itself and exits 7. Strip it from anything spawned from here.
+const { PAGE_LAB_CDP_WS_REEXEC: _drop, ...CLEAN_ENV } = process.env;
 const sup = (args, env = {}) =>
-  spawnSync(process.execPath, ['--experimental-websocket', SUP, ...args, ...(args[0] === 'start' ? ['--browser-url', browserUrl] : [])], {
+  spawnSync(process.execPath, [SUP, ...args, ...(args[0] === 'start' ? ['--browser-url', browserUrl] : [])], {
     encoding: 'utf8',
-    env: { ...process.env, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1', ...env },
+    env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1', ...env },
   });
 
 // -- fixture server ----------------------------------------------------------------------
@@ -150,14 +153,14 @@ try {
   check('Esc: `arm` refuses to take control back', sup(['arm']).status === 10);
   await navigate(`${base}/second.html`);
   check('human state survives navigation', (await pl('window.__pageLab.state')) === 'human');
-  const w = spawnSync(process.execPath, ['--experimental-websocket', SUP, 'wait', '--timeout', '1'], { encoding: 'utf8' });
+  const w = spawnSync(process.execPath, [SUP, 'wait', '--timeout', '1'], { encoding: 'utf8', env: CLEAN_ENV });
   check('wait times out with exit 20 while human', w.status === 20);
 
   // -- hand-back chip ---------------------------------------------------------------------------
   const vp = await ev(`({w:innerWidth,h:innerHeight})`);
   await click(vp.w - 60, vp.h - 30); // the "Hand back to Claude" button
   check('chip click hands control back (agent)', await waitFor(async () => sup(['state']).stdout.trim() === 'agent'));
-  check('wait returns 0 once agent', spawnSync(process.execPath, ['--experimental-websocket', SUP, 'wait', '--timeout', '3'], { encoding: 'utf8' }).status === 0);
+  check('wait returns 0 once agent', spawnSync(process.execPath, [SUP, 'wait', '--timeout', '3'], { encoding: 'utf8', env: CLEAN_ENV }).status === 0);
   check('layer is back after hand-back', await inState('agent'));
 
   // -- the pill is a barge-in target too (Esc needs keyboard focus in the window; a click does not) --------
@@ -180,8 +183,8 @@ try {
 
   // -- need-human -----------------------------------------------------------------------------------------
   const runNeed = (args) => {
-    const child = spawn(process.execPath, ['--experimental-websocket', SUP, 'need-human', ...args], {
-      env: { ...process.env, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' },
+    const child = spawn(process.execPath, [SUP, 'need-human', ...args], {
+      env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' },
     });
     let out = '';
     child.stdout.on('data', (d) => (out += d));
@@ -218,8 +221,8 @@ try {
   sup(['arm', '--force']);
 
   // (d) raise-once guard: the stamp is written before the raise, and a repeat is suppressed
-  const d1 = spawnSync(process.execPath, ['--experimental-websocket', SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...process.env, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
-  const d2 = spawnSync(process.execPath, ['--experimental-websocket', SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...process.env, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  const d1 = spawnSync(process.execPath, [SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  const d2 = spawnSync(process.execPath, [SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
   const r1 = JSON.parse(d1.stdout.trim()).raised;
   const r2 = JSON.parse(d2.stdout.trim()).raised;
   check('raise-once: first call would raise, repeat is suppressed', /^dry-run/.test(r1) && r2 === 'suppressed-already-raised', `${r1} / ${r2}`);

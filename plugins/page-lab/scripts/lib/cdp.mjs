@@ -7,7 +7,8 @@
 // arbitrary CDP command at any version, so this side channel is structural, not a stopgap
 // [F-NO-CDP-PASSTHROUGH].
 //
-// Not an entrypoint. Importers: pick-element.mjs, pick-watchdog.mjs, selector-verify.mjs.
+// Not an entrypoint. Importers: pick-element.mjs, pick-watchdog.mjs, selector-verify.mjs,
+// supervise.mjs, supervise-selftest.mjs, supervise-measure.mjs.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
