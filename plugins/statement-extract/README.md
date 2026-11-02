@@ -29,14 +29,15 @@ with the consumer.
 | `statement-extract:extract` | "extract these statements", "what does exit 3 mean" | runs the CLI over many files, reads the report, handles refusals without working around them |
 | `statement-extract:adapter` | "add support for <bank>", "this layout changed" | identify → shape → synthetic fixture → TOML/hook → checks → goldens → run.sh, under the key-freeze rule and the privacy boundary; `references/` holds the contract, the schema, the known layout traps and the fixture rules |
 | `adapter-author` agent | delegated adapter work | the same procedure in an isolated worktree, from shapes and failing reports only; it can't touch frozen normalisers, and it reports only when `run.sh` is green |
-| commit guard | automatic (PreToolUse on Bash) | blocks a `git commit` that would add OFX content outside `fixtures/` in **any** repo, or a PDF/CSV/XLSX inside this plugin outside `fixtures/` |
+| commit guard | automatic (PreToolUse on Bash) | asks before a `git commit` that would add OFX content outside `fixtures/` in **any** repo, or a PDF/CSV/XLSX inside this plugin outside `fixtures/` |
 
 **About the commit guard:**
 - It checks the index, plus `git commit -a`, plus the paths a `git add` earlier in the same
   command would stage. The hook runs before that add, so the index alone would miss it.
-- It exits 2 with the reason on stderr.
+- It asks rather than refuses: one line of hook JSON on stdout (`permissionDecision: "ask"`),
+  exit 0. The one-line reason is shown in the prompt, and is what Claude reads if you decline.
 - It is deliberately narrow: it returns at once unless the command contains `git … commit`, and
-  it never blocks a CSV or PDF outside this plugin.
+  it never asks about a CSV or PDF outside this plugin.
 - It fails **open** on a malformed payload or an internal error, because a guard that denied
   on its own bug would stall every Bash call in every session.
 - `tests/guard-cases.sh` asserts both directions and the fail-open path.
@@ -408,7 +409,7 @@ unknown `identify` fields for exactly that reason.
 ## Requires
 
 - **poppler** (`pdftotext`) for PDF statements only.
-- **node** and **git** for the staging-guard hook (`hooks/hooks.json`), which blocks staging statement files.
+- **node** and **git** for the staging-guard hook (`hooks/hooks.json`), which asks before committing statement files.
 - Python **≥ 3.11**, standard library only. No uv, no ofxtools: ofxtools is GPL-3.0, and this
   reader is MIT.
 - The launcher re-execs under `python3 -I`, so `PYTHONPATH` and the working directory cannot
