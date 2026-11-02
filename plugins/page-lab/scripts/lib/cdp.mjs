@@ -8,7 +8,7 @@
 // [F-NO-CDP-PASSTHROUGH].
 //
 // Not an entrypoint. Importers: pick-element.mjs, pick-watchdog.mjs, selector-verify.mjs,
-// supervise.mjs, supervise-selftest.mjs, supervise-measure.mjs.
+// lock-selftest.mjs.
 
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
