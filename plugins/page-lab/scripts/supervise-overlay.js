@@ -15,7 +15,10 @@
  *   agent      layer on. Operator pointer + keyboard swallowed. Esc (or a click on the pill)
  *              is barge-in.
  *   human      layer off, chip on. The agent must not act until the chip is pressed.
- *   intervene  layer off, prompt banner with the reason and a Done button.
+ *   intervene  layer off, prompt banner with the reason and a Done button. The banner shows on
+ *              the ONE tab the intervention is about (PL.mine); every other tab is in the same state
+ *              with no banner, so pass() still refuses there, but the operator is not told about a
+ *              step that is not on that page.
  *
  * WHY A PASSTHROUGH WINDOW AND NOT isTrusted. CDP Input.dispatch* events are isTrusted=true,
  * so the page cannot tell the agent's click from the operator's. The agent therefore ARMS a
@@ -36,6 +39,7 @@
     v: 1,
     state: 'pending',
     reason: '',
+    mine: true,
     stats: { blockedPointer: 0, blockedKey: 0, passedPointer: 0, passedKey: 0 },
   });
   var passUntil = 0;
@@ -134,7 +138,7 @@
     ui.chipText.textContent = 'You have control — Claude is paused';
     show(ui.chip, PL.state === 'human');
     ui.barText.textContent = 'Claude needs you: ' + (PL.reason || 'your input') + ' — press Done when finished';
-    show(ui.bar, PL.state === 'intervene');
+    show(ui.bar, PL.state === 'intervene' && PL.mine);
   }
 
   function setLocal(state, reason) {
@@ -203,15 +207,19 @@
 
   // ---- API -----------------------------------------------------------------------------
   /** Daemon/CLI side: apply a state. Idempotent. */
-  PL._set = function (state, reason, escEnds) {
+  PL._set = function (state, reason, escEnds, mine) {
     PL.escEnds = !!escEnds;
+    var m = mine !== false;
+    var moved = m !== PL.mine;
+    PL.mine = m;
     if (state !== PL.state || (reason || '') !== PL.reason) setLocal(state, reason);
+    else if (moved) paint();
     return PL.state;
   };
   /** Daemon heartbeat; also (re)applies the authoritative state. */
-  PL._hb = function (state, reason, escEnds) {
+  PL._hb = function (state, reason, escEnds, mine) {
     lastHb = Date.now();
-    return PL._set(state, reason, escEnds);
+    return PL._set(state, reason, escEnds, mine);
   };
   /**
    * Agent side. Open a passthrough window of `ms` (default 6000, 100..30000). Returns
@@ -225,10 +233,20 @@
     passOnce = !!(opts && opts.once);
     paint();
     if (n) setTimeout(function () { if (!passing()) paint(); }, n + 20);
+    // Tell the daemon which tab the agent is driving: it is need-human's default target. The
+    // all-pages CLI form ({cli:true}) is not "driving" any one tab, so it stays silent.
+    if (!(opts && opts.cli)) signal('driven');
     return { ok: true, state: PL.state, until: passUntil };
   };
   PL.info = function () {
-    return { state: PL.state, reason: PL.reason, passing: passing(), stats: PL.stats, url: location.href };
+    return {
+      state: PL.state,
+      reason: PL.reason,
+      passing: passing(),
+      banner: !!(ui.bar && !ui.bar.classList.contains('none')),
+      stats: PL.stats,
+      url: location.href,
+    };
   };
   PL._destroy = function () {
     setLocal('pending');

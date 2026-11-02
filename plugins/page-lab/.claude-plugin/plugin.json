@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "page-lab",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Author Violentmonkey userscripts and diagnose live pages from one place \u2014 a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site, and a supervised-driving mode in which an agent drives the operator's Chromium behind a take-over-with-Esc overlay and hands control to the operator for logins, captchas and payments without stealing their window.",
   "author": {
     "name": "Ismail Kattakath"
