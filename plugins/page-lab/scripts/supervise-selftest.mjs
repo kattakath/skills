@@ -4,7 +4,9 @@
 //   node supervise-selftest.mjs --browser-url http://127.0.0.1:9333
 //
 // Run it against a THROWAWAY Chromium (own --user-data-dir and port), never the operator's
-// browser: it opens its own background tab, and starts and stops the supervise daemon.
+// browser: it opens its own background tabs, starts and stops the supervise daemon, and the
+// last section ACTIVATES a tab for real (Target.activateTarget), which brings that Chromium's
+// window forward on the machine running the test.
 // Operator and agent input are indistinguishable at the CDP layer [F-SUPERVISE-TRUSTED-SAME],
 // so "operator input" below is a trusted event sent WITHOUT arming a window, and "agent
 // input" is the same event sent INSIDE one. Exit 0 = every check held; 1 = a check failed.
@@ -183,7 +185,7 @@ try {
 
   // -- need-human -----------------------------------------------------------------------------------------
   const runNeed = (args) => {
-    const child = spawn(process.execPath, [SUP, 'need-human', ...args], {
+    const child = spawn(process.execPath, [SUP, 'need-human', '--tab', targetId, ...args], {
       env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' },
     });
     let out = '';
@@ -221,12 +223,67 @@ try {
   sup(['arm', '--force']);
 
   // (d) raise-once guard: the stamp is written before the raise, and a repeat is suppressed
-  const d1 = spawnSync(process.execPath, [SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
-  const d2 = spawnSync(process.execPath, [SUP, 'need-human', '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  const d1 = spawnSync(process.execPath, [SUP, 'need-human', '--tab', targetId, '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  const d2 = spawnSync(process.execPath, [SUP, 'need-human', '--tab', targetId, '--reason', `selftest raise ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
   const r1 = JSON.parse(d1.stdout.trim()).raised;
   const r2 = JSON.parse(d2.stdout.trim()).raised;
   check('raise-once: first call would raise, repeat is suppressed', /^dry-run/.test(r1) && r2 === 'suppressed-already-raised', `${r1} / ${r2}`);
   sup(['arm', '--force']);
+
+  // (e) THE BUG (2026-11-02): the agent opens a BACKGROUND tab and calls need-human; the banner
+  // must land on THAT tab, and the tab must come to the front. A is the tab the operator is
+  // looking at (no focus emulation, so visibilityState is the real "is selected" signal).
+  const mkTab = async (url) => {
+    const t = (await client.send('Target.createTarget', { url, background: true })).targetId;
+    return { targetId: t, sid: await attach(client, t) };
+  };
+  const evOn = async (t, expression) => {
+    const r = await client.send('Runtime.evaluate', { expression, returnByValue: true }, t.sid);
+    return r.exceptionDetails ? undefined : r.result.value;
+  };
+  const infoOn = async (t) => JSON.parse((await evOn(t, 'JSON.stringify(window.__pageLab&&window.__pageLab.info())')) ?? 'null');
+  const A = await mkTab(`${base}/second.html`);
+  await client.send('Target.activateTarget', { targetId: A.targetId }); // setup: A is the visible tab
+  const opened = JSON.parse(sup(['open', `${base}/index.html?hidden=${RUN}`]).stdout.trim());
+  const B = { targetId: opened.targetId, sid: await attach(client, opened.targetId) };
+  const bothArmed = await waitFor(async () => (await infoOn(A))?.state === 'agent' && (await infoOn(B))?.state === 'agent');
+  check('background tab: `open` leaves A visible and B hidden', bothArmed && (await evOn(A, 'document.visibilityState')) === 'visible' && (await evOn(B, 'document.visibilityState')) === 'hidden');
+  const e = spawn(process.execPath, [SUP, 'need-human', '--reason', `selftest background ${RUN}`, '--until', 'url:cleared=1', '--timeout', '30'], {
+    env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' },
+  });
+  let eOut = '';
+  e.stdout.on('data', (d) => (eOut += d));
+  const eDone = new Promise((r) => e.on('close', (code) => r({ code, out: eOut })));
+  check('need-human (no --tab) targets the tab opened last: B carries the banner', await waitFor(async () => (await infoOn(B))?.banner === true));
+  check('need-human: B became the selected tab, A did not', (await evOn(B, 'document.visibilityState')) === 'visible' && (await evOn(A, 'document.visibilityState')) === 'hidden');
+  const ia = await infoOn(A);
+  check('need-human: the previously visible tab has NO banner, but is held (pass refuses)', ia.banner === false && ia.state === 'intervene' && (await evOn(A, 'JSON.stringify(window.__pageLab.pass(1000))')).includes('"ok":false'));
+  // --until is judged on the target only: the URL appearing on A must not resolve it
+  await client.send('Page.navigate', { url: `${base}/index.html?cleared=1` }, A.sid);
+  await sleep(1500);
+  check('need-human: --until on ANOTHER tab does not resolve it', (await infoOn(B))?.state === 'intervene');
+  await client.send('Page.navigate', { url: `${base}/index.html?cleared=1` }, B.sid);
+  const re = await eDone;
+  const je = JSON.parse(re.out.trim().split('\n').pop());
+  check('need-human: resolved by --until on the target tab', re.code === 0 && je.resolved === 'until' && je.tab.targetId === B.targetId && je.tab.activated === true, re.out.trim());
+  check('need-human: banner gone from B and layer re-armed on both', await waitFor(async () => (await infoOn(B))?.state === 'agent' && (await infoOn(A))?.state === 'agent' && (await infoOn(B)).banner === false));
+
+  // (f) explicit --tab by URL substring beats the implicit one; a miss changes nothing
+  const miss = spawnSync(process.execPath, [SUP, 'need-human', '--tab', `no-such-tab-${RUN}`, '--reason', 'selftest miss', '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  check('need-human: --tab that matches nothing exits 1 and shows no banner', miss.status === 1 && (await infoOn(A)).state === 'agent' && (await infoOn(B)).state === 'agent', miss.stderr.split('\n')[0]);
+  await client.send('Page.navigate', { url: `${base}/second.html?a=${RUN}` }, A.sid);
+  await sleep(500);
+  const f1 = spawnSync(process.execPath, [SUP, 'need-human', '--tab', `a=${RUN}`, '--reason', `selftest explicit ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  check('need-human: --tab <url-substring> targets that tab and activates it', f1.status === 20 && JSON.parse(f1.stdout.trim()).tab.targetId === A.targetId && (await infoOn(A)).banner === true && (await evOn(A, 'document.visibilityState')) === 'visible', f1.stdout.trim());
+  sup(['arm', '--force']);
+
+  // (g) `__pageLab.pass` on a tab makes it the default target (the "driven" half of lastTab)
+  await evOn(B, 'window.__pageLab.pass(500)');
+  await sleep(600);
+  const g = spawnSync(process.execPath, [SUP, 'need-human', '--reason', `selftest driven ${RUN}`, '--timeout', '1'], { encoding: 'utf8', env: { ...CLEAN_ENV, PAGE_LAB_SUPERVISE_NO_OSASCRIPT: '1' } });
+  check('need-human: a tab the agent drove via pass() is the default target', JSON.parse(g.stdout.trim()).tab.targetId === B.targetId, g.stdout.trim());
+  sup(['arm', '--force']);
+  for (const t of [A, B]) await client.send('Target.closeTarget', { targetId: t.targetId }).catch(() => {});
 } finally {
   sup(['stop']);
   try {

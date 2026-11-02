@@ -26,7 +26,7 @@ agent ── supervise.mjs ──► stamp file (state, reason) ◄── daemon
 |---|---|---|---|---|
 | `agent` | on, ~12 % tint, top pill | swallowed | `start`, hand-back, `need-human` return | Esc / pill click → `human`; `need-human` → `intervene` |
 | `human` | off, chip bottom-right | free | Esc or pill click | the **Hand back to Claude** chip (only the operator) |
-| `intervene` | off, amber banner with the reason | free | `need-human` | `--until` holds, **Done**, timeout |
+| `intervene` | off; amber banner with the reason **on the target tab only** | free | `need-human` | `--until` holds on the target tab, **Done**, timeout |
 | `pending` | off | free | before the daemon speaks; after 15 s without it | any daemon message |
 
 ## Passthrough: arm, then act
@@ -42,7 +42,7 @@ model think time is on top and was not measured).
 
 Esc inside a window still barges in, unless the agent opted in with `{keys:["Escape"]}`.
 
-Verified on `scripts/fixtures/supervise/` with `supervise-selftest.mjs` (35 checks) and, through the
+Verified on `scripts/fixtures/supervise/` with `supervise-selftest.mjs` (45 checks) and, through the
 real `chrome-devtools-mcp@1.12.0`, `supervise-measure.mjs`:
 
 | Input | No window | Inside `pass()` |
@@ -54,14 +54,32 @@ real `chrome-devtools-mcp@1.12.0`, `supervise-measure.mjs`:
 
 ## Intervention (`need-human`)
 
-Layer off, banner with the reason, `osascript` notification plus a Glass sound via backgrounded `afplay` (`say` only if that fails), raise the window
-**once**, then poll every 500 ms for `--until` (any tab's URL, or a selector in any tab) or the
-Done button; on return the layer is back on. Exit 20 on timeout (default 540 s, under the Bash
-tool's 600 s cap) with the banner left up.
+Resolve the target tab, bring it to the front, layer off, banner with the reason **on that tab**,
+`osascript` notification plus a Glass sound via backgrounded `afplay` (`say` only if that fails), then poll every 500 ms for `--until`
+(the target tab's URL, or a selector in the target tab) or the Done button; on return the layer is
+back on. Exit 20 on timeout (default 540 s, under the Bash tool's 600 s cap) with the banner left up.
+
+- **Which tab (the 2026-11-02 bug).** An agent opened Google's 2SV page with `supervise open`
+  (a background tab, by design) and called `need-human`. The old code broadcast the state to
+  every tab, so the banner landed on the visible Grafana tab and the real prompt sat hidden.
+  Now: `--tab <targetId|url-substring>`, else `lastTab` in the stamp — set by `open` and by
+  `__pageLab.pass` (the page signals `driven` to the daemon; the all-pages CLI `pass` sends
+  `cli:true` and stays silent). The visible tab is never assumed, and no resolvable tab is exit 1
+  with no banner anywhere. `stamp.target` makes `setExpr` hand `mine:false` to every other tab:
+  held (`pass` refuses) but no banner.
+- **The raise is `Target.activateTarget`** — measured 2026-11-02 (throwaway Chromium 152, Ghostty
+  frontmost, `lsappinfo front`): Chromium became frontmost, the target's `visibilityState` went
+  `visible` and the previous tab's `hidden`. So it is a window raise, gated like the `osascript`
+  one. One exception that costs nothing: with the browser already the frontmost app, a repeat
+  call still selects the tab (the operator may have wandered off it).
+- **Use it only for human-only steps** — MFA/TOTP, passkey/Touch ID or Google re-auth, captcha.
+  A Done banner for a decision already made in conversation is a prompt nobody is waiting to see;
+  it timed out unseen in the same session. `--until` is the default resolution, Done the fallback.
 
 - **Raise guard:** a stamp per reason in `$TMPDIR/page-lab-supervise/`, written *before* the
-  `activate`, 10 min TTL. A repeat of the same reason notifies again but cannot raise.
-  Tested with the osascript calls stubbed (`PAGE_LAB_SUPERVISE_NO_OSASCRIPT=1`).
+  raise, 10 min TTL. A repeat of the same reason notifies again but cannot raise. The tab
+  activation is real in the selftest (it brings the throwaway Chromium forward); only the
+  `osascript` calls are stubbed (`PAGE_LAB_SUPERVISE_NO_OSASCRIPT=1`).
 - **Deliberately not wired: "Esc ends the intervention".** A login modal's Esc is habit; an early
   resume would put the agent's input into the operator's half-typed form. `--esc-ends` opts in,
   and still ignores Esc inside an input.
@@ -79,6 +97,7 @@ Throwaway-profile Chromium 152 (`open -g -n`), a non-Chromium app frontmost befo
 | MCP `list_pages`, `new_page {background:true}`, `navigate_page`, `take_snapshot`, `evaluate_script`, `take_screenshot`, `click`, `fill`, `press_key`, `select_page {bringToFront:false}`, `close_page` | no |
 | CDP `Target.createTarget {background:true}`, `Emulation.setFocusEmulationEnabled`, `Input.dispatchMouseEvent` | no |
 | CDP `Page.bringToFront` — the positive control | **yes** |
+| CDP `Target.activateTarget` (what `need-human` uses) | **yes** — and flips `visibilityState` of the two tabs |
 
 `AppleSpacesSwitchOnActivate` read `1`, so a steal also switches Space when the window is on
 another one. The Space switch itself was not observed (one Space under test).
