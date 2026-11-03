@@ -62,6 +62,12 @@ opening equals the previous closing; date holes and where history starts per acc
 look-alikes are listed; after survivorship, two same-rank sources printing the same rows under different Keys fail).
 Exit 3 on a balance break, a conflicting Key or a doubled source.
 
+`beancount-kit metrics` reports how well the ledger is kept, as **ratios and counts only**: savings
+rate, budget used against the month elapsed, budgets over, the freshest and stalest import, the
+review backlog and loader errors. No amount and no account name is ever output. `--push` sends
+them as OTLP gauges to `$BEANCOUNT_KIT_OTLP_{ENDPOINT,INSTANCE,TOKEN}`. The push is best-effort,
+so a failure never fails the command.
+
 `beancount-kit suggest` (optional, needs **smart_importer 1.2**, MIT) suggests a category
 for each flagged entry, learned from the categorised ones; the operator accepts or not.
 

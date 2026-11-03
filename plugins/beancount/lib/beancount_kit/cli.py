@@ -9,6 +9,9 @@
   groups  [--journal J] [--out F]   flagged entries grouped by merchant, with a rule pattern
   suggest [--journal J] [--out F | --evaluate]   category suggestions for flagged entries
   fava    start | stop | status   [--journal J]
+  metrics [--journal J] [--today D] [--stale-days N] [--push]
+                                     ratios and counts only, never an amount (lib/beancount_kit/metrics.py);
+                                     --push sends them as OTLP to $BEANCOUNT_KIT_OTLP_{ENDPOINT,INSTANCE,TOKEN}
   doctor
 
 Exit codes: 0 ok · 1 bug · 2 usage (bad input, wrong schema) · 3 refused (a check failed;
@@ -240,6 +243,23 @@ def doctor(_a) -> int:
     return 0 if ok else 3
 
 
+def metrics_cmd(a) -> int:
+    import datetime as dt
+    from . import metrics
+    if not a.journal:
+        raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
+    today = dt.date.fromisoformat(a.today) if a.today else None
+    points = metrics.compute(a.journal, today, a.stale_days)
+    for name, value, attrs in points:
+        print(json.dumps({"name": name, "value": round(value, 4), **attrs}))
+    if a.push:
+        try:
+            print(f"beancount-kit metrics: pushed {len(points)} points, HTTP {metrics.push(points)}", file=sys.stderr)
+        except Exception as e:  # best-effort: telemetry never fails the ledger
+            print(f"beancount-kit metrics: push failed ({type(e).__name__}); nothing else affected", file=sys.stderr)
+    return 0
+
+
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser(prog="beancount-kit", description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -279,6 +299,12 @@ def main(argv=None) -> int:
     f = sub.add_parser("fava")
     f.add_argument("action", choices=("start", "stop", "status"))
     f.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
+    mp = sub.add_parser("metrics")
+    mp.add_argument("--journal", default=os.environ.get("BEANCOUNT_JOURNAL"))
+    mp.add_argument("--today", help="YYYY-MM-DD (default: today)")
+    mp.add_argument("--stale-days", type=int, default=35)
+    mp.add_argument("--push", action="store_true",
+                    help="best-effort OTLP push; a failure warns and still exits 0")
     sub.add_parser("doctor")
     a = ap.parse_args(argv)
     try:
@@ -294,6 +320,8 @@ def main(argv=None) -> int:
             return groups_cmd(a)
         if a.cmd == "suggest":
             return suggest_cmd(a)
+        if a.cmd == "metrics":
+            return metrics_cmd(a)
         if a.action == "start":
             if not a.journal:
                 raise Refusal(Exit.USAGE, "no --journal and BEANCOUNT_JOURNAL is unset")
