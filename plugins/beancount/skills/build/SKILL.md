@@ -169,6 +169,22 @@ derived.
   entries. Prefer groups.
 - Needs `smart_importer` in `$BEANCOUNT_PYTHON`; `doctor` reports whether it is there.
 
+## After a successful build: health metrics (`metrics`)
+
+When the consumer has an OTLP endpoint, send the ledger's health right after a build
+that wrote the journal. It pushes **ratios and counts only** (savings rate, budget pace, import
+freshness, review backlog, loader errors), never an amount or an account name:
+
+```bash
+"$KIT" metrics --journal "$BEANCOUNT_JOURNAL" --push
+```
+
+The three `BEANCOUNT_KIT_OTLP_*` values come from the consumer's secret store at run time,
+never from a file. On nix-config that is
+`secret exec BEANCOUNT_KIT_OTLP_ENDPOINT=grafana:otlp:endpoint BEANCOUNT_KIT_OTLP_INSTANCE=grafana:otlp:instance BEANCOUNT_KIT_OTLP_TOKEN=grafana:otlp:token -- "$KIT" metrics --push`.
+Without them, run `metrics` without `--push` to read the same numbers locally. A failed push
+never fails the build.
+
 ## Exit codes
 
 | Code | Meaning | Do |

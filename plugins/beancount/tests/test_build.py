@@ -548,5 +548,64 @@ class Suggest(unittest.TestCase):
                 code = main(["suggest", "--journal", str(bad)])
             self.assertEqual(code, 3, err.getvalue())
 
+
+class Metrics(unittest.TestCase):
+    """metrics: exact ratios on a synthetic journal, and no amount ever in the output."""
+    JOURNAL = """option "operating_currency" "CAD"
+2026-01-01 open Assets:Bank:Chequing CAD
+2026-01-01 open Assets:Bank:Old CAD
+2026-01-01 open Income:Salary CAD
+2026-01-01 open Expenses:Food CAD
+2026-01-01 open Expenses:Rent CAD
+2026-01-01 custom "budget" Expenses:Food "monthly" 400.00 CAD
+2026-01-01 custom "budget" Expenses:Rent "yearly" 24000.00 CAD
+2026-01-05 * "Payroll"
+  Income:Salary  -5000.00 CAD
+  Assets:Bank:Chequing
+2026-01-06 * "Rent"
+  Expenses:Rent  2000.00 CAD
+  Assets:Bank:Chequing
+2026-01-07 * "Old account last use"
+  Expenses:Food  10.00 CAD
+  Assets:Bank:Old
+2026-02-03 * "Groceries"
+  Expenses:Food  500.00 CAD
+  Assets:Bank:Chequing
+2026-02-04 ! "Mystery"
+  Expenses:Food  1.00 CAD
+  Assets:Bank:Chequing
+"""
+
+    def test_ratios_counts_and_no_amounts(self):
+        with tempfile.TemporaryDirectory() as t:
+            j = Path(t) / "m.beancount"
+            j.write_text(self.JOURNAL)
+            out = io.StringIO()
+            with redirect_stdout(out):
+                rc = main(["metrics", "--journal", str(j), "--today", "2026-02-14", "--stale-days", "35"])
+            self.assertEqual(rc, 0)
+            rows = [json.loads(line) for line in out.getvalue().splitlines()]
+            got = {(r["name"], r.get("window") or r.get("state") or r.get("stat") or ""): r["value"] for r in rows}
+            # January: income 5000, expenses 2010 -> (5000 - 2010) / 5000
+            self.assertAlmostEqual(got[("finance_savings_rate", "last_month")], 0.598)
+            # February to date: food 501 vs 400; rent 0 vs 24000/12 = 2000 -> 501 / 2400
+            self.assertAlmostEqual(got[("finance_budget_used_ratio", "")], round(501 / 2400, 4))
+            self.assertEqual(got[("finance_budgets", "total")], 2)
+            self.assertEqual(got[("finance_budgets", "over")], 1)
+            self.assertAlmostEqual(got[("finance_month_elapsed_ratio", "")], round(14 / 28, 4))
+            # Chequing last posted 2026-02-04 (10 d); Old 2026-01-07 (38 d, stale at 35)
+            self.assertEqual(got[("finance_import_age_days", "newest")], 10)
+            self.assertEqual(got[("finance_import_age_days", "oldest")], 38)
+            self.assertEqual(got[("finance_import_stale_accounts", "")], 1)
+            self.assertEqual(got[("finance_review_backlog", "")], 1)
+            self.assertEqual(got[("finance_journal_errors", "")], 0)
+            # Nothing that could carry money or an account name leaves.
+            text = out.getvalue()
+            for leak in ("5000", "2000", "Chequing", "Assets", "Expenses:"):
+                self.assertNotIn(leak, text)
+            for r in rows:
+                self.assertTrue(set(r) <= {"name", "value", "window", "state", "stat"}, r)
+
+
 if __name__ == "__main__":
     unittest.main()
