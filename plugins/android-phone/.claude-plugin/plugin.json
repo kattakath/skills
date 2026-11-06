@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "android-phone",
-  "version": "1.0.0",
-  "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring.",
+  "version": "1.1.0",
+  "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring \u2014 plus unlocking an Android Emulator AVD by PIN or fingerprint.",
   "author": {
     "name": "Ismail Kattakath"
   },
@@ -15,6 +15,7 @@
     "scrcpy",
     "device",
     "mirroring",
-    "wireless-debugging"
+    "wireless-debugging",
+    "emulator"
   ]
 }

@@ -37,7 +37,9 @@ live-diagnosed adb footguns that raw adb makes you re-learn every session.
 ## Scope
 
 This gets a device *connected*. Driving app UIs — tap, type, screenshot inside apps — is the
-gateway's `mobile-mcp` server, afterwards. The virtual emulator is a different tool entirely.
+gateway's `mobile-mcp` server, afterwards. The virtual emulator is a different tool. Its unlock and fingerprint procedure is the
+plugin's second skill, `android-emulator` (the Touch Sensor button and `adb emu finger touch`
+send different finger IDs, so enroll by the route you will unlock with).
 
 ## Requires
 

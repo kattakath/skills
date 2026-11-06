@@ -10,8 +10,8 @@ description: >-
   or any ADB connectivity/diagnosis task. Also covers the traps of automating apps
   inside a Samsung "Secure Folder" ("look inside the Secure Folder", "the app in my
   secure folder", Knox work profile) — no UI tree, wrong-profile launches, black
-  secure screens. NOT for the virtual emulator (that is `android-emu` / the Android
-  Emulator app); general app-UI driving is the plugin's `mobile-mcp` server.
+  secure screens. For the virtual emulator (locking, PIN, fingerprint) use the
+  sibling `android-emulator` skill; general app-UI driving is the plugin's `mobile-mcp` server.
 ---
 
 # Android over ADB — the `android-phone` operator
@@ -124,6 +124,7 @@ accept the loss. Passkeys usually do not survive an export.
 - **Driving app UIs** (tap/type/screenshot inside apps): use the `mobile-mcp`
   gateway server *after* this skill gets the device connected.
 - **Virtual emulator**: `android-emu` / the "Android Emulator" Spotlight app —
-  unrelated tool, don't point `android-phone` at it.
+  don't point `android-phone` at it. Unlocking and fingerprint enrollment there are the
+  sibling `android-emulator` skill.
 - **Modifying the tooling itself**: that's a kattakath/nix-config session
   (`packages/android-phone.nix`), rebuilt via `darwin-rebuild switch`.

@@ -104,6 +104,13 @@
       "gap": true
     },
     {
+      "goal": "Unlock an Android Emulator AVD or enroll its fingerprint",
+      "steps": [
+        "android-phone"
+      ],
+      "gap": true
+    },
+    {
       "goal": "Send a formatted message with attachments from a native macOS app",
       "steps": [
         "mac-app-send"
