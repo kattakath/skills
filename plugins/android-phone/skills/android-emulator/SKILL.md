@@ -3,7 +3,7 @@ name: android-emulator
 description: >-
   Unlock, and set up biometric unlock on, an Android Emulator AVD (Android Virtual Device)
   driven over adb from a Mac. Use when the user says "unlock the emulator", "the swipe is
-  too sensitive", "hard to get to the PIN page", "does the emulator fingerprint work",
+  too sensitive", "hard to get to the PIN page", "there are 2 desktops / home screens", "does the emulator fingerprint work",
   "Touch Sensor says fingerprint not recognized", "enroll a fingerprint on the emulator",
   "does my Mac's Touch ID work in the emulator", or the emulator keeps asking for its PIN.
   Covers the GUI-vs-adb finger-ID mismatch, headless enrollment without leaking the PIN,
@@ -69,6 +69,23 @@ They have nothing to do with the fingers enrolled in macOS System Settings.
 
 4. **Prove it.** Lock with `input keyevent KEYCODE_SLEEP` then `KEYCODE_WAKEUP`, so
    `isKeyguardShowing=true`. Fire the route. It should read `false`, and `accept` should rise.
+
+## Move home-screen icons between pages (Pixel Launcher)
+
+An emptied home page is deleted by the launcher itself. To merge page 2 into page 1:
+
+- **Long-press does not offer "Move" or "Remove".** It shows only App info and Pause app. You must drag.
+- **`input draganddrop` works only within a page.** It moves in a straight line and releases at the end, so it never dwells at the edge to flip pages.
+- **Separate `input motionevent` calls from the Mac don't start a drag.** The gaps between adb round-trips break the long-press, and the gesture becomes a page swipe. Send the whole sequence as **one** `adb shell "…"` string:
+  ```sh
+  adb -s <serial> shell "input motionevent DOWN $SX $SY; sleep 1;
+    input motionevent MOVE $((SX+5)) $((SY-13)); sleep 0.2;
+    input motionevent MOVE 200 700; sleep 0.2;
+    input motionevent MOVE 20 700; sleep 2;          # hover at the left edge: flips to page 1
+    input motionevent MOVE $DX $DY; sleep 1; input motionevent UP $DX $DY"
+  ```
+- **Aim at the SHRUNKEN layout.** Drag mode scales the pages to about 0.68× (a 1080×1920 screen put page 1's card at about x 178–912, y 336–1258). A drop outside the card cancels the drag, and the icon snaps back. Screenshot mid-drag (`screencap` inside the same shell string) to read the card's bounds.
+- **Check:** after the last icon moves, a left swipe from home stays on page 1. `uiautomator dump` lists every app once.
 
 ## Pitfalls
 
