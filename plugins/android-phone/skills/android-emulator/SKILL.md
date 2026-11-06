@@ -3,7 +3,7 @@ name: android-emulator
 description: >-
   Unlock, and set up biometric unlock on, an Android Emulator AVD (Android Virtual Device)
   driven over adb from a Mac. Use when the user says "unlock the emulator", "the swipe is
-  too sensitive", "hard to get to the PIN page", "there are 2 desktops / home screens", "does the emulator fingerprint work",
+  too sensitive", "hard to get to the PIN page", "there are 2 desktops / home screens", "calibrate touch sensitivity to my trackpad", "scrolling flings too far", "does the emulator fingerprint work",
   "Touch Sensor says fingerprint not recognized", "enroll a fingerprint on the emulator",
   "does my Mac's Touch ID work in the emulator", or the emulator keeps asking for its PIN.
   Covers the GUI-vs-adb finger-ID mismatch, headless enrollment without leaking the PIN,
@@ -69,6 +69,16 @@ They have nothing to do with the fingers enrolled in macOS System Settings.
 
 4. **Prove it.** Lock with `input keyevent KEYCODE_SLEEP` then `KEYCODE_WAKEUP`, so
    `isKeyguardShowing=true`. Fire the route. It should read `false`, and `accept` should rise.
+
+## Trackpad scroll is a fake fling: disable the mouse wheel
+
+**Symptom:** "the swipe is too sensitive". A two-finger trackpad scroll flings lists, or swipes the lock screen.
+
+- **Cause (emulator source, `emulator-qt-window.cpp` `EmulatorQtWindow::wheelEvent`):** a phone AVD has only multi-touch devices (`getevent -pl` lists `virtio_input_multi_touch_*` and no mouse or tablet). So the emulator turns every wheel or trackpad scroll into a **synthetic finger swipe** at the cursor.
+- **It is amplified about 8×.** `delta = angleDelta × 120 / 15` turns one 120-unit notch into 960. `height × delta / 120 / 9` then gives 8/9 of the screen height per notch, although the code's comment says 1/9.
+- **It is fast.** Each segment plays as 20 ticks × 15 ms ≈ 300 ms, so Android reads it as a fling. There is no scale knob. Android's touch slop is compiled into the image, and changing it needs root.
+- **Fix:** Extended Controls → Settings → **General** → **Disable mouse wheel**. The toggle is live. It persists as `set.disableMouseWheel` in the `com.android.Emulator` preferences, which are read at window start. Then scroll by **click-and-drag**: the cursor and the finger move 1:1.
+- **Unverified alternative:** `-feature VirtioTablet` at launch would send real scroll events. The Play image may ignore it.
 
 ## Move home-screen icons between pages (Pixel Launcher)
 
