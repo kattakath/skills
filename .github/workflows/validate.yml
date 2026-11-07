@@ -209,7 +209,7 @@ jobs:
       # run a shell or reach outside the project; the lint must flag and must stay quiet.
       # The autostage cases ask git what was staged, so they need git, not just node.
       - name: nix-flake-kit hook cases
-        run: node --test plugins/nix-flake-kit/tests/
+        run: node --test plugins/nix-flake-kit/tests/*.test.js
 
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh

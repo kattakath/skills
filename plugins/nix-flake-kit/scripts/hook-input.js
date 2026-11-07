@@ -18,7 +18,8 @@ const path = require("node:path");
 
 function within(root, p) {
   const rel = path.relative(root, p);
-  return rel === "" || (!rel.startsWith("..") && !path.isAbsolute(rel));
+  // `..` as a whole first SEGMENT, so a dir named `..scratch` inside the project still counts.
+  return rel === "" || (rel.split(path.sep)[0] !== ".." && !path.isAbsolute(rel));
 }
 
 function readNixTarget() {

@@ -98,6 +98,14 @@ test("NO SHELL: a $(…) filename is staged literally and runs nothing", () => {
   assert.ok(tracked(p, name));
 });
 
+test("STAGES a .nix under a directory whose NAME starts with two dots", () => {
+  const p = repo("dotdot");
+  fs.mkdirSync(path.join(p, "..scratch"));
+  fs.writeFileSync(path.join(p, "..scratch", "i.nix"), "1\n");
+  run(path.join(p, "..scratch", "i.nix"), p);
+  assert.ok(tracked(p, "..scratch/i.nix"));
+});
+
 test("NO OPTION: a filename starting with - is a pathspec, not a flag", () => {
   const p = repo("dash");
   fs.writeFileSync(path.join(p, "-n.nix"), "1\n");

@@ -85,7 +85,7 @@ and needs `uv`.
 ## Tests
 
 ```bash
-node --test plugins/nix-flake-kit/tests/
+node --test plugins/nix-flake-kit/tests/*.test.js
 ```
 
 `autostage-nix.test.js` builds throwaway git repos and asks git what got staged. It
