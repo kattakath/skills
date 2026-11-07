@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "beancount",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Double-entry accounting as a derived artifact: build a Beancount journal from statement-extract JSONL, a category-rules CSV and a per-transaction decisions CSV — transfers paired through a clearing account (exact, fee band, FX, in-wallet conversion), statement and screen balances as assertions, loan snapshots with interest pads — written only when Beancount's own check passes. Plus bean-query recipes and Fava on demand, read-only, on 127.0.0.1.",
   "author": {
     "name": "Ismail Kattakath"
