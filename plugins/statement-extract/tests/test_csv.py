@@ -31,6 +31,21 @@ class NeverRead(unittest.TestCase):
             p = run("fixture", "lint", d)
             self.assertEqual(p.returncode, 3)
 
+    def test_lint_exempts_only_the_declared_png_icon(self):
+        png = b"\x89PNG\r\n\x1a\n" + b"\0" * 32
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / ".claude-plugin").mkdir()
+            (root / "icon.png").write_bytes(png)
+            self.assertEqual(len(fixtures.lint(root)), 1, "an undeclared icon is still a binary")
+            (root / ".claude-plugin" / "plugin.json").write_text('{"icon": "./icon.png"}')
+            self.assertEqual(fixtures.lint(root), [], "the declared PNG icon is exempt")
+            (root / "statement.png").write_bytes(png)
+            self.assertEqual(len(fixtures.lint(root)), 1, "any other image still fails")
+            (root / "statement.png").unlink()
+            (root / "icon.png").write_bytes(b"%PDF-1.7 not a png")
+            self.assertEqual(len(fixtures.lint(root)), 1, "a renamed non-PNG is not exempt")
+
     def test_spec_may_not_read_a_never_read_column(self):
         spec = copy.deepcopy(WISE)
         spec["csv"]["columns"]["memo"] = ["Payee Account Number"]
