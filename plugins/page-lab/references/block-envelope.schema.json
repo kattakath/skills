@@ -83,26 +83,9 @@
           "type": "integer",
           "minimum": 100,
           "maximum": 599,
-          "description": "The main document's HTTP status, read from list_network_requests --resourceTypes document, never from navigate_page's success text (which reads \"Successfully navigated\" on a 403)."
+          "description": "The main document's HTTP status, read from list_network_requests --resourceTypes document, never from navigate_page's success text (which reads \"Successfully navigated\" on a 403). Required on an http-* reason; absent on detector-error, whose point is that the status could not be read."
         }
-      },
-      "allOf": [
-        {
-          "$comment": "A status stop must carry the status it stopped on.",
-          "if": {
-            "properties": {
-              "detector": {
-                "const": "status"
-              }
-            }
-          },
-          "then": {
-            "required": [
-              "status"
-            ]
-          }
-        }
-      ]
+      }
     },
     "profile": {
       "type": "string",
@@ -130,7 +113,7 @@
   },
   "allOf": [
     {
-      "$comment": "An http-* reason is a status stop, and only a status stop.",
+      "$comment": "An http-* reason is a status stop, only a status stop, and carries the status it stopped on.",
       "if": {
         "properties": {
           "reason": {
@@ -145,6 +128,9 @@
       "then": {
         "properties": {
           "evidence": {
+            "required": [
+              "status"
+            ],
             "properties": {
               "detector": {
                 "const": "status"
