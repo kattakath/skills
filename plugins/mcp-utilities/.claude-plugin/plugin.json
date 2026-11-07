@@ -1,12 +1,13 @@
 {
   "$schema": "https://anthropic.com/claude-code/plugin.schema.json",
   "name": "mcp-utilities",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Two keyless, account-free MCP servers: a persistent knowledge graph (memory, stored under XDG data, not the npx cache) and a sequential-reasoning scaffold. Both pinned; nothing to configure.",
   "author": {
     "name": "Ismail Kattakath"
   },
   "homepage": "https://github.com/kattakath/skills",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [

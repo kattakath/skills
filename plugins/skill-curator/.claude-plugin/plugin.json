@@ -1,12 +1,13 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "skill-curator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Keep a skill library from only growing: count real usage from Claude Code transcripts, mark skills stale or archive-candidate (pinned and depended-on skills exempt), and propose retirements and merges as a reviewable PR. Ported from the Hermes Agent curator.",
   "author": {
     "name": "Ismail Kattakath"
   },
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/skill-curator",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [

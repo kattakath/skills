@@ -1,12 +1,13 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "github-release-gate",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun.",
   "author": {
     "name": "Ismail Kattakath"
   },
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/github-release-gate",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [
