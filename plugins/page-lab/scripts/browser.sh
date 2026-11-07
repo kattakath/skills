@@ -16,6 +16,9 @@
 #       mcp                  exec a stdio chrome-devtools-mcp server — the `chrome-lab` entry
 #       print-argv [headed]  the dry run the no-evasion test asserts on
 #
+# Upstream defaults --headless AND --categoryExtensions to true for a launched browser, so the
+# argv spells both [F-CLI-HEADLESS-DEFAULT].
+#
 # WHY NO "$@" PASS-THROUGH in dedicated mode. This is the only place a dedicated argv is
 # turned into a process, and the argv itself comes from lib/profiles.mjs#dedicatedArgv, built
 # from a CLOSED set (profile record, headless flag, workspace) — the same function the gate's

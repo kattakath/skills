@@ -1,14 +1,17 @@
 {
   "mcpServers": {
     "kapture": {
-      "command": "npx",
-      "args": ["-y", "kapture-mcp@2.6.1", "bridge"]
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/kapture-bridge.sh"
     },
     "chrome-devtools": {
       "command": "${CLAUDE_PLUGIN_ROOT}/scripts/chrome-devtools-attach.sh",
       "env": {
         "CDP_CATEGORY_EXTENSIONS": "1"
       }
+    },
+    "chrome-lab": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/browser.sh",
+      "args": ["lab-diag", "mcp"]
     }
   }
 }

@@ -25,7 +25,7 @@ done
   hex-encoded (`lab` → `6c6162`) and `CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS=1`. Read-only tools
   only: `take_snapshot`, `evaluate_script`, `list_network_requests`, `get_network_request`.
 - **Never call a CLI tool while the daemon is down.** Every tool call on a stopped daemon starts a
-  DEFAULT one (default profile, no redaction). `nav` checks first; your extraction must not run
+  DEFAULT one (default profile, no redaction) [F-CLI-AUTOSTART-DEFAULT]. `nav` checks first; your extraction must not run
   after a `nav` that did not exit 0.
 - **An item without a valid `done` stays pending.** `resume` redoes it; a `done` item is never
   re-opened.

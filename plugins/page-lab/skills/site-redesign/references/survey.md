@@ -62,7 +62,12 @@ marks instead. **M5 is LAYERED: re-run after every removal**, since hiding what 
 exposes what was behind it.
 
 What it does NOT do: M6-M8 (listeners, matched styles, dialogs — N/A under the keep-list
-unless something actually moves) and M9 (colour). Those stay manual. **UNMEASURED is a finding**;
+unless something actually moves) and M9 (colour). Those stay manual — drive them through the
+**`chrome-lab`** MCP entry (page-lab's own headless Chromium, `lab-diag` profile, no debugging
+port), never the operator's `chrome-devtools` attach: a survey measures the stock site, and the
+daily browser carries the operator's scripts and sign-ins. `survey-recon.mjs` itself stays on its
+throwaway raw-CDP browser (`PL_BROWSER_URL`). `chrome-lab` keeps cookies between sessions, so
+M12's fresh-profile rule still means clearing site data first. **UNMEASURED is a finding**;
 the tool says UNMEASURED rather than guessing, and so should you.
 
 Why it exists: these measurements used to be prose, so every site hand-rolled them — and the

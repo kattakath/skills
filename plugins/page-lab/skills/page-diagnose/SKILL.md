@@ -39,12 +39,22 @@ The doctor separates the three real causes — **no Node/npx**, **nothing listen
 process, because ungoogled-chromium also reports itself as `Chrome/<version>`
 [F-UGC-NO-VENDOR]. When it fails, read `references/attaching.md`.
 
-## Two attach modes — pick deliberately
+## Two browsers — pick deliberately
 
-| Mode | Server flag | Use when |
+| MCP entry | Browser | Use when |
 |---|---|---|
-| **Launch an isolated Chrome** | *(default)* + `--isolated` | **The default for diagnosis.** A public site needs no login state, and the daily profile stays untouched |
-| **Attach to a running browser** | `--browser-url=http://127.0.0.1:9222` | Login state or an installed extension changes the result — the **only** route to an extension today |
+| **`chrome-lab`** (`mcp__plugin_page-lab_chrome-lab__*`) | page-lab's own Chromium on the `lab-diag` profile: headless, over a **pipe** (no debugging port), no extensions, no sign-ins | **The default for diagnosis.** A public page needs no login state, and the operator's browser stays untouched |
+| `chrome-devtools` (`mcp__plugin_page-lab_chrome-devtools__*`) | **attach** to the operator's running browser (`--browser-url` / `--autoConnect`) | Login state or an installed extension changes the result — the **only** route to an extension today |
+
+`chrome-lab` launches when its first tool runs; `scripts/browser.sh lab-diag print-argv` shows
+exactly what it starts with. It keeps its own cookies between sessions under
+`${XDG_STATE_HOME:-~/.local/state}/page-lab/profiles/lab-diag` — not a fresh profile, so a
+measurement that needs one (a first-visit theme, a consent banner) clears site data first.
+
+**`chrome-lab` has no viewport or device emulation** — `emulate` and `resize_page` are off by
+design, because the emulation category is the user-agent override [F-CHROME-LAB-30TOOLS]. For
+§ Another viewport or device, use `chrome-devtools` against an **isolated** throwaway browser,
+never the daily one.
 
 Attaching needs the browser **started** with `--remote-debugging-port=9222`; it is a startup
 flag, and a browser already running ignores it on a second launch. Full detail, the three
@@ -52,7 +62,7 @@ profiles and what each costs: `references/attaching.md`.
 
 **An open debugging port is an unauthenticated control channel** — any local process can drive
 that browser and act as the signed-in user. Hand-run only, closed when the work ends, never a
-launchd agent or login item.
+launchd agent or login item. `chrome-lab` opens none.
 
 ## Two privacy flags — on every invocation, no exceptions
 
@@ -62,7 +72,8 @@ launchd agent or login item.
 ```
 
 The second is the data-egress one: without it, the URL of every traced page leaves the machine.
-Set both before tracing anything private, internal or personal.
+Set both before tracing anything private, internal or personal. Both `chrome-lab` and the
+`chrome-devtools` launcher already pass them; this rule is for a server you start by hand.
 
 ## Workflows
 
@@ -110,7 +121,10 @@ belongs to the preset tool.
 - **Files enter and leave through the server's roots.** Uploads and saved snapshots are
   refused outside them: the session's start directory, `$TMPDIR` and the Claude Code
   scratchpads (`/private/tmp/claude-<uid>`); set `CDP_EXTRA_WORKSPACES` for more, or copy into
-  a git-ignored directory under the start directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS]. For many files, or an
+  a git-ignored directory under the start directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS].
+  **`chrome-lab` is narrower on purpose:** its only extra root is
+  `${XDG_STATE_HOME:-~/.local/state}/page-lab/workspace/lab-diag`, not `$TMPDIR` or the
+  scratchpads — save there or under the start directory. For many files, or an
   input the page creates only on click, capture the input and set files over CDP
   [F-FILE-INPUT-ON-CLICK].
 - **A visible menu or dialog with no snapshot nodes is `aria-hidden`, not absent.** Drive it

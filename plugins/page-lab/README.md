@@ -56,6 +56,8 @@ guesses a selector does not fail loudly — it mangles the page.
 | `references/facts.md` | **Every falsifiable claim, once**, with an ID, a date and a re-measure recipe |
 | `references/routes.md` | The five routes: gate, probe, how to open, fidelity, disarm obligation |
 | `references/pick-protocol.md` + `pick-envelope.schema.json` | The pick contract |
+| `references/profile.schema.json` | `page-lab/profile@1` — one browser profile: `daily` (attach), `lab`, `lab-diag` (dedicated); the operator overlay is `${XDG_CONFIG_HOME}/page-lab/profiles.json` |
+| `references/gate.md` + `gate-detectors.json` + `block-envelope.schema.json` | Unattended runs: the model-facing protocol, the fixed detector rules (data, versioned), and the `page-lab/block@1` event a stop writes |
 | `references/cdp-extras.md` | Raw-CDP surface no MCP tool exposes, as symptom → command |
 | `scripts/` | Everything deterministic — the picker, the validator, the linter, the route probe, the survey recon, the two acceptance runners |
 | `scripts/lib/` | `cdp.mjs` (one CDP client), `harness.mjs` (trusted input, `settle`, the document-start lab), `redesign-checks.mjs` (the check groups) |
@@ -68,7 +70,9 @@ scripts/page-route.sh                      # which route is available right now
 scripts/route-up.sh                        # how to OPEN a route, not just name it
 scripts/userscript-meta-lint.sh <path|dir> # Greasy Fork readiness
 scripts/pick-validate.mjs --self-test scripts/fixtures
-scripts/devtools-doctor.sh                 # CDP connection preflight
+scripts/devtools-doctor.sh                 # CDP connection preflight (attach lane)
+scripts/browser.sh <profile> up|headed|down|status|print-argv|mcp   # the ONE launcher per profile
+scripts/page-lab-gate.mjs run|nav|done|handoff|resume|status --run R   # unattended runs, references/gate.md
 scripts/survey-recon.mjs --origin <url> --shapes a=/,b=/x   # M1-M4, M10-M12, measured
 scripts/userscript-acceptance.mjs <spec>   # does ONE change still WORK? (trusted events)
 scripts/redesign-acceptance.mjs <config>   # does the WHOLE redesign work? (document-start)
@@ -106,8 +110,39 @@ Wire the linter into CI:
 ```
 
 Requires `bash`, and `node` for the `.mjs` scripts, which have zero npm dependencies. The plugin's
-MCP servers are separate: `.mcp.json` fetches `kapture-mcp` and `chrome-devtools-mcp` (pinned) through
-`npx` at runtime, and they need a Chromium with a debug port.
+MCP servers are separate, and `.mcp.json` fetches each (pinned) through `npx` at runtime:
+
+| Entry | What it drives | Loads |
+|---|---|---|
+| `chrome-devtools` | **attach** to the operator's running Chromium (debug port or autoConnect) — supervised driving, userscript work, `/pick`. Unchanged | always |
+| `chrome-lab` | page-lab's **own** Chromium on the `lab-diag` profile, headless, over a pipe — no debugging port, no extensions, no emulation tools. Diagnosis, `/devtools`, the redesign survey | always |
+| `kapture` | the Kapture bridge for supervised pick tiers 2/3 | **only with `PAGE_LAB_KAPTURE=1`** — its bridge listens on `127.0.0.1:61822` and admits requests with no `Origin` header |
+
+Both browser entries loaded is **67 tools** (37 + 30) [F-CHROME-LAB-30TOOLS].
+
+### Dedicated profiles — page-lab's own browser
+
+`scripts/browser.sh` is the only launcher. `daily` execs the unchanged attach launcher; a
+dedicated profile gets a **closed argv** (no pass-through) from `scripts/lib/profiles.mjs`, on a
+derived dir `${XDG_STATE_HOME:-~/.local/state}/page-lab/profiles/<name>` (`0700`, excluded from
+Time Machine). It never passes a proxy, a user-agent override, `--chromeArg`,
+`--ignoreDefaultChromeArg` or `--acceptInsecureCerts`; it always passes
+`--categoryEmulation=false --categoryExtensions=false --redactNetworkHeaders` and both privacy
+flags [F-CLI-HEADLESS-DEFAULT]. A test asserts all of it on `print-argv`.
+
+The browser is `PAGE_LAB_CHROME` when set — the fleet points it at nixpkgs
+`playwright-driver.browsers-chromium` (Chrome for Testing, hash-pinned) — else the overlay's
+`executable`, else `chrome-devtools-mcp`'s own resolution, announced on stderr.
+
+**Unattended runs** go through `scripts/page-lab-gate.mjs` (`references/gate.md`): every page is
+opened by the gate, fixed detectors run after each load (`references/gate-detectors.json`), and
+a challenge, a login wall or a 403/429/503 stops the run with exit 10 and a `page-lab/block@1`
+event. `handoff` reopens the SAME profile headed for the operator; `resume` continues without
+redoing finished items. A second block on an origin within 24 h is a cooldown only the operator
+clears, in a terminal. Design and evidence: `docs/page-lab-vnext-design.md` in this repo.
+
+Tests: `node --test plugins/page-lab/tests/` (CI). The live half needs `PAGE_LAB_CHROME` and
+skips by name without it.
 
 ## Facts are dated, not remembered
 

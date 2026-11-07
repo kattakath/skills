@@ -7,14 +7,17 @@ Run the **`page-diagnose`** skill from this plugin for: `$ARGUMENTS`
 
 ## Order of operations
 
-1. **Preflight before diagnosing.** `bash ${CLAUDE_PLUGIN_ROOT}/scripts/page-route.sh` says which
-   routes are up at all; `bash ${CLAUDE_PLUGIN_ROOT}/scripts/devtools-doctor.sh` triages the CDP
-   lane in detail. Run them **before** theorising — most failures are an unreachable browser, not
+1. **Preflight before diagnosing.** On `chrome-lab` there is nothing to attach to: `bash
+   ${CLAUDE_PLUGIN_ROOT}/scripts/browser.sh lab-diag print-argv` shows what it launches. For the
+   attach lane, `bash ${CLAUDE_PLUGIN_ROOT}/scripts/page-route.sh` says which routes are up at all
+   and `bash ${CLAUDE_PLUGIN_ROOT}/scripts/devtools-doctor.sh` triages it in detail. Run them **before** theorising — most failures are an unreachable browser, not
    a bad call. The doctor separates "no Node", "nothing listening", and "listening but an
    unsupported build".
-2. **Choose the profile deliberately.** Launch an **isolated** instance for a public site; attach
-   to the daily browser only when login state or an installed extension changes the result.
-   `skills/page-diagnose/references/attaching.md` has both modes and the already-running trap.
+2. **Choose the browser deliberately.** Use the **`chrome-lab`** MCP entry by default — page-lab's
+   own headless Chromium on the `lab-diag` profile, over a pipe, no debugging port. Attach through
+   `chrome-devtools` only when login state or an installed extension changes the result, or for
+   viewport/device emulation, which `chrome-lab` does not carry [F-CHROME-LAB-30TOOLS].
+   `skills/page-diagnose/references/attaching.md` has the attach modes and the already-running trap.
 3. **Check what exists.** The published package ships fewer tools than upstream's generated
    docs describe [F-CDP-29TOOLS]. Consult `skills/page-diagnose/references/tools.md` rather than
    assuming a documented tool is callable — **never build a plan on an absent tool**.

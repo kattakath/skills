@@ -131,7 +131,7 @@ export function resolveExecutable(profile, env = process.env) {
  * THE dedicated argv (server flags only; the caller prepends the binary). Same inputs, same
  * output, byte for byte — the handoff relaunch differs from the headless launch by exactly
  * one token, --headless=true → --headless=false. `--headless` is spelled with a value because
- * upstream defaults it to TRUE: omitting it does not give a headed browser.
+ * upstream defaults it to TRUE: omitting it does not give a headed browser [F-CLI-HEADLESS-DEFAULT].
  *
  * What is deliberately absent, and why (§7.3, §8): no --proxyServer, no --chromeArg, no
  * --ignoreDefaultChromeArg (it drops --enable-automation with the rest), no

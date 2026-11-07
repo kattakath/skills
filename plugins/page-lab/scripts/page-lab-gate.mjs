@@ -361,7 +361,7 @@ function cmdNav(opts) {
   const q = pick.next;
   // Before the cursor moves: a missing daemon must not silently skip an item. And before ANY
   // tool call: every CLI tool call on a stopped daemon auto-starts a DEFAULT one (default
-  // profile dir, no redaction) — the gate never lets a tool call be what launches Chrome.
+  // profile dir, no redaction) [F-CLI-AUTOSTART-DEFAULT] — a tool call never launches Chrome.
   requireOurDaemon(r.profile);
   writeJson(r.files.cursor, { cursor: pick.cursor });
 

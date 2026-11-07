@@ -210,7 +210,7 @@ esac
 
 # ---------------------------------------------------------------- 3. tier 2 — Kapture
 kapture_state=DOWN
-kapture_detail='bridge not listening — a different problem from a bridge with no tabs'
+kapture_detail='bridge not listening (it starts only when the session began with PAGE_LAB_KAPTURE=1) — a different problem from a bridge with no tabs'
 http_get "$KAPTURE_URL/tabs" "$KAPTURE_HOST" "$KAPTURE_PORT"
 case "$?" in
   0)

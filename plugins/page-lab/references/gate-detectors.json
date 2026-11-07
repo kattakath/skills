@@ -8,7 +8,7 @@
     { "name": "status.503", "code": 503, "reason": "http-503" }
   ],
   "finalUrl": {
-    "$comment": "A 3xx never shows in list_network_requests (measured: a 302 to /login lists only the 200 /login), so a redirect is caught by WHERE the browser ended up, not by a status. A login path counts only when the requested URL was not itself one.",
+    "$comment": "A 3xx never shows in list_network_requests (measured: a 302 to /login lists only the 200 /login), so a redirect is caught by WHERE the browser ended up, not by a status [F-NAV-SUCCESS-ON-403]. A login path counts only when the requested URL was not itself one.",
     "loginPaths": [
       {
         "name": "login-path",

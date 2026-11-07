@@ -106,7 +106,7 @@ export function parseProbe(stdout) {
 /**
  * The main document's status from list_network_requests JSON. An iframe is a `document` request
  * too (measured: a challenge iframe's blocked load is listed after the page), so the main one is
- * the request whose URL is the page's FINAL URL, fragment ignored. No such request → null → STOP.
+ * the request whose URL is the page's FINAL URL, fragment ignored [F-NAV-SUCCESS-ON-403]. No such request → null → STOP.
  */
 export function parseDocumentStatus(stdout, finalUrl) {
   const strip = (u) => String(u).split('#')[0];

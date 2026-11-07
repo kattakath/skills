@@ -1,6 +1,10 @@
 # page-lab v-next — a dedicated browser profile; the human only when needed
 
-**Status: PROPOSED (2026-11-07). No implementation until the operator approves.**
+**Status: ACCEPTED, steps 1–5 implemented (2026-11-07).** Steps 6–8 (fleet) are open. Deviations found while
+building, all measured: `block@1` admits `detector-error` (§7.4 vs §7.1/§7.3); the headed relaunch passes
+`--headless=false` and the argv sets `--categoryExtensions=false` (both upstream defaults are TRUE); the
+main-document status is the request at the FINAL URL (an iframe is a document request too); `chrome-lab`
+carries no emulation tools, so page-diagnose's viewport work stays on the attach entry.
 Scope: `plugins/page-lab` in this repo, plus the consumer changes it implies in a Nix fleet.
 This document carries no site specifics on purpose.
 

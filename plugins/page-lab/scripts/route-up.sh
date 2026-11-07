@@ -226,6 +226,7 @@ tier_two() {
   fi
   say "  2  kapture  DOWN  the bridge itself is not listening on 127.0.0.1:61822"
   step "that is a different problem: the MCP server half is not running."
+  step "The bridge is OPT-IN: start the session with PAGE_LAB_KAPTURE=1, or .mcp.json exits it."
   return 1
 }
 
