@@ -145,7 +145,12 @@ versioned model).
 
 ## Conventions
 
-- MIT license on every plugin/skill (`LICENSE` at repo root).
+- MIT license on every plugin/skill (`LICENSE` at repo root) — except a **vendored**
+  third-party plugin (`job-search`, `vercel-workflow`), which keeps its upstream licence:
+  upstream's licence file (and any NOTICE) ships inside `plugins/<name>/`, `plugin.json` and
+  the marketplace entry name that licence and the upstream author, and the plugin README pins
+  the upstream commit SHA and states the modifications (none, so far). Skill directory names
+  stay identical to upstream.
 - `homepage`/`repository` point at `github.com/kattakath/skills`, not a per-plugin repo —
   everything ships from this one tree.
 - No secrets, no machine-specific paths, no dependency on any other repo's `CLAUDE.md` or

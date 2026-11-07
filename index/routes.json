@@ -123,6 +123,13 @@
       ]
     },
     {
+      "goal": "Prepare a job application: analyze the posting, ATS-check the resume, draft the cover letter, prep the interview and the salary talk",
+      "steps": [
+        "job-search"
+      ],
+      "note": "Vendored unmodified from Paramchoudhary/ResumeSkills (MIT), pinned by commit in the plugin README. Prompt-only skills; pair with the resume-tailoring and ATS-PDF routes for the resume itself."
+    },
+    {
       "goal": "Supervise Claude Code hooks so one bad hook cannot wedge a session",
       "steps": [
         "superhook"
@@ -256,6 +263,13 @@
       ],
       "note": "Typst + PDF/UA-1, one column, measured text-layer rules; verify with pdftotext, pdftotext -raw and veraPDF, not by eye.",
       "gap": true
+    },
+    {
+      "goal": "Build durable workflows on Vercel's Workflow SDK, or migrate to it from Temporal, Inngest, Trigger.dev or AWS Step Functions",
+      "steps": [
+        "vercel-workflow"
+      ],
+      "note": "Vendored unmodified from vercel/workflow (Apache-2.0, LICENSE shipped in the plugin, no upstream NOTICE), pinned by commit in the plugin README."
     }
   ]
 }

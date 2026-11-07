@@ -261,6 +261,27 @@
       "source": "./plugins/history-scrub"
     },
     {
+      "name": "job-search",
+      "description": "Job-application skills vendored unmodified from Paramchoudhary/ResumeSkills (MIT): posting analysis and match scoring, ATS resume optimization, cover letters, interview STAR prep and salary negotiation.",
+      "author": {
+        "name": "Param Choudhary",
+        "url": "https://github.com/Paramchoudhary"
+      },
+      "category": "productivity",
+      "keywords": [
+        "job-search",
+        "resume",
+        "ats",
+        "cover-letter",
+        "interview",
+        "salary-negotiation",
+        "vendored"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/job-search",
+      "license": "MIT",
+      "source": "./plugins/job-search"
+    },
+    {
       "name": "jsonresume-tailor",
       "description": "Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF.",
       "author": {
@@ -581,6 +602,28 @@
       "homepage": "https://github.com/kattakath/skills",
       "license": "MIT",
       "source": "./plugins/superhook"
+    },
+    {
+      "name": "vercel-workflow",
+      "description": "Vercel Workflow SDK skills vendored unmodified from vercel/workflow (Apache-2.0): durable, resumable workflows, SDK setup, and migration from Temporal, Inngest, Trigger.dev and AWS Step Functions.",
+      "author": {
+        "name": "Vercel Inc.",
+        "url": "https://github.com/vercel"
+      },
+      "category": "development",
+      "keywords": [
+        "workflow",
+        "vercel",
+        "durable-functions",
+        "workflow-sdk",
+        "temporal",
+        "inngest",
+        "step-functions",
+        "vendored"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/vercel-workflow",
+      "license": "Apache-2.0",
+      "source": "./plugins/vercel-workflow"
     },
     {
       "name": "wordpress",
