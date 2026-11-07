@@ -12,6 +12,9 @@ description: >-
   secure folder", Knox work profile) — no UI tree, wrong-profile launches, black
   secure screens. For the virtual emulator (locking, PIN, fingerprint) use the
   sibling `android-emulator` skill; general app-UI driving is the plugin's `mobile-mcp` server.
+  Also use when asked to "browse on the phone/emulator without screenshots", "drive
+  Chrome on Android", "blind browsing on mobile" or "inspect a page in Android Chrome" —
+  that is the plugin's `android-chrome` (CDP) server.
 ---
 
 # Android over ADB — the `android-phone` operator
@@ -122,7 +125,19 @@ accept the loss. Passkeys usually do not survive an export.
 ## Routing to neighbors
 
 - **Driving app UIs** (tap/type/screenshot inside apps): use the `mobile-mcp`
-  gateway server *after* this skill gets the device connected.
+  server *after* this skill gets the device connected.
+- **Browsing a web page blind** (no screenshots, no coordinates): use the plugin's
+  `android-chrome` server — chrome-devtools-mcp over CDP to Chrome on the device, phone or
+  emulator. `take_snapshot` returns an accessibility tree with uids; `click`/`fill` take a
+  uid; every page tool in 1.12.0 needs `pageId` from `list_pages`. Setup is one forward,
+  which the launcher tries at session start:
+  `adb forward tcp:9223 localabstract:chrome_devtools_remote` (add `-s <serial>` when
+  several devices are attached). Chrome must be **running** on the device — its socket
+  exists only then (`am start -a android.intent.action.VIEW -d <url> -p com.android.chrome`).
+  The server connects lazily, so a forward made after session start works without a restart.
+  "Could not connect to Chrome … ECONNREFUSED 127.0.0.1:9223" = the forward is missing or
+  Chrome is closed. Firefox does not work here: its "Remote debugging via USB" speaks
+  Mozilla RDP, not CDP — use Firefox only when the job needs its extensions or userscripts.
 - **Virtual emulator**: `android-emu` / the "Android Emulator" Spotlight app —
   don't point `android-phone` at it. Unlocking and fingerprint enrollment there are the
   sibling `android-emulator` skill.

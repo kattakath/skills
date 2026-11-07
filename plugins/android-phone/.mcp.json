@@ -3,6 +3,9 @@
     "mobile-mcp": {
       "command": "npx",
       "args": ["-y", "@mobilenext/mobile-mcp@1.0.15"]
+    },
+    "android-chrome": {
+      "command": "${CLAUDE_PLUGIN_ROOT}/scripts/android-chrome-attach.sh"
     }
   }
 }

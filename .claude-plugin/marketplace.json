@@ -10,7 +10,7 @@
   "plugins": [
     {
       "name": "android-phone",
-      "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring — plus unlocking an Android Emulator AVD by PIN or fingerprint.",
+      "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring — plus unlocking an Android Emulator AVD by PIN or fingerprint, and blind (screenshot-free) browsing of Chrome on any adb device over CDP.",
       "author": {
         "name": "Ismail Kattakath"
       },
