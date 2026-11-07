@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kattakath.com/schema/page-lab/profile/1",
+  "title": "page-lab/profile@1",
+  "description": "One browser profile page-lab can drive. The plugin ships path-free defaults only (daily, lab, lab-diag in scripts/lib/profiles.mjs); an operator overlay at ${XDG_CONFIG_HOME:-~/.config}/page-lab/profiles.json — a JSON array of these objects — replaces a default by name or adds one. A Nix fleet writes that file with Home Manager; no repo holds a per-person path.",
+  "$comment": "Same keyword surface as pick-envelope.schema.json, so lib/envelope.mjs#validate enforces it: type, properties, required, additionalProperties, items, uniqueItems, enum, const, pattern, minLength, allOf, if/then, not. Deliberately no $ref/$defs. A dedicated profile has NO userDataDir field on purpose: its dir is derived as ${XDG_STATE_HOME:-~/.local/state}/page-lab/profiles/<name> by the launcher, so neither a model nor an overlay can point a dedicated browser at the daily profile.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "name",
+    "mode"
+  ],
+  "properties": {
+    "schema": {
+      "const": "page-lab/profile@1",
+      "description": "Schema identity AND version; never widened in place."
+    },
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$",
+      "description": "daily, lab, lab-diag, or an operator-added name. Hex-encoded into the CLI daemon's session id, so it stays short and ASCII."
+    },
+    "mode": {
+      "enum": [
+        "attach",
+        "dedicated"
+      ],
+      "description": "attach = drive the operator's running browser (scripts/chrome-devtools-attach.sh, unchanged). dedicated = page-lab launches its own browser on its own dir, over a pipe."
+    },
+    "userDataDir": {
+      "type": "string",
+      "pattern": "^/",
+      "description": "attach only: the daily browser's profile dir, absolute. Forbidden on dedicated — that dir is derived, never supplied."
+    },
+    "headless": {
+      "type": "boolean",
+      "description": "dedicated only; defaults to true. The handoff relaunch flips it to false for one headed session and changes nothing else."
+    },
+    "executable": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source"
+      ],
+      "properties": {
+        "source": {
+          "enum": [
+            "env",
+            "nix",
+            "path"
+          ],
+          "description": "env = read PAGE_LAB_CHROME at launch. nix = a /nix/store path the fleet pinned. path = any other absolute path."
+        },
+        "path": {
+          "type": "string",
+          "pattern": "^/",
+          "description": "Absolute path to the browser executable. Required unless source is env."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "enum": [
+                  "nix",
+                  "path"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "path"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "source": {
+                "const": "nix"
+              }
+            }
+          },
+          "then": {
+            "properties": {
+              "path": {
+                "pattern": "^/nix/store/"
+              }
+            }
+          }
+        }
+      ]
+    },
+    "allowedOrigins": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$"
+      },
+      "description": "dedicated only: each origin becomes one --allowedUrlPattern=<origin>/* (URL Pattern syntax; an omitted port matches only the scheme default). Empty or absent = no network allowlist."
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "dedicated: the dir is derived, never supplied.",
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "dedicated"
+          }
+        }
+      },
+      "then": {
+        "not": {
+          "required": [
+            "userDataDir"
+          ]
+        }
+      }
+    },
+    {
+      "$comment": "attach: the browser is the operator's; page-lab neither launches it headless nor restricts its network.",
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "attach"
+          }
+        }
+      },
+      "then": {
+        "allOf": [
+          {
+            "not": {
+              "required": [
+                "allowedOrigins"
+              ]
+            }
+          },
+          {
+            "not": {
+              "required": [
+                "headless"
+              ]
+            }
+          },
+          {
+            "not": {
+              "required": [
+                "executable"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

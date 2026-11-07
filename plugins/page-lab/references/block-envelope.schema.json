@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://kattakath.com/schema/page-lab/block/1",
+  "title": "page-lab/block@1",
+  "description": "One navigation the gate STOPPED on, recorded so a human can hand off and a resume can continue. The producer is scripts/lib/envelope.mjs (buildBlock) and nothing else; the writer is scripts/page-lab-gate.mjs, which appends one per stop to the run's events.jsonl and exits 10. A sibling of page-lab/pick@1, not a widening of it: pick@1 is never widened in place, and its process outcomes exit WITHOUT an envelope.",
+  "$comment": "Same keyword surface as pick-envelope.schema.json, so lib/envelope.mjs#validate enforces it with zero new validator code: type, properties, required, additionalProperties, items, enum, const, pattern, minLength, maxLength, minimum, maximum, allOf, if/then. Deliberately no $ref/$defs. No field carries page markup: evidence names the RULE that matched (a slug, pattern-checked), never the text it matched against, and additionalProperties:false makes that a rule rather than a wish. ONE deviation from the design doc's enum (docs/page-lab-vnext-design.md §7.4): reason also admits detector-error. §7.1 says exit 10 always writes an event, §7.3 says an unparseable probe or an unreadable status STOPS; without a reason for that stop the two cannot both hold, and an exit 10 with no event would leave resume and handoff with no record of why the run stopped.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "measuredAt",
+    "url",
+    "origin",
+    "reason",
+    "evidence",
+    "profile",
+    "runId",
+    "queuePos",
+    "notes"
+  ],
+  "properties": {
+    "schema": {
+      "const": "page-lab/block@1",
+      "description": "Schema identity AND version. A future shape is page-lab/block@2 with its own file; this one is never widened in place."
+    },
+    "measuredAt": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "Local date of the stop — the same vocabulary and format as pick@1. Timestamps for the 24 h cooldown window live in the run's cooldown.json, not here."
+    },
+    "url": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^[a-zA-Z][a-zA-Z0-9+.-]*:",
+      "description": "The queue item's URL — what the gate was asked to open, not where the browser ended up (a final URL can carry a login redirect's tokens)."
+    },
+    "origin": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "^([a-zA-Z][a-zA-Z0-9+.-]*://[^/ ]+|null)$",
+      "description": "Origin of url, derived by the producer. The unit the cooldown counts in."
+    },
+    "reason": {
+      "enum": [
+        "http-403",
+        "http-429",
+        "http-503",
+        "challenge-cf",
+        "hcaptcha",
+        "recaptcha",
+        "login-wall",
+        "consent-gate",
+        "age-gate",
+        "detector-error"
+      ],
+      "description": "Why the gate stopped. detector-error = a detector could not read its signal (the probe's JSON did not parse, no main-document request was listed, the CLI call failed). It STOPS like any other reason: a detector that cannot see fails closed, never open."
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "detector",
+        "rule"
+      ],
+      "properties": {
+        "detector": {
+          "enum": [
+            "status",
+            "final-url",
+            "title",
+            "probe"
+          ],
+          "description": "Which of the fixed detectors in references/gate-detectors.json fired."
+        },
+        "rule": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[a-z0-9][a-z0-9.-]*$",
+          "description": "The matched rule's NAME from references/gate-detectors.json — a slug, so it cannot carry a title, a selector's match or any page text."
+        },
+        "status": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 599,
+          "description": "The main document's HTTP status, read from list_network_requests --resourceTypes document, never from navigate_page's success text (which reads \"Successfully navigated\" on a 403)."
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "A status stop must carry the status it stopped on.",
+          "if": {
+            "properties": {
+              "detector": {
+                "const": "status"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "status"
+            ]
+          }
+        }
+      ]
+    },
+    "profile": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{0,31}$",
+      "description": "The page-lab/profile@1 name the run drove."
+    },
+    "runId": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "The run directory's name under ${XDG_STATE_HOME}/page-lab/runs/."
+    },
+    "queuePos": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Zero-based line of the item in the run's queue.jsonl."
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "maxLength": 200
+      },
+      "description": "Limitations in the operator's words. Never page text."
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "An http-* reason is a status stop, and only a status stop.",
+      "if": {
+        "properties": {
+          "reason": {
+            "enum": [
+              "http-403",
+              "http-429",
+              "http-503"
+            ]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "evidence": {
+            "properties": {
+              "detector": {
+                "const": "status"
+              }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

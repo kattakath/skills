@@ -1,9 +1,11 @@
-// THE constructor and validator for `page-lab/pick@1`. Every producer goes through here —
-// pick-element.mjs (tier 1) and pick-normalize.mjs (tiers 2-5) — so the two cannot drift.
-// Re-implementing either half elsewhere is the drift the schema exists to stop.
+// THE constructor and validator for `page-lab/pick@1`, and the constructor for its sibling
+// `page-lab/block@1`. Every producer goes through here — pick-element.mjs (tier 1) and
+// pick-normalize.mjs (tiers 2-5) for picks, page-lab-gate.mjs for blocks — so no two can drift.
+// Re-implementing either half elsewhere is the drift the schemas exist to stop.
 //
-// Authority is ../../references/pick-envelope.schema.json. This file enforces it; it never
-// widens it. Not an entrypoint: pick-validate.mjs is the CLI.
+// Authority is ../../references/pick-envelope.schema.json and block-envelope.schema.json
+// (profile.schema.json validates through the same function). This file enforces them; it
+// never widens them. Not an entrypoint: pick-validate.mjs is the CLI.
 //
 // validate() returns { valid, errors[] } where each error is
 //   { path: "/target/candidates/0/matches", keyword: "required", message: "..." }
@@ -23,12 +25,35 @@ export const SHIP_BLOCKERS = Object.freeze([
   'sanitizer-drift',
 ]);
 
-let cachedSchema = null;
+export const BLOCK_SCHEMA_NAME = 'page-lab/block@1';
+export const BLOCK_SCHEMA_PATH = new URL(
+  '../../references/block-envelope.schema.json',
+  import.meta.url
+);
+export const PROFILE_SCHEMA_NAME = 'page-lab/profile@1';
+export const PROFILE_SCHEMA_PATH = new URL('../../references/profile.schema.json', import.meta.url);
 
-/** The schema as an object, read once. */
+const cachedSchemas = new Map();
+
+function loadOnce(url) {
+  const key = String(url);
+  if (!cachedSchemas.has(key)) cachedSchemas.set(key, JSON.parse(readFileSync(url, 'utf8')));
+  return cachedSchemas.get(key);
+}
+
+/** The pick schema as an object, read once. */
 export function loadSchema() {
-  if (!cachedSchema) cachedSchema = JSON.parse(readFileSync(SCHEMA_PATH, 'utf8'));
-  return cachedSchema;
+  return loadOnce(SCHEMA_PATH);
+}
+
+/** The block schema as an object, read once. */
+export function loadBlockSchema() {
+  return loadOnce(BLOCK_SCHEMA_PATH);
+}
+
+/** The profile schema as an object, read once. */
+export function loadProfileSchema() {
+  return loadOnce(PROFILE_SCHEMA_PATH);
 }
 
 /** Local date, because measuredAt is the dated WHY block's citation, pre-formatted. */
@@ -152,6 +177,24 @@ export function build(parts = {}) {
 
   env.shipBlockers = deriveShipBlockers(env, parts.shipBlockers ?? []);
   return prune(env);
+}
+
+/**
+ * The only place a page-lab/block@1 object is constructed.
+ *
+ * Fills schema/measuredAt/origin and an empty notes list; everything else is the caller's
+ * measurement. Like build(), it never invents: no default reason, no default evidence, no
+ * guessed queue position. A missing required field stays missing and validate() says so — the
+ * gate validates before it writes, so an incomplete event is a crash, never a silent line.
+ */
+export function buildBlock(parts = {}) {
+  const env = prune({ ...parts });
+  env.schema = BLOCK_SCHEMA_NAME;
+  env.measuredAt ||= localDate();
+  if (env.url && !env.origin) env.origin = originOf(env.url);
+  env.notes = Array.isArray(env.notes) ? [...env.notes] : [];
+  if (env.evidence) env.evidence = prune({ ...env.evidence });
+  return env;
 }
 
 // ---------------------------------------------------------------------------
