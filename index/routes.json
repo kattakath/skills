@@ -62,6 +62,13 @@
       "gap": true
     },
     {
+      "goal": "Get language-server diagnostics and navigation in shell scripts",
+      "steps": [
+        "bash-language-server"
+      ],
+      "note": "Hook-free: needs bash-language-server and shellcheck on PATH. The community variants install the server over the network at session start."
+    },
+    {
       "goal": "Audit a config monorepo's foundation",
       "steps": [
         "foundation-audit"

@@ -48,6 +48,25 @@
       "source": "./plugins/ats-safe-pdf"
     },
     {
+      "name": "bash-language-server",
+      "description": "Shell script intelligence through bash-language-server: ShellCheck diagnostics, hover, go-to-definition and references in .sh, .bash and .ksh files. Hook-free; expects bash-language-server and shellcheck on PATH.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "bash",
+        "shell",
+        "shellcheck",
+        "lsp",
+        "bash-language-server",
+        "language-server"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/bash-language-server",
+      "license": "MIT",
+      "source": "./plugins/bash-language-server"
+    },
+    {
       "name": "beancount",
       "description": "Double-entry accounting as a derived artifact: build a Beancount journal from statement-extract JSONL, a category-rules CSV and a per-transaction decisions CSV — transfers paired through a clearing account (exact, fee band, FX, in-wallet conversion), statement and screen balances as assertions, loan snapshots with interest pads — written only when Beancount's own check passes. Plus bean-query recipes and Fava on demand, read-only, on 127.0.0.1.",
       "author": {
