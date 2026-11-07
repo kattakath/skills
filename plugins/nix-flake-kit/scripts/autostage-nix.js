@@ -3,58 +3,67 @@
  * PostToolUse auto-stage hook (Write|Edit).
  *
  * Safety net for the git-purity rule: flakes evaluate the git tree, so a newly
- * written/edited .nix file must be `git add`ed to be visible to evaluation.
- * This stages it automatically right after the write.
+ * written .nix file must be known to git to be visible to evaluation. This stages
+ * it right after the write. Only files under CLAUDE_PROJECT_DIR are touched
+ * (hook-input.js owns that test).
  *
- * Hook input arrives as JSON on stdin (NOT via env vars). We read
- * tool_input.file_path; the earlier $CLAUDE_TOOL_FILE_PATH version was a silent
- * no-op because that variable is never populated for PostToolUse.
+ * Hook input arrives as JSON on stdin (NOT via env vars). The earlier
+ * $CLAUDE_TOOL_FILE_PATH version was a silent no-op because that variable is never
+ * populated for PostToolUse.
  *
- * Read-only-ish reporter: never throws, never blocks, always exits 0. Only acts
- * on .nix files; everything else is a silent pass.
+ * NO SHELL. `git` is spawned with an argument vector, and `--` ends its options, so
+ * a filename is only ever a pathspec. The old `execSync(\`git add ${JSON.stringify(abs)}\`)`
+ * put the path inside shell double quotes, where `$(…)` and backticks still expand:
+ * writing `$(touch PWNED).nix` ran `touch` (measured 2026-11-07).
+ *
+ * RUN FROM THE FILE'S OWN DIRECTORY, not the project root. git then finds the
+ * repository the file actually belongs to. Claude Code creates its worktrees INSIDE
+ * the project (`.claude/worktrees/<name>/`, code.claude.com/docs/en/worktrees) and
+ * keeps CLAUDE_PROJECT_DIR at the main checkout, so running from the root asked the
+ * MAIN repo to add a path inside a nested worktree; git refused and the hook stayed
+ * silent, leaving the file untracked in exactly the isolated sessions that need the
+ * net. The same applies to a submodule or a nested repo holding its own flake.
+ *
+ * Never blocks, always exits 0. Silent when the file is in no repository or is
+ * gitignored (both deliberate). Any OTHER failure (e.g. a concurrent index.lock) is
+ * told to Claude via additionalContext, so a missed stage is never silent.
  */
 
-const { execSync } = require("node:child_process");
-const fs = require("node:fs");
+const { execFileSync } = require("node:child_process");
 const path = require("node:path");
+const { readNixTarget } = require("./hook-input.js");
+
+const QUIET_FAILURE = /not a git repository|paths are ignored by one of your \.gitignore/i;
 
 try {
-  let raw = "";
-  try {
-    raw = fs.readFileSync(0, "utf8");
-  } catch {
-    process.exit(0);
-  }
-  if (!raw.trim()) process.exit(0);
-
-  let evt;
-  try {
-    evt = JSON.parse(raw);
-  } catch {
-    process.exit(0);
-  }
-
-  const ti = evt.tool_input || {};
-  // Write/Edit use file_path; some tools surface filePath in tool_response.
-  const file = ti.file_path || (evt.tool_response && evt.tool_response.filePath) || "";
-  if (!file || !file.endsWith(".nix")) process.exit(0);
-
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-
-  // Only stage files inside the project (defense against odd absolute paths).
-  const abs = path.resolve(projectDir, file);
-  if (!abs.startsWith(path.resolve(projectDir))) process.exit(0);
+  const t = readNixTarget();
+  if (!t) process.exit(0);
+  const shown = path.relative(t.projectDir, t.abs);
 
   try {
-    execSync(`git add ${JSON.stringify(abs)}`, {
-      cwd: projectDir,
-      stdio: ["ignore", "ignore", "ignore"],
+    execFileSync("git", ["add", "--", path.basename(t.abs)], {
+      cwd: t.dir,
+      stdio: ["ignore", "ignore", "pipe"],
+      timeout: 8000,
     });
     process.stdout.write(
-      JSON.stringify({ systemMessage: `auto-staged ${file} (git-purity safety net)` }),
+      JSON.stringify({ systemMessage: `auto-staged ${shown} (git-purity safety net)` }) + "\n",
     );
-  } catch {
-    /* not a git repo / nothing to stage — silent */
+  } catch (e) {
+    const stderr = String((e && e.stderr) || (e && e.message) || "");
+    if (!QUIET_FAILURE.test(stderr)) {
+      const first = stderr.trim().split("\n")[0] || "git add failed";
+      process.stdout.write(
+        JSON.stringify({
+          hookSpecificOutput: {
+            hookEventName: "PostToolUse",
+            additionalContext:
+              `nix-flake-kit could NOT auto-stage ${shown}: ${first}\n` +
+              `A flake does not see an untracked file. Stage ${t.abs} yourself before evaluating.`,
+          },
+        }) + "\n",
+      );
+    }
   }
   process.exit(0);
 } catch {

@@ -1,13 +1,14 @@
 # nix-flake-kit
 
-Hooks for working on **Nix flakes** with Claude Code. Two `PostToolUse` hooks on
-`Write|Edit`, both **no-ops in a repo with no `.nix` files** — so enabling this
-globally is safe.
+Hooks and an MCP server for working on **Nix flakes** with Claude Code. Two
+`PostToolUse` hooks on `Write|Edit`, both **no-ops in a repo with no `.nix`
+files** — so enabling this globally is safe.
 
-| Hook | What it does |
+| Component | What it does |
 |---|---|
-| `autostage-nix.js` | `git add`s a `.nix` file as soon as it is written or edited. |
+| `autostage-nix.js` | `git add`s a `.nix` file as soon as it is written or edited — only under `CLAUDE_PROJECT_DIR`, and in the repository the file belongs to. |
 | `nix-home-path-lint.js` | Flags a hardcoded per-user home directory (`/Users/<name>`, `/home/<name>`) in a `.nix` **value** — except the line that *declares* one, `users.users.<name>.home = "/Users/<name>";`. |
+| `nixos` MCP server | [`mcp-nixos`](https://github.com/utensils/mcp-nixos): live, read-only lookup of nixpkgs packages and NixOS / home-manager / nix-darwin options. |
 
 ## Why auto-staging is not a convenience
 
@@ -16,6 +17,31 @@ has not been `git add`ed is *invisible* to the evaluator — `nix flake check`
 fails with a confusing "path does not exist", or worse, silently evaluates a
 previous version of the file and reports success. Staging at write time removes
 the whole class of error.
+
+### What it covers, and what it cannot
+
+- **Every built-in tool that writes a `.nix`**: `Write` and `Edit`. There is no
+  `MultiEdit` in the current [tools reference](https://code.claude.com/docs/en/tools-reference),
+  and `NotebookEdit` only writes `.ipynb`.
+- **Worktrees, nested repos and submodules.** `git` runs from the file's own
+  directory, so a `.nix` in Claude Code's own `.claude/worktrees/<name>/` is staged in
+  *that* worktree. `CLAUDE_PROJECT_DIR` stays at the main checkout after Claude enters a
+  worktree ([hooks reference](https://code.claude.com/docs/en/hooks)), so running from
+  the project root used to miss these files without a word.
+- **Not covered: files written by `Bash`** (a heredoc, `cp`, a generator). No hook
+  input names the file. Stage those yourself, or run `git add -A` before evaluating.
+- **Never silent on failure.** A file in no repository, or a gitignored one, is left
+  alone on purpose. Any other `git add` failure (a held `index.lock`, say) reaches Claude
+  as `additionalContext`, so a missed stage is never mistaken for a done one.
+- **No shell.** `git` gets an argument vector and `--`, so a filename can only ever be
+  a pathspec.
+
+Why a full `git add` and not `git add -N` (intent-to-add)? `-N` is enough for Nix:
+`nix flake init` uses it, and Nix's own untracked-file error suggests it. Measured on
+Determinate Nix 3.24.2 (Nix 2.35.3): an untracked file fails to evaluate, and after
+`git add -N` it evaluates, later edits included. But an intent-to-add file is left
+out of a plain `git commit`. The full add keeps "written means committed-with-the-rest",
+which is what this net has always promised.
 
 ## Why the home-path lint is value-only
 
@@ -42,16 +68,32 @@ The hook is the advisory half of a pair. The gate half is
 [`kattakath/nix-config`](https://github.com/kattakath/nix-config)'s
 `ast-grep/rules/nix-hardcoded-home-path.yml`, which runs in CI on every commit;
 the two carry the same regex and exemptions and must change together (last
-synced 2026-09-16, nix-config PR #532).
+synced 2026-11-07: the rule's leading `(^|[^a-zA-Z])` guard).
+
+## The MCP server
+
+`.mcp.json` names the bare `mcp-nixos` command, so **`mcp-nixos` must be on `PATH`**
+(nixpkgs ships it: `nix profile install nixpkgs#mcp-nixos`). Without it the server
+does not start. The hooks do not need it.
+
+A bare binary is deliberate, not an unpinned spec. The version is pinned by whatever
+installs it (on the operator's fleet, `pkgs.mcp-nixos` in nix-config's `flake.lock`),
+so no registry fetch happens when a session starts. The alternative,
+`uvx mcp-nixos==<version>`, would put the pin here, but it fetches from PyPI at spawn
+and needs `uv`.
 
 ## Tests
 
 ```bash
-node --test plugins/nix-flake-kit/tests/nix-home-path-lint.test.js
+node --test plugins/nix-flake-kit/tests/*.test.js
 ```
 
-The fixtures mirror the ast-grep rule's own `valid:`/`invalid:` test file, so
-both halves are proven against the same inputs.
+`autostage-nix.test.js` builds throwaway git repos and asks git what got staged. It
+covers worktrees, nested repos, injection-shaped filenames, a prefix-sibling
+directory, a symlink out of the project and a held `index.lock`. The lint fixtures
+mirror the ast-grep rule's own `valid:`/`invalid:` test file, so both halves are
+proven against the same inputs. CI runs both (`validate.yml`, step `nix-flake-kit
+hook cases`).
 
 ## Install
 
