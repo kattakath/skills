@@ -86,6 +86,9 @@ quiet("uppercase segment is not a user", '{ dir = "/Users/Shared/x"; }');
 quiet("shell variable is not a user", '{ dir = "/Users/$USER/x"; }');
 quiet("interpolated homeDirectory", '{ dir = "${config.home.homeDirectory}/x"; }');
 quiet("bare /home with no user", '{ dir = "/home"; }');
+// The rule's leading `(^|[^a-zA-Z])` guard: `/home/` continuing a word is not a home.
+quiet("/home/ continuing a path segment (rule's leading guard)", '{ dir = "/var/home/alice/x"; }');
+flags("home after a non-letter separator", '{ PATH = "/bin:/home/alice/bin"; }');
 quiet("prose in a comment", '# see /Users/ismail/Developer for the layout\n{ }');
 // STRUCTURAL exemption — the declaration of a home dir, both spellings.
 quiet("users.users.<name>.home declaration", '{ users.users.izzy.home = "/Users/izzy"; }');

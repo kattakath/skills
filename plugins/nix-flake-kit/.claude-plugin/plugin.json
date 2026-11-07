@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "nix-flake-kit",
-  "version": "2.0.2",
-  "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values.",
+  "version": "2.0.3",
+  "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. Also ships the mcp-nixos server for nixpkgs and option lookup.",
   "author": {
     "name": "Ismail Kattakath"
   },

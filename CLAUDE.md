@@ -81,19 +81,19 @@ it until it was removed wholesale (#31); do not reintroduce it.
 ## Validating before you push
 
 ```bash
-npx -y @anthropic-ai/claude-code@2.1.268 plugin validate .
-for p in plugins/*/; do npx -y @anthropic-ai/claude-code@2.1.268 plugin validate "$p"; done
+npx -y @anthropic-ai/claude-code@2.1.296 plugin validate .
+for p in plugins/*/; do npx -y @anthropic-ai/claude-code@2.1.296 plugin validate "$p"; done
 python3 scripts/build-index.py --check
 ```
 
-**The `@2.1.268` pin is load-bearing — do not drop it back to bare `npx`.** Measured 2026-10-06 on
+**The `@2.1.296` pin is load-bearing — do not drop it back to bare `npx`.** Measured 2026-10-06 on
 this machine: bare `npx -y @anthropic-ai/claude-code --version` resolves to a **cached 2.1.197**,
 the local `claude` is **2.1.278**, and CI pins **2.1.268**. Three different CLIs, and the
 unpinned command is none of them — so "matching it locally" was false while this said `npx` alone.
 Raise the pin here only together with the one in `validate.yml`.
 
 This is otherwise exactly what `.github/workflows/validate.yml` runs. Plugins with test suites
-(`page-lab`, `mac-app-send`, `skill-curator`) have their own commands in that workflow; check it
+(`page-lab`, `mac-app-send`, `skill-curator`, `nix-flake-kit` and others) have their own commands in that workflow; check it
 before assuming "validate passes" is sufficient for those. Two steps there cover assets the
 manifest validator never reads: `Nix assets parse`, and `Plugin workflows load-shape` — the latter
 exists because a workflow script whose `export const meta` literal is not the **first** statement

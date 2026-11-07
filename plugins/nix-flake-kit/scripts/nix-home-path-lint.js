@@ -13,7 +13,7 @@
  * Gate half: nix-config's ast-grep/rules/nix-hardcoded-home-path.yml carries the
  * same regex and exemptions and runs in CI on every commit, not just on Claude's
  * own writes. The two MUST stay in sync — change one, change the other. Last
- * synced 2026-09-16 with nix-config PR #532.
+ * synced 2026-11-07 (the rule's leading `(^|[^a-zA-Z])` guard; see HOME_PATH).
  *
  * Deliberately NOT flagged (the other axis): Nix SOURCE path literals like
  * `../../claude/CLAUDE.md` — those are eval-relative to the .nix file, copied to
@@ -28,11 +28,12 @@
  * also reached Claude but made the UI print "hook returned blocking error" for
  * advice. Never wedges a turn: any unexpected error exits 0.
  *
- * Input: hook JSON on stdin (tool_input.file_path), same as autostage-nix.js.
+ * Input: hook JSON on stdin, parsed by hook-input.js (shared with autostage-nix.js).
  */
 
 const fs = require("node:fs");
 const path = require("node:path");
+const { readNixTarget } = require("./hook-input.js");
 
 // A per-user home dir: /Users/<name> (macOS) or /home/<name> (Linux), where
 // <name> starts lowercase (so /Users/Shared, a bare /home, and /Users/$USER are
@@ -47,7 +48,13 @@ const path = require("node:path");
 // end-of-STRING here (no `m` flag) — correct, because the test runs per line.
 // Same regex as nix-config's ast-grep/rules/nix-hardcoded-home-path.yml, whose
 // `($|[^a-z0-9._-])` is the same set.
-const HOME_PATH = /\/(?:Users|home)\/[a-z][a-z0-9._-]*(?:$|[^a-z0-9._-])/g;
+//
+// LEADING GUARD (synced 2026-11-07): the rule's regex opens with `(^|[^a-zA-Z])`, so
+// a `/home/` that continues a word — `/var/home/alice` (Fedora Atomic), `/data/home/x`
+// — is not a match there. This hook lacked the guard while both headers claimed the
+// same regex, so it flagged what the gate passes. `(?<![a-zA-Z])` is that guard as a
+// lookbehind (it consumes nothing, so `m.index` still points at the path).
+const HOME_PATH = /(?<![a-zA-Z])\/(?:Users|home)\/[a-z][a-z0-9._-]*(?:$|[^a-z0-9._-])/g;
 
 // The NON-OPERATOR user segments — a Tart GUEST account (`admin`), the
 // evalModules fixture user (`tester`), the option-`example` placeholder (`me`)
@@ -92,28 +99,9 @@ const EXEMPT_USER = /\/(?:Users|home)\/(?:admin|tester|me|stranger)(?:$|[^a-z0-9
 const HOME_DECLARATION_BEFORE = /(?:^|[\s{;(])(?:[^\s=]+\.)?home\s*=\s*"$/;
 
 try {
-  let raw = "";
-  try {
-    raw = fs.readFileSync(0, "utf8");
-  } catch {
-    process.exit(0);
-  }
-  if (!raw.trim()) process.exit(0);
-
-  let evt;
-  try {
-    evt = JSON.parse(raw);
-  } catch {
-    process.exit(0);
-  }
-
-  const ti = evt.tool_input || {};
-  const file = ti.file_path || (evt.tool_response && evt.tool_response.filePath) || "";
-  if (!file || !file.endsWith(".nix")) process.exit(0);
-
-  const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
-  const abs = path.resolve(projectDir, file);
-  if (!abs.startsWith(path.resolve(projectDir))) process.exit(0);
+  const t = readNixTarget(); // shared with autostage-nix.js: same files, same boundary
+  if (!t) process.exit(0);
+  const { projectDir, abs } = t;
 
   let content = "";
   try {
