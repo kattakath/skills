@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://kattakath.com/schema/page-lab/profile/1",
   "title": "page-lab/profile@1",
-  "description": "One browser profile page-lab can drive. The plugin ships path-free defaults only (daily, lab, lab-diag in scripts/lib/profiles.mjs); an operator overlay at ${XDG_CONFIG_HOME:-~/.config}/page-lab/profiles.json — a JSON array of these objects — replaces a default by name or adds one. A Nix fleet writes that file with Home Manager; no repo holds a per-person path.",
+  "description": "One browser profile page-lab can drive. The plugin ships path-free defaults only (daily, lab, lab-diag in scripts/lib/profiles.mjs); an operator overlay at ${XDG_CONFIG_HOME:-~/.config}/page-lab/profiles.json — {\"profiles\": [ … ]}, PARTIAL entries merged by name onto the defaults (scripts/fixtures/overlay/fleet-hm.json) — overrides a default's fields or adds a profile; the merged record must validate here. A Nix fleet writes that file with Home Manager; no repo holds a per-person path.",
   "$comment": "Same keyword surface as pick-envelope.schema.json, so lib/envelope.mjs#validate enforces it: type, properties, required, additionalProperties, items, uniqueItems, enum, const, pattern, minLength, allOf, if/then, not. Deliberately no $ref/$defs. A dedicated profile has NO userDataDir field on purpose: its dir is derived as ${XDG_STATE_HOME:-~/.local/state}/page-lab/profiles/<name> by the launcher, so neither a model nor an overlay can point a dedicated browser at the daily profile.",
   "type": "object",
   "additionalProperties": false,
@@ -50,7 +50,7 @@
             "nix",
             "path"
           ],
-          "description": "env = read PAGE_LAB_CHROME at launch. nix = a /nix/store path the fleet pinned. path = any other absolute path."
+          "description": "env = read PAGE_LAB_CHROME at launch, and refuse to launch if it is unset (never fall back to another browser). nix = a /nix/store path the fleet pinned. path = any other absolute path."
         },
         "path": {
           "type": "string",

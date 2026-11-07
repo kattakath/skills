@@ -39,19 +39,20 @@ function sandbox() {
     assert.equal(r.code, 0, r.stderr);
     return runDir(run);
   };
-  return { base, env, gate, runDir, newRun };
+  const cooldownFile = join(env.XDG_STATE_HOME, 'page-lab', 'cooldown.json');
+  return { base, env, gate, runDir, newRun, cooldownFile };
 }
 
 const URLS = ['https://a.example/1', 'https://a.example/2', 'https://b.example/1', 'https://c.example/1'];
 
-test('run --no-start: queue, cursor, cooldown and meta written, owner-only', () => {
+test('run --no-start: queue, cursor and meta written, owner-only; no per-run cooldown', () => {
   const { newRun } = sandbox();
   const dir = newRun('r1', [...URLS, URLS[0]]);
   assert.equal(statSync(dir).mode & 0o777, 0o700);
   const q = readFileSync(join(dir, 'queue.jsonl'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
   assert.deepEqual(q.map((i) => i.url), URLS, 'duplicate dropped');
   assert.equal(statSync(join(dir, 'queue.jsonl')).mode & 0o777, 0o600);
-  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'cooldown.json'), 'utf8')), {});
+  assert.equal(existsSync(join(dir, 'cooldown.json')), false, 'the cooldown is shared, never per run');
 });
 
 test('usage: unknown command, missing --run, bad run id, attach profile, existing run', () => {
@@ -96,20 +97,20 @@ test('nav: everything done → drained, exit 0, no browser touched', () => {
 });
 
 test('nav: three origins in cooldown → exit 11 before any CLI call', () => {
-  const { gate, newRun } = sandbox();
-  const dir = newRun('c', URLS);
+  const { gate, newRun, cooldownFile } = sandbox();
+  newRun('c', URLS);
   const t = new Date().toISOString();
   const cooling = { blocks: [t, t], state: 'cooldown' };
-  writeFileSync(join(dir, 'cooldown.json'), JSON.stringify({ 'https://a.example': cooling, 'https://b.example': cooling, 'https://c.example': cooling }));
+  writeFileSync(cooldownFile, JSON.stringify({ 'https://a.example': cooling, 'https://b.example': cooling, 'https://c.example': cooling }));
   const r = gate('nav', '--run', 'c');
   assert.equal(r.code, 11, r.stderr);
   assert.equal(r.json.cooldown.length, 3);
 });
 
 test('nav: every pending item on a cooling origin → exit 11', () => {
-  const { gate, newRun } = sandbox();
-  const dir = newRun('c1', URLS.slice(0, 2));
-  writeFileSync(join(dir, 'cooldown.json'), JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } }));
+  const { gate, newRun, cooldownFile } = sandbox();
+  newRun('c1', URLS.slice(0, 2));
+  writeFileSync(cooldownFile, JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } }));
   const r = gate('nav', '--run', 'c1');
   assert.equal(r.code, 11);
   assert.deepEqual(r.json.held, { blocked: 0, cooldown: 2 });
@@ -131,8 +132,8 @@ test('handoff plan: same dir, same flags, --headless=false the ONLY change; open
 });
 
 test('resume plan after handoff re-processes 0 done items and lifts only first-block stops', () => {
-  const { gate, newRun, base } = sandbox();
-  const dir = newRun('rs', URLS);
+  const { gate, newRun, base, cooldownFile } = sandbox();
+  newRun('rs', URLS);
   const res = join(base, 'r.json');
   writeFileSync(res, '{}');
   const doneItems = [itemHash(URLS[0]), itemHash(URLS[2])];
@@ -144,7 +145,7 @@ test('resume plan after handoff re-processes 0 done items and lifts only first-b
   assert.equal(r.json.items.filter((i) => doneItems.includes(i)).length, 0, 'a done item would be re-processed');
   assert.ok(r.json.argv.includes('--headless=true'));
   // dry-run writes nothing
-  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'cooldown.json'), 'utf8')), {});
+  assert.equal(existsSync(cooldownFile), false);
 });
 
 test('lock: a foreign-host or live not-ours SingletonLock → exit 12, before any relaunch', () => {
@@ -166,29 +167,49 @@ test('lock: a foreign-host or live not-ours SingletonLock → exit 12, before an
 });
 
 test('clear-cooldown: refused without a terminal, nothing cleared', () => {
-  const { gate, newRun } = sandbox();
-  const dir = newRun('cc', URLS);
+  const { gate, newRun, cooldownFile } = sandbox();
+  newRun('cc', URLS);
   const before = JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } });
-  writeFileSync(join(dir, 'cooldown.json'), before);
-  const r = gate('clear-cooldown', '--run', 'cc', '--origin', 'https://a.example');
+  writeFileSync(cooldownFile, before);
+  const r = gate('clear-cooldown', '--origin', 'https://a.example');
   assert.equal(r.code, 2);
   assert.match(r.stderr, /TTY/);
-  assert.equal(readFileSync(join(dir, 'cooldown.json'), 'utf8'), before);
+  assert.equal(readFileSync(cooldownFile, 'utf8'), before);
 });
 
 test('clear-cooldown: a human at a terminal clears it', { skip: !['darwin', 'linux'].includes(process.platform) }, () => {
-  const { env, newRun } = sandbox();
-  const dir = newRun('ct', URLS);
-  writeFileSync(join(dir, 'cooldown.json'), JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } }));
-  const cmd = ['node', GATE, 'clear-cooldown', '--run', 'ct', '--origin', 'https://a.example'];
+  const { env, newRun, cooldownFile } = sandbox();
+  newRun('ct', URLS);
+  writeFileSync(cooldownFile, JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } }));
+  const cmd = ['node', GATE, 'clear-cooldown', '--origin', 'https://a.example'];
   // script(1) gives the command a pseudo-terminal — the closest a test gets to "a human ran it".
   const args = process.platform === 'darwin' ? ['-q', '/dev/null', ...cmd] : ['-qec', cmd.join(' '), '/dev/null'];
   const r = spawnSync('script', args, { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
   assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
-  assert.equal(JSON.parse(readFileSync(join(dir, 'cooldown.json'), 'utf8'))['https://a.example'].state, 'cleared');
+  assert.equal(JSON.parse(readFileSync(cooldownFile, 'utf8'))['https://a.example'].state, 'cleared');
 });
 
 test('the run protocol never tells the model to open a page itself', () => {
   const text = readFileSync(join(ROOT, 'references', 'gate.md'), 'utf8');
   assert.equal(/navigate_page|new_page/.test(text), false, 'references/gate.md names a navigation tool');
+});
+
+test('cooldown is per ORIGIN across runs: a cooldown recorded by one run holds another run', () => {
+  const { gate, newRun, cooldownFile } = sandbox();
+  newRun('first', URLS.slice(0, 1));
+  newRun('second', URLS.slice(1, 2)); // same origin, different run
+  writeFileSync(cooldownFile, JSON.stringify({ 'https://a.example': { blocks: [new Date().toISOString()], state: 'cooldown' } }));
+  const r = gate('nav', '--run', 'second');
+  assert.equal(r.code, 11);
+  assert.deepEqual(r.json.held, { blocked: 0, cooldown: 1 });
+});
+
+test('status is the model\'s window on run state: counts plus the last event, no file reads needed', () => {
+  const { gate, newRun, runDir } = sandbox();
+  newRun('st', URLS);
+  writeFileSync(join(runDir('st'), 'events.jsonl'), `${JSON.stringify({ url: URLS[1], reason: 'http-429', evidence: { rule: 'status.429' }, queuePos: 1 })}\n`);
+  const r = gate('status', '--run', 'st');
+  assert.equal(r.code, 0, r.stderr);
+  assert.deepEqual(r.json.lastEvent, { reason: 'http-429', rule: 'status.429', url: URLS[1], queuePos: 1 });
+  assert.equal(r.json.pending, URLS.length);
 });

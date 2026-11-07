@@ -55,27 +55,43 @@ export function overlayPath(env = process.env) {
   return join(configHome(env), 'page-lab', 'profiles.json');
 }
 
-/** Defaults, then the operator overlay replacing or adding by name. Every record validated. */
+/**
+ * Defaults, then the operator overlay merged onto them BY NAME. The overlay is the file a Nix
+ * fleet writes with Home Manager:
+ *
+ *   { "profiles": [ { "name": "lab", "executable": { "source": "env" } }, … ] }
+ *
+ * Entries are PARTIAL: each top-level key replaces the default's (executable and
+ * allowedOrigins replace wholesale, never deep-merge), schema is filled in, and the MERGED
+ * record must validate as page-lab/profile@1 — so an overlay cannot give a dedicated profile a
+ * userDataDir any more than a default could. A name with no default must carry `mode`.
+ * Anything else at the top level, or a non-array `profiles`, is refused.
+ */
 export function loadRegistry(env = process.env) {
   const byName = new Map(DEFAULT_PROFILES.map((p) => [p.name, p]));
   const path = overlayPath(env);
-  if (existsSync(path)) {
-    let list;
-    try {
-      list = JSON.parse(readFileSync(path, 'utf8'));
-    } catch (err) {
-      throw new ProfileError(`${path}: not JSON — ${err.message}`);
+  if (!existsSync(path)) return byName;
+  let doc;
+  try {
+    doc = JSON.parse(readFileSync(path, 'utf8'));
+  } catch (err) {
+    throw new ProfileError(`${path}: not JSON — ${err.message}`);
+  }
+  if (!doc || typeof doc !== 'object' || Array.isArray(doc) || !Array.isArray(doc.profiles)) {
+    throw new ProfileError(`${path}: must be {"profiles": [ … ]} — partial page-lab/profile@1 entries, merged by name`);
+  }
+  const extra = Object.keys(doc).filter((k) => k !== 'profiles');
+  if (extra.length) throw new ProfileError(`${path}: unexpected top-level key(s): ${extra.join(', ')}`);
+  for (const [i, entry] of doc.profiles.entries()) {
+    if (!entry || typeof entry !== 'object' || Array.isArray(entry) || typeof entry.name !== 'string') {
+      throw new ProfileError(`${path}: profiles[${i}] needs a "name"`);
     }
-    if (!Array.isArray(list)) {
-      throw new ProfileError(`${path}: must be a JSON array of page-lab/profile@1 objects`);
+    const merged = { ...(byName.get(entry.name) ?? {}), ...entry, schema: 'page-lab/profile@1' };
+    const r = validate(merged, loadProfileSchema());
+    if (!r.valid) {
+      throw new ProfileError(`${path}: profiles[${i}] (${entry.name}) invalid after merge\n${formatErrors(r.errors).join('\n')}`);
     }
-    for (const [i, p] of list.entries()) {
-      const r = validate(p, loadProfileSchema());
-      if (!r.valid) {
-        throw new ProfileError(`${path}[${i}]: invalid\n${formatErrors(r.errors).join('\n')}`);
-      }
-      byName.set(p.name, p);
-    }
+    byName.set(entry.name, merged);
   }
   return byName;
 }
@@ -91,8 +107,18 @@ export function profileDir(name, env = process.env) {
   return join(stateHome(env), 'page-lab', 'profiles', name);
 }
 
+export function cacheHome(env = process.env) {
+  return env.XDG_CACHE_HOME || join(home(env), '.cache');
+}
+
+/**
+ * The default --workspace (file root for screenshots and uploads). Under the CACHE home, not the
+ * state home: the fleet denies the agent's tools ${XDG_STATE_HOME}/page-lab/** (profile cookies,
+ * run state), and a screenshot the model saved must stay readable by it. A gate run passes its
+ * own run dir instead.
+ */
 export function defaultWorkspace(name, env = process.env) {
-  return join(stateHome(env), 'page-lab', 'workspace', name);
+  return join(cacheHome(env), 'page-lab', 'workspace', name);
 }
 
 /** The CLI daemon's session id: the name hex-encoded, which upstream's ^[a-fA-F0-9-]+$ admits. */
@@ -103,10 +129,16 @@ export function sessionIdFor(name) {
 /**
  * Executable: PAGE_LAB_CHROME, then the profile's own, then none (the server's own resolution,
  * which the caller announces on stderr). Returns { path, source } or { path: null, source }.
+ * A profile that SAYS {source: "env"} and finds PAGE_LAB_CHROME unset is an error, not a
+ * fallback: the fleet pinned a browser, and silently launching another one is the drift the
+ * pin exists to stop.
  */
 export function resolveExecutable(profile, env = process.env) {
   let path = null;
   let source = 'upstream';
+  if (profile.executable?.source === 'env' && !env.PAGE_LAB_CHROME) {
+    throw new ProfileError(`profile ${profile.name} reads its browser from PAGE_LAB_CHROME, which is unset`);
+  }
   if (env.PAGE_LAB_CHROME) {
     path = env.PAGE_LAB_CHROME;
     source = 'env';

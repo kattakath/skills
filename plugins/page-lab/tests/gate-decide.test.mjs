@@ -14,14 +14,16 @@ import {
   loadDetectors,
   nextItem,
   parseDocumentStatus,
+  parseHeaders,
   parseProbe,
   parseQueue,
   probeSource,
   recordBlock,
+  safeTitle,
 } from '../scripts/lib/gate.mjs';
 
 const U = 'https://example.com/page';
-const ok = { requestedUrl: U, nav: { finalUrl: U, title: 'fine' }, status: 200, probe: { hits: [] } };
+const ok = { requestedUrl: U, nav: { finalUrl: U, title: 'fine' }, status: 200, headers: {}, probe: { hits: [] } };
 const fenced = (v) => JSON.stringify({ message: `Script ran on page and returned:\n\`\`\`json\n${JSON.stringify(v)}\n\`\`\`` });
 
 test('an ordinary 200 page passes', () => assert.deepEqual(decide(ok), { ok: true }));
@@ -30,7 +32,7 @@ test('status 403 / 429 / 503 stop, with the status as evidence', () => {
   for (const code of [403, 429, 503]) {
     const d = decide({ ...ok, status: code });
     assert.equal(d.reason, `http-${code}`);
-    assert.deepEqual(d.evidence, { detector: 'status', rule: `status.${code}`, status: code });
+    assert.deepEqual(d.evidence, { detector: 'status', rule: `status.${code}`, status: code, title: 'fine' });
   }
   assert.equal(decide({ ...ok, status: 404 }).ok, true, '404 is not a challenge');
 });
@@ -38,6 +40,7 @@ test('status 403 / 429 / 503 stop, with the status as evidence', () => {
 test('fail closed: no status, no navigate data, no probe → detector-error', () => {
   assert.equal(decide({ ...ok, status: null }).evidence.rule, 'status-unreadable');
   assert.equal(decide({ ...ok, nav: null }).evidence.rule, 'navigate-unreadable');
+  assert.equal(decide({ ...ok, headers: null }).evidence.rule, 'headers-unreadable');
   const p = decide({ ...ok, probe: null });
   assert.equal(p.reason, 'detector-error');
   assert.equal(p.evidence.rule, 'probe-unparseable');
@@ -60,18 +63,58 @@ test('challenge titles stop as challenge-cf', () => {
   }
 });
 
-test('every probe rule maps to its reason', () => {
+test('every probe rule maps to its reason — corroborated where the rule demands it', () => {
   const want = { 'cf-chl-marker': 'challenge-cf', 'hcaptcha-frame': 'hcaptcha', 'recaptcha-frame': 'recaptcha', 'consent-cmp': 'consent-gate', 'age-gate': 'age-gate' };
   const names = loadDetectors().probe.rules.map((r) => r.name);
   assert.deepEqual(names.sort(), Object.keys(want).sort(), 'a rule was added or removed without a test');
   for (const [rule, reason] of Object.entries(want)) {
-    const d = decide({ ...ok, probe: { hits: [rule] } });
+    const d = decide({ ...ok, status: 401, probe: { hits: [rule] } });
     assert.deepEqual([d.reason, d.evidence.detector, d.evidence.rule], [reason, 'probe', rule]);
   }
 });
 
+test('FALSE POSITIVE guard: a challenge marker or captcha widget on a normal 200 page passes', () => {
+  for (const rule of ['cf-chl-marker', 'hcaptcha-frame', 'recaptcha-frame']) {
+    assert.deepEqual(decide({ ...ok, probe: { hits: [rule] } }), { ok: true }, rule);
+  }
+  // consent and age gates block the page by themselves; they need no corroboration.
+  assert.equal(decide({ ...ok, probe: { hits: ['consent-cmp'] } }).reason, 'consent-gate');
+  // The beacon is not a marker at all: no script src is in any selector.
+  for (const r of loadDetectors().probe.rules) assert.doesNotMatch(r.selector, /script\[/, r.name);
+});
+
+test('cf-mitigated present (its value redacted) stops as challenge-cf; it also corroborates', () => {
+  const headers = { server: 'cloudflare', 'cf-ray': '<redacted>', 'cf-mitigated': '<redacted>' };
+  const d = decide({ ...ok, headers });
+  assert.deepEqual([d.reason, d.evidence.detector, d.evidence.rule], ['challenge-cf', 'headers', 'header-cf-mitigated']);
+  assert.deepEqual(d.evidence.headers, headers);
+  assert.equal(d.evidence.status, 200);
+  assert.equal(decide({ ...ok, headers: { server: 'cloudflare', 'cf-ray': '<redacted>' } }).ok, true, 'cloudflare alone is not a wall');
+});
+
+test('evidence = status + allowlisted headers + capped title + rule name, valid block@1', () => {
+  const d = decide({ ...ok, status: 429, headers: { server: 'nginx' }, nav: { finalUrl: U, title: `Slow down ${'a1B2'.repeat(10)}` } });
+  assert.deepEqual(Object.keys(d.evidence).sort(), ['detector', 'headers', 'rule', 'status', 'title']);
+  assert.equal(d.evidence.title, 'Slow down [redacted]');
+  const ev = buildBlock({ url: U, reason: d.reason, evidence: d.evidence, profile: 'lab', runId: 'r', queuePos: 0 });
+  assert.deepEqual(validate(ev, loadBlockSchema()).errors, []);
+});
+
+test('parseHeaders keeps ONLY the allowlist — set-cookie never survives', () => {
+  const raw = JSON.stringify({ networkRequest: { responseHeaders: { Server: 'cloudflare', 'Set-Cookie': 'sid=secret', 'cf-ray': '<redacted>', 'x-other': '1' } } });
+  assert.deepEqual(parseHeaders(raw), { server: 'cloudflare', 'cf-ray': '<redacted>' });
+  assert.equal(parseHeaders('{"message":"Nothing is currently selected"}'), null);
+  assert.equal(parseHeaders('nope'), null);
+});
+
+test('safeTitle caps at 120 and redacts token-like runs', () => {
+  assert.equal(safeTitle('word '.repeat(60)).length, 120);
+  assert.equal(safeTitle('id eyJhbGciOiJIUzI1NiJ9abcdefgh done'), 'id [redacted] done');
+  assert.equal(safeTitle(undefined), '');
+});
+
 test('precedence: status beats final-url beats title beats probe', () => {
-  const all = { requestedUrl: U, nav: { finalUrl: 'https://example.com/login', title: 'Just a moment' }, status: 429, probe: { hits: ['hcaptcha-frame'] } };
+  const all = { requestedUrl: U, nav: { finalUrl: 'https://example.com/login', title: 'Just a moment' }, status: 429, headers: {}, probe: { hits: ['hcaptcha-frame'] } };
   assert.equal(decide(all).reason, 'http-429');
   assert.equal(decide({ ...all, status: 200 }).reason, 'login-wall');
   assert.equal(decide({ ...all, status: 200, nav: { finalUrl: U, title: 'Just a moment' } }).reason, 'challenge-cf');

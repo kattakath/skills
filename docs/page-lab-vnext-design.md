@@ -197,9 +197,15 @@ Existing codes checked for collisions: `EXIT_NO_TARGET=3`, `EXIT_UNSUPPORTED_NOD
 | `queue.jsonl` | pending items |
 | `done.jsonl` | append-only, keyed by URL hash — resume skips these, so no duplicate work |
 | `events.jsonl` | `page-lab/block@1` events |
-| `cooldown.json` | origin → state; cleared only by the human (§ 7.5) |
+| **`${XDG_STATE_HOME}/page-lab/cooldown.json`** (one file, all runs) | origin → state; cleared only by the human (§ 7.5) |
 
 Run state is never in a repo or in the profile dir (that dir is Chromium's).
+
+- **The cooldown is shared, not per run** (revised during implementation). Counted per run, a
+  peer session's measurement let 4 refused requests through in 30 s: each fresh run saw a fresh
+  window. Blocks are counted per ORIGIN, whichever run hit them.
+- **The agent never reads these files.** The fleet denies its tools `.local/state/page-lab/**`;
+  run state reaches the model only through `page-lab-gate status` (counts and the last event).
 
 ### 7.3 Detectors — fixed rules, run after EVERY navigation
 
@@ -214,6 +220,15 @@ detector trusting it fails OPEN.
 | challenge frames | one fixed `evaluate_script` probe | `cf-chl` markers, hCaptcha / reCAPTCHA iframe origins → STOP |
 | consent / age gate | the same probe, fixed selector list | → STOP |
 | **probe unparseable** | `evaluate_script` wraps JSON in a markdown fence | **parse failure → STOP** (fail closed) |
+| `cf-mitigated` header | `get_network_request --reqid <main>` (added in implementation) | present → STOP `challenge-cf`. `--redactNetworkHeaders` redacts the VALUE, keeps the key (measured) |
+
+- **Challenge markers need corroboration** (revised in implementation): a cf marker or a captcha
+  iframe counts only with status ≥ 400 or `cf-mitigated` present. Cloudflare injects a beacon
+  script (`/cdn-cgi/challenge-platform/scripts/jsd/main.js`) into ordinary 200 pages; a bare
+  marker rule flagged a real page and wrote a false cooldown (peer measurement). Consent and age
+  gates still stop on their own.
+- **Evidence** = status + three allowlisted headers (`server`, `cf-ray`, `cf-mitigated`; never
+  `set-cookie`) + the title capped at 120 chars with token-like runs redacted + the rule name.
 
 - The detector list is data in the plugin, versioned, unit-tested against local fixtures. No
   model judgement decides "is this a challenge".

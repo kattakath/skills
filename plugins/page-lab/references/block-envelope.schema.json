@@ -3,7 +3,7 @@
   "$id": "https://kattakath.com/schema/page-lab/block/1",
   "title": "page-lab/block@1",
   "description": "One navigation the gate STOPPED on, recorded so a human can hand off and a resume can continue. The producer is scripts/lib/envelope.mjs (buildBlock) and nothing else; the writer is scripts/page-lab-gate.mjs, which appends one per stop to the run's events.jsonl and exits 10. A sibling of page-lab/pick@1, not a widening of it: pick@1 is never widened in place, and its process outcomes exit WITHOUT an envelope.",
-  "$comment": "Same keyword surface as pick-envelope.schema.json, so lib/envelope.mjs#validate enforces it with zero new validator code: type, properties, required, additionalProperties, items, enum, const, pattern, minLength, maxLength, minimum, maximum, allOf, if/then. Deliberately no $ref/$defs. No field carries page markup: evidence names the RULE that matched (a slug, pattern-checked), never the text it matched against, and additionalProperties:false makes that a rule rather than a wish. ONE deviation from the design doc's enum (docs/page-lab-vnext-design.md §7.4): reason also admits detector-error. §7.1 says exit 10 always writes an event, §7.3 says an unparseable probe or an unreadable status STOPS; without a reason for that stop the two cannot both hold, and an exit 10 with no event would leave resume and handoff with no record of why the run stopped.",
+  "$comment": "Same keyword surface as pick-envelope.schema.json, so lib/envelope.mjs#validate enforces it with zero new validator code: type, properties, required, additionalProperties, items, enum, const, pattern, minLength, maxLength, minimum, maximum, allOf, if/then. Deliberately no $ref/$defs. No field carries page markup or a cookie: evidence names the RULE that matched (a slug, pattern-checked) plus what the detectors READ — status, three allowlisted headers, a capped and redacted title — and additionalProperties:false makes that a rule rather than a wish. ONE deviation from the design doc's enum (docs/page-lab-vnext-design.md §7.4): reason also admits detector-error. §7.1 says exit 10 always writes an event, §7.3 says an unparseable probe or an unreadable status STOPS; without a reason for that stop the two cannot both hold, and an exit 10 with no event would leave resume and handoff with no record of why the run stopped.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -66,6 +66,7 @@
         "detector": {
           "enum": [
             "status",
+            "headers",
             "final-url",
             "title",
             "probe"
@@ -83,7 +84,34 @@
           "type": "integer",
           "minimum": 100,
           "maximum": 599,
-          "description": "The main document's HTTP status, read from list_network_requests --resourceTypes document, never from navigate_page's success text (which reads \"Successfully navigated\" on a 403). Required on an http-* reason; absent on detector-error, whose point is that the status could not be read."
+          "description": "The main document's HTTP status, read from list_network_requests --resourceTypes document (the request at the final URL), never from navigate_page's success text (which reads \"Successfully navigated\" on a 403). Present whenever it was read; required on an http-* reason; absent on status-unreadable."
+        },
+        "headers": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "The ALLOWLISTED response headers of the main document, as read after --redactNetworkHeaders (cf-* values arrive as \"<redacted>\"; their presence is the signal). additionalProperties:false is the rule that keeps set-cookie and every other header out.",
+          "properties": {
+            "server": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^[\\x20-\\x7e]*$"
+            },
+            "cf-ray": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^[\\x20-\\x7e]*$"
+            },
+            "cf-mitigated": {
+              "type": "string",
+              "maxLength": 200,
+              "pattern": "^[\\x20-\\x7e]*$"
+            }
+          }
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120,
+          "description": "The page title as read, capped at 120 characters with token-like runs replaced by [redacted] (lib/gate.mjs#safeTitle). The only page-derived text an event carries."
         }
       }
     },

@@ -12,7 +12,7 @@
  *   page-lab-gate handoff --run R [--dry-run [--offline]]
  *   page-lab-gate resume  --run R [--dry-run [--offline]]
  *   page-lab-gate status  --run R
- *   page-lab-gate clear-cooldown --run R --origin ORIGIN      (a human, in a terminal)
+ *   page-lab-gate clear-cooldown --origin ORIGIN      (a human, in a terminal; all runs)
  *
  * Exit 0 ok / queue drained · 10 blocked, handoff needed · 11 cooldown, aborted ·
  *      12 profile locked by a live process that is not ours · 1 error · 2 usage.
@@ -20,8 +20,11 @@
  * route-up 2, doctor 3.)
  *
  * Run state: ${XDG_STATE_HOME:-~/.local/state}/page-lab/runs/<run>/ — queue.jsonl, done.jsonl,
- * events.jsonl, cooldown.json, plus meta.json and cursor.json. Never in a repo, never in the
- * profile dir (that dir is Chromium's).
+ * events.jsonl, plus meta.json and cursor.json. The cooldown is SHARED across runs, at
+ * ${XDG_STATE_HOME}/page-lab/cooldown.json: counted per run, a peer's measurement let 4 refused
+ * requests through in 30 s, one fresh run at a time. Never in a repo, never in the profile dir
+ * (that dir is Chromium's). The agent's tools are denied that tree by the fleet; the model reads
+ * run state only through `status`.
  *
  * The browser is the chrome-devtools CLI daemon from the pinned chrome-devtools-mcp, holding
  * Chromium over a pipe. Its argv comes from lib/profiles.mjs#dedicatedArgv — the same function
@@ -49,7 +52,8 @@ import {
   decide,
   liftBlocked,
   nextItem,
-  parseDocumentStatus,
+  parseHeaders,
+  parseMainDocument,
   parseNavigate,
   parseProbe,
   parseQueue,
@@ -111,6 +115,11 @@ function appendJsonl(path, obj) {
   appendFileSync(path, `${JSON.stringify(obj)}\n`, { mode: 0o600 });
 }
 
+/** One cooldown for every run: blocks are counted per ORIGIN, whichever run hit them. */
+function cooldownPath() {
+  return join(stateHome(), 'page-lab', 'cooldown.json');
+}
+
 function openRun(run) {
   const dir = runDir(run);
   const meta = readJson(join(dir, 'meta.json'), null);
@@ -121,7 +130,7 @@ function openRun(run) {
     queue: join(dir, 'queue.jsonl'),
     done: join(dir, 'done.jsonl'),
     events: join(dir, 'events.jsonl'),
-    cooldown: join(dir, 'cooldown.json'),
+    cooldown: cooldownPath(),
     cursor: join(dir, 'cursor.json'),
   };
   return {
@@ -287,7 +296,6 @@ function cmdRun(opts) {
   chmodSync(dir, 0o700);
   writeFileSync(join(dir, 'queue.jsonl'), items.map((i) => JSON.stringify(i)).join('\n') + '\n', { mode: 0o600 });
   writeJson(join(dir, 'cursor.json'), { cursor: 0 });
-  writeJson(join(dir, 'cooldown.json'), {});
   writeJson(join(dir, 'meta.json'), {
     profile: profile.name,
     createdAt: new Date().toISOString(),
@@ -394,10 +402,19 @@ function cmdNav(opts) {
     'json',
   ]);
   const nav = parseNavigate(navR.stdout);
+  const main = json(statusR) === null || !nav ? null : parseMainDocument(statusR.stdout, nav.finalUrl);
+  // Headers of the SAME main document, from the browser's own record — no extra request to the
+  // site. Only the allowlist survives parseHeaders.
+  let headers = null;
+  if (main && Number.isInteger(main.requestId)) {
+    const hR = cdt(r.profile, ['get_network_request', String(page), '--reqid', String(main.requestId), '--output-format', 'json']);
+    headers = json(hR) === null ? null : parseHeaders(hR.stdout);
+  }
   const decision = decide({
     requestedUrl: q.url,
     nav,
-    status: json(statusR) === null || !nav ? null : parseDocumentStatus(statusR.stdout, nav.finalUrl),
+    status: main ? main.status : null,
+    headers,
     probe: json(probeR) === null ? null : parseProbe(probeR.stdout),
   });
   if (!decision.ok) blockAndExit(r, q, decision);
@@ -500,6 +517,11 @@ function cmdStatus(opts) {
     done: r.done.size,
     pending: r.queue.filter((q) => !r.done.has(q.item)).length,
     events: readJsonl(r.files.events).length,
+    // The model's only window on events.jsonl (the fleet denies the file to its tools).
+    lastEvent: (() => {
+      const e = readJsonl(r.files.events).at(-1);
+      return e ? { reason: e.reason, rule: e.evidence?.rule, url: e.url, queuePos: e.queuePos } : null;
+    })(),
     cursor: r.cursor,
     cooldown: Object.fromEntries(Object.entries(r.cooldown).map(([o, v]) => [o, v.state])),
     lock: lockState(r.profile.name).state,
@@ -513,10 +535,11 @@ function cmdClearCooldown(opts) {
     throw new GateExit(EXIT.USAGE, 'clear-cooldown is for the human, in a terminal (stdin and stdout must be a TTY)');
   }
   if (!opts.origin) throw new GateExit(EXIT.USAGE, 'clear-cooldown needs --origin');
-  const r = openRun(opts.run);
+  const path = cooldownPath();
+  const cooldown = readJson(path, {});
   const origin = originOf(opts.origin);
-  if (!clearCooldown(r.cooldown, origin, Date.now())) throw new GateExit(EXIT.USAGE, `no cooldown entry for ${origin}`);
-  writeJson(r.files.cooldown, r.cooldown);
+  if (!clearCooldown(cooldown, origin, Date.now())) throw new GateExit(EXIT.USAGE, `no cooldown entry for ${origin}`);
+  writeJson(path, cooldown);
   out({ cleared: origin });
 }
 
@@ -555,7 +578,7 @@ function main(argv) {
     if (!fn) {
       throw new GateExit(EXIT.USAGE, `usage: page-lab-gate {${Object.keys(COMMANDS).join('|')}} --run R …`);
     }
-    if (cmd !== 'run' && !opts.run) throw new GateExit(EXIT.USAGE, `${cmd} needs --run`);
+    if (cmd !== 'run' && cmd !== 'clear-cooldown' && !opts.run) throw new GateExit(EXIT.USAGE, `${cmd} needs --run`);
     fn(opts);
     return EXIT.OK;
   } catch (err) {

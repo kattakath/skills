@@ -120,9 +120,20 @@ fi
 
 # Chromium allows one process per profile dir; a HEADED second opener silently hands off to
 # the live one instead of failing. Refuse before launching (exit 12, as page-lab-gate does).
+#
+# For `mcp` this is the ONLY check there is: Claude Code spawns one chrome-lab server per
+# session, and the server launches Chromium lazily, at its first tool call — after which no
+# hook of ours runs. So a live lock at spawn means another session's chrome-lab (or a gate run)
+# owns the dir, and this server must not start: exit non-zero, one line, no tools. A second
+# session spawned BEFORE the first one's first tool call still collides later, as a launch
+# error; README states the one-session limit.
 lock="$(node "$lib" lock "$profile")"
 case "$lock" in
-  held* | foreign*) die 12 "profile $profile is locked ($lock) — one owner per dir" ;;
+  held*)
+    if [ "$verb" = mcp ]; then die 12 "$profile in use by pid ${lock#held }; one chrome-lab per machine"; fi
+    die 12 "profile $profile is locked ($lock) — one owner per dir"
+    ;;
+  foreign*) die 12 "profile $profile is locked ($lock) — one owner per dir" ;;
 esac
 
 dir="$(node "$lib" dir "$profile")"

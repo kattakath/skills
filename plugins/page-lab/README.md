@@ -120,6 +120,13 @@ MCP servers are separate, and `.mcp.json` fetches each (pinned) through `npx` at
 
 Both browser entries loaded is **67 tools** (37 + 30) [F-CHROME-LAB-30TOOLS].
 
+**One `chrome-lab` per machine.** Every session spawns its own `chrome-lab` server on the same
+`lab-diag` profile, and Chromium allows one process per profile. A server that finds the profile
+held by a live browser at spawn exits with `lab-diag in use by pid N; one chrome-lab per
+machine`, and that session has no `chrome-lab` tools. **Known gap:** Chromium starts lazily, at
+the first tool call, so two sessions spawned before either used a tool both start, and the
+second one's first call fails as a browser-launch error instead.
+
 ### Dedicated profiles — page-lab's own browser
 
 `scripts/browser.sh` is the only launcher. `daily` execs the unchanged attach launcher; a
@@ -130,6 +137,14 @@ Time Machine). It never passes a proxy, a user-agent override, `--chromeArg`,
 `--categoryEmulation=false --categoryExtensions=false --redactNetworkHeaders` and both privacy
 flags [F-CLI-HEADLESS-DEFAULT]. A test asserts all of it on `print-argv`.
 
+The operator overlay is `${XDG_CONFIG_HOME}/page-lab/profiles.json`:
+`{"profiles": [ … ]}` with **partial** entries merged by name onto the defaults — the fleet's Home
+Manager file is `scripts/fixtures/overlay/fleet-hm.json`, verbatim. An entry with
+`"executable": {"source": "env"}` reads `PAGE_LAB_CHROME` and refuses to launch without it.
+Screenshots and uploads go through `${XDG_CACHE_HOME:-~/.cache}/page-lab/workspace/<name>`;
+cookies and run state stay under `${XDG_STATE_HOME}/page-lab`, which the fleet denies to the
+agent's tools.
+
 The browser is `PAGE_LAB_CHROME` when set — the fleet points it at nixpkgs
 `playwright-driver.browsers-chromium` (Chrome for Testing, hash-pinned) — else the overlay's
 `executable`, else `chrome-devtools-mcp`'s own resolution, announced on stderr.
@@ -137,7 +152,8 @@ The browser is `PAGE_LAB_CHROME` when set — the fleet points it at nixpkgs
 **Unattended runs** go through `scripts/page-lab-gate.mjs` (`references/gate.md`): every page is
 opened by the gate, fixed detectors run after each load (`references/gate-detectors.json`), and
 a challenge, a login wall or a 403/429/503 stops the run with exit 10 and a `page-lab/block@1`
-event. `handoff` reopens the SAME profile headed for the operator; `resume` continues without
+event. A challenge marker or captcha iframe counts only when corroborated (status ≥ 400 or a
+`cf-mitigated` header), because Cloudflare's beacon script sits on ordinary 200 pages. `handoff` reopens the SAME profile headed for the operator; `resume` continues without
 redoing finished items. A second block on an origin within 24 h is a cooldown only the operator
 clears, in a terminal. Design and evidence: `docs/page-lab-vnext-design.md` in this repo.
 

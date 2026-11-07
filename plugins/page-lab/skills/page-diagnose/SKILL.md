@@ -46,6 +46,9 @@ process, because ungoogled-chromium also reports itself as `Chrome/<version>`
 | **`chrome-lab`** (`mcp__plugin_page-lab_chrome-lab__*`) | page-lab's own Chromium on the `lab-diag` profile: headless, over a **pipe** (no debugging port), no extensions, no sign-ins | **The default for diagnosis.** A public page needs no login state, and the operator's browser stays untouched |
 | `chrome-devtools` (`mcp__plugin_page-lab_chrome-devtools__*`) | **attach** to the operator's running browser (`--browser-url` / `--autoConnect`) | Login state or an installed extension changes the result — the **only** route to an extension today |
 
+**One `chrome-lab` per machine.** A second session's `chrome-lab` refuses to start while the
+first one's browser holds the profile ("lab-diag in use by pid N"); use `chrome-devtools` there.
+
 `chrome-lab` launches when its first tool runs; `scripts/browser.sh lab-diag print-argv` shows
 exactly what it starts with. It keeps its own cookies between sessions under
 `${XDG_STATE_HOME:-~/.local/state}/page-lab/profiles/lab-diag` — not a fresh profile, so a
@@ -123,7 +126,7 @@ belongs to the preset tool.
   scratchpads (`/private/tmp/claude-<uid>`); set `CDP_EXTRA_WORKSPACES` for more, or copy into
   a git-ignored directory under the start directory and delete it afterwards [F-UPLOAD-INSIDE-ROOTS].
   **`chrome-lab` is narrower on purpose:** its only extra root is
-  `${XDG_STATE_HOME:-~/.local/state}/page-lab/workspace/lab-diag`, not `$TMPDIR` or the
+  `${XDG_CACHE_HOME:-~/.cache}/page-lab/workspace/lab-diag`, not `$TMPDIR` or the
   scratchpads — save there or under the start directory. For many files, or an
   input the page creates only on click, capture the input and set files over CDP
   [F-FILE-INPUT-ON-CLICK].

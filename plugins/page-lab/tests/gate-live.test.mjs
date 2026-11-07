@@ -13,7 +13,7 @@
 
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
@@ -50,6 +50,11 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     const r = await sh('node', [GATE, ...args], env);
     return { ...r, json: lastJson(r.stdout) };
   };
+  // The cooldown is shared across runs (per origin) and every fixture shares ONE origin, so each
+  // case starts from a clean one; the resume case then exercises the window on purpose.
+  const cooldownFile = () => join(env.XDG_STATE_HOME, 'page-lab', 'cooldown.json');
+  const resetCooldown = () => rmSync(cooldownFile(), { force: true });
+  const cooldown = () => (existsSync(cooldownFile()) ? JSON.parse(readFileSync(cooldownFile(), 'utf8')) : {});
   let runN = 0;
   const newRun = async (paths) => {
     const run = `live-${++runN}`;
@@ -69,13 +74,14 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     // third-party hosts, and those loads must never leave the machine.
     writeFileSync(
       join(root, 'config', 'page-lab', 'profiles.json'),
-      JSON.stringify([{ schema: 'page-lab/profile@1', name: 'lab', mode: 'dedicated', allowedOrigins: [fx.base] }])
+      JSON.stringify({ profiles: [{ name: 'lab', executable: { source: 'env' }, allowedOrigins: [fx.base] }] })
     );
     env = {
       ...process.env,
       HOME: root,
       XDG_STATE_HOME: join(root, 'state'),
       XDG_CONFIG_HOME: join(root, 'config'),
+      XDG_CACHE_HOME: join(root, 'cache'),
       XDG_RUNTIME_DIR: join(root, 'r'),
       PAGE_LAB_CHROME: CHROME,
     };
@@ -98,6 +104,7 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     ['/403', 'http-403', 'status.403'],
     ['/429', 'http-429', 'status.429'],
     ['/503', 'http-503', 'status.503'],
+    ['/cf-mitigated', 'challenge-cf', 'header-cf-mitigated'],
     ['/redirect-login', 'login-wall', 'login-path'],
     ['/challenge-title', 'challenge-cf', 'title-cf-just-a-moment'],
     ['/cf-chl', 'challenge-cf', 'cf-chl-marker'],
@@ -109,6 +116,7 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
 
   for (const [path, reason, rule] of STOPS) {
     test(`${path} STOPS: exit 10, ${reason} (${rule}), event valid and recorded`, async () => {
+      resetCooldown();
       const run = await newRun([path]);
       const r = await gate('nav', '--run', run);
       assert.equal(r.code, 10, `${r.stdout}\n${r.stderr}`);
@@ -119,12 +127,16 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
       assert.equal(ev.url, `${fx.base}${path}`);
       const events = readFileSync(join(env.XDG_STATE_HOME, 'page-lab', 'runs', run, 'events.jsonl'), 'utf8').trim().split('\n');
       assert.deepEqual(JSON.parse(events.at(-1)), ev);
+      assert.equal(JSON.stringify(ev).includes('not-a-real-secret'), false, 'a cookie reached the event');
+      if (path === '/cf-mitigated') assert.deepEqual(Object.keys(ev.evidence.headers).sort(), ['cf-mitigated', 'cf-ray', 'server']);
     });
   }
 
-  test('ordinary pages pass, done records them, the queue drains with exit 0', async () => {
-    const run = await newRun(['/ok', '/ok-2', '/consent-hidden']);
-    for (let i = 0; i < 3; i++) {
+  test('ordinary pages pass — incl. the cf beacon and a 200-page captcha — no event, no cooldown, drains', async () => {
+    resetCooldown();
+    const pages = ['/ok', '/ok-2', '/consent-hidden', '/cf-beacon', '/hcaptcha-200'];
+    const run = await newRun(pages);
+    for (let i = 0; i < pages.length; i++) {
       const r = await gate('nav', '--run', run);
       assert.equal(r.code, 0, `${r.stdout}\n${r.stderr}`);
       assert.equal(r.json.ok, true);
@@ -134,10 +146,13 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     }
     const end = await gate('nav', '--run', run);
     assert.equal(end.code, 0);
-    assert.deepEqual([end.json.drained, end.json.pending, end.json.done], [true, 0, 3]);
+    assert.deepEqual([end.json.drained, end.json.pending, end.json.done], [true, 0, pages.length]);
+    assert.equal(existsSync(join(env.XDG_STATE_HOME, 'page-lab', 'runs', run, 'events.jsonl')), false, 'no event');
+    assert.deepEqual(cooldown(), {}, 'no cooldown entry');
   });
 
   test('resume after a block re-navigates 0 done items; a 2nd block on the origin is a cooldown', async () => {
+    resetCooldown();
     const run = await newRun(['/ok', '/403', '/ok-2']);
     const first = await gate('nav', '--run', run);
     assert.equal(first.code, 0, `${first.stdout}\n${first.stderr}`);
