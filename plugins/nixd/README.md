@@ -22,6 +22,12 @@ server cannot start. Pick one way to install it:
 
 Check it with `command -v nixd` before you start a session.
 
+Then install the plugin:
+
+```
+/plugin install nixd --marketplace kattakath/skills
+```
+
 ## Why there is no auto-install hook
 
 The community `nixd` plugin in
