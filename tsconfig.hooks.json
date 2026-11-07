@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true,
+    "strict": true,
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "types": ["node"],
+    "skipLibCheck": true
+  },
+  "files": [
+    "plugins/superhook/scripts/superhook.js",
+    "plugins/nix-flake-kit/scripts/hook-input.js",
+    "plugins/nix-flake-kit/scripts/autostage-nix.js",
+    "plugins/nix-flake-kit/scripts/nix-home-path-lint.js",
+    "plugins/brain-signals/scripts/stop-limbo.js",
+    "plugins/brain-signals/scripts/mermaid-hint.js"
+  ]
+}

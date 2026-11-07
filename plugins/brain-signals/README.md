@@ -12,6 +12,8 @@ An answer-shape kit: verdict first, then layered detail, easy to scan, with real
 
 `/diagram` and `cartographer` render with the [`mermaid-ascii`](https://github.com/AlexanderGrooff/mermaid-ascii) CLI, which you need on `PATH`. It is not bundled: a plugin `bin/` directory would stop claude.ai and Cowork installing this plugin. If it is missing, a SessionStart hook says so once (with install options) and tells Claude to hand-draw diagrams instead.
 
+**Node.js on `PATH`.** Both hooks (`stop-limbo`, the mermaid-ascii hint) run with `node`, and the Claude Code CLI is a native binary that does not ship one. Without it they cannot start; the output style, commands and agent still work. The superhook plugin, if installed, says so at session start. The hook scripts import nothing at run time. CI type-checks them (`tsc --checkJs`, `tsconfig.hooks.json` at the repo root) against the hook input and output types in Anthropic's `@anthropic-ai/claude-agent-sdk`; those types exist only in JSDoc comments.
+
 The style's rules are accessibility rules backed by published standards and measured effect sizes, not taste: [answer-shape evidence](https://github.com/kattakath/nix-config/blob/main/docs/answer-shape-evidence.md).
 
 ### Two traps the files guard against

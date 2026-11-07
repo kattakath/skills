@@ -1,0 +1,14 @@
+{
+  "name": "kattakath-skills-devtools",
+  "private": true,
+  "description": "CI-only dev tooling. No plugin depends on anything here: hook scripts run with plain node and no node_modules.",
+  "license": "MIT",
+  "scripts": {
+    "typecheck:hooks": "tsc -p tsconfig.hooks.json"
+  },
+  "devDependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.296",
+    "@types/node": "22.20.5",
+    "typescript": "6.0.3"
+  }
+}

@@ -50,9 +50,15 @@ writes no log line, so the wrapper has to give up first to record the incident.
 Before 1.1.0 `Stop` had a 60 s harness timeout around a 600 s inner budget, so a
 cold `nix flake check` was cancelled and the gate silently never ran.
 
+## Requirements
+
+**Node.js on `PATH`.** Every script here runs with `node`, and the Claude Code CLI is a native binary that does not ship one. Without node, the `PreToolUse` entry cannot start, and `onFailure: "block"` turns that into a block: in a repo with `.claude/hooks/pretooluse-bash-guard.js`, **every Bash call is blocked** until node is installed. That is fail-closed working as designed, so a SessionStart hook written in POSIX `sh` (`scripts/node-check.sh`, no node needed) says so at session start: it is silent when `command -v node` succeeds, and otherwise prints a `systemMessage` naming the floor plugins that cannot run (superhook, nix-flake-kit, brain-signals).
+
+The hook scripts import nothing at run time. CI type-checks them (`tsc --checkJs`, `tsconfig.hooks.json` at the repo root) against the hook input and output types in Anthropic's `@anthropic-ai/claude-agent-sdk`; those types exist only in JSDoc comments.
+
 ## Wiring — the plugin ships the hooks
 
-Installing this plugin is the whole wiring. `hooks/hooks.json` declares three
+Installing this plugin is the whole wiring. `hooks/hooks.json` declares four
 entries that auto-merge into your effective hook set; **nothing goes in your
 `settings.json`**:
 
@@ -61,6 +67,7 @@ entries that auto-merge into your effective hook set; **nothing goes in your
 | `Stop` | — | `<repo>/.claude/hooks/stop-gate.js` |
 | `PreToolUse` | `Bash` | `<repo>/.claude/hooks/pretooluse-bash-guard.js` |
 | `SessionStart` | — | `scripts/superhook-digest.js` (reads `superhook.log`) |
+| `SessionStart` | — | `scripts/node-check.sh` (warns when `node` is missing; not a wrapper) |
 
 ### The path convention
 

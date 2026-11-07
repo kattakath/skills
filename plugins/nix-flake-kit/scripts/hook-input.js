@@ -1,3 +1,4 @@
+// @ts-check
 /**
  * Shared input half of both PostToolUse hooks: read the hook JSON from stdin and
  * return the written .nix file, or null when the hook has nothing to do. One copy,
@@ -16,12 +17,23 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
+// Types only — erased at run time, so the hook still needs nothing but `node`. They come
+// from Anthropic's own SDK (CI installs it as a dev dependency and runs tsc over this file).
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').PostToolUseHookInput} PostToolUseHookInput */
+/** @typedef {{ projectDir: string, dir: string, abs: string }} NixTarget */
+
+/**
+ * @param {string} root
+ * @param {string} p
+ * @returns {boolean}
+ */
 function within(root, p) {
   const rel = path.relative(root, p);
   // `..` as a whole first SEGMENT, so a dir named `..scratch` inside the project still counts.
   return rel === "" || (rel.split(path.sep)[0] !== ".." && !path.isAbsolute(rel));
 }
 
+/** @returns {NixTarget | null} */
 function readNixTarget() {
   let raw = "";
   try {
@@ -31,6 +43,7 @@ function readNixTarget() {
   }
   if (!raw.trim()) return null;
 
+  /** @type {PostToolUseHookInput} */
   let evt;
   try {
     evt = JSON.parse(raw);
@@ -39,10 +52,13 @@ function readNixTarget() {
   }
   if (!evt || typeof evt !== "object") return null;
 
-  const ti = evt.tool_input || {};
+  // The SDK types tool_input / tool_response as `unknown` (they differ per tool). For
+  // Write/Edit both are objects; the `typeof` test below rejects anything else.
+  const ti = /** @type {{ file_path?: unknown }} */ (evt.tool_input || {});
+  const tr = /** @type {{ filePath?: unknown } | undefined} */ (evt.tool_response);
   // Write/Edit carry tool_input.file_path (always absolute, per the hooks reference);
   // tool_response.filePath is the same path, kept as a fallback.
-  const file = ti.file_path || (evt.tool_response && evt.tool_response.filePath) || "";
+  const file = ti.file_path || (tr && tr.filePath) || "";
   if (typeof file !== "string" || !file.endsWith(".nix")) return null;
 
   try {

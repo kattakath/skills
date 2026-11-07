@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "brain-signals",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "An answer-shape kit for scannable, verdict-first answers: the Brain Signals output style, the /explain family (explain, compare, map, zoom, why, tldr, diagram), a read-only cartographer subagent for architecture maps, /task for goal-locked execution, and a warn-only Stop hook that flags a turn ending in limbo (a prose question with no options, or background work with no wait line).",
   "author": {
     "name": "Ismail Kattakath"

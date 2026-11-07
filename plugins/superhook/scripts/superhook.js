@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 /**
  * superhook.js — supervising dispatcher for command-type hooks.
  *
@@ -55,6 +56,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const crypto = require("node:crypto");
 
+// Types only — erased at run time, so the script still needs nothing but `node`. They come
+// from Anthropic's own SDK (CI installs it as a dev dependency and runs tsc over this file).
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').SyncHookJSONOutput} SyncHookJSONOutput */
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').PreToolUseHookSpecificOutput} PreToolUseHookSpecificOutput */
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').HookEvent} HookEvent */
+/** What the wrapper hands back to the harness. "No decision" is empty stdout + exit 0.
+ * @typedef {{ stdout: string, stderr: string, code: number }} Result */
+
 const projectDir = process.env.CLAUDE_PROJECT_DIR || process.cwd();
 const hooksDir = path.join(projectDir, ".claude", "hooks");
 const logFile = path.join(hooksDir, "superhook.log");
@@ -73,6 +82,7 @@ const LOOP_BREAK_EVENTS = new Set(["Stop", "SubagentStop"]);
 // 20 s): a harness timeout discards the output and writes no log line, so the
 // wrapper must give up first to record the incident. The Stop gate runs
 // `nix flake check`, often well over a minute cold.
+/** @type {Partial<Record<HookEvent, number>>} */
 const INNER_TIMEOUT_MS = { Stop: 600_000, SubagentStop: 600_000 };
 const DEFAULT_INNER_TIMEOUT_MS = 15_000;
 
@@ -108,11 +118,17 @@ const rotateIfNeeded = () => {
   }
 };
 
-const hash = (s) => crypto.createHash("sha1").update(String(s)).digest("hex").slice(0, 12);
+const hash = (/** @type {unknown} */ s) => crypto.createHash("sha1").update(String(s)).digest("hex").slice(0, 12);
 
+/**
+ * @param {string} event  the harness event name (argv[2]); not validated, hence string
+ * @param {string[]} innerArgv
+ * @param {string} stdin  the event payload, forwarded verbatim
+ * @returns {Result}
+ */
 function main(event, innerArgv, stdin) {
   const isDecision = DECISION_EVENTS.has(event);
-  const log = (entry) => {
+  const log = (/** @type {Record<string, unknown>} */ entry) => {
     try {
       rotateIfNeeded();
       fs.appendFileSync(logFile, JSON.stringify({ ts: now(), event, ...entry }) + "\n");
@@ -128,7 +144,7 @@ function main(event, innerArgv, stdin) {
       return {};
     }
   };
-  const writeState = (s) => {
+  const writeState = (/** @type {Record<string, unknown>} */ s) => {
     try {
       fs.writeFileSync(stateFile, JSON.stringify(s));
     } catch {
@@ -136,7 +152,12 @@ function main(event, innerArgv, stdin) {
     }
   };
   // A result is { stdout, stderr, code }. "No decision" is empty stdout + exit 0.
-  const notice = (systemMessage) => ({ stdout: isDecision ? JSON.stringify({ systemMessage }) : "", stderr: "", code: 0 });
+  /** @returns {Result} */
+  const notice = (/** @type {string} */ systemMessage) => {
+    /** @type {SyncHookJSONOutput} */
+    const json = { systemMessage };
+    return { stdout: isDecision ? JSON.stringify(json) : "", stderr: "", code: 0 };
+  };
 
   // Nothing to run: no-op pass so a mis-wired entry can't wedge us.
   if (innerArgv.length === 0) {
@@ -145,13 +166,15 @@ function main(event, innerArgv, stdin) {
   }
 
   // ---- run the inner hook ---------------------------------------------------
+  /** @type {import('node:child_process').SpawnSyncOptionsWithStringEncoding} */
   const opts = {
     cwd: projectDir,
     input: stdin,
     encoding: "utf8",
-    timeout: INNER_TIMEOUT_MS[event] || DEFAULT_INNER_TIMEOUT_MS,
+    timeout: INNER_TIMEOUT_MS[/** @type {HookEvent} */ (event)] || DEFAULT_INNER_TIMEOUT_MS,
     maxBuffer: 20 * 1024 * 1024,
   };
+  /** @type {{ status: number | null, stdout?: string, stderr?: string, error?: Error }} */
   let res;
   try {
     res =
@@ -159,7 +182,7 @@ function main(event, innerArgv, stdin) {
         ? spawnSync(innerArgv[0], { ...opts, shell: true })
         : spawnSync(innerArgv[0], innerArgv.slice(1), opts);
   } catch (e) {
-    res = { status: -1, stdout: "", stderr: String(e && e.message) };
+    res = { status: -1, stdout: "", stderr: String(e && /** @type {Error} */ (e).message) };
   }
   const status = res.status;
   const out = (res.stdout || "").trim();
@@ -183,6 +206,9 @@ function main(event, innerArgv, stdin) {
   }
 
   // ---- classify the inner verdict -------------------------------------------
+  // The INNER hook's stdout is the only hook JSON this wrapper reads; typing it as the SDK's
+  // SyncHookJSONOutput checks `decision` / `permissionDecision` against the real enums.
+  /** @type {SyncHookJSONOutput | undefined} */
   let parsed;
   if (out) {
     try {
@@ -192,7 +218,9 @@ function main(event, innerArgv, stdin) {
     }
   }
   if (!parsed || typeof parsed !== "object") parsed = undefined;
-  const hso = (parsed && parsed.hookSpecificOutput) || {};
+  // Only PreToolUse's specific output carries a permission decision; any other event's
+  // object simply lacks those keys, which reads the same as `{}`.
+  const hso = /** @type {Partial<PreToolUseHookSpecificOutput>} */ ((parsed && parsed.hookSpecificOutput) || {});
   const blocked =
     status === 2 || (parsed && parsed.decision === "block") || hso.permissionDecision === "deny";
   const approved =
@@ -262,6 +290,7 @@ function main(event, innerArgv, stdin) {
 }
 
 // ---- entry ----------------------------------------------------------------
+/** @type {Result} */
 let result;
 try {
   const argv = process.argv.slice(2);
@@ -278,7 +307,7 @@ try {
 } catch (e) {
   // The wrapper itself must not throw: fail to "no decision", never to allow —
   // and leave a crash-safe line so the digest still sees it.
-  const msg = `superhook internal error: ${String(e && e.message)}`;
+  const msg = `superhook internal error: ${String(e && /** @type {Error} */ (e).message)}`;
   try {
     fs.appendFileSync(logFile, JSON.stringify({ ts: now(), event: process.argv[2] || "Unknown", action: "crash-safe", status: "internal", stderr: msg }) + "\n");
   } catch {

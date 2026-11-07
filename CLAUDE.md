@@ -84,7 +84,13 @@ it until it was removed wholesale (#31); do not reintroduce it.
 npx -y @anthropic-ai/claude-code@2.1.296 plugin validate .
 for p in plugins/*/; do npx -y @anthropic-ai/claude-code@2.1.296 plugin validate "$p"; done
 python3 scripts/build-index.py --check
+npm ci --ignore-scripts --omit=optional && npx --no-install tsc -p tsconfig.hooks.json
 ```
+
+The last line type-checks the safety-floor hook scripts (superhook, nix-flake-kit,
+brain-signals) against the hook types in `@anthropic-ai/claude-agent-sdk`, pinned in the root
+`package.json`. Those are dev-only: the scripts carry the types as JSDoc and import nothing at
+run time. A new hook script in one of those plugins goes into `tsconfig.hooks.json`'s `files`.
 
 **The `@2.1.296` pin is load-bearing — do not drop it back to bare `npx`.** Measured 2026-10-06 on
 this machine: bare `npx -y @anthropic-ai/claude-code --version` resolves to a **cached 2.1.197**,

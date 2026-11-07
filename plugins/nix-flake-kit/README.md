@@ -95,6 +95,12 @@ mirror the ast-grep rule's own `valid:`/`invalid:` test file, so both halves are
 proven against the same inputs. CI runs both (`validate.yml`, step `nix-flake-kit
 hook cases`).
 
+## Requirements
+
+**Node.js on `PATH`.** Both hooks run with `node`, and the Claude Code CLI is a native binary that does not ship one. Without it, neither hook can start, so nothing is auto-staged and nothing is linted. The superhook plugin, if installed, says so at session start.
+
+The hook scripts import nothing at run time. CI type-checks them (`tsc --checkJs`, `tsconfig.hooks.json` at the repo root) against the hook input and output types in Anthropic's `@anthropic-ai/claude-agent-sdk`; those types exist only in JSDoc comments.
+
 ## Install
 
 ```bash

@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 /**
  * PostToolUse home-path lint (Write|Edit), .nix only.
  *
@@ -34,6 +35,10 @@
 const fs = require("node:fs");
 const path = require("node:path");
 const { readNixTarget } = require("./hook-input.js");
+
+// Types only — erased at run time, so the hook still needs nothing but `node`. They come
+// from Anthropic's own SDK (CI installs it as a dev dependency and runs tsc over this file).
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').SyncHookJSONOutput} SyncHookJSONOutput */
 
 // A per-user home dir: /Users/<name> (macOS) or /home/<name> (Linux), where
 // <name> starts lowercase (so /Users/Shared, a bare /home, and /Users/$USER are
@@ -110,6 +115,7 @@ try {
     process.exit(0); // file gone / unreadable — nothing to lint
   }
 
+  /** @type {{ n: number, text: string }[]} */
   const hits = [];
   content.split("\n").forEach((line, i) => {
     // Strip a trailing comment so `# … /Users/ismail …` prose is ignored; only
@@ -138,11 +144,9 @@ try {
     `Runtime paths must be $HOME/XDG-relative — use $HOME, config.home.homeDirectory, or an XDG dir, ` +
     `not a literal /Users/<name> or /home/<name>. (Nix SOURCE path literals like ../../foo are exempt and correct — ` +
     `this only flags absolute home dirs.) Reconsider unless this absolute path is genuinely intentional.`;
-  process.stdout.write(
-    JSON.stringify({
-      hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: advice },
-    }) + "\n",
-  );
+  /** @type {SyncHookJSONOutput} */
+  const out = { hookSpecificOutput: { hookEventName: "PostToolUse", additionalContext: advice } };
+  process.stdout.write(JSON.stringify(out) + "\n");
   process.exit(0); // surface to Claude to reconsider; does not revert the write
 } catch {
   process.exit(0); // a PostToolUse lint must never wedge a turn

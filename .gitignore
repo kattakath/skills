@@ -6,3 +6,6 @@ Thumbs.db
 .claude/worktrees/
 __pycache__/
 *.pyc
+
+# CI-only dev tooling (package.json); never shipped in a plugin
+node_modules/
