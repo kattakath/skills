@@ -1,0 +1,34 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "bash-language-server",
+  "version": "1.0.0",
+  "description": "Shell script intelligence for Claude Code through bash-language-server: ShellCheck diagnostics, hover, go-to-definition and references in .sh, .bash and .ksh files. Hook-free: it installs nothing and expects bash-language-server and shellcheck on PATH.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/bash-language-server",
+  "icon": "./icon.png",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "bash",
+    "shell",
+    "shellcheck",
+    "lsp",
+    "bash-language-server",
+    "language-server"
+  ],
+  "lspServers": {
+    "bash": {
+      "command": "bash-language-server",
+      "args": [
+        "start"
+      ],
+      "extensionToLanguage": {
+        ".sh": "shellscript",
+        ".bash": "shellscript",
+        ".ksh": "shellscript"
+      }
+    }
+  }
+}
