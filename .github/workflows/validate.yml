@@ -311,6 +311,12 @@ jobs:
         run: bash plugins/brain-signals/tests/shape-cases.sh
       - name: brain-signals mermaid-hint cases
         run: bash plugins/brain-signals/tests/mermaid-hint-cases.sh
+      # superhook sits in front of consumer GUARDS (nix-config's Bash guard and Stop gate),
+      # so its failure mode is a guard that silently stops guarding. The cases pin that every
+      # block passes through, a repeated PreToolUse deny is never downgraded, the wrapper
+      # never synthesizes an allow, and each inner budget sits under its harness timeout.
+      - name: superhook supervisor cases
+        run: bash plugins/superhook/tests/supervisor-cases.sh
 
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which

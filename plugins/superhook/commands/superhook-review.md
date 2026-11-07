@@ -1,5 +1,5 @@
 ---
-description: Review superhook incident log, diagnose recurring crash-safe/loop-break failures, and propose fixes to the offending inner hook scripts.
+description: Review superhook incident log, diagnose recurring crash-safe/loop-break/loop-detected incidents, and propose fixes to the offending inner hook scripts.
 allowed-tools: Read, Edit, Bash(cat:*), Bash(node:*)
 ---
 
@@ -16,7 +16,8 @@ Read `.claude/hooks/superhook.log`. If it is missing or empty, report **"no supe
 The log is one JSON object per line, with fields `ts`, `event`, `action`, plus action-specific fields. Focus only on the real incidents:
 
 - `action == "crash-safe"` — inner hook exited nonzero (fields: `status`, `stderr`, `recommendation`).
-- `action == "loop-break"` — repeated identical block detected and broken (fields: `occurrences`, `blockedReason`, `recommendation`).
+- `action == "loop-break"` — a Stop/SubagentStop gate blocked with the same reason 3x and was released (fields: `occurrences`, `blockedReason`, `recommendation`).
+- `action == "loop-detected"` — a PreToolUse deny repeated 3x with the same reason. The deny was **kept** (a tool deny cannot wedge a session); decide whether the agent kept retrying a blocked command or the rule misfires (same fields as `loop-break`).
 
 Treat `pass-approve`, `pass-block`, `pass-through`, and `noop` lines as **volume context only** — count them for the totals but do not analyze them individually.
 
@@ -27,7 +28,7 @@ Group incidents by `(event, action)` and count occurrences. Present a concise ta
 | event | action | count | latest ts | summary |
 |-------|--------|-------|-----------|---------|
 
-Use `stderr` as the summary for `crash-safe` rows and `blockedReason` for `loop-break` rows. Mention overall pass/noop volume in one line beneath the table.
+Use `stderr` as the summary for `crash-safe` rows and `blockedReason` for `loop-break` / `loop-detected` rows. Mention overall pass/noop volume in one line beneath the table.
 
 ## 4. Diagnose and propose fixes for recurring incidents
 
