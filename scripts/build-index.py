@@ -110,6 +110,11 @@ def ships(name):
     if mcp.exists():
         n = len(json.loads(mcp.read_text()).get("mcpServers", {}))
         out.append(f"{n} MCP server" + ("s" if n != 1 else ""))
+    lsp = json.loads((d / ".claude-plugin" / "plugin.json").read_text()).get("lspServers")
+    if lsp is None and (d / ".lsp.json").exists():
+        lsp = json.loads((d / ".lsp.json").read_text())
+    if isinstance(lsp, dict):
+        out.append(f"{len(lsp)} LSP server" + ("s" if len(lsp) != 1 else ""))
     if (d / "hooks" / "hooks.json").exists():
         out.append("hooks")
     if not out:
@@ -130,7 +135,7 @@ def render_readme(readme, market):
         ) or "—"
         desc = e["description"].replace("|", "\\|")
         rows.append(f"| [`{name}`](plugins/{name}) | {desc} | {ships(name)} | {deps} |")
-    rows += ["", f"{len(market['plugins'])} plugins. An MCP server or hook runs as a local process, so"
+    rows += ["", f"{len(market['plugins'])} plugins. An MCP server, LSP server or hook runs as a local process, so"
              " it needs a surface that runs local processes (Claude Code); a skills-only plugin"
              " needs only the skill loader.", ""]
     return readme[:begin] + "\n".join(rows) + readme[end:]
