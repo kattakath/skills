@@ -12,6 +12,15 @@ An answer-shape kit: verdict first, then layered detail, easy to scan, with real
 
 `/diagram` and `cartographer` render with the [`mermaid-ascii`](https://github.com/AlexanderGrooff/mermaid-ascii) CLI, which you need on `PATH`.
 
+The style's rules are accessibility rules backed by published standards and measured effect sizes, not taste: [answer-shape evidence](https://github.com/kattakath/nix-config/blob/main/docs/answer-shape-evidence.md).
+
+### Two traps the files guard against
+
+- **Diagram width.** Measure with `LC_ALL=C.UTF-8 wc -mL` (the last number is the width). Measured 2026-11-07 on a 10-column diagram: BSD (macOS) `wc -L` reports **30**, because it counts bytes. GNU `wc -L` reports **9** without a UTF-8 locale.
+- **Plugin agent names.** `/map` forks into `cartographer`, which this plugin registers as `brain-signals:cartographer`. With a bare `agent: cartographer`, the 1.1.2 skill ran on `general-purpose` instead, and nothing reported an error.
+
+`tests/shape-cases.sh` pins both traps. It also pins the frontmatter keys Claude Code honours, which matters because it ignores an unknown key silently.
+
 ## The `stop-limbo` Stop hook
 
 It fixes one problem: a reply ends and you cannot tell if Claude is waiting on something or waiting on you.
@@ -50,8 +59,10 @@ Measured 2026-11-07 by replaying 465 completed turns from 40 real sessions: `ope
 
 **Known false-positive shapes:**
 - A rhetorical `?` in a closing line.
-- An offer phrase quoted in the last paragraph.
-- A long-lived background task, such as a `Monitor`, that every reply would otherwise have to mention.
+- An offer phrase quoted in the last paragraph, such as a `>` blockquote.
+- A long-lived background task, such as a `Monitor`, that every reply would otherwise have to mention. `background_tasks` also lists ambient watchers ([anthropics/claude-code#98816](https://github.com/anthropics/claude-code/issues/98816)).
+
+**Fixed in 1.1.3, each pinned by a case:** a `?` inside inline code (`` `foo?` ``) no longer fires. A typographic `I’ll report` or "notification" now counts as a wait line. A question followed by a trailing `---` rule is no longer missed.
 
 **Known misses:**
 - A wait word used for another reason ("watch out", "a background note", "resume" as in a CV) silences `silent-wait`.

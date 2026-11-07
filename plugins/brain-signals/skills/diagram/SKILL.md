@@ -1,6 +1,6 @@
 ---
 name: diagram
-description: Render a mermaid diagram as real ASCII boxes in the terminal. Use when I want a rendered diagram of an architecture, flow, or state.
+description: Render a mermaid diagram as real ASCII boxes in the terminal. Use when the user wants a rendered diagram of an architecture, flow, or state.
 allowed-tools: Bash(printf:*), Bash(mermaid-ascii:*)
 ---
 Author a mermaid diagram for: $ARGUMENTS.
@@ -19,10 +19,11 @@ Render CONDENSED and VERTICAL — always these flags:
   wide for a terminal and wraps mid-box into unreadable garbage.
 - MEASURE the width before showing it, hard budget <=80 cols — "looks fine" is not a check:
 
-    ... | mermaid-ascii -p 0 -x 1 -y 2 | wc -L      # true display columns
+    ... | mermaid-ascii -p 0 -x 1 -y 2 | LC_ALL=C.UTF-8 wc -mL    # LAST number = columns
 
-  Use `wc -L`, **not** `awk length()` — awk counts bytes, so each box glyph counts 3 and a
-  17-column diagram reports 51. Over 80: shorten labels, switch to `TD`, or split in two.
+  Keep `LC_ALL=C.UTF-8` and `-m`: without a UTF-8 locale GNU `wc -L` undercounts box glyphs,
+  and BSD (macOS) `wc -L` counts **bytes** unless `-m` is given — a 10-column diagram reports
+  30. `awk length()` has the same byte trap. Over 80: shorten labels, switch to `TD`, or split.
 - Dotted/thick edges (`-.->`, `==>`) do NOT render — mermaid-ascii turns the whole line into a
   literal node label. Use plain `-->` only.
 - Every node and edge must be something you VERIFIED. A plausible but unverified diagram is

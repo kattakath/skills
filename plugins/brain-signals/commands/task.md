@@ -24,8 +24,8 @@ files and the checks.
 | Goal names files you already know | Read them directly. No agent. |
 | Goal spans unknown files / naming conventions | `Explore` agent, breadth "medium" |
 | Goal needs the architecture, not the lines | `cartographer` agent, or the `map` skill |
-| Goal is a bug or test failure | `systematic-debugging` skill **before** proposing a fix |
-| Goal touches a GitHub PR/issue | `gh-cli` skill (authenticated `gh`, never raw curl) |
+| Goal is a bug or test failure | reproduce it first (a debugging skill, if one is installed) **before** proposing a fix |
+| Goal touches a GitHub PR/issue | authenticated `gh`, never raw curl |
 | Goal touches Claude API / model ids / pricing | `claude-api` skill — never answer from memory |
 | Genuine architectural fork with trade-offs | `Plan` agent for the strategy, then continue here |
 
@@ -53,7 +53,7 @@ Rules for the contract:
 - If you think the goal itself is wrong, say so in **two lines**, then present the
   contract for the goal as asked anyway. Scaling it down is the user's call.
 
-Then ask for approval with **AskUserQuestion** (click-to-select, per global CLAUDE.md):
+Then ask for approval with **AskUserQuestion** (click-to-select options, never a typed answer):
 `Approve (Recommended)` / `Adjust the plan` / `Cancel`. Do not fire a single write tool
 before that answer lands.
 
@@ -76,8 +76,8 @@ While executing:
   polling loops or foreground sleeps.
 - Verifying a real app behaves: the `run` skill. A change that must be deployed or
   activated is not done until it is; the repo's own CLAUDE.md names how.
-- Genuinely stuck after two real attempts: say so and offer `grok-build:grok-delegate`
-  for a second diagnosis. Do not silently keep grinding.
+- Genuinely stuck after two real attempts: say so and offer a second diagnosis (another
+  agent or model, if one is available). Do not silently keep grinding.
 
 ## Phase 4 — Parking lot & close-out
 

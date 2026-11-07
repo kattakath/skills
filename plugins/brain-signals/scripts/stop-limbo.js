@@ -43,7 +43,7 @@ const TERMINAL = /^(?:completed|failed|killed|stopped|cancell?ed|error)$/i;
 
 // A reply that says it is waiting. Checked against the whole reply.
 const WAIT =
-  /\b(?:wait(?:ing)?|watch(?:ing|er)?|background|I'll report|I will report|resume|notified|notify|still running|in flight|when it (?:finishes|lands|completes))\b|⏳/i;
+  /\b(?:wait(?:ing)?|watch(?:ing|er)?|background|I'll report|I will report|resume|notif(?:y|ied|ications?)|still running|in flight|when it (?:finishes|lands|completes))\b|⏳/i;
 
 // Prose offers that hand a decision back as free text. Checked on the last paragraph.
 const OFFER =
@@ -57,11 +57,27 @@ function safeParse(s) {
   }
 }
 
-// The last paragraph of prose, with fenced code removed (a regex ending in `?` is not a
-// question) and trailing emphasis/brackets/quotes stripped so `**Proceed?**` still reads.
+// Typographic apostrophes and quotes folded to ASCII, so `I’ll report` matches the same
+// regex as `I'll report` — models emit both.
+function normalize(text) {
+  return String(text || "").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
+}
+
+// A markdown thematic break (`---`, `***`, `___`): layout, not a paragraph of prose.
+const RULE = /^(?:[-*_][ \t]*){3,}$/;
+
+// The last paragraph of prose. Code is removed — fenced blocks AND inline spans, because
+// a regex or a shell glob ending in `?` is not a question — and a trailing thematic break
+// is skipped, so `Want me to?` followed by `---` is still the paragraph that is read.
+// Trailing emphasis/brackets/quotes are stripped later so `**Proceed?**` still reads.
 function lastParagraph(text) {
-  const prose = String(text || "").replace(/```[\s\S]*?(?:```|$)/g, "");
-  const paras = prose.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+  const prose = normalize(text)
+    .replace(/```[\s\S]*?(?:```|$)/g, "")
+    .replace(/`[^`\n]*`/g, "CODE");
+  const paras = prose
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter((p) => p && !RULE.test(p));
   return paras.length ? paras[paras.length - 1] : "";
 }
 
@@ -263,7 +279,7 @@ function main() {
   const running = Array.isArray(input.background_tasks)
     ? input.background_tasks.filter(inFlight).length
     : pendingFromTranscript(transcript());
-  if (running > 0 && !WAIT.test(finalText)) cases.push("silent-wait");
+  if (running > 0 && !WAIT.test(normalize(finalText))) cases.push("silent-wait");
 
   // The AskUserQuestion exemption is only visible in the transcript. When it cannot be
   // read, this case cannot be decided, so it stays silent rather than guess.
