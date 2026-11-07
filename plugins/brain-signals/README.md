@@ -46,9 +46,14 @@ jq -r .case "$f" | sort | uniq -c    # warnings per case
 
 Block mode is a separate decision. First, count the false positives from this log against the sessions it names.
 
+Measured 2026-11-07 by replaying 465 completed turns from 40 real sessions: `open-question` fired on 47 (10%). Most matched "say the word" (18) or "want me to" (21), the prose offers it targets.
+
 **Known false-positive shapes:**
 - A rhetorical `?` in a closing line.
 - An offer phrase quoted in the last paragraph.
 - A long-lived background task, such as a `Monitor`, that every reply would otherwise have to mention.
 
-**Known misses:** a wait word used for another reason ("watch out", "a background note") silences `silent-wait`.
+**Known misses:**
+- A wait word used for another reason ("watch out", "a background note", "resume" as in a CV) silences `silent-wait`.
+- Agent Teams teammates never count as background work: they live for the whole session.
+- A reply that a blocking Stop hook forced (`stop_hook_active` is true) is never checked, even though it is the one you read.

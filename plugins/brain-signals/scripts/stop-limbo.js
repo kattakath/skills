@@ -229,6 +229,17 @@ const MESSAGES = {
     "[silent-wait] background work is still running and the reply does not say it is waiting for it",
 };
 
+// A native `background_tasks` entry that means "paused, waiting". Teammates (Agent Teams)
+// are long-lived by design, like the transcript fallback's `teammate_spawned`, so a lead
+// session would otherwise warn on every reply while its team exists.
+function inFlight(t) {
+  return Boolean(t) && typeof t === "object" && t.type !== "teammate" && !TERMINAL.test(String(t.status || ""));
+}
+
+function expandHome(p) {
+  return p === "~" || p.startsWith("~/") ? path.join(os.homedir(), p.slice(1)) : p;
+}
+
 function main() {
   const input = safeParse(fs.readFileSync(0, "utf8"));
   if (!input || typeof input !== "object") return;
@@ -238,7 +249,7 @@ function main() {
   const transcript = () => {
     if (entries === null) {
       if (typeof input.transcript_path !== "string") throw new Error("no transcript");
-      entries = readTail(input.transcript_path);
+      entries = readTail(expandHome(input.transcript_path));
       if (!entries.length) throw new Error("malformed transcript");
     }
     return entries;
@@ -250,7 +261,7 @@ function main() {
   const cases = [];
 
   const running = Array.isArray(input.background_tasks)
-    ? input.background_tasks.filter((t) => t && typeof t === "object" && !TERMINAL.test(String(t.status || ""))).length
+    ? input.background_tasks.filter(inFlight).length
     : pendingFromTranscript(transcript());
   if (running > 0 && !WAIT.test(finalText)) cases.push("silent-wait");
 

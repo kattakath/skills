@@ -105,6 +105,7 @@ warn silent-wait,open-question "both at once"        "$(input "$FX/bg-running.js
 quiet "native background_tasks empty"                "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[]')"
 quiet "native running, reply says waiting"           "$(input "$FX/bg-running.jsonl" "Started the suite in the background; I'll report when it lands." "$RUNNING")"
 quiet "native running, reply has ⏳"                 "$(input "$FX/bg-running.jsonl" '⏳ suite running.' "$RUNNING")"
+quiet "native: only a teammate in flight"            "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"tm1","type":"teammate","status":"running"}]')"
 quiet "native task already completed"                "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"bt1","type":"shell","status":"completed"}]')"
 quiet "fallback: completed notification"             "$(input "$FX/bg-completed.jsonl" - -)"
 quiet "fallback: agent stopped by TaskStop"          "$(input "$FX/agent-stopped.jsonl" - -)"
