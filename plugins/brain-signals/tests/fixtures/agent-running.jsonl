@@ -1,0 +1,4 @@
+{"type": "user", "origin": {"kind": "human"}, "message": {"role": "user", "content": "Research it."}}
+{"type": "assistant", "isSidechain": false, "message": {"role": "assistant", "content": [{"type": "tool_use", "id": "toolu_4", "name": "Agent", "input": {"description": "Research", "prompt": "x", "subagent_type": "general-purpose"}}]}}
+{"type": "user", "toolUseResult": {"isAsync": true, "status": "async_launched", "agentId": "ag1"}, "message": {"role": "user", "content": [{"type": "tool_result", "tool_use_id": "toolu_4", "content": "ok"}]}}
+{"type": "assistant", "isSidechain": false, "message": {"role": "assistant", "content": [{"type": "text", "text": "Launched the research agent."}]}}
