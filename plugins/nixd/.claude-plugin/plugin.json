@@ -1,0 +1,27 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "nixd",
+  "version": "1.0.0",
+  "description": "Nix language intelligence for Claude Code through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free: it installs nothing and expects nixd on PATH.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/nixd",
+  "icon": "./icon.png",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "nix",
+    "lsp",
+    "nixd",
+    "language-server"
+  ],
+  "lspServers": {
+    "nix": {
+      "command": "nixd",
+      "extensionToLanguage": {
+        ".nix": "nix"
+      }
+    }
+  }
+}

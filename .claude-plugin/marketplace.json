@@ -397,6 +397,23 @@
       "source": "./plugins/nix-flake-kit"
     },
     {
+      "name": "nixd",
+      "description": "Nix language intelligence through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free; expects nixd on PATH.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "nix",
+        "lsp",
+        "nixd",
+        "language-server"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/nixd",
+      "license": "MIT",
+      "source": "./plugins/nixd"
+    },
+    {
       "name": "page-lab",
       "description": "Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
       "author": {
