@@ -3,7 +3,9 @@
 Rules:
 - every fixture input (*.qfx, *.ofx, *.csv) sits under adapters/<inst>/fixtures/ with a
   <case>.case.toml saying `synthetic = true` and a <case>.expected.jsonl golden;
-- no PDF, XLSX or other binary file anywhere in the plugin (PDF cases are *.layout.txt);
+- no PDF, XLSX or other binary file anywhere in the plugin (PDF cases are *.layout.txt),
+  except the ONE icon the manifest declares: the root-level file `plugin.json`'s `icon`
+  names, and only if it is a real, small PNG (magic bytes, <= 64 KiB);
 - no stray 7+ digit run in a fixture input or case file, except the reserved synthetic
   pattern (a run starting 0000) and OFX datetime values (<DT...>);
 - no CSV fixture with a value under a never-read column ("Payee Account Number"): the
@@ -11,6 +13,7 @@ Rules:
 """
 import csv
 import io
+import json
 import re
 import tomllib
 from pathlib import Path
@@ -55,14 +58,35 @@ def stray_runs(text: str) -> list[str]:
     return [m.group(0)[:3] + "…" for m in RUN.finditer(text) if not RESERVED.fullmatch(m.group(0))]
 
 
+PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
+ICON_MAX = 64 * 1024
+
+
+def declared_icon(plugin_root: Path) -> Path | None:
+    """The manifest's icon, if it is a root-level, real, small PNG; else None."""
+    try:
+        icon = json.loads((plugin_root / ".claude-plugin" / "plugin.json").read_text("utf-8")).get("icon")
+    except (OSError, ValueError, AttributeError):
+        return None
+    if not isinstance(icon, str):
+        return None
+    p = (plugin_root / icon).resolve()
+    if p.parent != plugin_root.resolve() or p.suffix.lower() != ".png" or not p.is_file():
+        return None
+    if p.stat().st_size > ICON_MAX or p.read_bytes()[:8] != PNG_MAGIC:
+        return None
+    return p
+
+
 def lint(plugin_root: Path) -> list[str]:
     problems = []
+    icon = declared_icon(plugin_root)
     for p in sorted(plugin_root.rglob("*")):
         if not p.is_file() or {".git", "__pycache__"} & set(p.parts):
             continue
         parts = p.relative_to(plugin_root).parts
         rel = "/".join(parts)
-        if p.suffix.lower() in BINARY_EXT:
+        if p.suffix.lower() in BINARY_EXT and not (icon and p.resolve() == icon):
             problems.append(f"{rel}: binary statement-like file in the plugin tree")
             continue
         in_fixtures = len(parts) >= 4 and parts[0] == "adapters" and parts[2] == "fixtures"
