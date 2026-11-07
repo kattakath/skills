@@ -1,9 +1,11 @@
 // page-lab-gate against a REAL browser and the local fixture site: every detector STOPS with
-// exit 10 and a schema-valid page-lab/block@1 event, and ordinary pages pass.
+// exit 10 and a schema-valid page-lab/block@1 event, ordinary pages pass, and a resume after a
+// block re-navigates ZERO done items.
 //
 // Needs a browser: set PAGE_LAB_CHROME to a Chrome for Testing executable (the fleet's
 // nixpkgs playwright-driver.browsers-chromium). Without it every case SKIPS, by name — never a
-// silent pass.
+// silent pass. The headed handoff itself cannot run unattended; tests/gate-cli.test.mjs covers
+// it up to the relaunch argv.
 //
 // Everything lives under one throwaway dir (PAGE_LAB_TEST_TMP, else the OS temp dir): XDG
 // state, config and the CLI daemon's runtime dir, so the operator's profiles, overlay and any
@@ -135,4 +137,40 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     assert.deepEqual([end.json.drained, end.json.pending, end.json.done], [true, 0, 3]);
   });
 
+  test('resume after a block re-navigates 0 done items; a 2nd block on the origin is a cooldown', async () => {
+    const run = await newRun(['/ok', '/403', '/ok-2']);
+    const first = await gate('nav', '--run', run);
+    assert.equal(first.code, 0, `${first.stdout}\n${first.stderr}`);
+    const res = join(root, `${run}-r.json`);
+    writeFileSync(res, '{}');
+    await gate('done', '--run', run, '--item', first.json.item, '--result', res);
+
+    const blocked = await gate('nav', '--run', run);
+    assert.equal(blocked.code, 10, `${blocked.stdout}\n${blocked.stderr}`);
+    assert.equal(blocked.json.originState, 'blocked');
+    // /403 and /ok-2 share the blocked origin: both held, neither navigated, still exit 10.
+    const held = await gate('nav', '--run', run);
+    assert.equal(held.code, 10, `${held.stdout}\n${held.stderr}`);
+    assert.deepEqual(held.json.held, { blocked: 2, cooldown: 0 });
+
+    const plan = await gate('handoff', '--run', run, '--dry-run');
+    assert.equal(plan.code, 0, plan.stderr);
+    assert.ok(plan.json.argv.includes('--headless=false'));
+    assert.equal(plan.json.open, `${fx.base}/403`);
+
+    const resumed = await gate('resume', '--run', run);
+    assert.equal(resumed.code, 0, resumed.stderr);
+    assert.equal(resumed.json.pending, 2);
+    assert.equal(resumed.json.items.includes(first.json.item), false);
+
+    // After resume: the 403 is retried once (the human cleared it), blocks again → cooldown.
+    const again = await gate('nav', '--run', run);
+    assert.equal(again.code, 10, `${again.stdout}\n${again.stderr}`);
+    assert.equal(again.json.originState, 'cooldown');
+    const cooled = await gate('nav', '--run', run);
+    assert.equal(cooled.code, 11, 'every pending item sits on an origin in cooldown');
+    const done = readFileSync(join(env.XDG_STATE_HOME, 'page-lab', 'runs', run, 'done.jsonl'), 'utf8').trim().split('\n');
+    assert.equal(done.length, 1, 'done.jsonl untouched by resume');
+    for (const r of [again, cooled]) assert.notEqual(r.json?.event?.url, first.json.url, 'a done item was re-navigated');
+  });
 });

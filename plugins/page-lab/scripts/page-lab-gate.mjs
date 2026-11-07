@@ -9,7 +9,10 @@
  *   page-lab-gate run     --profile P --run R --queue FILE [--result-schema FILE] [--no-start]
  *   page-lab-gate nav     --run R
  *   page-lab-gate done    --run R --item HASH --result FILE
+ *   page-lab-gate handoff --run R [--dry-run [--offline]]
+ *   page-lab-gate resume  --run R [--dry-run [--offline]]
  *   page-lab-gate status  --run R
+ *   page-lab-gate clear-cooldown --run R --origin ORIGIN      (a human, in a terminal)
  *
  * Exit 0 ok / queue drained · 10 blocked, handoff needed · 11 cooldown, aborted ·
  *      12 profile locked by a live process that is not ours · 1 error · 2 usage.
@@ -41,8 +44,10 @@ import { buildBlock, formatErrors, loadBlockSchema, originOf, validate } from '.
 import {
   COOLDOWN_ABORT_ORIGINS,
   RUN_ID_PATTERN,
+  clearCooldown,
   cooldownOrigins,
   decide,
+  liftBlocked,
   nextItem,
   parseDocumentStatus,
   parseNavigate,
@@ -73,6 +78,7 @@ class GateExit extends Error {
 }
 
 const out = (obj) => process.stdout.write(`${JSON.stringify(obj)}\n`);
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
 // ---------------------------------------------------------------------------
 // Run files
@@ -213,6 +219,16 @@ function requireOurDaemon(profile) {
   return st;
 }
 
+function waitLockReleased(profile, ms = 15_000) {
+  const until = Date.now() + ms;
+  while (Date.now() < until) {
+    const s = lockState(profile.name).state;
+    if (s === 'free' || s === 'stale') return true;
+    sleep(250);
+  }
+  return false;
+}
+
 function prepareDir(profile) {
   const dir = profileDir(profile.name);
   mkdirSync(join(dir, '..'), { recursive: true, mode: 0o700 });
@@ -227,6 +243,13 @@ function startDaemon(profile, headless, workspace) {
   const r = cdt(profile, ['start', ...argv]);
   if (r.code !== 0) throw new GateExit(EXIT.ERROR, `chrome-devtools start failed: ${r.stderr.trim()}`);
   return argv;
+}
+
+function stopDaemon(profile) {
+  cdt(profile, ['stop'], { timeout: 30_000 });
+  if (!waitLockReleased(profile)) {
+    throw new GateExit(EXIT.LOCKED, `profile ${profile.name} still locked after stop`);
+  }
 }
 
 function json(r) {
@@ -407,6 +430,67 @@ function cmdDone(opts) {
   out({ done: q.item });
 }
 
+function lastBlockedUrl(r) {
+  const events = readJsonl(r.files.events);
+  return events.length ? events[events.length - 1].url : null;
+}
+
+function cmdHandoff(opts) {
+  const r = openRun(opts.run);
+  const dry = Boolean(opts['dry-run']);
+  const st = dry ? daemonStatusOrNone(r.profile, opts) : daemonStatus(r.profile);
+  const lock = checkLock(r.profile, st);
+  const { argv } = dedicatedArgv(r.profile, { headless: false, workspace: r.files.dir });
+  const url = lastBlockedUrl(r);
+  const plan = { run: r.run, profile: r.profile.name, lock: lock.state, stop: st.running, argv, open: url };
+  if (dry) {
+    out({ dryRun: true, ...plan });
+    return;
+  }
+  if (st.running) stopDaemon(r.profile);
+  startDaemon(r.profile, false, r.files.dir);
+  // The daemon launches Chromium lazily, on its first tool call: list_pages opens the window.
+  const page = workingPage(r.profile);
+  if (url) cdt(r.profile, ['navigate_page', String(page), '--type', 'url', '--url', url]);
+  out({
+    ...plan,
+    next: `clear the challenge or sign in, close the window, then: page-lab-gate resume --run ${r.run}`,
+  });
+}
+
+function daemonStatusOrNone(profile, opts) {
+  // --dry-run --offline plans without calling the CLI at all (tests, CI, no npx). Planning only:
+  // nothing is stopped, started or written.
+  return opts.offline ? { running: false } : daemonStatus(profile);
+}
+
+function cmdResume(opts) {
+  const r = openRun(opts.run);
+  const dry = Boolean(opts['dry-run']);
+  const st = dry ? daemonStatusOrNone(r.profile, opts) : daemonStatus(r.profile);
+  const lock = checkLock(r.profile, st);
+  liftBlocked(r.cooldown);
+  const pending = r.queue.filter((q) => !r.done.has(q.item));
+  const { argv } = dedicatedArgv(r.profile, { headless: r.profile.headless !== false, workspace: r.files.dir });
+  const plan = {
+    run: r.run,
+    lock: lock.state,
+    pending: pending.length,
+    done: r.done.size,
+    items: pending.map((q) => q.item),
+    argv,
+  };
+  if (dry) {
+    out({ dryRun: true, ...plan });
+    return;
+  }
+  writeJson(r.files.cooldown, r.cooldown);
+  writeJson(r.files.cursor, { cursor: 0 });
+  if (st.running) stopDaemon(r.profile);
+  startDaemon(r.profile, r.profile.headless !== false, r.files.dir);
+  out(plan);
+}
+
 function cmdStatus(opts) {
   const r = openRun(opts.run);
   out({
@@ -422,14 +506,31 @@ function cmdStatus(opts) {
   });
 }
 
+function cmdClearCooldown(opts) {
+  // The ONLY way out of a cooldown, and it is the human's (§7.5): an agent's Bash tool has no
+  // terminal. Deliberately no env override — an override is a bypass.
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    throw new GateExit(EXIT.USAGE, 'clear-cooldown is for the human, in a terminal (stdin and stdout must be a TTY)');
+  }
+  if (!opts.origin) throw new GateExit(EXIT.USAGE, 'clear-cooldown needs --origin');
+  const r = openRun(opts.run);
+  const origin = originOf(opts.origin);
+  if (!clearCooldown(r.cooldown, origin, Date.now())) throw new GateExit(EXIT.USAGE, `no cooldown entry for ${origin}`);
+  writeJson(r.files.cooldown, r.cooldown);
+  out({ cleared: origin });
+}
+
 const COMMANDS = {
   run: cmdRun,
   nav: cmdNav,
   done: cmdDone,
+  handoff: cmdHandoff,
+  resume: cmdResume,
   status: cmdStatus,
+  'clear-cooldown': cmdClearCooldown,
 };
 
-const FLAGS = new Set(['no-start']);
+const FLAGS = new Set(['dry-run', 'offline', 'no-start']);
 
 function parseArgs(argv) {
   const [cmd, ...rest] = argv;

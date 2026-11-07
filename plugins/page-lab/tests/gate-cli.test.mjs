@@ -1,14 +1,18 @@
-// page-lab-gate's run state and cooldown exits — no browser, no npx. `run --no-start` writes
-// the files, `done` appends, and the drained/cooldown exits are reached before any CLI call.
+// page-lab-gate's run state, handoff plan, resume plan and cooldown — no browser, no npx.
+// Everything that does not need a live page: `run --no-start` writes the files, `done` appends,
+// `handoff --dry-run --offline` and `resume --dry-run --offline` print the plan they would act
+// on, and the cooldown/lock exits are reached before any CLI call. The headed relaunch itself
+// needs a display and a human; this covers everything up to its argv.
 
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
-import { tmpdir } from 'node:os';
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, statSync, symlinkSync, writeFileSync } from 'node:fs';
+import { hostname, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { dedicatedArgv, resolveProfile } from '../scripts/lib/profiles.mjs';
 import { itemHash } from '../scripts/lib/gate.mjs';
 
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
@@ -109,6 +113,79 @@ test('nav: every pending item on a cooling origin → exit 11', () => {
   const r = gate('nav', '--run', 'c1');
   assert.equal(r.code, 11);
   assert.deepEqual(r.json.held, { blocked: 0, cooldown: 2 });
+});
+
+test('handoff plan: same dir, same flags, --headless=false the ONLY change; opens the blocked URL', () => {
+  const { gate, newRun, env } = sandbox();
+  const dir = newRun('h', URLS);
+  writeFileSync(join(dir, 'events.jsonl'), `${JSON.stringify({ url: URLS[1] })}\n`);
+  const r = gate('handoff', '--run', 'h', '--dry-run', '--offline');
+  assert.equal(r.code, 0, r.stderr);
+  const headless = dedicatedArgv(resolveProfile('lab', env), { headless: true, workspace: dir, env }).argv;
+  const diff = headless.map((a, i) => [a, r.json.argv[i]]).filter(([a, b]) => a !== b);
+  assert.equal(r.json.argv.length, headless.length);
+  assert.deepEqual(diff, [['--headless=true', '--headless=false']]);
+  assert.ok(r.json.argv.includes(`--userDataDir=${join(env.XDG_STATE_HOME, 'page-lab', 'profiles', 'lab')}`));
+  assert.equal(r.json.open, URLS[1]);
+  assert.equal(r.json.lock, 'free');
+});
+
+test('resume plan after handoff re-processes 0 done items and lifts only first-block stops', () => {
+  const { gate, newRun, base } = sandbox();
+  const dir = newRun('rs', URLS);
+  const res = join(base, 'r.json');
+  writeFileSync(res, '{}');
+  const doneItems = [itemHash(URLS[0]), itemHash(URLS[2])];
+  for (const i of doneItems) assert.equal(gate('done', '--run', 'rs', '--item', i, '--result', res).code, 0);
+  assert.equal(gate('handoff', '--run', 'rs', '--dry-run', '--offline').code, 0);
+  const r = gate('resume', '--run', 'rs', '--dry-run', '--offline');
+  assert.equal(r.code, 0, r.stderr);
+  assert.equal(r.json.pending, 2);
+  assert.equal(r.json.items.filter((i) => doneItems.includes(i)).length, 0, 'a done item would be re-processed');
+  assert.ok(r.json.argv.includes('--headless=true'));
+  // dry-run writes nothing
+  assert.deepEqual(JSON.parse(readFileSync(join(dir, 'cooldown.json'), 'utf8')), {});
+});
+
+test('lock: a foreign-host or live not-ours SingletonLock → exit 12, before any relaunch', () => {
+  const { gate, newRun, env } = sandbox();
+  newRun('l', URLS);
+  const pdir = join(env.XDG_STATE_HOME, 'page-lab', 'profiles', 'lab');
+  mkdirSync(pdir, { recursive: true });
+  symlinkSync('some-other-host-4242', join(pdir, 'SingletonLock'));
+  assert.equal(gate('handoff', '--run', 'l', '--dry-run', '--offline').code, 12);
+  assert.equal(gate('resume', '--run', 'l', '--dry-run', '--offline').code, 12);
+
+  const { gate: gate2, newRun: newRun2, env: env2 } = sandbox();
+  newRun2('l2', URLS);
+  const pdir2 = join(env2.XDG_STATE_HOME, 'page-lab', 'profiles', 'lab');
+  mkdirSync(pdir2, { recursive: true });
+  // A live pid on this host that is no daemon's child: this test process.
+  symlinkSync(`${hostname()}-${process.pid}`, join(pdir2, 'SingletonLock'));
+  assert.equal(gate2('handoff', '--run', 'l2', '--dry-run', '--offline').code, 12);
+});
+
+test('clear-cooldown: refused without a terminal, nothing cleared', () => {
+  const { gate, newRun } = sandbox();
+  const dir = newRun('cc', URLS);
+  const before = JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } });
+  writeFileSync(join(dir, 'cooldown.json'), before);
+  const r = gate('clear-cooldown', '--run', 'cc', '--origin', 'https://a.example');
+  assert.equal(r.code, 2);
+  assert.match(r.stderr, /TTY/);
+  assert.equal(readFileSync(join(dir, 'cooldown.json'), 'utf8'), before);
+});
+
+test('clear-cooldown: a human at a terminal clears it', { skip: !['darwin', 'linux'].includes(process.platform) }, () => {
+  const { env, newRun } = sandbox();
+  const dir = newRun('ct', URLS);
+  writeFileSync(join(dir, 'cooldown.json'), JSON.stringify({ 'https://a.example': { blocks: [], state: 'cooldown' } }));
+  const cmd = ['node', GATE, 'clear-cooldown', '--run', 'ct', '--origin', 'https://a.example'];
+  // script(1) gives the command a pseudo-terminal — the closest a test gets to "a human ran it".
+  const args = process.platform === 'darwin' ? ['-q', '/dev/null', ...cmd] : ['-qec', cmd.join(' '), '/dev/null'];
+  const r = spawnSync('script', args, { env, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  assert.equal(r.status, 0, `${r.stdout}\n${r.stderr}`);
+  assert.equal(JSON.parse(readFileSync(join(dir, 'cooldown.json'), 'utf8'))['https://a.example'].state, 'cleared');
 });
 
 test('the run protocol never tells the model to open a page itself', () => {
