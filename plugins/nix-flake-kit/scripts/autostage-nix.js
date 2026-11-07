@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 /**
  * PostToolUse auto-stage hook (Write|Edit).
  *
@@ -33,6 +34,10 @@ const { execFileSync } = require("node:child_process");
 const path = require("node:path");
 const { readNixTarget } = require("./hook-input.js");
 
+// Types only — erased at run time, so the hook still needs nothing but `node`. They come
+// from Anthropic's own SDK (CI installs it as a dev dependency and runs tsc over this file).
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').SyncHookJSONOutput} SyncHookJSONOutput */
+
 const QUIET_FAILURE = /not a git repository|paths are ignored by one of your \.gitignore/i;
 
 try {
@@ -46,23 +51,24 @@ try {
       stdio: ["ignore", "ignore", "pipe"],
       timeout: 8000,
     });
-    process.stdout.write(
-      JSON.stringify({ systemMessage: `auto-staged ${shown} (git-purity safety net)` }) + "\n",
-    );
+    /** @type {SyncHookJSONOutput} */
+    const staged = { systemMessage: `auto-staged ${shown} (git-purity safety net)` };
+    process.stdout.write(JSON.stringify(staged) + "\n");
   } catch (e) {
-    const stderr = String((e && e.stderr) || (e && e.message) || "");
+    const err = /** @type {{ stderr?: unknown, message?: unknown } | undefined} */ (e);
+    const stderr = String((err && err.stderr) || (err && err.message) || "");
     if (!QUIET_FAILURE.test(stderr)) {
       const first = stderr.trim().split("\n")[0] || "git add failed";
-      process.stdout.write(
-        JSON.stringify({
-          hookSpecificOutput: {
-            hookEventName: "PostToolUse",
-            additionalContext:
-              `nix-flake-kit could NOT auto-stage ${shown}: ${first}\n` +
-              `A flake does not see an untracked file. Stage ${t.abs} yourself before evaluating.`,
-          },
-        }) + "\n",
-      );
+      /** @type {SyncHookJSONOutput} */
+      const missed = {
+        hookSpecificOutput: {
+          hookEventName: "PostToolUse",
+          additionalContext:
+            `nix-flake-kit could NOT auto-stage ${shown}: ${first}\n` +
+            `A flake does not see an untracked file. Stage ${t.abs} yourself before evaluating.`,
+        },
+      };
+      process.stdout.write(JSON.stringify(missed) + "\n");
     }
   }
   process.exit(0);

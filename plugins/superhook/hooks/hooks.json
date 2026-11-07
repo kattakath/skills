@@ -29,6 +29,15 @@
         "hooks": [
           {
             "type": "command",
+            "command": "/bin/sh \"${CLAUDE_PLUGIN_ROOT}/scripts/node-check.sh\"",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
             "command": "root=$(git -C \"${CLAUDE_PROJECT_DIR:-$PWD}\" rev-parse --show-toplevel 2>/dev/null || printf '%s' \"${CLAUDE_PROJECT_DIR:-$PWD}\"); [ -f \"$root/.claude/hooks/superhook.log\" ] || exit 0; CLAUDE_PROJECT_DIR=\"$root\" exec node \"${CLAUDE_PLUGIN_ROOT}/scripts/superhook-digest.js\"",
             "timeout": 10
           }

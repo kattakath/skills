@@ -161,6 +161,36 @@ check "digest silent after review" "$(CLAUDE_PROJECT_DIR="$PROJ" node "$DIG")" "
 printf 'not json\n' >"$PROJ/.claude/hooks/superhook.log"
 check "digest survives a garbage log" "$(CLAUDE_PROJECT_DIR="$PROJ" node "$DIG"; echo "rc=$?")" "rc=0"
 
+echo "node-check (POSIX sh, runs when node cannot)"
+NC="$HERE/../scripts/node-check.sh"
+NODIR=$(mktemp -d); FAKEDIR=$(mktemp -d)
+printf '#!/bin/sh\nexit 0\n' >"$FAKEDIR/node"; chmod +x "$FAKEDIR/node"
+# nc <PATH value>  -> sets OUT, ERR, RC. /bin/sh by absolute path, as hooks.json starts it;
+# run from an empty dir, since some shells read an empty PATH element as the cwd.
+nc() {
+  local o e
+  o=$(mktemp); e=$(mktemp)
+  (cd "$NODIR" && env -i PATH="$1" /bin/sh "$NC" >"$o" 2>"$e"); RC=$?
+  OUT=$(cat "$o"); ERR=$(cat "$e"); rm -f "$o" "$e"
+}
+nc "$PATH"
+check "node on PATH: silent, exit 0" "$RC|$OUT|$ERR" "0||"
+nc "$FAKEDIR"
+check "any node on PATH counts (a lookup, not a hardcoded path)" "$RC|$OUT|$ERR" "0||"
+missing='"node is not on PATH" in d["systemMessage"] and "BLOCKS every Bash" in d["systemMessage"] and d["hookSpecificOutput"]["hookEventName"] == "SessionStart" and "NOT on PATH" in d["hookSpecificOutput"]["additionalContext"]'
+nc "$NODIR"
+check "node absent: SessionStart JSON with systemMessage, exit 0" "$RC|$(j "$missing")|$ERR" "0|True|"
+nc ""
+check "empty PATH: same JSON, exit 0" "$RC|$(j "$missing")|$ERR" "0|True|"
+check "message names all three floor plugins" "$(j 'all(p in d["systemMessage"] for p in ("superhook", "nix-flake-kit", "brain-signals"))')" "True"
+rm -rf "$NODIR" "$FAKEDIR"
+nc_wired=$(python3 -I -c '
+import json, sys
+cmds = [h["command"] for e in json.load(open(sys.argv[1]))["hooks"]["SessionStart"] for h in e["hooks"]]
+c = [x for x in cmds if "node-check.sh" in x]
+print(len(c) == 1 and c[0].startswith("/bin/sh ") and "node " not in c[0])' "$HOOKS_JSON")
+check "hooks.json starts node-check with /bin/sh, never node" "$nc_wired" "True"
+
 echo "wiring"
 # Budgets are read from the sources, never restated here.
 wiring=$(python3 -I - "$HOOKS_JSON" "$SUP" <<'PY'
@@ -183,5 +213,5 @@ check "inner budgets < harness timeouts; Bash matcher; PreToolUse fails closed; 
 total=$((pass+fail))
 echo "superhook: $pass passed, $fail failed ($total cases)"
 # A floor, so a moved fixture cannot pass as zero cases.
-if [ "$total" -lt 39 ]; then echo "FAIL: only $total cases ran (floor 39)"; exit 1; fi
+if [ "$total" -lt 45 ]; then echo "FAIL: only $total cases ran (floor 45)"; exit 1; fi
 [ "$fail" -eq 0 ]

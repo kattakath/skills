@@ -129,6 +129,31 @@ jobs:
           done < <(find plugins -name '*.sh' -print0)
           exit $rc
 
+      # The safety-floor hooks (superhook, nix-flake-kit, brain-signals) are typed against
+      # Anthropic's OWN hook types: JSDoc `import('@anthropic-ai/claude-agent-sdk')` typedefs,
+      # checked by tsc. Parsing cannot see a typo'd `decision`/`permissionDecision` value or a
+      # payload field the harness never sends; this can (a `"aprove"` fails with TS2367).
+      #
+      # Types only — the scripts still run with plain `node` and no node_modules. The SDK is a
+      # devDependency in the root package.json, and the grep fails any plugin script that
+      # `require`s or `import`s it at run time.
+      #
+      # Pins, all exact, from package-lock.json via `npm ci` (integrity-checked):
+      #   - claude-agent-sdk 0.3.296: its `claudeCodeVersion` is 2.1.296, the same CLI the
+      #     validator above is pinned to. Raise the two together.
+      #   - typescript 6.0.3: the last JavaScript tsc. 7.x is native and arrives as an
+      #     optionalDependency (@typescript/typescript-<platform>), which --omit=optional drops.
+      #   - --omit=optional is load-bearing: the SDK's optionalDependencies are its native CLI
+      #     binaries, ~290 MB unpacked each (measured: the linux-x64 one), and tsc needs none.
+      - name: Hook scripts type-check
+        run: |
+          npm ci --ignore-scripts --omit=optional --no-audit --no-fund
+          npx --no-install tsc -p tsconfig.hooks.json
+          if grep -rnE "(require\(|from |import\()['\"]@anthropic-ai/claude-agent-sdk" plugins --include='*.js' --include='*.mjs' | grep -v '@typedef'; then
+            echo "::error::a plugin script loads the Agent SDK at run time; types must stay in JSDoc"
+            exit 1
+          fi
+
       # `node --check` CANNOT SEE THE FAILURE THAT ACTUALLY MATTERS HERE. A workflow script
       # whose `export const meta = {...}` literal is not the FIRST statement is perfectly valid
       # JavaScript and loads as ZERO workflows — measured: `Total plugin workflows loaded: 0`

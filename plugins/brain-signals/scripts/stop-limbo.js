@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// @ts-check
 /**
  * Stop hook: warn when a turn ends in LIMBO — the reader cannot tell whether Claude is
  * waiting on something or expecting an answer. Two shapes, both measured as the
@@ -38,6 +39,16 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
+// Types only — erased at run time, so the hook still needs nothing but `node`. They come
+// from Anthropic's own SDK (CI installs it as a dev dependency and runs tsc over this file).
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').StopHookInput} StopHookInput */
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').BackgroundTaskSummary} BackgroundTaskSummary */
+/** @typedef {import('@anthropic-ai/claude-agent-sdk').SyncHookJSONOutput} SyncHookJSONOutput */
+// The transcript JSONL has no published type; only the fields read here are named.
+/** @typedef {{ type?: string, text?: unknown, name?: string, id?: string, tool_use_id?: string, input?: { task_id?: unknown } }} Block */
+/** @typedef {{ type?: string, isMeta?: boolean, isSidechain?: boolean, toolUseResult?: any, message?: { content?: unknown } }} Entry */
+/** @typedef {"open-question" | "silent-wait"} Case */
+
 const TAIL_BYTES = 1024 * 1024; // transcripts reach 80+ MB; the current turn is at the end
 const TERMINAL = /^(?:completed|failed|killed|stopped|cancell?ed|error)$/i;
 
@@ -49,6 +60,7 @@ const WAIT =
 const OFFER =
   /\b(?:let me know|want me to|should I|shall I|say the word|tell me if|would you like|do you want)\b/i;
 
+/** @param {string} s @returns {any} */
 function safeParse(s) {
   try {
     return JSON.parse(s);
@@ -59,6 +71,7 @@ function safeParse(s) {
 
 // Typographic apostrophes and quotes folded to ASCII, so `I’ll report` matches the same
 // regex as `I'll report` — models emit both.
+/** @param {unknown} text */
 function normalize(text) {
   return String(text || "").replace(/[\u2018\u2019]/g, "'").replace(/[\u201C\u201D]/g, '"');
 }
@@ -70,6 +83,7 @@ const RULE = /^(?:[-*_][ \t]*){3,}$/;
 // a regex or a shell glob ending in `?` is not a question — and a trailing thematic break
 // is skipped, so `Want me to?` followed by `---` is still the paragraph that is read.
 // Trailing emphasis/brackets/quotes are stripped later so `**Proceed?**` still reads.
+/** @param {string | undefined} text */
 function lastParagraph(text) {
   const prose = normalize(text)
     .replace(/```[\s\S]*?(?:```|$)/g, "")
@@ -81,6 +95,7 @@ function lastParagraph(text) {
   return paras.length ? paras[paras.length - 1] : "";
 }
 
+/** @param {string | undefined} text */
 function isOpenQuestion(text) {
   const p = lastParagraph(text);
   if (!p) return false;
@@ -92,6 +107,7 @@ function isOpenQuestion(text) {
 
 // Parsed entries from the last TAIL_BYTES. Throws on a missing file; returns [] when
 // nothing parses, which the caller treats as "malformed" and goes silent.
+/** @param {string} file @returns {Entry[]} */
 function readTail(file) {
   const fd = fs.openSync(file, "r");
   try {
@@ -113,6 +129,7 @@ function readTail(file) {
   }
 }
 
+/** @param {Entry | undefined} entry @returns {Block[]} */
 function blocks(entry) {
   const c = entry && entry.message && entry.message.content;
   if (Array.isArray(c)) return c;
@@ -120,6 +137,7 @@ function blocks(entry) {
   return [];
 }
 
+/** @param {Entry} entry */
 function userText(entry) {
   return blocks(entry)
     .filter((b) => b && b.type === "text" && typeof b.text === "string")
@@ -129,12 +147,14 @@ function userText(entry) {
 
 // A user entry that STARTS a turn: a prompt, a task-notification or a peer message —
 // anything but a tool result or a meta/system injection.
+/** @param {Entry | undefined} entry */
 function startsTurn(entry) {
   if (!entry || entry.type !== "user" || entry.isMeta === true) return false;
   return !blocks(entry).some((b) => b && b.type === "tool_result");
 }
 
 // Assistant content blocks of the current (last) turn, in order.
+/** @param {Entry[]} entries @returns {Block[]} */
 function currentTurnBlocks(entries) {
   let start = 0;
   for (let i = entries.length - 1; i >= 0; i--) {
@@ -150,6 +170,7 @@ function currentTurnBlocks(entries) {
   return out;
 }
 
+/** @param {Block[]} turn @returns {string} */
 function finalTextFrom(turn) {
   for (let i = turn.length - 1; i >= 0; i--) {
     const b = turn[i];
@@ -160,6 +181,7 @@ function finalTextFrom(turn) {
 
 // True when an AskUserQuestion call came after the turn's last text block (or the
 // turn has no text at all and asked one).
+/** @param {Block[]} turn */
 function askedAfterText(turn) {
   let lastText = -1;
   for (let i = 0; i < turn.length; i++) {
@@ -173,6 +195,7 @@ function askedAfterText(turn) {
   return false;
 }
 
+/** @param {string} s @param {string} name */
 function tag(s, name) {
   const m = new RegExp(`<${name}>([^<]*)</${name}>`).exec(s);
   return m ? m[1].trim() : null;
@@ -182,6 +205,7 @@ function tag(s, name) {
 // (Bash `backgroundTaskId`; Agent `isAsync` / `async_launched`), minus any that a
 // task-notification reported terminal or TaskStop stopped. Teammates are long-lived by
 // design and are not counted.
+/** @param {Entry[]} entries */
 function pendingFromTranscript(entries) {
   const pending = new Map(); // tool_use id -> task id
   const done = new Set(); // tool_use ids and task ids reported terminal
@@ -225,6 +249,7 @@ function logDir() {
   return path.join(state, "brain-signals");
 }
 
+/** @param {Case[]} cases @param {unknown} sessionId */
 function logCases(cases, sessionId) {
   try {
     const dir = logDir();
@@ -238,6 +263,7 @@ function logCases(cases, sessionId) {
   }
 }
 
+/** @type {Record<Case, string>} */
 const MESSAGES = {
   "open-question":
     "[open-question] the reply ends on a prose question or offer, with no AskUserQuestion options after it",
@@ -248,19 +274,24 @@ const MESSAGES = {
 // A native `background_tasks` entry that means "paused, waiting". Teammates (Agent Teams)
 // are long-lived by design, like the transcript fallback's `teammate_spawned`, so a lead
 // session would otherwise warn on every reply while its team exists.
+// Typed as the SDK's entry, but still guarded: the payload is untrusted JSON.
+/** @param {BackgroundTaskSummary} t */
 function inFlight(t) {
   return Boolean(t) && typeof t === "object" && t.type !== "teammate" && !TERMINAL.test(String(t.status || ""));
 }
 
+/** @param {string} p */
 function expandHome(p) {
   return p === "~" || p.startsWith("~/") ? path.join(os.homedir(), p.slice(1)) : p;
 }
 
 function main() {
+  /** @type {StopHookInput | undefined} */
   const input = safeParse(fs.readFileSync(0, "utf8"));
   if (!input || typeof input !== "object") return;
   if (input.stop_hook_active === true) return;
 
+  /** @type {Entry[] | null} */
   let entries = null;
   const transcript = () => {
     if (entries === null) {
@@ -274,6 +305,7 @@ function main() {
   const native = typeof input.last_assistant_message === "string";
   const finalText = native ? input.last_assistant_message : finalTextFrom(currentTurnBlocks(transcript()));
 
+  /** @type {Case[]} */
   const cases = [];
 
   const running = Array.isArray(input.background_tasks)
@@ -296,7 +328,9 @@ function main() {
   if (!cases.length) return;
   logCases(cases, input.session_id);
   const body = cases.map((c) => MESSAGES[c]).join("; ");
-  process.stdout.write(JSON.stringify({ systemMessage: `brain-signals stop-limbo (warn only): ${body}.` }));
+  /** @type {SyncHookJSONOutput} */
+  const out = { systemMessage: `brain-signals stop-limbo (warn only): ${body}.` };
+  process.stdout.write(JSON.stringify(out));
 }
 
 try {
