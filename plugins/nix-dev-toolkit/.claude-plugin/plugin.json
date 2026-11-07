@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "nix-dev-toolkit",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue.",
   "author": {
     "name": "Ismail Kattakath"

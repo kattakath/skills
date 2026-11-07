@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "job-search",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Job-application skills: analyze a posting and score the match, optimize a resume for ATS, write a cover letter, prepare interview STAR stories, and plan a salary negotiation. Vendored unmodified from Paramchoudhary/ResumeSkills@74ae19e (MIT).",
   "author": {
     "name": "Param Choudhary",

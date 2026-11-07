@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ats-safe-pdf",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Produce PDFs whose text layer reads correctly for ATS parsers, copy-paste and screen readers: Typst with PDF/UA-1 instead of HTML print-to-PDF, single-column layout, measured text-layer rules, and a multi-reader order/completeness check.",
   "author": {
     "name": "Ismail Kattakath"

@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "harvest",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
   "author": {
     "name": "Ismail Kattakath"
