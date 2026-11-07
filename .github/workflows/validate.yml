@@ -290,12 +290,6 @@ jobs:
           bash plugins/rag/tests/launcher-cases.sh
           bash plugins/wordpress/tests/launcher-cases.sh
 
-      # The launcher's credential precedence is the plugin's whole contract, and an empty
-      # userConfig value (what an UNSET one substitutes to) blanking the environment is the
-      # bug it exists to prevent. A stub uvx records argv + env, so no network or uv is needed.
-      - name: google-workspace-mcp launcher cases
-        run: bash plugins/google-workspace-mcp/tests/run.sh
-
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which
       # matters more than the flags: this hook is enabled in every repo, so a rule that

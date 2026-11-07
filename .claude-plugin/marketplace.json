@@ -221,23 +221,6 @@
       "source": "./plugins/github-release-gate"
     },
     {
-      "name": "google-workspace-mcp",
-      "description": "Google Workspace as one stdio MCP server (workspace-mcp, pinned): Google Tasks by default, any other service opt-in. Credentials come from a credential command, then the environment, then a prompt.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "mcp",
-        "google-workspace",
-        "google-tasks",
-        "workspace-mcp"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/google-workspace-mcp",
-      "license": "MIT",
-      "source": "./plugins/google-workspace-mcp"
-    },
-    {
       "name": "harvest",
       "description": "At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format.",
       "author": {
@@ -617,25 +600,6 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/wordpress",
       "license": "MIT",
       "source": "./plugins/wordpress"
-    },
-    {
-      "name": "workspace-gtd",
-      "description": "A work-life system on eight Google Workspace apps (Gmail, Chat, Calendar, Tasks, Drive, Docs, Sheets, Forms): GTD on Tasks + Calendar, one home per fact, daily shutdown, agent-drafted weekly review, Studio nudges to Chat, no alarms, and the employer's Outlook/Slack joined as a free/busy + pointer adapter rather than a second system.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "gtd",
-        "google-workspace",
-        "google-tasks",
-        "google-calendar",
-        "workspace-studio",
-        "productivity"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/workspace-gtd",
-      "license": "MIT",
-      "source": "./plugins/workspace-gtd"
     }
   ]
 }

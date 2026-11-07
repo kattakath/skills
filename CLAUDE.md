@@ -33,8 +33,7 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
   only lane since nix-config's gateway was purged on 2026-10-02. (The old `mcp-clients/`
   catalog the gateway read was deleted once nothing read it.) A server needing a
   credential gets it from the plugin's own launcher script, which resolves a
-  `credential_command` userConfig, then the environment, then prompted userConfig — see
-  [`google-workspace-mcp`](plugins/google-workspace-mcp). A plugin that still names a bare
+  `credential_command` userConfig, then the environment, then prompted userConfig. A plugin that still names a bare
   launcher BINARY depends on a PATH package from nix-config (`local.pluginMcp`), so it
   works only on that fleet.
 - **Every plugin carries a semver `version` in its `plugin.json`, and CI forces it up on
