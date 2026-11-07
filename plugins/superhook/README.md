@@ -52,7 +52,7 @@ cold `nix flake check` was cancelled and the gate silently never ran.
 
 ## Requirements
 
-**Node.js on `PATH`.** Every script here runs with `node`, and the Claude Code CLI is a native binary that does not ship one. Without node, the `PreToolUse` entry cannot start, and `onFailure: "block"` turns that into a block: in a repo with `.claude/hooks/pretooluse-bash-guard.js`, **every Bash call is blocked** until node is installed. That is fail-closed working as designed, so a SessionStart hook written in POSIX `sh` (`scripts/node-check.sh`, no node needed) says so at session start: it is silent when `command -v node` succeeds, and otherwise prints a `systemMessage` naming the floor plugins that cannot run (superhook, nix-flake-kit, brain-signals).
+**Node.js on `PATH`.** Every script here runs with `node`, and the Claude Code CLI is a native binary that does not ship one. Without node, the `PreToolUse` entry dies at `exec node` (exit 127), and `onFailure: "block"` turns that failure into a block: in a repo with `.claude/hooks/pretooluse-bash-guard.js`, **every Bash call is blocked** until node is installed. That is fail-closed working as designed, so a SessionStart hook written in POSIX `sh` (`scripts/node-check.sh`, no node needed) says so at session start: it is silent when `command -v node` succeeds, and otherwise prints a `systemMessage` naming the floor plugins that cannot run (superhook, nix-flake-kit, brain-signals).
 
 The hook scripts import nothing at run time. CI type-checks them (`tsc --checkJs`, `tsconfig.hooks.json` at the repo root) against the hook input and output types in Anthropic's `@anthropic-ai/claude-agent-sdk`; those types exist only in JSDoc comments.
 
@@ -77,7 +77,7 @@ each entry looks for **one specific filename** under the repo's own
 `.claude/hooks/`. Put your gate at that path and it is supervised; put it
 anywhere else and the plugin ignores it.
 
-Each command does three things, in order:
+Each wrapper command (all but `node-check.sh`) does three things, in order:
 
 1. **Resolves the repo root itself.** `CLAUDE_PROJECT_DIR` is the session's
    *launch CWD*, **not** the git root — a session started in `<repo>/sub` gets

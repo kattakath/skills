@@ -4,11 +4,11 @@
 # Why this is POSIX sh and not node: it exists for the session where node is missing.
 # Every safety-floor hook runs `node` (superhook's wrappers, nix-flake-kit's PostToolUse
 # pair, brain-signals' SessionStart and Stop hooks), and the Claude Code CLI is a native
-# binary that does not ship one. Without node those hooks cannot start, and superhook's
-# PreToolUse entry sets `onFailure: "block"`: a hook that "could not start" counts as
-# exit 2 (the `onFailure` docs in the Agent SDK's sdk.d.ts), so every Bash call is
-# blocked in a repo that has .claude/hooks/pretooluse-bash-guard.js. That is the
-# fail-closed design working — but
+# binary that does not ship one. Without node, each of those commands dies at
+# `exec node` with exit 127. superhook's PreToolUse entry sets `onFailure: "block"`, and a
+# hook that "exited with a code other than 0 or 2" then counts as exit 2 (the `onFailure`
+# docs in the Agent SDK's sdk.d.ts). So every Bash call is blocked in a repo that has
+# .claude/hooks/pretooluse-bash-guard.js. That is the fail-closed design working, but
 # without this notice it looks like a broken session rather than a missing dependency.
 #
 # Builtins only (`command -v`, `printf`), so it runs even with an empty PATH. hooks.json
