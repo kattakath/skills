@@ -290,6 +290,12 @@ jobs:
           bash plugins/rag/tests/launcher-cases.sh
           bash plugins/wordpress/tests/launcher-cases.sh
 
+      # brain-signals' Stop hook runs at the end of EVERY turn, so its must-stay-QUIET half
+      # matters as much as the warnings, and a warning must never carry `decision` or
+      # `additionalContext` (either one continues the turn on Stop — warn mode would block).
+      - name: brain-signals stop-limbo cases
+        run: bash plugins/brain-signals/tests/stop-limbo-cases.sh
+
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which
       # matters more than the flags: this hook is enabled in every repo, so a rule that
