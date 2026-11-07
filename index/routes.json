@@ -278,6 +278,13 @@
         "vercel-workflow"
       ],
       "note": "Vendored unmodified from vercel/workflow (Apache-2.0, LICENSE shipped in the plugin, no upstream NOTICE), pinned by commit in the plugin README."
+    },
+    {
+      "goal": "Push straight to main and hear about CI only when it breaks",
+      "steps": [
+        "ci-watch"
+      ],
+      "note": "asyncRewake hook: silent on green, wakes the session with a resolved report on red, no runs or still running."
     }
   ]
 }

@@ -7,7 +7,9 @@
     "target": "es2022",
     "module": "nodenext",
     "moduleResolution": "nodenext",
-    "types": ["node"],
+    "types": [
+      "node"
+    ],
     "skipLibCheck": true
   },
   "files": [
@@ -16,6 +18,8 @@
     "plugins/nix-flake-kit/scripts/autostage-nix.js",
     "plugins/nix-flake-kit/scripts/nix-home-path-lint.js",
     "plugins/brain-signals/scripts/stop-limbo.js",
-    "plugins/brain-signals/scripts/mermaid-hint.js"
+    "plugins/brain-signals/scripts/mermaid-hint.js",
+    "plugins/ci-watch/scripts/ci-watch.js",
+    "plugins/ci-watch/tests/fixtures/gh-stub.js"
   ]
 }

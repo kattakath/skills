@@ -144,6 +144,25 @@
       "source": "./plugins/capability-broker"
     },
     {
+      "name": "ci-watch",
+      "description": "Push to main and keep working: a PostToolUse asyncRewake hook waits on every GitHub Actions run the pushed commit triggered, stays silent when they all pass, and wakes the session only on red, no runs (or all skipped), a run still going at the ceiling, or a watch that failed after the push landed. The wake-up carries a resolved report (run, job and step ids, numbered log lines around the error, changed files, rerun commands), so nothing has to be looked up. Deterministic: gh only, no model in the loop.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "ci",
+        "github-actions",
+        "hooks",
+        "direct-push",
+        "background",
+        "gh"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/ci-watch",
+      "license": "MIT",
+      "source": "./plugins/ci-watch"
+    },
+    {
       "name": "empire",
       "description": "Bring an unflaked repo up to a verified standard in an isolated worktree, implement inside one repo with memory that survives the session, and research a decision across parallel read-only lanes with a deterministic Senate workflow.",
       "author": {

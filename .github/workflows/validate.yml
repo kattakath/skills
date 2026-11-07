@@ -356,6 +356,12 @@ jobs:
       - name: silent-instruments lint cases
         run: bash plugins/silent-instruments/tests/lint-cases.sh
 
+      # ci-watch's halves: silent on green (empty stdout AND stderr), never green on zero,
+      # late or cancelled runs, a resolved report on red, and a hook that asks GitHub nothing
+      # for a non-push. `gh` is a fixture stub, so no network. The suite has a case floor.
+      - name: ci-watch cases
+        run: bash plugins/ci-watch/tests/run.sh
+
       # The trap cases assert the CATALOGUE, not the code: that each documented
       # instrument really does exit 0 having measured nothing, and that the named
       # replacement really does answer correctly. A trap that stops reproducing is an
