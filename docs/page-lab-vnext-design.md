@@ -175,9 +175,10 @@ The last two rows are live exposures independent of this redesign (§ 10).
 | **10** | blocked — handoff needed (event written) |
 | **11** | cooldown active — aborted |
 | **12** | profile locked by a live process that is not ours |
+| **13** | egress outside the profile's `egress` policy — nothing navigated (§7.7) |
 
 Existing codes checked for collisions: `EXIT_NO_TARGET=3`, `EXIT_UNSUPPORTED_NODE=7`,
-`route-up` 2, doctor 3.
+`route-up` 2, doctor 3 (13 re-checked 2026-11-07: unused in the plugin).
 
 **The model's seams — the only ones:**
 - **Navigation goes through the gate only:** `page-lab-gate nav --run R` pops the next queue
@@ -285,6 +286,38 @@ detector trusting it fails OPEN.
 | `Page.bringToFront` | visible | 122 | 447 |
 
 **Rule: one working tab per run, and `select_page <id> --bringToFront` before each navigation.**
+
+### 7.7 Egress preflight (added 2026-11-07)
+
+**Why (peer measurement, site-agnostic):** a real managed challenge was caused by VPN egress in
+an unexpected country; a preflight against `https://www.cloudflare.com/cdn-cgi/trace` that
+refused on unexpected egress prevented it. A second measurement set the placement: a "prove it
+refuses" demo reached the site because the VPN changed **between the check and the run** — so
+the check runs inside the gate command that does the work, never as a separate step.
+
+- **When:** `run` (after the daemon starts; `--no-start` defers it to `resume`, or to the first
+  `nav` when a daemon is already up), `resume`,
+  and `nav` when the last check is absent, ≥ 10 min old, did not pass, or was taken under a
+  different policy. Recorded as `meta.json#egress`. Placed in `nav` after the drained check and
+  before the cursor moves, so a refusal leaves the queue exactly as it was.
+- **Through the browser:** the working tab opens the trace URL and one fixed `evaluate_script`
+  filters the `key=value` body **in the page** to `loc, colo, warp, gateway, http, tls`. The
+  trace's `ip` never reaches node, stdout, an event or a run file; `parseEgress` also rejects
+  any other key. Node's own `fetch` was rejected: it measures node's egress, not the browser's.
+- **Allowlist:** the trace origin is added to `--allowedUrlPattern` by every gate launch
+  (`dedicatedArgv` `extraOrigins`), only when the profile already has an allowlist — adding one
+  pattern to an open profile would make it trace-only. The handoff still differs by
+  `--headless` alone.
+- **Policy:** profile@1 `egress: {allowLoc: [ISO-3166 alpha-2], allowWarp: [off|on|plus]}`,
+  dedicated only. Mismatch → `page-lab/block@1` `reason: egress-mismatch`, detector `egress`,
+  evidence `loc/colo/warp`, exit **13**. Unreadable trace with a policy → `detector-error`,
+  exit 10 (fail closed). Neither writes a cooldown entry: the site did nothing. No policy → it
+  measures, records and prints one stderr line, never refuses.
+- **Tests:** the fixture server's `/cdn-cgi/trace` stands in for the real one via
+  `PAGE_LAB_EGRESS_TRACE_URL`, honoured **only** for `http://127.0.0.1` so production cannot be
+  pointed at a host that always answers `CA`. No test reaches the real trace.
+- **Weak point:** a point-in-time read. Between rechecks (≤ 10 min) a VPN change goes unseen
+  until the next `run`/`resume`/recheck.
 
 ## 8. Security posture of `dedicated` mode
 

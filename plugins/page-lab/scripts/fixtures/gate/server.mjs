@@ -1,7 +1,11 @@
 // Local fixture site for the gate's detectors: 127.0.0.1, a random port, no network beyond it.
 //
 //   import { startFixtureServer } from './server.mjs';
-//   const { base, close } = await startFixtureServer();
+//   const { base, close, setTrace, hits } = await startFixtureServer();
+//
+// /cdn-cgi/trace mimics Cloudflare's trace (text/plain key=value lines) for the egress
+// preflight; setTrace(body) swaps the body per case. Its ip= is a TEST-NET-3 sentinel
+// (RFC 5737) that a test asserts never reaches an event, a run file or the gate's output.
 //
 // One route per detector rule, plus pages that must PASS. The challenge pages mimic only the
 // MARKERS the detectors look for (an id, an iframe src, a title) — no real challenge script.
@@ -35,9 +39,24 @@ const ROUTES = {
   '/consent-hidden': [200, html('example', '<div id="onetrust-consent-sdk" style="display:none"></div><p>fine</p>')],
 };
 
+export const TRACE_IP = '203.0.113.77';
+
+export const traceBody = ({ loc = 'CA', colo = 'YYZ', warp = 'off' } = {}) =>
+  ['fl=1f2', 'h=www.cloudflare.com', `ip=${TRACE_IP}`, `ts=${Date.now() / 1000}`, 'visit_scheme=https',
+    'uag=Mozilla/5.0', `colo=${colo}`, 'sliver=none', 'http=http/2', `loc=${loc}`, 'tls=TLSv1.3',
+    'sni=plaintext', `warp=${warp}`, 'gateway=off', 'rbi=off', 'kex=X25519', ''].join('\n');
+
 export async function startFixtureServer() {
+  let trace = traceBody();
+  const hits = new Map();
   const server = createServer((req, res) => {
     const path = req.url.split('?')[0];
+    hits.set(path, (hits.get(path) ?? 0) + 1);
+    if (path === '/cdn-cgi/trace') {
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(trace);
+      return;
+    }
     if (path === '/redirect-login') {
       res.writeHead(302, { location: '/login?next=%2Fprivate' });
       res.end();
@@ -66,7 +85,15 @@ export async function startFixtureServer() {
   });
   await new Promise((r) => server.listen(0, '127.0.0.1', r));
   const base = `http://127.0.0.1:${server.address().port}`;
-  return { base, close: () => new Promise((r) => server.close(r)) };
+  return {
+    base,
+    // How often a path was requested: the proof that a refused run navigated nothing.
+    hits: (path) => hits.get(path) ?? 0,
+    setTrace: (body) => {
+      trace = body;
+    },
+    close: () => new Promise((r) => server.close(r)),
+  };
 }
 
 // Standalone: `node server.mjs` prints the base URL and serves until killed.

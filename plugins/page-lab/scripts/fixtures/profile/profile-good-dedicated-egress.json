@@ -1,0 +1,1 @@
+{"schema":"page-lab/profile@1","name":"lab","mode":"dedicated","headless":true,"executable":{"source":"env"},"egress":{"allowLoc":["CA"],"allowWarp":["off"]}}

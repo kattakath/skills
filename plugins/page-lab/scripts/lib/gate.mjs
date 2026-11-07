@@ -288,3 +288,117 @@ export function nextItem(queue, done, cooldown, cursor) {
   }
   return { next: null, cursor: queue.length, held };
 }
+
+// ---------------------------------------------------------------------------
+// Egress preflight (§7.7) — where the BROWSER's traffic leaves, measured through the browser.
+// A managed challenge was once caused by VPN egress in an unexpected country (peer
+// measurement, site-agnostic); refusing on an unexpected egress prevented it. The trace body
+// carries the caller's IP: it is filtered IN THE PAGE to EGRESS_FIELDS, so `ip` never reaches
+// node, stdout, an event or a run file — and parseEgress rejects any other key anyway.
+// ---------------------------------------------------------------------------
+
+export const EGRESS_SCHEMA = 'page-lab/egress@1';
+export const EGRESS_TRACE_URL = 'https://www.cloudflare.com/cdn-cgi/trace';
+export const EGRESS_FIELDS = Object.freeze(['loc', 'colo', 'warp', 'gateway', 'http', 'tls']);
+export const EGRESS_RECHECK_MS = 10 * 60 * 1000;
+
+/**
+ * The trace URL. PAGE_LAB_EGRESS_TRACE_URL is honoured ONLY when it points at 127.0.0.1 (the
+ * test fixture server), so production can never be redirected to a host that answers "CA"
+ * whatever the egress is. Returns { url, overridden, ignored }.
+ */
+export function traceUrl(env = process.env) {
+  const raw = env.PAGE_LAB_EGRESS_TRACE_URL;
+  if (!raw) return { url: EGRESS_TRACE_URL, overridden: false, ignored: false };
+  try {
+    const u = new URL(raw);
+    if (u.protocol === 'http:' && u.hostname === '127.0.0.1') return { url: u.href, overridden: true, ignored: false };
+  } catch {
+    // fall through: an unparseable override is ignored like a non-local one
+  }
+  return { url: EGRESS_TRACE_URL, overridden: false, ignored: true };
+}
+
+/** key=value lines → only the EGRESS_FIELDS, each capped. The SAME code runs in the page. */
+export function filterTrace(text, fields = EGRESS_FIELDS) {
+  const out = {};
+  for (const line of String(text ?? '').split('\n')) {
+    const i = line.indexOf('=');
+    if (i <= 0) continue;
+    const k = line.slice(0, i).trim();
+    if (fields.includes(k)) out[k] = line.slice(i + 1).trim().slice(0, 32);
+  }
+  return out;
+}
+
+/** The fixed evaluate_script body: reads the trace page's text and returns ONLY the allowed keys. */
+export function egressSource(fields = EGRESS_FIELDS) {
+  return `() => {
+  const filterTrace = ${filterTrace.toString()};
+  const text = document.body ? document.body.innerText : '';
+  return { egress: '${EGRESS_SCHEMA}', fields: filterTrace(text, ${JSON.stringify(fields)}) };
+}`;
+}
+
+/**
+ * evaluate_script JSON → the egress fields, or null (unparseable, no loc, an unknown key, or a
+ * value that is not short printable ASCII). null with a policy present STOPS: fail closed.
+ */
+export function parseEgress(stdout, fields = EGRESS_FIELDS) {
+  try {
+    const outer = JSON.parse(stdout);
+    const m = /```json\n([\s\S]*?)\n```/.exec(String(outer?.message ?? ''));
+    if (!m) return null;
+    const v = JSON.parse(m[1]);
+    if (v?.egress !== EGRESS_SCHEMA || !v.fields || typeof v.fields !== 'object' || Array.isArray(v.fields)) return null;
+    const out = {};
+    for (const [k, val] of Object.entries(v.fields)) {
+      if (!fields.includes(k)) return null;
+      if (typeof val !== 'string' || !/^[\x21-\x7e]{1,32}$/.test(val)) return null;
+      out[k] = val;
+    }
+    // Two characters, not two letters: Cloudflare's country field uses XX (unknown) and T1 (Tor).
+    if (!/^[A-Z0-9]{2}$/.test(out.loc ?? '')) return null;
+    return out;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Is a recheck due? No check yet, an unreadable timestamp, one ≥ EGRESS_RECHECK_MS old, a check
+ * that did not PASS (a refused egress must be re-measured, never remembered as a pass), or one
+ * taken under a different enforcement than now (a policy added mid-run).
+ */
+export function egressDue(last, now, enforced) {
+  const t = Date.parse(last?.at ?? '');
+  if (!Number.isFinite(t) || now - t >= EGRESS_RECHECK_MS) return true;
+  return last.pass !== true || last.enforced !== Boolean(enforced);
+}
+
+export function egressEnforced(policy) {
+  return Boolean(policy && (policy.allowLoc?.length || policy.allowWarp?.length));
+}
+
+/**
+ * fields (parseEgress output, or null) × the profile's `egress` policy (or undefined) →
+ *   { ok: true, enforced } · { ok: false, reason, rule, evidence }
+ * evidence carries loc/colo/warp only — never ip, never any other field. No policy: never
+ * refuses (the caller prints a one-line note), even when the trace was unreadable.
+ */
+export function decideEgress(fields, policy) {
+  if (!egressEnforced(policy)) return { ok: true, enforced: false };
+  if (!fields) return { ok: false, reason: 'detector-error', rule: 'egress-trace-unreadable', evidence: {} };
+  // Evidence is cut to the block schema's shape HERE: a colo or warp the schema cannot carry is
+  // omitted, so a real mismatch still writes its event and exits 13 instead of failing validation.
+  const evidence = { loc: fields.loc };
+  if (/^[A-Z]{3,4}$/.test(fields.colo ?? '')) evidence.colo = fields.colo;
+  if (['off', 'on', 'plus'].includes(fields.warp)) evidence.warp = fields.warp;
+  if (policy.allowLoc?.length && !policy.allowLoc.includes(fields.loc)) {
+    return { ok: false, reason: 'egress-mismatch', rule: 'egress.loc', evidence };
+  }
+  if (policy.allowWarp?.length && !policy.allowWarp.includes(fields.warp)) {
+    return { ok: false, reason: 'egress-mismatch', rule: 'egress.warp', evidence };
+  }
+  return { ok: true, enforced: true };
+}

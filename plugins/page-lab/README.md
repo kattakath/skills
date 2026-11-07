@@ -155,7 +155,19 @@ a challenge, a login wall or a 403/429/503 stops the run with exit 10 and a `pag
 event. A challenge marker or captcha iframe counts only when corroborated (status ≥ 400 or a
 `cf-mitigated` header), because Cloudflare's beacon script sits on ordinary 200 pages. `handoff` reopens the SAME profile headed for the operator; `resume` continues without
 redoing finished items. A second block on an origin within 24 h is a cooldown only the operator
-clears, in a terminal. Design and evidence: `docs/page-lab-vnext-design.md` in this repo.
+clears, in a terminal. Before any item, and every 10 minutes, an **egress preflight** reads
+Cloudflare's trace through the run's own browser; a profile `egress` policy
+(`{"allowLoc": ["CA"], "allowWarp": ["off"]}`) refuses an unexpected egress with exit 13, and
+the trace's `ip` is never kept. Design and evidence: `docs/page-lab-vnext-design.md` in this repo.
+
+| `page-lab-gate` exit | Meaning |
+|---|---|
+| 0 | page ready, or queue drained |
+| 1 / 2 | error / usage |
+| 10 | blocked — `page-lab/block@1` event written, handoff needed (also: egress trace unreadable with a policy) |
+| 11 | cooldown — run aborted |
+| 12 | profile locked by a live process that is not the gate's |
+| 13 | egress outside the profile's `egress` policy — nothing navigated |
 
 Tests: `node --test plugins/page-lab/tests/` (CI). The live half needs `PAGE_LAB_CHROME` and
 skips by name without it.

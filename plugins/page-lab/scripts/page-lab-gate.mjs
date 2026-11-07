@@ -15,9 +15,15 @@
  *   page-lab-gate clear-cooldown --origin ORIGIN      (a human, in a terminal; all runs)
  *
  * Exit 0 ok / queue drained · 10 blocked, handoff needed · 11 cooldown, aborted ·
- *      12 profile locked by a live process that is not ours · 1 error · 2 usage.
+ *      12 profile locked by a live process that is not ours · 13 egress outside the profile's
+ *      policy, nothing navigated · 1 error · 2 usage.
  * (Checked against the plugin's other codes: EXIT_NO_TARGET=3, EXIT_UNSUPPORTED_NODE=7,
  * route-up 2, doctor 3.)
+ *
+ * Egress preflight (§7.7): run, resume, and nav (first of a run, then every 10 min) read
+ * the trace page THROUGH the dedicated browser — its egress, not node's — and refuse on a
+ * profile `egress` policy mismatch before any queue item is touched. Only loc, colo, warp,
+ * gateway, http and tls are kept; the trace's `ip` is dropped in the page itself.
  *
  * Run state: ${XDG_STATE_HOME:-~/.local/state}/page-lab/runs/<run>/ — queue.jsonl, done.jsonl,
  * events.jsonl, plus meta.json and cursor.json. The cooldown is SHARED across runs, at
@@ -50,15 +56,21 @@ import {
   clearCooldown,
   cooldownOrigins,
   decide,
+  decideEgress,
+  egressDue,
+  egressEnforced,
+  egressSource,
   liftBlocked,
   nextItem,
   parseHeaders,
   parseMainDocument,
+  parseEgress,
   parseNavigate,
   parseProbe,
   parseQueue,
   probeSource,
   recordBlock,
+  traceUrl,
 } from './lib/gate.mjs';
 import {
   CDM_PACKAGE,
@@ -71,7 +83,7 @@ import {
   stateHome,
 } from './lib/profiles.mjs';
 
-export const EXIT = Object.freeze({ OK: 0, ERROR: 1, USAGE: 2, BLOCKED: 10, COOLDOWN: 11, LOCKED: 12 });
+export const EXIT = Object.freeze({ OK: 0, ERROR: 1, USAGE: 2, BLOCKED: 10, COOLDOWN: 11, LOCKED: 12, EGRESS: 13 });
 
 class GateExit extends Error {
   constructor(code, message, payload) {
@@ -246,9 +258,18 @@ function prepareDir(profile) {
   if (process.platform === 'darwin') spawnSync('tmutil', ['addexclusion', dir], { stdio: 'ignore' });
 }
 
+/**
+ * THE gate's launch argv: dedicatedArgv plus the egress trace origin, so the preflight passes
+ * the run's own allowlist. run, resume and the handoff all build it here — same inputs, so the
+ * handoff still differs by --headless alone.
+ */
+function launchArgv(profile, headless, workspace) {
+  return dedicatedArgv(profile, { headless, workspace, extraOrigins: [originOf(traceUrl().url)] });
+}
+
 function startDaemon(profile, headless, workspace) {
   prepareDir(profile);
-  const { argv } = dedicatedArgv(profile, { headless, workspace });
+  const { argv } = launchArgv(profile, headless, workspace);
   const r = cdt(profile, ['start', ...argv]);
   if (r.code !== 0) throw new GateExit(EXIT.ERROR, `chrome-devtools start failed: ${r.stderr.trim()}`);
   return argv;
@@ -276,6 +297,83 @@ function workingPage(profile) {
 }
 
 // ---------------------------------------------------------------------------
+// Egress preflight (§7.7)
+// ---------------------------------------------------------------------------
+
+/**
+ * Measure the browser's egress and apply the profile's policy. Needs OUR daemon running.
+ * `r` = { run, profile, meta, files: { meta, events } }; queuePos = the item that would be next.
+ * Records meta.egress (allowed fields only) on every check, passing or not. Throws exit 13 on a
+ * mismatch and exit 10 detector-error on an unreadable trace — both only with a policy, both
+ * WITHOUT a cooldown entry: neither is the site's doing.
+ */
+function preflightEgress(r, queuePos) {
+  const t = traceUrl();
+  if (t.ignored) {
+    process.stderr.write('page-lab-gate: PAGE_LAB_EGRESS_TRACE_URL ignored — only http://127.0.0.1 is honoured\n');
+  }
+  const page = workingPage(r.profile);
+  cdt(r.profile, ['select_page', String(page), '--bringToFront']);
+  const navR = cdt(r.profile, ['navigate_page', String(page), '--type', 'url', '--url', t.url, '--output-format', 'json']);
+  let fields = null;
+  if (navR.code === 0) {
+    const evR = cdt(r.profile, [
+      'evaluate_script',
+      egressSource(),
+      '--pageId',
+      String(page),
+      '--waitForStableDom',
+      'false',
+      '--output-format',
+      'json',
+    ]);
+    fields = json(evR) === null ? null : parseEgress(evR.stdout);
+  }
+  const policy = r.profile.egress;
+  const d = decideEgress(fields, policy);
+  r.meta.egress = {
+    at: new Date().toISOString(),
+    ...(fields ?? { unreadable: true }),
+    enforced: egressEnforced(policy),
+    pass: d.ok,
+  };
+  writeJson(r.files.meta, r.meta);
+  if (!d.enforced && d.ok) {
+    const seen = fields ? `loc=${fields.loc} colo=${fields.colo ?? '?'} warp=${fields.warp ?? '?'}` : 'trace unreadable';
+    process.stderr.write(`page-lab-gate: egress ${seen} — profile ${r.profile.name} has no egress policy, not enforced\n`);
+  }
+  if (d.ok) return r.meta.egress;
+  const event = buildBlock({
+    url: t.url,
+    reason: d.reason,
+    evidence: { detector: 'egress', rule: d.rule, ...d.evidence },
+    profile: r.profile.name,
+    runId: r.run,
+    queuePos,
+    notes:
+      d.reason === 'egress-mismatch'
+        ? [`egress outside the profile policy (${d.rule}); no queue item was navigated`]
+        : ['egress trace unreachable or unparseable with a policy present; failing closed'],
+  });
+  const v = validate(event, loadBlockSchema());
+  if (!v.valid) throw new GateExit(EXIT.ERROR, `internal: egress event invalid\n${formatErrors(v.errors).join('\n')}`);
+  appendJsonl(r.files.events, event);
+  if (d.reason === 'egress-mismatch') {
+    throw new GateExit(EXIT.EGRESS, `egress refused (${d.rule}) — fix the VPN/egress, then page-lab-gate resume --run ${r.run}`, {
+      event,
+    });
+  }
+  throw new GateExit(EXIT.BLOCKED, `egress unreadable with a policy present — page-lab-gate resume --run ${r.run} retries it`, {
+    event,
+  });
+}
+
+function firstPendingPos(queue, done) {
+  const i = queue.findIndex((q) => !done.has(q.item));
+  return i < 0 ? 0 : i;
+}
+
+// ---------------------------------------------------------------------------
 // Commands
 // ---------------------------------------------------------------------------
 
@@ -296,21 +394,24 @@ function cmdRun(opts) {
   chmodSync(dir, 0o700);
   writeFileSync(join(dir, 'queue.jsonl'), items.map((i) => JSON.stringify(i)).join('\n') + '\n', { mode: 0o600 });
   writeJson(join(dir, 'cursor.json'), { cursor: 0 });
-  writeJson(join(dir, 'meta.json'), {
-    profile: profile.name,
-    createdAt: new Date().toISOString(),
-    resultSchema,
-  });
+  const meta = { profile: profile.name, createdAt: new Date().toISOString(), resultSchema };
+  writeJson(join(dir, 'meta.json'), meta);
 
   let started = false;
+  let egress = null;
   if (!opts['no-start']) {
     if (st.running && !daemonIsOurs(profile, st)) throw new GateExit(EXIT.LOCKED, 'daemon on this session is not ours');
     if (!st.running) {
       startDaemon(profile, profile.headless !== false, dir);
       started = true;
     }
+    // Same step as the run's start — never a check taken earlier, by another command.
+    const files = { meta: join(dir, 'meta.json'), events: join(dir, 'events.jsonl') };
+    egress = preflightEgress({ run: opts.run, profile, meta, files }, 0);
   }
-  out({ run: opts.run, profile: profile.name, items: items.length, dir, started });
+  // --no-start: no check here. The first nav measures it if a daemon is already up (nav never
+  // starts one); otherwise resume starts the daemon and measures.
+  out({ run: opts.run, profile: profile.name, items: items.length, dir, started, egress: egress ?? 'deferred' });
 }
 
 function blockAndExit(r, q, decision, notes = []) {
@@ -371,6 +472,9 @@ function cmdNav(opts) {
   // tool call: every CLI tool call on a stopped daemon auto-starts a DEFAULT one (default
   // profile dir, no redaction) [F-CLI-AUTOSTART-DEFAULT] — a tool call never launches Chrome.
   requireOurDaemon(r.profile);
+  // Egress: the first nav of a run and then every 10 min, BEFORE the cursor moves, so a refusal
+  // leaves the queue exactly as it was.
+  if (egressDue(r.meta.egress, Date.now(), egressEnforced(r.profile.egress))) preflightEgress(r, q.queuePos);
   writeJson(r.files.cursor, { cursor: pick.cursor });
 
   const page = workingPage(r.profile);
@@ -447,8 +551,9 @@ function cmdDone(opts) {
   out({ done: q.item });
 }
 
+/** The last SITE the gate stopped on — an egress event names the trace URL, not a site. */
 function lastBlockedUrl(r) {
-  const events = readJsonl(r.files.events);
+  const events = readJsonl(r.files.events).filter((e) => e.evidence?.detector !== 'egress');
   return events.length ? events[events.length - 1].url : null;
 }
 
@@ -457,7 +562,7 @@ function cmdHandoff(opts) {
   const dry = Boolean(opts['dry-run']);
   const st = dry ? daemonStatusOrNone(r.profile, opts) : daemonStatus(r.profile);
   const lock = checkLock(r.profile, st);
-  const { argv } = dedicatedArgv(r.profile, { headless: false, workspace: r.files.dir });
+  const { argv } = launchArgv(r.profile, false, r.files.dir);
   const url = lastBlockedUrl(r);
   const plan = { run: r.run, profile: r.profile.name, lock: lock.state, stop: st.running, argv, open: url };
   if (dry) {
@@ -488,7 +593,7 @@ function cmdResume(opts) {
   const lock = checkLock(r.profile, st);
   liftBlocked(r.cooldown);
   const pending = r.queue.filter((q) => !r.done.has(q.item));
-  const { argv } = dedicatedArgv(r.profile, { headless: r.profile.headless !== false, workspace: r.files.dir });
+  const { argv } = launchArgv(r.profile, r.profile.headless !== false, r.files.dir);
   const plan = {
     run: r.run,
     lock: lock.state,
@@ -505,7 +610,9 @@ function cmdResume(opts) {
   writeJson(r.files.cursor, { cursor: 0 });
   if (st.running) stopDaemon(r.profile);
   startDaemon(r.profile, r.profile.headless !== false, r.files.dir);
-  out(plan);
+  // Same step as the resume: a VPN that changed during the handoff is caught here.
+  const egress = preflightEgress(r, firstPendingPos(r.queue, r.done));
+  out({ ...plan, egress });
 }
 
 function cmdStatus(opts) {
@@ -523,6 +630,8 @@ function cmdStatus(opts) {
       return e ? { reason: e.reason, rule: e.evidence?.rule, url: e.url, queuePos: e.queuePos } : null;
     })(),
     cursor: r.cursor,
+    // Allowed fields only (loc, colo, warp, gateway, http, tls) — never the trace's ip.
+    egress: r.meta.egress ?? null,
     cooldown: Object.fromEntries(Object.entries(r.cooldown).map(([o, v]) => [o, v.state])),
     lock: lockState(r.profile.name).state,
   });

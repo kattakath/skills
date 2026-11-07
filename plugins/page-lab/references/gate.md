@@ -38,9 +38,26 @@ done
 | **10** | blocked — `nav` printed the `page-lab/block@1` event | **stop and tell the operator**: `page-lab-gate handoff --run <id>` opens the SAME profile headed for them |
 | **11** | cooldown — 3 origins cooling, or every pending item is on one | stop; report the origins. Only the operator clears a cooldown, in a terminal |
 | **12** | profile locked by a process that is not the gate's | stop; something else holds the profile dir |
+| **13** | egress refused — the browser's egress is outside the profile's `egress` policy; nothing was opened | **stop and tell the operator** the `loc`/`warp` from the event; after they fix the VPN: `page-lab-gate resume --run <id>` |
 
 After the operator clears the page and closes the window: `page-lab-gate resume --run <id>`
 relaunches headless and continues; `done` items are skipped.
+
+## Egress preflight — automatic, nothing to call
+
+`run`, `resume` and the first `nav` of a run (then every 10 minutes) read Cloudflare's trace
+page **through the run's own browser** and keep only `loc`, `colo`, `warp`, `gateway`, `http`,
+`tls` — never `ip`. The check runs inside the same command as the work it guards, so a VPN that
+moves between a check and a run cannot slip past it.
+
+- **Profile has an `egress` policy** (`{"allowLoc": ["CA"], "allowWarp": ["off"]}`): a mismatch
+  exits **13** with a `page-lab/block@1` event (`reason: egress-mismatch`) before any queue item
+  is touched; an unreadable trace exits **10** (`detector-error`, detector `egress`). Neither
+  records a cooldown.
+- **No policy:** the preflight still measures and records (`status` shows it) and prints one
+  stderr line; it never refuses.
+- Never work around a 13 — not with another profile, not by waiting it out. The egress is the
+  operator's to fix.
 
 ## Never
 

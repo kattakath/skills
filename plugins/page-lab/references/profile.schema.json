@@ -102,6 +102,36 @@
         "pattern": "^https?://[A-Za-z0-9.-]+(:[0-9]{1,5})?$"
       },
       "description": "dedicated only: each origin becomes one --allowedUrlPattern=<origin>/* (URL Pattern syntax; an omitted port matches only the scheme default). Empty or absent = no network allowlist."
+    },
+    "egress": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "dedicated only: the egress the gate's preflight accepts (docs/page-lab-vnext-design.md §7.7). The preflight reads https://www.cloudflare.com/cdn-cgi/trace THROUGH this profile's browser at run, resume and every 10 min of nav; a loc or warp outside these lists stops the run with exit 13 (reason egress-mismatch) before any queue item is navigated, and an unreadable trace stops it with exit 10 (detector-error). Absent = the preflight still measures and records, but never refuses. Only loc, colo, warp, gateway, http and tls are ever kept — never ip.",
+      "properties": {
+        "allowLoc": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^[A-Z]{2}$"
+          },
+          "description": "ISO 3166-1 alpha-2 country codes the trace's loc may report, e.g. [\"CA\"]."
+        },
+        "allowWarp": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "enum": [
+              "off",
+              "on",
+              "plus"
+            ]
+          },
+          "description": "Accepted values of the trace's warp field (Cloudflare WARP): off, on, plus."
+        }
+      }
     }
   },
   "allOf": [
@@ -151,6 +181,13 @@
             "not": {
               "required": [
                 "executable"
+              ]
+            }
+          },
+          {
+            "not": {
+              "required": [
+                "egress"
               ]
             }
           }

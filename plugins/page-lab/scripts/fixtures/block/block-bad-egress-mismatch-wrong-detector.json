@@ -1,0 +1,1 @@
+{"schema":"page-lab/block@1","measuredAt":"2026-11-07","url":"https://www.cloudflare.com/cdn-cgi/trace","origin":"https://www.cloudflare.com","profile":"lab","runId":"r1","queuePos":0,"reason":"egress-mismatch","evidence":{"detector":"status","rule":"egress.loc","loc":"AT"},"notes":[]}

@@ -7,13 +7,17 @@
 // silent pass. The headed handoff itself cannot run unattended; tests/gate-cli.test.mjs covers
 // it up to the relaunch argv.
 //
+// The egress preflight runs on every run/resume and the first nav, against the fixture server's
+// fake /cdn-cgi/trace (PAGE_LAB_EGRESS_TRACE_URL, honoured only for 127.0.0.1) — never the real
+// trace. `lab` has no egress policy (records, never refuses); `lab-egress` allows CA/off.
+//
 // Everything lives under one throwaway dir (PAGE_LAB_TEST_TMP, else the OS temp dir): XDG
 // state, config and the CLI daemon's runtime dir, so the operator's profiles, overlay and any
 // concurrent session's daemon are never touched.
 
 import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { after, before, describe, test } from 'node:test';
@@ -21,7 +25,7 @@ import { fileURLToPath } from 'node:url';
 
 import { loadBlockSchema, validate } from '../scripts/lib/envelope.mjs';
 import { sessionIdFor } from '../scripts/lib/profiles.mjs';
-import { startFixtureServer } from '../scripts/fixtures/gate/server.mjs';
+import { TRACE_IP, startFixtureServer, traceBody } from '../scripts/fixtures/gate/server.mjs';
 
 const GATE = fileURLToPath(new URL('../scripts/page-lab-gate.mjs', import.meta.url));
 const CHROME = process.env.PAGE_LAB_CHROME;
@@ -46,8 +50,11 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
   let fx;
   let env;
   let root;
+  // Every byte the gate printed, for the ip-leak assertion at the end.
+  const transcript = [];
   const gate = async (...args) => {
     const r = await sh('node', [GATE, ...args], env);
+    transcript.push(r.stdout, r.stderr);
     return { ...r, json: lastJson(r.stdout) };
   };
   // The cooldown is shared across runs (per origin) and every fixture shares ONE origin, so each
@@ -56,13 +63,23 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
   const resetCooldown = () => rmSync(cooldownFile(), { force: true });
   const cooldown = () => (existsSync(cooldownFile()) ? JSON.parse(readFileSync(cooldownFile(), 'utf8')) : {});
   let runN = 0;
-  const newRun = async (paths) => {
-    const run = `live-${++runN}`;
+  const queueFile = (run, paths) => {
     const q = join(root, `${run}.queue`);
     writeFileSync(q, paths.map((p) => `${fx.base}${p}`).join('\n'));
-    const r = await gate('run', '--profile', 'lab', '--run', run, '--queue', q);
+    return q;
+  };
+  const newRun = async (paths, profile = 'lab', extra = []) => {
+    const run = `live-${++runN}`;
+    const r = await gate('run', '--profile', profile, '--run', run, '--queue', queueFile(run, paths), ...extra);
     assert.equal(r.code, 0, `run: ${r.stdout}\n${r.stderr}`);
     return run;
+  };
+  const runFile = (run, f) => join(env.XDG_STATE_HOME, 'page-lab', 'runs', run, f);
+  // Push the last egress check 11 min into the past, so the next nav is due a recheck.
+  const ageEgress = (run) => {
+    const m = JSON.parse(readFileSync(runFile(run, 'meta.json'), 'utf8'));
+    m.egress.at = new Date(Date.now() - 11 * 60 * 1000).toISOString();
+    writeFileSync(runFile(run, 'meta.json'), JSON.stringify(m));
   };
 
   before(async () => {
@@ -74,7 +91,19 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     // third-party hosts, and those loads must never leave the machine.
     writeFileSync(
       join(root, 'config', 'page-lab', 'profiles.json'),
-      JSON.stringify({ profiles: [{ name: 'lab', executable: { source: 'env' }, allowedOrigins: [fx.base] }] })
+      JSON.stringify({
+        profiles: [
+          { name: 'lab', executable: { source: 'env' }, allowedOrigins: [fx.base] },
+          {
+            name: 'lab-egress',
+            mode: 'dedicated',
+            headless: true,
+            executable: { source: 'env' },
+            allowedOrigins: [fx.base],
+            egress: { allowLoc: ['CA'], allowWarp: ['off'] },
+          },
+        ],
+      })
     );
     env = {
       ...process.env,
@@ -84,18 +113,21 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
       XDG_CACHE_HOME: join(root, 'cache'),
       XDG_RUNTIME_DIR: join(root, 'r'),
       PAGE_LAB_CHROME: CHROME,
+      PAGE_LAB_EGRESS_TRACE_URL: `${fx.base}/cdn-cgi/trace`,
     };
   });
 
   after(async () => {
     if (env) {
-      await sh('npx', ['-y', '-p', 'chrome-devtools-mcp@1.12.0', 'chrome-devtools', 'stop'], {
-        ...env,
-        CD4A_INTERNAL_DAEMON_SESSION_ID: sessionIdFor('lab'),
-        CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: '1',
-      });
-      // A clean stop removes Chromium's Singleton* links (measured); a leftover means a leak.
-      assert.equal(existsSync(join(root, 'state', 'page-lab', 'profiles', 'lab', 'SingletonLock')), false);
+      for (const name of ['lab', 'lab-egress']) {
+        await sh('npx', ['-y', '-p', 'chrome-devtools-mcp@1.12.0', 'chrome-devtools', 'stop'], {
+          ...env,
+          CD4A_INTERNAL_DAEMON_SESSION_ID: sessionIdFor(name),
+          CHROME_DEVTOOLS_MCP_NO_UPDATE_CHECKS: '1',
+        });
+        // A clean stop removes Chromium's Singleton* links (measured); a leftover means a leak.
+        assert.equal(existsSync(join(root, 'state', 'page-lab', 'profiles', name, 'SingletonLock')), false, name);
+      }
     }
     await fx?.close();
   });
@@ -187,5 +219,113 @@ describe('page-lab-gate, live', { skip, concurrency: false }, () => {
     const done = readFileSync(join(env.XDG_STATE_HOME, 'page-lab', 'runs', run, 'done.jsonl'), 'utf8').trim().split('\n');
     assert.equal(done.length, 1, 'done.jsonl untouched by resume');
     for (const r of [again, cooled]) assert.notEqual(r.json?.event?.url, first.json.url, 'a done item was re-navigated');
+  });
+  // -------------------------------------------------------------------------------------------
+  // Egress preflight (§7.7)
+  // -------------------------------------------------------------------------------------------
+
+  test('egress, no policy: run measures + records, notes it on stderr, never refuses', async () => {
+    resetCooldown();
+    fx.setTrace(traceBody({ loc: 'AT', colo: 'VIE' }));
+    const run = `live-${++runN}`;
+    const r = await gate('run', '--profile', 'lab', '--run', run, '--queue', queueFile(run, ['/ok']));
+    assert.equal(r.code, 0, `${r.stdout}\n${r.stderr}`);
+    assert.match(r.stderr, /loc=AT .*no egress policy, not enforced/);
+    assert.deepEqual([r.json.egress.loc, r.json.egress.enforced, r.json.egress.pass], ['AT', false, true]);
+    const nav = await gate('nav', '--run', run);
+    assert.equal(nav.code, 0, `${nav.stdout}\n${nav.stderr}`);
+    fx.setTrace(traceBody());
+  });
+
+  test('egress match: run passes, nav proceeds without a recheck inside 10 min', async () => {
+    resetCooldown();
+    fx.setTrace(traceBody());
+    const before = fx.hits('/cdn-cgi/trace');
+    const run = await newRun(['/ok'], 'lab-egress');
+    const st = await gate('status', '--run', run);
+    assert.deepEqual([st.json.egress.loc, st.json.egress.warp, st.json.egress.pass, st.json.egress.enforced], ['CA', 'off', true, true]);
+    const nav = await gate('nav', '--run', run);
+    assert.equal(nav.code, 0, `${nav.stdout}\n${nav.stderr}`);
+    assert.equal(fx.hits('/cdn-cgi/trace') - before, 1, 'one measurement: the run start; nav reused it');
+  });
+
+  test('egress mismatch at the 10-min recheck: exit 13, egress-mismatch event, 0 items navigated, no cooldown', async () => {
+    resetCooldown();
+    fx.setTrace(traceBody());
+    const run = await newRun(['/ok-3'], 'lab-egress');
+    // The VPN moves after the run started; the nav's recheck must see it.
+    ageEgress(run);
+    fx.setTrace(traceBody({ loc: 'AT', colo: 'VIE' }));
+    const okBefore = fx.hits('/ok-3');
+    const r = await gate('nav', '--run', run);
+    assert.equal(r.code, 13, `${r.stdout}\n${r.stderr}`);
+    const ev = r.json.event;
+    assert.deepEqual(validate(ev, loadBlockSchema()).errors, []);
+    assert.deepEqual([ev.reason, ev.evidence.detector, ev.evidence.rule, ev.evidence.loc, ev.evidence.colo, ev.evidence.warp], [
+      'egress-mismatch', 'egress', 'egress.loc', 'AT', 'VIE', 'off',
+    ]);
+    assert.equal(ev.queuePos, 0);
+    assert.deepEqual(JSON.parse(readFileSync(runFile(run, 'events.jsonl'), 'utf8').trim().split('\n').at(-1)), ev);
+    assert.equal(fx.hits('/ok-3'), okBefore, 'a queue item was navigated');
+    assert.deepEqual(JSON.parse(readFileSync(runFile(run, 'cursor.json'), 'utf8')), { cursor: 0 }, 'the cursor moved');
+    assert.equal(existsSync(runFile(run, 'done.jsonl')), false);
+    assert.deepEqual(cooldown(), {}, 'an egress refusal is not a site block');
+    // A refusal is never remembered as a pass: the next nav measures again and refuses again.
+    const again = await gate('nav', '--run', run);
+    assert.equal(again.code, 13);
+    assert.equal(fx.hits('/ok-3'), okBefore);
+    // Fixed egress + resume (same step) → the run continues.
+    fx.setTrace(traceBody());
+    const resumed = await gate('resume', '--run', run);
+    assert.equal(resumed.code, 0, `${resumed.stdout}\n${resumed.stderr}`);
+    assert.equal(resumed.json.egress.pass, true);
+    const nav = await gate('nav', '--run', run);
+    assert.equal(nav.code, 0, `${nav.stdout}\n${nav.stderr}`);
+    assert.equal(fx.hits('/ok-3'), okBefore + 1);
+  });
+
+  test('egress mismatch at run start: exit 13 before any nav', async () => {
+    resetCooldown();
+    fx.setTrace(traceBody({ warp: 'on' }));
+    const run = `live-${++runN}`;
+    const r = await gate('run', '--profile', 'lab-egress', '--run', run, '--queue', queueFile(run, ['/ok-3']));
+    assert.equal(r.code, 13, `${r.stdout}\n${r.stderr}`);
+    assert.equal(r.json.event.evidence.rule, 'egress.warp');
+    fx.setTrace(traceBody());
+  });
+
+  test('egress trace garbage with a policy: exit 10 detector-error, fail closed, no cooldown', async () => {
+    resetCooldown();
+    fx.setTrace(traceBody());
+    const run = await newRun(['/ok-3'], 'lab-egress');
+    ageEgress(run);
+    fx.setTrace('<html><body>nope</body></html>');
+    const okBefore = fx.hits('/ok-3');
+    const r = await gate('nav', '--run', run);
+    assert.equal(r.code, 10, `${r.stdout}\n${r.stderr}`);
+    assert.deepEqual([r.json.event.reason, r.json.event.evidence.detector, r.json.event.evidence.rule], [
+      'detector-error', 'egress', 'egress-trace-unreadable',
+    ]);
+    assert.deepEqual(validate(r.json.event, loadBlockSchema()).errors, []);
+    assert.equal(fx.hits('/ok-3'), okBefore);
+    assert.deepEqual(cooldown(), {});
+    fx.setTrace(traceBody());
+  });
+
+  test('egress: the trace ip never reaches stdout, stderr, events, meta or status', async () => {
+    const st = await gate('status', '--run', `live-${runN}`);
+    assert.equal(st.code, 0);
+    assert.ok(transcript.length > 0);
+    assert.equal(transcript.join('\n').includes(TRACE_IP), false, 'ip in the gate output');
+    const runs = join(env.XDG_STATE_HOME, 'page-lab', 'runs');
+    let files = 0;
+    for (const run of readdirSync(runs)) {
+      for (const f of readdirSync(join(runs, run))) {
+        files++;
+        assert.equal(readFileSync(join(runs, run, f), 'utf8').includes(TRACE_IP), false, `ip in ${run}/${f}`);
+      }
+    }
+    assert.ok(files > 0, 'no run files scanned');
+    assert.ok(fx.hits('/cdn-cgi/trace') > 0, 'the fixture trace was never read — the cases measured nothing');
   });
 });

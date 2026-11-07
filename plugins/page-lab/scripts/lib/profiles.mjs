@@ -169,8 +169,16 @@ export function resolveExecutable(profile, env = process.env) {
  * --ignoreDefaultChromeArg (it drops --enable-automation with the rest), no
  * --acceptInsecureCerts, no user-agent override. --categoryExtensions=false is EXPLICIT because
  * upstream turns extension tools ON by default for a launched (pipe) browser.
+ *
+ * extraOrigins (the gate's egress trace origin, §7.7) WIDENS an existing allowlist and never
+ * creates one: a profile with no allowedOrigins has no network allowlist, and adding a single
+ * pattern would make it trace-only. Every gate launch passes the same list, so the handoff's
+ * one-token difference holds.
  */
-export function dedicatedArgv(profile, { headless = profile.headless !== false, workspace, env = process.env } = {}) {
+export function dedicatedArgv(
+  profile,
+  { headless = profile.headless !== false, workspace, extraOrigins = [], env = process.env } = {}
+) {
   if (profile.mode !== 'dedicated') throw new ProfileError(`${profile.name} is not dedicated`);
   const exe = resolveExecutable(profile, env);
   const argv = [
@@ -187,7 +195,9 @@ export function dedicatedArgv(profile, { headless = profile.headless !== false, 
     '--fileNavigations=false',
     `--workspace=${workspace || defaultWorkspace(profile.name, env)}`
   );
-  for (const o of profile.allowedOrigins ?? []) argv.push(`--allowedUrlPattern=${o}/*`);
+  const origins = profile.allowedOrigins ?? [];
+  const allow = origins.length ? [...new Set([...origins, ...extraOrigins])] : [];
+  for (const o of allow) argv.push(`--allowedUrlPattern=${o}/*`);
   for (const a of argv) {
     // One flag per line is the sh hand-off format; a newline would split an argument.
     if (/[\n\r\0]/.test(a)) throw new ProfileError(`argv token carries a control char: ${JSON.stringify(a)}`);
