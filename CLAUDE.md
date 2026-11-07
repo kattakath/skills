@@ -107,16 +107,20 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
 
 ## Shipping a change
 
-- Branch off `main`, open a PR. `auto-merge.yml` arms squash-auto-merge on same-repo PRs
-  (never forks) the moment they leave draft. `gate` is the ONLY required check: it asserts
-  every job in `validate.yml` ended as the event expects. The full `validate` suite runs
-  **once**, in the merge queue (own-branch PRs get the cheap `quick` job instead); fork PRs
-  run it on the PR too. Open work in progress as a **draft**: `gate` is green in seconds, so
-  an armed PR is queued almost at once. Never rename the `gate` job; every ruleset names it.
-- A merge to `main` **is** the release — treat `main` accordingly. Bump the `version` of
-  every plugin the PR touches, or `validate` goes red. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
+- **The operator's changes land by direct push to `main`** (the fleet default: nix-config's
+  global `claude/CLAUDE.md` § Landing on the fleet). Run the local checks in § Validating
+  and the two leak gates, then push. `validate.yml` runs the full suite on the push (its
+  version-bump base is `github.event.before`), and the `ci-watch` plugin wakes the session
+  only if something fails.
+- **The PR lane stays for bots and forks.** `auto-merge.yml` arms same-repo, non-draft PRs.
+  `gate` is the ONLY required check: it asserts every job in `validate.yml` ended as the
+  event expects. The full suite runs **once**, in the merge queue (own-branch PRs get the
+  cheap `quick` job), and once more on the push to `main`. Never rename the `gate` job;
+  every ruleset names it.
+- A push to `main` **is** the release — treat `main` accordingly. Bump the `version` of
+  every plugin the change touches, or `validate` goes red. This is what [`github-release-gate`](plugins/github-release-gate) generalizes.
 - Fork PRs land un-armed on purpose — a maintainer adds them to the merge queue after review.
-- **A merge is released, not delivered.** An installed copy moves only when Claude Code
+- **A push is released, not delivered.** An installed copy moves only when Claude Code
   refreshes the marketplace on its own schedule. `/reload-plugins` re-reads the **local cache**
   and fetches nothing — measured 2026-10-18: after #87 merged, a reload still ran the
   pre-merge cache dir because the marketplace clone sat on the old HEAD. To see a merged
