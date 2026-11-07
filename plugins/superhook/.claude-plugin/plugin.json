@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "superhook",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, every block passed through intact, and a 3-strikes loop breaker so a mis-firing Stop gate cannot trap an agent forever.",
   "author": {
     "name": "Ismail Kattakath"
