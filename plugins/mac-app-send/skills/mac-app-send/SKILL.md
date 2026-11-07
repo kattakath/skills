@@ -5,7 +5,7 @@ description: >-
   and/or file attachments — WhatsApp Desktop is the worked example, but the
   Open/Save panel technique applies to ANY Mac app that attaches, imports, exports
   or saves a file. Use when the user asks to "send X on WhatsApp", "message them
-  this PDF", "attach the file in <Mac app>", "text them the document", or whenever
+  this PDF", "attach the file in {Mac app}", "text them the document", or whenever
   an `app_*` tool refuses a file chooser. NOT for web apps (use the browser MCP)
   and NOT for services that have a dedicated MCP — Gmail, Slack, Calendar, Linear
   — reach for those first; they are API-backed and verifiable.

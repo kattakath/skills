@@ -4,7 +4,7 @@ description: >
   This skill should be used when the user wants a whole alternative experience for a
   site rather than one annoyance removed — "dark mode the entire site", "make the
   thumbnails fill the screen and put everything else in a menu", "rebuild this legacy
-  app's shell", "redesign <site>", or any userscript that relocates the site's own
+  app's shell", "redesign {site}", or any userscript that relocates the site's own
   controls, restyles every surface, or is expected to run past a few hundred lines. It
   runs a measure-first survey, builds against a keep-list, and verifies with trusted
   events at document-start before shipping.

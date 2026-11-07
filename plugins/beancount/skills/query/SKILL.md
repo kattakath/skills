@@ -4,7 +4,7 @@ description: >
   This skill should be used when the user asks a question their Beancount journal can answer —
   "what did I spend on groceries last month", "net worth today", "balance of my card",
   "which transactions need review", "spending by category this year", "show the transfer
-  residue", "find transaction <key>". It answers with bean-query (BQL) against the journal,
+  residue", "find transaction {key}". It answers with bean-query (BQL) against the journal,
   using tested recipes, and never edits the journal.
 ---
 
