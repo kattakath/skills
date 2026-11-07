@@ -41,19 +41,23 @@ name: validate
 # job skipped after a failure "may not block merging" (GitHub docs). So a skipped job must
 # never BE the required check. Prior art: indexmap, DeterminateSystems/magic-nix-cache-action.
 #
-# No `push: main` leg. In the queue, the merge-group commit IS the commit main gets (measured on
-# kattakath/nix-config #558). Without a queue, push:main could only ever report a bad merge AFTER
-# it had shipped (a merge is the release); the queue is what closes that gap, before the merge.
-# release-tags.yml keeps its own push:main trigger.
+# The `push: main` leg is for the operator's direct pushes (admin bypass), which skip the queue.
+# It reports a bad push AFTER it shipped (a push to main is the release); that is the accepted
+# trade for not opening a PR. Queue merges also run it once more on main. release-tags.yml keeps
+# its own push:main trigger.
 
 on:
   pull_request:
   merge_group:
     types: [checks_requested]
+  # The operator's own changes land by direct push (admin bypass), not via a PR, so this
+  # is the only check they get. The kattakath/skills `ci-watch` plugin waits on it.
+  push:
+    branches: [main]
   workflow_dispatch:
 
 concurrency:
-  group: validate-${{ github.event.pull_request.number || github.ref }}
+  group: validate-${{ github.event.pull_request.number || (github.event_name == 'push' && github.sha) || github.ref }}
   # Supersede stale PR runs; never cancel a queue run (the queue would eject the PR).
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
@@ -298,11 +302,13 @@ jobs:
 
       # Plugins carry a semver `version`; an installed copy updates only when it changes.
       # A plugin change without a bump would therefore reach nobody, silently. This makes it red.
-      # In the queue the base is the merge group's base commit; on a PR it is the target branch.
+      # In the queue the base is the merge group's base commit; on a PR it is the target branch;
+      # on a push it is the commit main held before (`event.before`). Only on push: a PR's
+      # `before` is its previous HEAD, which would weaken the check.
       - name: Plugin version bumped
         if: github.event_name != 'workflow_dispatch'
         env:
-          BASE_REF: ${{ github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
+          BASE_REF: ${{ (github.event_name == 'push' && github.event.before) || github.event.merge_group.base_sha || format('origin/{0}', github.base_ref) }}
         run: |
           python3 -I scripts/check-version-bump.py --self-test
           python3 -I scripts/check-version-bump.py "$BASE_REF"
