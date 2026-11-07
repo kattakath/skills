@@ -65,20 +65,7 @@
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/beancount",
       "license": "MIT",
-      "source": "./plugins/beancount",
-      "strict": false,
-      "lspServers": {
-        "beancount": {
-          "command": "beancount-language-server",
-          "args": [
-            "--stdio"
-          ],
-          "extensionToLanguage": {
-            ".beancount": "beancount",
-            ".bean": "beancount"
-          }
-        }
-      }
+      "source": "./plugins/beancount"
     },
     {
       "name": "brag-dossier",

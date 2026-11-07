@@ -73,8 +73,12 @@ for each flagged entry, learned from the categorised ones; the operator accepts 
 
 ## Language server
 
-The marketplace entry declares `beancount-language-server --stdio` for `.beancount` and
-`.bean` files (`strict: false` + `lspServers`, the pattern Anthropic's own LSP plugins use).
+`plugin.json` declares `beancount-language-server --stdio` for `.beancount` and `.bean`
+files (`lspServers`). It must live there, not in the marketplace entry: once a plugin has
+its own `plugin.json`, entry `lspServers` do not apply
+([marketplace reference](https://code.claude.com/docs/en/plugins/marketplace-reference.md)).
+Anthropic's LSP plugins declare it in the entry only because they ship no `plugin.json`.
+Until 1.1.4 it sat in the entry, and the server never loaded.
 Install the binary separately (nix-config's `local.beancount` does). Measured 2026-11-01 on
 1.9.2: 12 capabilities, and the golden journal's two `!` entries come back as warnings.
 The journal is generated, so the server is for reading and querying it, not hand-editing.
