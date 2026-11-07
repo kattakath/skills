@@ -12,6 +12,7 @@ switch (mode) {
   case "ask":
     say({ hookSpecificOutput: { hookEventName: "PreToolUse", permissionDecision: "ask", permissionDecisionReason: "stub: confirm?" } });
     break;
+  case "numreason": say({ decision: "block", reason: 123 }); break;
   case "approve": say({ decision: "approve" }); break;
   case "exit2": process.stderr.write("stub: exit-2 block"); process.exitCode = 2; break;
   case "crash": throw new Error("stub: crashed");

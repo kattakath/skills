@@ -197,8 +197,10 @@ function main(event, innerArgv, stdin) {
     status === 2 || (parsed && parsed.decision === "block") || hso.permissionDecision === "deny";
   const approved =
     !blocked && ((parsed && parsed.decision === "approve") || hso.permissionDecision === "allow");
-  const reason =
-    status === 2 ? err : (parsed && parsed.reason) || hso.permissionDecisionReason || "";
+  // String(): a non-string reason must not throw below and drop the block.
+  const reason = String(
+    status === 2 ? err : (parsed && parsed.reason) || hso.permissionDecisionReason || "",
+  );
   const passThrough = { stdout: out, stderr: status === 2 ? err : "", code: status === 2 ? 2 : 0 };
 
   // ---- 2./3. blocks: pass through; loop-break on Stop only ------------------
@@ -274,8 +276,15 @@ try {
   }
   result = main(event, innerArgv, stdin);
 } catch (e) {
-  // The wrapper itself must not throw: fail to "no decision", never to allow.
-  result = { stdout: "", stderr: `superhook internal error: ${String(e && e.message)}`, code: 0 };
+  // The wrapper itself must not throw: fail to "no decision", never to allow —
+  // and leave a crash-safe line so the digest still sees it.
+  const msg = `superhook internal error: ${String(e && e.message)}`;
+  try {
+    fs.appendFileSync(logFile, JSON.stringify({ ts: now(), event: process.argv[2] || "Unknown", action: "crash-safe", status: "internal", stderr: msg }) + "\n");
+  } catch {
+    /* logging must never throw */
+  }
+  result = { stdout: "", stderr: msg, code: 0 };
 }
 // exitCode + natural exit, not process.exit(): stdout to a pipe is async on
 // POSIX, and process.exit() right after write() can truncate a large payload

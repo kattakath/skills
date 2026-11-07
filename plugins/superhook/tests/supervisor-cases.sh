@@ -73,6 +73,10 @@ for i in 1 2 3; do
 done
 
 fresh
+sup PreToolUse -- node "$STUB" numreason
+check "a non-string reason still blocks" "$RC|$(j 'd["decision"]')|$(logcount pass-block)" "0|block|1"
+
+fresh
 sup PreToolUse -- node "$STUB" ask
 check "PreToolUse ask passes through" "$RC|$(j 'd["hookSpecificOutput"]["permissionDecision"]')" "0|ask"
 
@@ -179,5 +183,5 @@ check "inner budgets < harness timeouts; Bash matcher; PreToolUse fails closed; 
 total=$((pass+fail))
 echo "superhook: $pass passed, $fail failed ($total cases)"
 # A floor, so a moved fixture cannot pass as zero cases.
-if [ "$total" -lt 38 ]; then echo "FAIL: only $total cases ran (floor 38)"; exit 1; fi
+if [ "$total" -lt 39 ]; then echo "FAIL: only $total cases ran (floor 39)"; exit 1; fi
 [ "$fail" -eq 0 ]
