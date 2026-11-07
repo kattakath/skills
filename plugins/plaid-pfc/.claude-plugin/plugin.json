@@ -1,12 +1,13 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "plaid-pfc",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Plaid's Personal Finance Category (PFC) taxonomy, pinned and strictly enforced: the 127 v2 detailed names with Plaid's descriptions, a v1-to-v2 crosswalk (renames and splits), validation that refuses any invented name, standard I/O records with JSON Schema for enum-bound LLM output, and a refresh that diffs Plaid's published CSV. Stdlib Python only; holds no data.",
   "author": {
     "name": "Ismail Kattakath"
   },
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/plaid-pfc",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [

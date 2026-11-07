@@ -1,12 +1,13 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "llmstxt",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
   "author": {
     "name": "Ismail Kattakath"
   },
   "homepage": "https://llmstxt.org",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [

@@ -1,13 +1,14 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "vercel-workflow",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Vercel's Workflow SDK skills: write durable, resumable workflows, install and configure the SDK, and migrate from Temporal, Inngest, Trigger.dev or AWS Step Functions. Vendored unmodified from vercel/workflow@7153e09 (Apache-2.0).",
   "author": {
     "name": "Vercel Inc.",
     "url": "https://github.com/vercel"
   },
   "homepage": "https://github.com/kattakath/skills/tree/main/plugins/vercel-workflow",
+  "icon": "./icon.png",
   "repository": "https://github.com/kattakath/skills",
   "license": "Apache-2.0",
   "keywords": [
