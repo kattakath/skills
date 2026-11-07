@@ -587,7 +587,7 @@
     },
     {
       "name": "superhook",
-      "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, and a 3-strikes loop breaker so a mis-firing gate cannot trap an agent forever.",
+      "description": "Supervising dispatcher for command-type Claude Code hooks: crash safety so a throwing hook can never wedge a session, every block passed through intact, and a 3-strikes loop breaker so a mis-firing Stop gate cannot trap an agent forever.",
       "author": {
         "name": "Ismail Kattakath"
       },

@@ -9,16 +9,46 @@ changing what the hook decides when it is working.
 
 ## What it does, in order of reliability
 
-1. **Crash safety** — if the inner hook throws or exits non-zero, never wedge the
-   session. Decision events (`PreToolUse`, `Stop`, `StopFailure`, `SubagentStop`)
-   get a safe `approve`; non-decision events pass silently. Always logged.
-2. **Loop breaker** — if the *same* block reason fires 3 times in a row for an
-   event, downgrade that block to `approve` so a mis-firing gate cannot trap the
-   agent forever. Loudly logged and surfaced via `systemMessage`.
-3. **Pass-through** — otherwise the inner hook's decision is honoured verbatim. A
-   single legitimate block is **not** downgraded.
+1. **Crash safety** — if the inner hook throws, times out, or exits with anything
+   but `0` or `2`, never wedge the session. The wrapper emits **no decision**, only
+   a `systemMessage`, so the call goes through the normal permission flow
+   ("staying silent doesn't approve it" —
+   [hooks reference](https://code.claude.com/docs/en/hooks#exit-code-output)).
+   Before 1.1.0 it emitted `decision: "approve"`, which on `PreToolUse` maps to
+   `allow` and **skips the permission prompt**. Always logged.
+2. **Blocks pass through** — a JSON block (`decision: "block"` or
+   `hookSpecificOutput.permissionDecision: "deny"`) and an **exit-2** block (reason
+   on stderr, the documented convention) reach the harness unchanged. Before 1.1.0
+   an exit-2 block was treated as a crash and approved.
+3. **Loop breaker, `Stop`/`SubagentStop` only** — if the *same* block reason fires 3
+   times in a row, let the agent stop, loudly (`systemMessage` + log). A `Stop`
+   block can trap an agent; a `PreToolUse` deny cannot — Claude just runs
+   something else. So a repeated `PreToolUse` deny is logged as `loop-detected`
+   and **never downgraded**. Before 1.1.0 the third identical retry of a
+   hard-blocked command was turned into an allow. Upstream also caps Stop loops
+   itself (8 consecutive continuations, `CLAUDE_CODE_STOP_HOOK_BLOCK_CAP` —
+   [Stop input](https://code.claude.com/docs/en/hooks#stop-input)); this breaker
+   is lower and leaves a log line, which is why it stays.
 4. **Log + recommend** — every invocation is appended to `superhook.log` as a JSON
    line (rotating, 5 MB × 3 backups). The wrapper never edits hook files itself.
+
+### Fail-closed where it is safe
+
+The `PreToolUse` entry sets `"onFailure": "block"`
+([docs](https://code.claude.com/docs/en/hooks#block-the-action-when-a-hook-fails),
+Claude Code 2.1.295+). If the **wrapper itself** cannot start or hits the 20 s
+harness timeout, the Bash call is blocked instead of silently running unguarded.
+An inner-hook crash is still crash-safe (item 1): the wrapper exits 0. `Stop` does
+not get the field — upstream ignores it there, since Claude cannot repair a hook
+that will not run.
+
+### Timeouts
+
+Each inner budget sits **below** its `hooks.json` `timeout`: `Stop` 600 s inside
+630 s, `PreToolUse` 15 s inside 20 s. A harness timeout discards the output and
+writes no log line, so the wrapper has to give up first to record the incident.
+Before 1.1.0 `Stop` had a 60 s harness timeout around a 600 s inner budget, so a
+cold `nix flake check` was cancelled and the gate silently never ran.
 
 ## Wiring — the plugin ships the hooks
 
@@ -92,6 +122,9 @@ The conventional paths cover the common case. For a gate at some other path, cal
 node /path/to/superhook.js Stop -- node "$root/.claude/hooks/my-gate.js"
 ```
 
+Several arguments after `--` run as an argv, with no shell, so a path with a space
+survives. A single argument runs as a shell string.
+
 ⚠ Do **not** do this for a gate the plugin already covers. A `settings.json`
 entry and a plugin entry both fire, so the gate would run **twice**.
 
@@ -104,6 +137,11 @@ both a crash and a loop into an *approve*, so from the harness's side those are
 indistinguishable from a clean run. Measured over a live stream,
 `PreToolUse:Bash` reported 15,102 records at `num_blocking 0,
 num_non_blocking_error 0`. Hence `superhook-digest.js` reads `superhook.log`.
+
+## Tests
+
+`bash plugins/superhook/tests/supervisor-cases.sh` — stub inner hooks only, no
+consumer repo needed. CI runs it in `validate`.
 
 ## Scope note
 
