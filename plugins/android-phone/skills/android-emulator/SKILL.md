@@ -5,9 +5,11 @@ description: >-
   driven over adb from a Mac. Use when the user says "unlock the emulator", "the swipe is
   too sensitive", "hard to get to the PIN page", "there are 2 desktops / home screens", "calibrate touch sensitivity to my trackpad", "scrolling flings too far", "what are the circles when I press Cmd", "does the emulator fingerprint work",
   "Touch Sensor says fingerprint not recognized", "enroll a fingerprint on the emulator",
-  "does my Mac's Touch ID work in the emulator", or the emulator keeps asking for its PIN.
-  Covers the GUI-vs-adb finger-ID mismatch, headless enrollment without leaking the PIN,
-  and the lockout and strong-auth rules. NOT for a physical phone (that is the sibling
+  "does my Mac's Touch ID work in the emulator", the emulator keeps asking for its PIN,
+  or BEFORE launching an AVD at all ("start the emulator", "boot pixel_play"), and when "the
+  emulator lost its state" / "it looks like months ago". Covers how to launch without
+  rewinding the disk, the GUI-vs-adb finger-ID mismatch, headless enrollment without leaking
+  the PIN, and the lockout and strong-auth rules. NOT for a physical phone (that is the sibling
   `android-phone` skill).
 ---
 
@@ -112,6 +114,27 @@ An emptied home page is deleted by the launcher itself. To merge page 2 into pag
   ```
 - **Aim at the SHRUNKEN layout.** Drag mode scales the pages to about 0.68× (a 1080×1920 screen put page 1's card at about x 178–912, y 336–1258). A drop outside the card cancels the drag, and the icon snaps back. Screenshot mid-drag (`screencap` inside the same shell string) to read the card's bounds.
 - **Check:** after the last icon moves, a left swipe from home stays on page 1. `uiautomator dump` lists every app once.
+
+## Launch with a cold boot, never a quick-boot
+
+**Loading a quick-boot snapshot rewinds the DISK too, not just RAM.** The emulator stores the
+snapshot inside `userdata-qemu.img.qcow2` itself. Loading it throws away every write made after
+the snapshot. Nothing warns you: it looks like an ordinary boot.
+
+- **Launch with `-no-snapshot`** (no load and no save). In the kattakath fleet, launch only via
+  `android-emu [avd]`, which adds it. Never run a bare `emulator -avd <name>`.
+- **`-no-snapshot-save` is NOT enough.** It skips the save on exit but still LOADS the snapshot.
+  Measured 2026-11-06: one `emulator -avd pixel_play -no-snapshot-save` rewound the AVD to an
+  Aug 4 snapshot and lost three months of state. The earlier launches had all cold-booted, so
+  they never touched that snapshot.
+- **Diagnose "it lost its state":** run `qemu-img snapshot -l <avd>/userdata-qemu.img.qcow2`
+  (the SDK ships `qemu-img` beside `emulator`). Also check the date on
+  `<avd>/snapshots/default_boot/ram.bin`. An old `default_boot` there is the rewind point.
+  Look for `fastboot.forceFastBoot=yes` in `config.ini`.
+- **Remove the hazard** with the emulator stopped: `qemu-img snapshot -d default_boot …qcow2`,
+  move `snapshots/default_boot` to the Trash, then set `fastboot.forceColdBoot=yes` and
+  `fastboot.forceFastBoot=no` in `config.ini`. Already-lost state comes back only from a
+  backup of the qcow2.
 
 ## Pitfalls
 
