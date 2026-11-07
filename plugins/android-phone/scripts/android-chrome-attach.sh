@@ -18,6 +18,13 @@
 #
 # Port 9223, not 9222: page-lab's desktop Chromium owns 9222, and both run at once.
 #
+# WHY THE FORWARD IS REMOVED ON EXIT: the forward makes the phone's LOGGED-IN Chrome an
+# unauthenticated CDP endpoint on 127.0.0.1 — any local process can drive it — and an
+# adb forward outlives the process that made it. So this script does not `exec` the
+# server: it waits for it and then removes the forward, unless another instance of this
+# launcher is still running (it would lose its endpoint mid-session). Only a forward that
+# still points at OUR socket is removed, so a hand-made forward to something else stays.
+#
 # Configuration (environment):
 #   ANDROID_SERIAL      which device, when more than one is attached (adb's own variable)
 #   ANDROID_CDP_PORT    Mac-side port (default 9223)
@@ -39,6 +46,26 @@ elif ! "$adb" forward "tcp:$port" "localabstract:$socket" >/dev/null 2>&1; then
   echo "android-chrome: no forward yet (no single authorized device); run 'adb forward tcp:$port localabstract:$socket' later — the server connects lazily" >&2
 fi
 
+cleanup() {
+  [ -n "$adb" ] || return 0
+  # Another launcher still alive shares this forward; leave it for the last one out.
+  # `pgrep -f` prints pids only — never add -l, which echoes other processes' argv.
+  others="$(pgrep -f 'android-chrome-attach[.]sh' 2>/dev/null | grep -vx "$$" | grep -c . || true)"
+  [ "${others:-0}" -eq 0 ] || return 0
+  if "$adb" forward --list 2>/dev/null | grep -q " tcp:$port localabstract:$socket\$"; then
+    "$adb" forward --remove "tcp:$port" >/dev/null 2>&1 || true
+  fi
+}
+
 # --no-performance-crux keeps traced URLs from being sent to Google; keep both flags.
-exec npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$port" \
-  --no-usage-statistics --no-performance-crux "$@"
+# The server inherits stdin/stdout, so MCP traffic is unchanged by not exec-ing it.
+npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$port" \
+  --no-usage-statistics --no-performance-crux "$@" &
+child=$!
+trap 'kill -TERM "$child" 2>/dev/null' HUP INT TERM
+status=0
+wait "$child" || status=$?
+# A trapped signal interrupts the first wait; wait again so cleanup runs after the child.
+if kill -0 "$child" 2>/dev/null; then wait "$child" || status=$?; fi
+cleanup
+exit "$status"
