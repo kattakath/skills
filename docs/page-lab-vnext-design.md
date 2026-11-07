@@ -384,5 +384,18 @@ bumps only if `page-lab-pick` learns `--profile`.
   so it may trip challenges MORE often, making handoffs frequent. What settles it: a week of
   `block@1` counts per origin, headless vs headed-offscreen. If headed-offscreen wins, the
   profile's `headless` default flips — the design does not change.
+  - **Measured 2026-11-07 — the assumption is weak, and headed-offscreen is NOT the way out.**
+    - A peer A/B from a clean residential egress, one run, n=1: honest headless was
+      **challenged 1/1** (403, `cf-mitigated: challenge`, "Just a moment..."). The fingerprinted,
+      TLS-impersonating and UA-overridden variants passed 0/2, and all three are banned by § 7.3.
+      From a VPN egress every variant was challenged, so IP reputation dominates.
+    - Headed-offscreen on macOS (CfT 156, `--window-position=-32000,-32000`):
+      - macOS **clamped the window back onscreen** at `0,33`, 1280x800.
+      - CfT **became the frontmost app** after the first navigation (`NSWorkspace.frontmostApplication`).
+      - It is neither offscreen nor focus-safe, so it is rejected.
+    - **Consequence: the default stays headless, and handoffs are the expected path,** not the
+      exception, for origins behind a managed challenge.
+    - The honest levers left: slower pacing, egress policy (§ 7.7), and a once-per-origin
+      headed sign-in whose cookies persist. Overriding the UA is spoofing and stays banned.
 - Runner-up: a launch WITHOUT the mock-keychain flags losing cookies (inferred; testing it
   creates a Keychain item, so it needs the operator's OK).
