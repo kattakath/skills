@@ -309,6 +309,8 @@ jobs:
       # mermaid-ascii is not on the runner).
       - name: brain-signals shape cases
         run: bash plugins/brain-signals/tests/shape-cases.sh
+      - name: brain-signals mermaid-hint cases
+        run: bash plugins/brain-signals/tests/mermaid-hint-cases.sh
 
       # Both halves of silent-instruments, and they test different things. The lint
       # cases pin the hook's behaviour — including the must-stay-QUIET half, which

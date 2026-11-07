@@ -10,7 +10,7 @@ An answer-shape kit: verdict first, then layered detail, easy to scan, with real
 | `/task` | Goal-locked execution: an approved contract, a frozen todo list, and a parking lot for anything off-plan. |
 | Stop hook `stop-limbo` | Warns when a turn ends in limbo. **Warn only, never blocks.** |
 
-`/diagram` and `cartographer` render with the [`mermaid-ascii`](https://github.com/AlexanderGrooff/mermaid-ascii) CLI, which you need on `PATH`.
+`/diagram` and `cartographer` render with the [`mermaid-ascii`](https://github.com/AlexanderGrooff/mermaid-ascii) CLI, which you need on `PATH`. It is not bundled: a plugin `bin/` directory would stop claude.ai and Cowork installing this plugin. If it is missing, a SessionStart hook says so once (with install options) and tells Claude to hand-draw diagrams instead.
 
 The style's rules are accessibility rules backed by published standards and measured effect sizes, not taste: [answer-shape evidence](https://github.com/kattakath/nix-config/blob/main/docs/answer-shape-evidence.md).
 
