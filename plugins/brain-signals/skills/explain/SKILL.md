@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Layered expert explanation of a topic. Use when I ask to explain, understand, or unpack a concept, system, or design.
+description: Layered expert explanation of a topic. Use when the user asks to explain, understand, or unpack a concept, system, or design.
 argument-hint: "[topic]"
 ---
 Explain $ARGUMENTS for a senior engineer.
