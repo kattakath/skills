@@ -7,7 +7,7 @@ description: >
   fabricating anything, then validate + render a PDF via the `jsonresume` wrapper.
   Use when asked to "tailor my resume for this job", "optimize resume.json for a
   posting", "make an ATS version of my resume", "generate a tailored PDF/cover
-  letter for <job>", or "apply to <job> with my JSON resume". This is the
+  letter for {job}", or "apply to {job} with my JSON resume". This is the
   json-native counterpart to the text-based ResumeSkills pack (job-description-
   analyzer / resume-ats-optimizer / cover-letter-generator) — call those for their
   heuristics, but keep resume.json as the source of truth here. Pairs with

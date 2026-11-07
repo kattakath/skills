@@ -2,7 +2,7 @@
 name: adapter
 description: >
   This skill should be used when statement-extract cannot read a statement and an adapter has
-  to be added or repaired — "add support for <bank>", "statement-extract refuses this file",
+  to be added or repaired — "add support for {bank}", "statement-extract refuses this file",
   "exit 4 no adapter identifies this file", "this bank changed its PDF layout", "write an
   adapter", "the summary check fails on a new statement", or when the extract skill hands over
   a refusal. It covers identify → shape → synthetic fixture → TOML (a hook only if needed) →
