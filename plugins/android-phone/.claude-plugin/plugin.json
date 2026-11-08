@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "android-phone",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "Connect and operate a physical Android device over ADB, wired or wireless: pairing, connecting, TCP/IP bootstrap and scrcpy mirroring — plus unlocking an Android Emulator AVD by PIN or fingerprint, and blind (screenshot-free) browsing of Chrome on any adb device over CDP.",
   "author": {
     "name": "Ismail Kattakath"

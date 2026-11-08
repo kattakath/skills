@@ -42,7 +42,8 @@ click by uid, run JavaScript, no screenshots — is the plugin's `android-chrome
 chrome-devtools-mcp attached over CDP to Chrome on the device (phone or emulator), through
 `adb forward tcp:9223 localabstract:chrome_devtools_remote`. Its launcher,
 `scripts/android-chrome-attach.sh`, makes that forward at session start when exactly one
-device is attached; set `ANDROID_SERIAL` to pick one of several. The virtual emulator is a different tool. Its unlock and fingerprint procedure is the
+device is attached; set `ANDROID_SERIAL` to pick one of several. It removes the forward when the
+last session using it exits — why, and the one exit it cannot catch, are in the script's header. The virtual emulator is a different tool. Its unlock and fingerprint procedure is the
 plugin's second skill, `android-emulator` (the Touch Sensor button and `adb emu finger touch`
 send different finger IDs, so enroll by the route you will unlock with).
 

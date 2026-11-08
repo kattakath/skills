@@ -21,9 +21,15 @@
 # WHY THE FORWARD IS REMOVED ON EXIT: the forward makes the phone's LOGGED-IN Chrome an
 # unauthenticated CDP endpoint on 127.0.0.1 — any local process can drive it — and an
 # adb forward outlives the process that made it. So this script does not `exec` the
-# server: it waits for it and then removes the forward, unless another instance of this
-# launcher is still running (it would lose its endpoint mid-session). Only a forward that
-# still points at OUR socket is removed, so a hand-made forward to something else stays.
+# server: it waits for it and then removes the forward (EXIT trap, so a signal or a failed
+# step still cleans up), unless another launcher on the SAME port is still running (it
+# would lose its endpoint mid-session). Each launcher registers its pid in a per-user,
+# per-port directory under $TMPDIR; dead pids there are pruned, so one SIGKILL'd launcher
+# (the only exit no trap sees) leaves a forward that the next session's exit removes.
+# Only a forward that still points at OUR socket is removed, each with `-s <its serial>`,
+# so a hand-made forward to anything else stays. adb has no process-bound forward;
+# `--no-rebind` (first launcher owns it) lost because the owner's exit would cut a
+# sibling session's endpoint. Tests: tests/attach-cases.sh.
 #
 # Configuration (environment):
 #   ANDROID_SERIAL      which device, when more than one is attached (adb's own variable)
@@ -36,8 +42,35 @@ set -eu
 port="${ANDROID_CDP_PORT:-9223}"
 socket="${ANDROID_CDP_SOCKET:-chrome_devtools_remote}"
 
+child=
 adb="$(command -v adb 2>/dev/null || true)"
 [ -n "$adb" ] || [ ! -x /opt/homebrew/bin/adb ] || adb=/opt/homebrew/bin/adb
+
+reg="${TMPDIR:-/tmp}/android-chrome-attach-$(id -u)"
+if ! { { mkdir -m 700 "$reg" 2>/dev/null || [ -d "$reg" ]; } && mkdir -p "$reg/$port" && : >"$reg/$port/$$"; }; then
+  echo "android-chrome: cannot register in $reg; the forward will be removed at exit even if another session uses it" >&2
+fi
+
+# shellcheck disable=SC2329  # invoked by the EXIT trap
+cleanup() {
+  rm -f "$reg/$port/$$"
+  # Another live launcher on this port shares the forward; leave it for the last one out.
+  for f in "$reg/$port"/*; do
+    [ -e "$f" ] || continue
+    if kill -0 "${f##*/}" 2>/dev/null; then return 0; fi
+    rm -f "$f"
+  done
+  [ -n "$adb" ] || return 0
+  "$adb" forward --list 2>/dev/null | while read -r serial local remote; do
+    if [ "$local $remote" = "tcp:$port localabstract:$socket" ]; then
+      "$adb" -s "$serial" forward --remove "tcp:$port" >/dev/null 2>&1 || true
+    fi
+  done
+}
+# Both traps go in BEFORE the forward exists: a signal during startup must still run
+# cleanup (an untrapped TERM kills the shell without the EXIT trap).
+trap cleanup EXIT
+trap 'if [ -n "$child" ]; then kill -TERM "$child" 2>/dev/null; else exit 143; fi' HUP INT TERM
 
 if [ -z "$adb" ]; then
   echo "android-chrome: adb not found; tools will fail until 'adb forward tcp:$port localabstract:$socket' runs" >&2
@@ -46,26 +79,13 @@ elif ! "$adb" forward "tcp:$port" "localabstract:$socket" >/dev/null 2>&1; then
   echo "android-chrome: no forward yet (no single authorized device); run 'adb forward tcp:$port localabstract:$socket' later — the server connects lazily" >&2
 fi
 
-cleanup() {
-  [ -n "$adb" ] || return 0
-  # Another launcher still alive shares this forward; leave it for the last one out.
-  # `pgrep -f` prints pids only — never add -l, which echoes other processes' argv.
-  others="$(pgrep -f 'android-chrome-attach[.]sh' 2>/dev/null | grep -vx "$$" | grep -c . || true)"
-  [ "${others:-0}" -eq 0 ] || return 0
-  if "$adb" forward --list 2>/dev/null | grep -q " tcp:$port localabstract:$socket\$"; then
-    "$adb" forward --remove "tcp:$port" >/dev/null 2>&1 || true
-  fi
-}
-
 # --no-performance-crux keeps traced URLs from being sent to Google; keep both flags.
 # The server inherits stdin/stdout, so MCP traffic is unchanged by not exec-ing it.
 npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$port" \
   --no-usage-statistics --no-performance-crux "$@" &
 child=$!
-trap 'kill -TERM "$child" 2>/dev/null' HUP INT TERM
 status=0
 wait "$child" || status=$?
 # A trapped signal interrupts the first wait; wait again so cleanup runs after the child.
 if kill -0 "$child" 2>/dev/null; then wait "$child" || status=$?; fi
-cleanup
 exit "$status"

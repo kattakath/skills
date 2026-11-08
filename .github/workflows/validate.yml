@@ -333,6 +333,13 @@ jobs:
           bash plugins/rag/tests/launcher-cases.sh
           bash plugins/wordpress/tests/launcher-cases.sh
 
+      # android-phone's android-chrome launcher makes an adb forward that serves the device's
+      # logged-in Chrome as unauthenticated CDP on 127.0.0.1. The cases pin that every exit
+      # (clean, crash, TERM/HUP, TERM mid-startup, SIGKILL then next session) leaves no
+      # forward and no listener, against a fake adb that really binds the port.
+      - name: android-phone launcher cases
+        run: bash plugins/android-phone/tests/attach-cases.sh
+
       # brain-signals' Stop hook runs at the end of EVERY turn, so its must-stay-QUIET half
       # matters as much as the warnings, and a warning must never carry `decision` or
       # `additionalContext` (either one continues the turn on Stop — warn mode would block).
