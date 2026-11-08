@@ -41,6 +41,7 @@ KNOWN_TOP = frozenset(
         "consumer",
         "plugins",
         "claude",
+        "crawl",
         "groups",
         "stages",
         "utilities",
