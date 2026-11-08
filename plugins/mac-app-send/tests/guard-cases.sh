@@ -69,7 +69,34 @@ expect "multi-line app_type, no element_index" \
 expect "request_access on the panel service" \
   '{"tool_name":"mcp__computer-use__request_access","tool_input":{"apps":["com.apple.appkit.xpc.openAndSavePanelService","WhatsApp"]}}' ask
 
+expect "osascript heredoc clicking a menu" \
+  '{"tool_name":"Bash","tool_input":{"command":"osascript <<'\''EOF'\''\ntell application \"System Events\" to tell process \"X\" to click menu bar item 1\nEOF"}}' ask
+expect "osascript inside \$( )" \
+  '{"tool_name":"Bash","tool_input":{"command":"r=$(osascript -e '\''tell app \"System Events\" to keystroke \"v\"'\''); echo $r"}}' ask
+expect "osascript after cd && and a VAR= prefix" \
+  '{"tool_name":"Bash","tool_input":{"command":"cd /tmp && X=1 /usr/bin/osascript -e '\''tell app \"System Events\" to key code 36'\''"}}' ask
+expect "osascript under sudo" \
+  '{"tool_name":"Bash","tool_input":{"command":"sudo osascript -e '\''tell app \"System Events\" to keystroke \"q\"'\''"}}' ask
+expect "osascript inside bash -c" \
+  '{"tool_name":"Bash","tool_input":{"command":"bash -c \"osascript -e '\''tell app \\\"System Events\\\" to keystroke \\\"q\\\"'\''\""}}' ask
+expect "osascript piped from a shell heredoc" \
+  '{"tool_name":"Bash","tool_input":{"command":"zsh <<EOF\nosascript -e '\''tell app \"System Events\" to keystroke \"q\"'\''\nEOF"}}' ask
+
+expect "heredoc-written script then osascript by path" \
+  '{"tool_name":"Bash","tool_input":{"command":"cat > s.applescript <<'\''EOF'\''\ntell application \"System Events\" to keystroke \"a\"\nEOF\nosascript s.applescript"}}' ask
+
 echo "must ALLOW (exit 0, no output)"
+# The 2026-11-07 false positives: the words as DATA, nothing runs osascript.
+expect "grep PATTERN naming osascript + System Events" \
+  '{"tool_name":"Bash","tool_input":{"command":"grep -n '\''osascript\\|System Events\\|keystroke'\'' modules/home/claude-guardrails.nix | head"}}' allow
+expect "echo osascript; echo keystroke" \
+  '{"tool_name":"Bash","tool_input":{"command":"echo osascript; echo keystroke"}}' allow
+expect "printf writing an osascript line to a file" \
+  '{"tool_name":"Bash","tool_input":{"command":"printf '\''%s'\'' \"osascript -e '\''tell application \\\"System Events\\\" to get name'\''\" > v/12-osascript"}}' allow
+expect "cat heredoc writing an injection script" \
+  '{"tool_name":"Bash","tool_input":{"command":"cat > s.applescript <<'\''EOF'\''\ntell application \"System Events\" to keystroke \"a\"\nEOF\necho osascript next"}}' allow
+expect "osascript read, System Events in a later grep" \
+  '{"tool_name":"Bash","tool_input":{"command":"osascript -e '\''id of app \"Finder\"'\''; grep -c '\''System Events'\'' notes.md"}}' allow
 expect "osascript reading a property (no input verb)" \
   '{"tool_name":"Bash","tool_input":{"command":"osascript -e '\''id of app \"WhatsApp\"'\''"}}' allow
 expect "ordinary bash" \

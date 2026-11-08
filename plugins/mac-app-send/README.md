@@ -25,7 +25,8 @@ it fail, and neither is discoverable from the tool descriptions.
 | `request_access` on `openAndSavePanelService` | Not an installed app: returns `notInstalled`, **short-circuits the whole call**, never reaches the user | Display scope |
 
 Reading a property with `osascript` stays allowed — the rule matches an *input verb*, not the
-binary. Each match is a confirm prompt (`permissionDecision: "ask"`), not a refusal: the
+binary — and only when `osascript`/`cliclick` actually RUNS: the words as data (a `grep` pattern,
+a `printf` body, a heredoc written to a file and never run) do not ask. Each match is a confirm prompt (`permissionDecision: "ask"`), not a refusal: the
 one-line reason names the better route, and it is also what Claude reads if you decline.
 `tests/guard-cases.sh` asserts that, plus every ask, plus that the guard never throws.
 
