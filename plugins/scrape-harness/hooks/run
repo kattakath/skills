@@ -1,0 +1,5 @@
+#!/bin/sh
+# Hook entry point. Fails CLOSED (exit 2) when python3 is missing: a hook command that merely
+# errors would exit 127 and Claude Code would let the tool call through.
+command -v python3 >/dev/null 2>&1 || { echo "hook: python3 not on PATH; failing closed" >&2; exit 2; }
+exec python3 -I "$(dirname "$0")/guard.py" "$@"

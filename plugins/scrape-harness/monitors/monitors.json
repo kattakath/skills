@@ -1,0 +1,8 @@
+[
+  {
+    "name": "run-status",
+    "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/run watch",
+    "description": "scrape-harness: one line when the latest run starts, stops, finishes, meets a challenge or stalls (from the STATE status file).",
+    "when": "always"
+  }
+]

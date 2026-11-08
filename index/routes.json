@@ -285,6 +285,13 @@
         "ci-watch"
       ],
       "note": "asyncRewake hook: silent on green, wakes the session with a resolved report on red, no runs or still running."
+    },
+    {
+      "goal": "Run a polite, typed scraping pipeline whose every rule is declared once in pipeline.toml",
+      "steps": [
+        "scrape-harness"
+      ],
+      "note": "Networked runs only with an operator-signed plan; stops become incidents the steward must acknowledge; /scrape-harness:plan-pipeline designs the stages without fetching."
     }
   ]
 }

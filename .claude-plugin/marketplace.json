@@ -551,6 +551,26 @@
       "source": "./plugins/rag"
     },
     {
+      "name": "scrape-harness",
+      "description": "Gates, agents, runbooks and a monitor for a polite, typed scraping pipeline whose every rule is declared in the project's pipeline.toml: networked runs only with an operator-signed plan, no data in the repo, no secret on a command line, a task per declared stage, an incident record the run-steward agent cannot walk away from, and a plan-pipeline workflow that designs a pipeline without fetching anything.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "scraping",
+        "crawling",
+        "politeness",
+        "hooks",
+        "approvals",
+        "incidents",
+        "pipeline"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/scrape-harness",
+      "license": "MIT",
+      "source": "./plugins/scrape-harness"
+    },
+    {
       "name": "session-relay",
       "description": "Work that crosses between concurrent Claude sessions: find this session's own address, hand out a paste-ready calling card, read which peers are actually reachable, and handle an inbound peer message without laundering a permission decision.",
       "author": {
