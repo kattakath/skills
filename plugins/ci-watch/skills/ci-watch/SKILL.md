@@ -13,7 +13,8 @@ description: >-
 # ci-watch — push, keep working, hear about it only when it breaks
 
 The plugin's `PostToolUse` hook runs after every Bash command that pushes. It waits on
-**every** GitHub Actions run the pushed commit triggered. All green → it exits silently and
+**every** GitHub Actions run the pushed commit triggered — or, for a `gitlab.com` remote,
+every GitLab pipeline, through `glab`. Other GitLab hosts stay quiet (unwatched). All green → it exits silently and
 nothing reaches the conversation. Anything else → it wakes the session with a summary and a
 path to the full JSON report.
 
@@ -40,10 +41,10 @@ broken hook. The text starts `ci-watch <STATUS>: <owner/repo>@<sha12> "<subject>
 
 | Status | Meaning | Do |
 |---|---|---|
-| `RED` | A run ended `failure`, `cancelled`, `timed_out` or similar | Read the report; fix forward; push again |
+| `RED` | A run ended `failure`, `cancelled`, `timed_out` or similar; on GitLab `failed`, `canceled`, or `manual` (blocked on a manual job that may not fail) | Read the report; fix forward; push again. `manual` needs a human to play the job |
 | `NO_RUNS` | Nothing ran on the commit within the appear window, or every run was skipped | The repo has no `push` trigger for this branch, or every workflow was path-filtered or `if:`-gated out. Tell the user. This is not a pass |
 | `STILL_RUNNING` | A run was still going at the 45-min ceiling | Watch it by hand with the same sha; don't assume either outcome |
-| `WATCH_FAILED` | The push landed, but a GitHub lookup failed (network, rate limit, expired login) | Watch it by hand once `gh` works again |
+| `WATCH_FAILED` | The push landed, but a GitHub or GitLab lookup failed (network, rate limit, expired login) | Watch it by hand once `gh` / `glab` works again |
 
 **The report has everything the next step needs**, so don't look anything up:
 
@@ -51,7 +52,12 @@ broken hook. The text starts `ci-watch <STATUS>: <owner/repo>@<sha12> "<subject>
 - for each failed job: run id and URL, job id and URL, the failing step's number, name
   and times;
 - the numbered log lines around `##[error]`, cut to that step's time window;
-- ready `gh run view … --log-failed` and `gh run rerun … --failed` commands.
+- ready `gh run view … --log-failed` and `gh run rerun … --failed` commands (on GitLab,
+  `glab ci trace <job>` and `glab ci retry <job>`).
+
+On GitLab a pipeline is the "run" and its jobs have no steps, so `step` is `null` and the
+excerpt is cut around the trace's `ERROR:` lines. A job with `allow_failure: true` is never
+reported.
 
 Diagnose from the excerpt and the changed files first. Reach for the full log only if the
 excerpt doesn't explain it. A rerun is right only for a flake; a real failure needs a fix.
@@ -79,10 +85,10 @@ it is gated on `pull_requests[0]`, and a direct push has no PR.
 ## Watching by hand
 
 ```bash
-node "<plugin>/scripts/ci-watch.js" --sha <sha> [--repo owner/name] [--cwd <checkout>]
+node "<plugin>/scripts/ci-watch.js" --sha <sha> [--repo owner/name | gitlab.com/<path>] [--cwd <checkout>]
 ```
 
-Run it with `run_in_background`. Exit codes: 0 green (prints nothing), 1 red, 3 no runs,
+Without `--repo`, the checkout's `origin` URL picks the forge. Run it with `run_in_background`. Exit codes: 0 green (prints nothing), 1 red, 3 no runs,
 4 still running, 64 usage or lookup error. The report lands in `$CLAUDE_PLUGIN_DATA`, or
 `<tmp>/ci-watch` outside a hook.
 

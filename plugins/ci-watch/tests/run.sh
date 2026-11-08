@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Case suite for scripts/ci-watch.js. No network: `gh` and `git` are tests/fixtures/gh-stub.js.
+# Case suite for scripts/ci-watch.js. No network: `gh`, `glab` and `git` are tests/fixtures/gh-stub.js.
 #
 # The halves that matter:
 #   silent-GREEN  all runs pass -> exit 0, NOTHING on stdout or stderr, no report written
@@ -9,6 +9,7 @@
 #   hook-QUIET    non-pushes, dry runs, feature-branch and rejected pushes, and a re-watched
 #                 sha exit 0 without asking GitHub anything about runs
 #   hook-LOUD     once a push to the default branch landed, every failure wakes (exit 2)
+#   gitlab        the same contract for a gitlab.com remote, through glab
 #   wiring        hooks.json: asyncRewake, a timeout above the script's worst case
 # Run:  bash plugins/ci-watch/tests/run.sh
 set -uo pipefail
@@ -48,7 +49,7 @@ PY
 
 ENVV=()
 setenv() {
-  ENVV=(CI_WATCH_FIXTURE="$F" CI_WATCH_GH="$STUB" CI_WATCH_GIT="$STUB" CI_WATCH_DIR="$F/out"
+  ENVV=(CI_WATCH_FIXTURE="$F" CI_WATCH_GH="$STUB" CI_WATCH_GLAB="$STUB" CI_WATCH_GIT="$STUB" CI_WATCH_DIR="$F/out"
     CI_WATCH_APPEAR_S="${APPEAR:-0.3}" CI_WATCH_SETTLE_S="${SETTLE:-0}" CI_WATCH_POLL_S=0.02 CI_WATCH_CEILING_S="${CEIL:-2}")
 }
 # cw [args...] -> runs the CLI against fixture F; sets OUT ERR RC
@@ -250,22 +251,134 @@ check "hook: ... WATCH_FAILED" "$(grep -c '^ci-watch WATCH_FAILED' <<<"$ERR")" 1
 fx hvar; hk 'cd "$WT" && git push origin HEAD:main' "$S"
 check "hook: push in an unresolvable (variable) dir wakes" "$RC" 2
 check "hook: ... and says to watch by hand" "$(grep -c 'Watch it by hand' <<<"$ERR")" 1
-fx hlab; runs 1 "93:ci:completed:failure"; CI_WATCH_FAKE_REMOTE=git@gitlab.com:o/r.git hk "git push" "$S"
-check "hook: a GitLab remote stays quiet" "$RC" 0
+fx hlab; runs 1 "93:ci:completed:failure"; CI_WATCH_FAKE_REMOTE=git@gitlab.example.com:o/r.git hk "git push" "$S"
+check "hook: a self-hosted GitLab remote stays quiet (gitlab.com only)" "$RC" 0
 check "hook: ... and asks GitHub nothing" "$(calls 'repo view')" 0
+check "hook: ... and asks glab nothing" "$(calls 'api --hostname')" 0
 fx hnot; CI_WATCH_FAKE_NOTREPO=1 hk "git push" "$S"
 check "hook: not a git checkout stays quiet" "$RC" 0
 fx hurl; runs 1 "11:nix-ci:completed:success"; CI_WATCH_FAKE_REMOTE=x hk "git push git@github.com:o/r.git HEAD:main" "$S"
 check "hook: a URL remote argument is used as the remote" "$(calls 'run list')" 1
+
+# ---- gitlab ------------------------------------------------------------------------
+# glfx <name> [path]  -> fixture F for a gitlab.com project (id 42) at [path] (default o/r)
+glfx() {
+  fx "$1"; local p=${2:-o/r}
+  printf '{"id":42,"path_with_namespace":"%s","default_branch":"main"}' "$p" >"$F/gl-project.json"
+  printf '{"id":"%s","title":"fix: thing"}' "$S" >"$F/gl-commit.json"
+  printf '[{"new_path":"a.nix"},{"new_path":"b.md"}]' >"$F/gl-diff.json"
+}
+# glruns <k> <id:status>...  -> gl-pipelines.<k>.json (created_at = now, or $OLD)
+glruns() {
+  local k=$1; shift
+  python3 -I - "$F/gl-pipelines.$k.json" "${OLD:-}" "$@" <<'PY2'
+import datetime, json, sys
+at = sys.argv[2] or datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+json.dump([{"id": int(i), "source": "push", "status": st, "web_url": f"https://gitlab.com/o/r/-/pipelines/{i}",
+            "created_at": at} for i, st in (a.split(":") for a in sys.argv[3:])], open(sys.argv[1], "w"))
+PY2
+}
+GLR=git@gitlab.com:o/r.git
+glcalls() { grep -c "^api --hostname gitlab.com projects/42/pipelines?sha=$S" "$F/calls.log" 2>/dev/null || true; }
+
+glfx glgreen; glruns 1 "501:success" "502:skipped"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push origin HEAD:main" "$S"
+check "gitlab: green exits 0" "$RC" 0
+check "gitlab: green is silent" "$ERR$OUT" ""
+check "gitlab: green writes no report" "$(find "$F/out" -type f -name '*.json' | wc -l | tr -d ' ')" 0
+check "gitlab: pipelines listed by the full sha" "$(glcalls)" 1
+check "gitlab: asks GitHub nothing" "$(calls 'repo view')" 0
+check "gitlab: the project is resolved by its encoded path" "$(calls 'api --hostname gitlab.com projects/o%2Fr ')" 1
+
+glfx glred; glruns 1 "511:failed" "512:success"
+cat >"$F/gl-jobs-511.json" <<'JSON'
+[{"id":701,"name":"lint","stage":"test","status":"failed","allow_failure":false,"web_url":"https://gitlab.com/o/r/-/jobs/701"},
+ {"id":702,"name":"flaky","stage":"test","status":"failed","allow_failure":true,"web_url":"https://gitlab.com/o/r/-/jobs/702"},
+ {"id":703,"name":"deploy","stage":"deploy","status":"skipped","allow_failure":false,"web_url":"https://gitlab.com/o/r/-/jobs/703"},
+ {"id":704,"name":"build","stage":"build","status":"success","allow_failure":false,"web_url":"https://gitlab.com/o/r/-/jobs/704"}]
+JSON
+{
+  printf '2026-11-07T11:00:00.100000Z 00O section_start:1794000000:step_script\r\033[0K\033[0K\033[36;1mExecuting "step_script"\033[0;m\n'
+  printf '2026-11-07T11:00:01.000000Z 01O $ make lint\n'
+  printf '2026-11-07T11:00:02.000000Z 01E \033[31mlint: a.nix:3: unused binding\033[0m\n'
+  printf '2026-11-07T11:00:03.000000Z 00O section_end:1794000003:step_script\r\033[0K\n'
+  printf '2026-11-07T11:00:04.000000Z 00O \033[31;1mERROR: Job failed: exit code 2\033[0;m\n'
+} >"$F/gl-trace-701.log"
+CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: red wakes (exit 2)" "$RC" 2
+check "gitlab: red summary first line" "$(grep -c "^ci-watch RED: o/r@${S:0:12} \"fix: thing\"" <<<"$ERR")" 1
+check "gitlab: red status" "$(j 'd["status"]')" RED
+check "gitlab: only the real cause (allow_failure and skipped jobs dropped)" "$(j 'len(d["failures"])')" 1
+check "gitlab: job name" "$(j 'd["failures"][0]["job"]')" lint
+check "gitlab: job url" "$(j 'd["failures"][0]["job_url"]')" "https://gitlab.com/o/r/-/jobs/701"
+check "gitlab: pipeline url" "$(j 'd["failures"][0]["run_url"]')" "https://gitlab.com/o/r/-/pipelines/511"
+check "gitlab: conclusion is GitLab's word" "$(j 'd["failures"][0]["conclusion"]')" failed
+check "gitlab: no step (jobs have none)" "$(j 'd["failures"][0]["step"]')" None
+check "gitlab: same failure keys as GitHub" "$(j 'sorted(d["failures"][0])==sorted(["run_id","workflow","run_url","conclusion","job_id","job","job_url","step","log","commands"])')" True
+check "gitlab: error line number is the real one" "$(j 'd["failures"][0]["log"]["error_lines"]')" "[5]"
+check "gitlab: stream prefix and ANSI stripped" "$(j 'd["failures"][0]["log"]["lines"][2]["text"]')" "lint: a.nix:3: unused binding"
+check "gitlab: section marker stripped" "$(j 'd["failures"][0]["log"]["lines"][3]["text"]')" ""
+check "gitlab: rerun command names the job" "$(j 'd["failures"][0]["commands"]["rerun"]')" "glab ci retry 701 -R o/r"
+check "gitlab: commit url" "$(j 'd["commit_url"]')" "https://gitlab.com/o/r/-/commit/$S"
+check "gitlab: changed files" "$(j '",".join(d["changed_files"])')" "a.nix,b.md"
+check "gitlab: summary names the job and its url" "$(grep -c 'FAILED pipeline 511 > lint  https://gitlab.com/o/r/-/jobs/701' <<<"$ERR")" 1
+check "gitlab: summary quotes the error line" "$(grep -c 'L5: ERROR: Job failed: exit code 2' <<<"$ERR")" 1
+check "gitlab: summary has no gh-only flag" "$(grep -c -- '--log-failed' <<<"$ERR")" 0
+CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: same sha again is deduped" "$RC" 0
+check "gitlab: dedupe lists pipelines only once" "$(glcalls)" 1
+
+glfx glnone; glruns 1; CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: no pipeline wakes (exit 2)" "$RC" 2
+check "gitlab: ... NO_RUNS" "$(grep -c '^ci-watch NO_RUNS' <<<"$ERR")" 1
+glfx glold; OLD=2026-01-01T00:00:00.000Z glruns 1 "521:success"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: only an OLD pipeline on the sha is NO_RUNS" "$(grep -c '^ci-watch NO_RUNS' <<<"$ERR")" 1
+glfx glrun; glruns 1 "531:running"; CEIL=0.2 CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: still running wakes (exit 2)" "$RC" 2
+check "gitlab: ... STILL_RUNNING naming the pipeline" "$(grep -c 'still running after 0.2s: pipeline 531' <<<"$ERR")" 1
+glfx glmanual; glruns 1 "541:manual"; printf '[]' >"$F/gl-jobs-541.json"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: a pipeline blocked on a manual job wakes without waiting out the ceiling" "$(j 'd["failures"][0]["conclusion"]')" manual
+check "gitlab: ... with the pipeline commands (no job)" "$(j 'd["failures"][0]["commands"]["view"]')" "glab ci get -p 541 -R o/r"
+glfx glerr; rm -f "$F/gl-project.json"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: glab failing after a landed push wakes (exit 2)" "$RC" 2
+check "gitlab: ... WATCH_FAILED" "$(grep -c '^ci-watch WATCH_FAILED' <<<"$ERR")" 1
+glfx glerr2; CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: a pipeline lookup error mid-watch is WATCH_FAILED" "$(grep -c '^ci-watch WATCH_FAILED.*HTTP 404' <<<"$ERR")" 1
+glfx glfeat; glruns 1 "551:failed"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push origin feature" "$S"
+check "gitlab: push to another branch exits 0" "$RC" 0
+check "gitlab: ... lists no pipelines" "$(glcalls)" 0
+glfx gloff; glruns 1 "561:failed"; printf '{"id":"%s"}' "fedcba9876543210fedcba9876543210fedcba98" >"$F/gl-merge-base.json"
+CI_WATCH_FAKE_REMOTE=$GLR hk "git push" "$S"
+check "gitlab: a sha that is not on the branch is not watched" "$(glcalls)" 0
+
+glfx glnest g/sub/r; glruns 1 "571:failed"; printf '[]' >"$F/gl-jobs-571.json"
+CI_WATCH_FAKE_REMOTE=https://gitlab.com/g/sub/r.git hk "git push" "$S"
+check "gitlab: subgroup path is encoded whole" "$(calls 'api --hostname gitlab.com projects/g%2Fsub%2Fr ')" 1
+check "gitlab: subgroup red is RED, not WATCH_FAILED" "$(grep -c '^ci-watch RED: g/sub/r@' <<<"$ERR")" 1
+check "gitlab: subgroup report lands in the report dir" "$(test -f "$F/out/g--sub--r-$S.json" && echo yes)" yes
+
+glfx glcli; glruns 1 "581:success"; cw --repo gitlab.com/o/r --sha 0123456
+check "gitlab cli: --repo gitlab.com/<path> watches through glab" "$RC" 0
+check "gitlab cli: short sha expands to the full one" "$(glcalls)" 1
+glfx glcli2; glruns 1 "582:failed"; printf '[]' >"$F/gl-jobs-582.json"; CI_WATCH_FAKE_REMOTE=$GLR cw
+check "gitlab cli: origin's gitlab.com URL picks glab" "$RC" 1
+
+ff() { node -e 'const {forgeOf}=require(process.argv[1]); const r=forgeOf(process.argv[2]); process.stdout.write(r?(r.forge+(r.path?" "+r.host+" "+r.path:"")):"null")' "$CW" "$1"; }
+check "forgeOf: scp" "$(ff git@gitlab.com:g/sub/r.git)" "gitlab gitlab.com g/sub/r"
+check "forgeOf: https with user, no .git" "$(ff https://oauth2@gitlab.com/o/r)" "gitlab gitlab.com o/r"
+check "forgeOf: ssh with port" "$(ff ssh://git@gitlab.com:22/o/r.git)" "gitlab gitlab.com o/r"
+check "forgeOf: trailing slash" "$(ff https://gitlab.com/o/r/)" "gitlab gitlab.com o/r"
+check "forgeOf: github" "$(ff git@github.com:o/r.git)" github
+check "forgeOf: another host" "$(ff git@gitlab.example.com:o/r.git)" null
+check "forgeOf: a lookalike host" "$(ff https://notgitlab.com/o/r.git)" null
 
 # ---- wiring -------------------------------------------------------------------------
 w() { python3 -I -c "import json; h=json.load(open('$HOOKS'))['hooks']['PostToolUse'][0]; c=h['hooks'][0]; print($1)"; }
 check "wiring: matcher Bash" "$(w 'h["matcher"]')" Bash
 check "wiring: asyncRewake" "$(w 'c["asyncRewake"]')" True
 check "wiring: if catches git -C and chained pushes" "$(w 'c["if"]')" "Bash(*git*push*)"
-# Worst case: the 2700s ceiling, one report (1 commit lookup + 5 job lookups + 5 log downloads
-# at 30s each = 330s), plus slack. It must stay under the hook timeout.
-check "wiring: hook timeout exceeds the worst-case runtime" "$(w 'c["timeout"] >= 2700 + 11*30 + 60')" True
+# Worst case: the 2700s ceiling, one report (2 commit lookups on GitLab + 5 job lookups + 5 log
+# downloads at 30s each = 360s), plus slack. It must stay under the hook timeout.
+check "wiring: hook timeout exceeds the worst-case runtime" "$(w 'c["timeout"] >= 2700 + 12*30 + 60')" True
 
 # ---- findPush unit cases -----------------------------------------------------------
 fp() { node -e 'const {findPush}=require(process.argv[1]); const r=findPush(process.argv[2],"/w"); process.stdout.write(r?r.dir:"null")' "$CW" "$1"; }
@@ -279,5 +392,5 @@ check "findPush: tags only" "$(fp 'git push --tags')" null
 check "findPush: git log mentioning push" "$(fp 'git log --grep push')" null
 
 printf '%d passed, %d failed\n' "$pass" "$fail"
-FLOOR=100
+FLOOR=150
 [ "$fail" -eq 0 ] && [ "$pass" -ge "$FLOOR" ] || { [ "$pass" -lt "$FLOOR" ] && echo "case floor: $pass < $FLOOR"; exit 1; }
