@@ -292,6 +292,13 @@
         "scrape-harness"
       ],
       "note": "Networked runs only with an operator-signed plan; stops become incidents the steward must acknowledge; /scrape-harness:plan-pipeline designs the stages without fetching."
+    },
+    {
+      "goal": "Message people on Slack without spamming, duplicating or burying the point",
+      "steps": [
+        "slack-etiquette"
+      ],
+      "note": "Layers on Slack's own slack:slack-messaging skill; workspace IDs stay in the workspace's CLAUDE.md or memory."
     }
   ]
 }

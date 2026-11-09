@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "slack-etiquette",
+  "version": "1.0.0",
+  "description": "Slack etiquette for agents that message people: when not to post, re-reading history before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Layers on Slack's own slack:slack-messaging skill; holds no workspace data.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-etiquette",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "slack",
+    "messaging",
+    "etiquette",
+    "agents",
+    "communication"
+  ]
+}

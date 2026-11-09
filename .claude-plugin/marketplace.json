@@ -628,6 +628,23 @@
       "source": "./plugins/skill-curator"
     },
     {
+      "name": "slack-etiquette",
+      "description": "Slack etiquette for agents that message people: when not to post, re-read before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Layers on Slack's own slack:slack-messaging skill.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "slack",
+        "messaging",
+        "etiquette",
+        "agents"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-etiquette",
+      "license": "MIT",
+      "source": "./plugins/slack-etiquette"
+    },
+    {
       "name": "statement-extract",
       "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, CSV and PDF for TD, CIBC, Scotiabank, Tangerine, Desjardins, BMO, Wise) into canonical, masked, deduplicated JSONL, plus loan and mortgage balance snapshots (TD, CIBC, BMO, NSLSC) as opt-in position records: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
       "author": {
