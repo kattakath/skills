@@ -112,6 +112,9 @@ quiet "native running, reply has ⏳"                 "$(input "$FX/bg-running.j
 quiet "native running, typographic I\u2019ll report"    "$(input "$FX/bg-running.jsonl" $'Started the suite. I\u2019ll report back.' "$RUNNING")"
 quiet "native running, reply names the notification" "$(input "$FX/bg-running.jsonl" 'Started the suite; a notification arrives when it ends.' "$RUNNING")"
 quiet "native: only a teammate in flight"            "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"tm1","type":"teammate","status":"running"}]')"
+quiet "native: only a paused task"                   "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"bt2","type":"subagent","status":"paused","description":"report"}]')"
+quiet "native: only a [daemon] shell"                "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"bt3","type":"shell","status":"running","description":"SSM tunnel loop [daemon]"}]')"
+warn silent-wait "native: daemon plus real work"     "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"bt3","type":"shell","status":"running","description":"SSM tunnel [daemon]"},{"id":"bt1","type":"shell","status":"running","description":"tests"}]')"
 quiet "native task already completed"                "$(input "$FX/bg-running.jsonl" 'Started the suite.' '[{"id":"bt1","type":"shell","status":"completed"}]')"
 quiet "fallback: completed notification"             "$(input "$FX/bg-completed.jsonl" - -)"
 quiet "fallback: agent stopped by TaskStop"          "$(input "$FX/agent-stopped.jsonl" - -)"
@@ -133,11 +136,15 @@ import json, sys
 n = 0
 for line in open(sys.argv[1]):
     d = json.loads(line)
-    assert set(d) == {"ts", "case", "session_id"}, sorted(d)
+    assert set(d) - {"tasks"} == {"ts", "case", "session_id"}, sorted(d)
+    if "tasks" in d:
+        assert d["case"] == "silent-wait"
+        for t in d["tasks"]:
+            assert set(t) == {"type", "status", "description"} and len(t["description"]) <= 80
     assert d["case"] in ("open-question", "silent-wait") and d["session_id"] == "test-session"
     n += 1
 print(n)' "$LOG" 2>&1)
-if [ "$got" = "$warns" ]; then printf '  ok    LOG    %s lines, keys ts/case/session_id only\n' "$got"; pass=$((pass+1))
+if [ "$got" = "$warns" ]; then printf '  ok    LOG    %s lines, keys ts/case/session_id (+ tasks on silent-wait), no reply text\n' "$got"; pass=$((pass+1))
 else printf '  FAIL  LOG    expected %s lines, got: %s\n' "$warns" "$got"; fail=$((fail+1)); fi
 
 # A floor, so a moved fixtures dir or a broken helper cannot pass as zero cases.

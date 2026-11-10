@@ -30,7 +30,17 @@
  * with no output. An advisory must never wedge a turn, and a guess is worse than silence.
  *
  * The log (one JSON line per warning: ts, case, session_id — never any reply text) is
- * there so the false-positive rate can be counted before block mode is considered.
+ * there so the false-positive rate can be counted before block mode is considered. A
+ * silent-wait line also names the tasks it counted (type, status, the first 80 chars of
+ * the description), so a false positive can be traced to the task that caused it.
+ *
+ * NOT COUNTED as in flight:
+ *   - teammates (long-lived by design);
+ *   - a `paused` task: it is not moving, so nothing is being waited on;
+ *   - a deliberate daemon (an SSM tunnel, a log tail) whose description carries the
+ *     marker `[daemon]`. It runs on purpose for the whole session, so without the marker
+ *     every reply that does not mention it would warn (measured: one 10-hour tunnel
+ *     loop drove 19 of 111 warnings across two lab sessions, 2026-11-10).
  */
 
 "use strict";
@@ -51,6 +61,8 @@ const path = require("path");
 
 const TAIL_BYTES = 1024 * 1024; // transcripts reach 80+ MB; the current turn is at the end
 const TERMINAL = /^(?:completed|failed|killed|stopped|cancell?ed|error)$/i;
+const IDLE = /^paused$/i;
+const DAEMON = /\[daemon\]/i;
 
 // A reply that says it is waiting. Checked against the whole reply.
 const WAIT =
@@ -209,12 +221,15 @@ function tag(s, name) {
 function pendingFromTranscript(entries) {
   const pending = new Map(); // tool_use id -> task id
   const done = new Set(); // tool_use ids and task ids reported terminal
+  const daemons = new Set(); // tool_use ids launched with the [daemon] marker
   for (const e of entries) {
     if (e.type === "assistant") {
       for (const b of blocks(e)) {
         if (b && b.type === "tool_use" && b.name === "TaskStop" && b.input && b.input.task_id) {
           done.add(String(b.input.task_id));
         }
+        const desc = b && b.type === "tool_use" && b.input && /** @type {any} */ (b.input).description;
+        if (b && b.id && typeof desc === "string" && DAEMON.test(desc)) daemons.add(String(b.id));
       }
       continue;
     }
@@ -237,7 +252,7 @@ function pendingFromTranscript(entries) {
     }
   }
   let n = 0;
-  for (const [tu, ti] of pending) if (!done.has(tu) && !done.has(ti)) n++;
+  for (const [tu, ti] of pending) if (!done.has(tu) && !done.has(ti) && !daemons.has(tu)) n++;
   return n;
 }
 
@@ -249,14 +264,16 @@ function logDir() {
   return path.join(state, "brain-signals");
 }
 
-/** @param {Case[]} cases @param {unknown} sessionId */
-function logCases(cases, sessionId) {
+/** @param {Case[]} cases @param {unknown} sessionId @param {object[] | null} tasks */
+function logCases(cases, sessionId, tasks) {
   try {
     const dir = logDir();
     fs.mkdirSync(dir, { recursive: true });
     const ts = new Date().toISOString();
     const sid = typeof sessionId === "string" ? sessionId : null;
-    const lines = cases.map((c) => JSON.stringify({ ts, case: c, session_id: sid })).join("\n");
+    const lines = cases
+      .map((c) => JSON.stringify(c === "silent-wait" && tasks ? { ts, case: c, session_id: sid, tasks } : { ts, case: c, session_id: sid }))
+      .join("\n");
     fs.appendFileSync(path.join(dir, "stop-limbo.jsonl"), lines + "\n");
   } catch {
     // a log that cannot be written must not suppress the warning
@@ -277,7 +294,10 @@ const MESSAGES = {
 // Typed as the SDK's entry, but still guarded: the payload is untrusted JSON.
 /** @param {BackgroundTaskSummary} t */
 function inFlight(t) {
-  return Boolean(t) && typeof t === "object" && t.type !== "teammate" && !TERMINAL.test(String(t.status || ""));
+  if (!t || typeof t !== "object" || t.type === "teammate") return false;
+  const status = String(t.status || "");
+  if (TERMINAL.test(status) || IDLE.test(status)) return false;
+  return !DAEMON.test(String(t.description || ""));
 }
 
 /** @param {string} p */
@@ -308,9 +328,12 @@ function main() {
   /** @type {Case[]} */
   const cases = [];
 
-  const running = Array.isArray(input.background_tasks)
-    ? input.background_tasks.filter(inFlight).length
-    : pendingFromTranscript(transcript());
+  const live = Array.isArray(input.background_tasks) ? input.background_tasks.filter(inFlight) : null;
+  const running = live ? live.length : pendingFromTranscript(transcript());
+  // What the log names: type, status and a description prefix only, never reply text.
+  const tasks = live
+    ? live.map((t) => ({ type: String(t.type || ""), status: String(t.status || ""), description: String(t.description || "").slice(0, 80) }))
+    : null;
   if (running > 0 && !WAIT.test(normalize(finalText))) cases.push("silent-wait");
 
   // The AskUserQuestion exemption is only visible in the transcript. When it cannot be
@@ -326,7 +349,7 @@ function main() {
   }
 
   if (!cases.length) return;
-  logCases(cases, input.session_id);
+  logCases(cases, input.session_id, tasks);
   const body = cases.map((c) => MESSAGES[c]).join("; ");
   /** @type {SyncHookJSONOutput} */
   const out = { systemMessage: `brain-signals stop-limbo (warn only): ${body}.` };

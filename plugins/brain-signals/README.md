@@ -32,6 +32,8 @@ It fixes one problem: a reply ends and you cannot tell if Claude is waiting on s
 | `open-question` | The reply's last paragraph ends in `?` or is a prose offer ("want me to", "let me know", "should I", "say the word"…), and no `AskUserQuestion` call came after it. A decision should be click-to-select options, not a question you must type an answer to. |
 | `silent-wait` | Background work is still running and the reply never says it is waiting ("waiting", "watch", "background", "I'll report", "resume", "notified", `⏳`…). |
 
+**Not counted as in flight:** teammates, a `paused` task (nothing is moving), and a deliberate daemon whose description carries `[daemon]` (an SSM tunnel, a log tail). Launch a session-long background loop with `[daemon]` in its description, or every reply that does not mention it warns.
+
 ### What it reads
 
 - **`last_assistant_message`** and **`background_tasks`** from the Stop hook input ([hooks reference](https://code.claude.com/docs/en/hooks), "Stop input"). Verified on Claude Code 2.1.300.
@@ -46,7 +48,7 @@ It fixes one problem: a reply ends and you cannot tell if Claude is waiting on s
 
 ### Reading the log
 
-Each warning appends one JSON line to `stop-limbo.jsonl`, with `ts`, `case` and `session_id` only. No reply text is logged. The file is in `$CLAUDE_PLUGIN_DATA`, falling back to `$XDG_STATE_HOME/brain-signals/` and then `~/.local/state/brain-signals/`.
+Each warning appends one JSON line to `stop-limbo.jsonl`, with `ts`, `case` and `session_id`. A `silent-wait` line also lists the `tasks` it counted (type, status, the first 80 characters of the description), so a false positive can be traced to its cause. No reply text is logged. The file is in `$CLAUDE_PLUGIN_DATA`, falling back to `$XDG_STATE_HOME/brain-signals/` and then `~/.local/state/brain-signals/`.
 
 ```bash
 f="${CLAUDE_PLUGIN_DATA:-${XDG_STATE_HOME:-$HOME/.local/state}/brain-signals}/stop-limbo.jsonl"
