@@ -645,6 +645,26 @@
       "source": "./plugins/slack-etiquette"
     },
     {
+      "name": "smtp-egress",
+      "description": "Send plain-text email over authenticated SMTP through a local SOCKS5 proxy so the sending machine's IP never reaches the Received: headers. Ships an egress check that refuses unless the proxied exit is outside the direct IPv4 /24 and IPv6 /48, a send script that runs it first and logs every send without the body, a header check on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "smtp",
+        "email",
+        "socks5",
+        "proxy",
+        "privacy",
+        "msmtp",
+        "wireproxy"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/smtp-egress",
+      "license": "MIT",
+      "source": "./plugins/smtp-egress"
+    },
+    {
       "name": "statement-extract",
       "description": "Deterministic, reconcile-gated extraction of bank and card statements (QFX/OFX, CSV and PDF for TD, CIBC, Scotiabank, Tangerine, Desjardins, BMO, Wise) into canonical, masked, deduplicated JSONL, plus loan and mortgage balance snapshots (TD, CIBC, BMO, NSLSC) as opt-in position records: fail-closed exit codes, frozen transaction keys, an OTel-shaped run log. Stdlib Python only.",
       "author": {

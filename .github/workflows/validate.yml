@@ -248,6 +248,16 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
+      # smtp-egress's guard is the human gate in front of every email, so both halves are
+      # pinned: every send.sh run and every raw SMTP bypass must ASK, and reading or grepping
+      # the same words must stay quiet. The egress and send cases feed fixed documentation
+      # IPs to the range logic and run send.sh against stub msmtp/curl: nothing is ever sent.
+      - name: smtp-egress cases
+        run: |
+          bash plugins/smtp-egress/tests/guard-cases.sh
+          bash plugins/smtp-egress/tests/egress-cases.sh
+          bash plugins/smtp-egress/tests/send-cases.sh
+
       # The script's own cases run gpg against throwaway keys with a file-backed clipboard.
       # zsh is the script's interpreter and is not on the ubuntu image; gnupg is.
       - name: pgp-ops script cases
