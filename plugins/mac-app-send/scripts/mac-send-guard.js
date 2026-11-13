@@ -146,8 +146,11 @@ function commands(src, depth = 0) {
       while (src[j] === " " || src[j] === "\t") j++;
       let k = j;
       while (k < src.length && !/[\s;&|<>()]/.test(src[k])) k++;
-      const delim = src.slice(j, k).replace(/['"\\]/g, "");
-      if (delim) pendingHeredocs.push({ delim, owner: cur });
+      const rawDelim = src.slice(j, k);
+      const delim = rawDelim.replace(/['"\\]/g, "");
+      // FIX (ported from smtp-egress 1.1.0 review): remember whether the delimiter was
+      // quoted. An UNQUOTED body still expands $( … ) and backticks when the shell reads it.
+      if (delim) pendingHeredocs.push({ delim, owner: cur, quoted: /['"\\]/.test(rawDelim) });
       cur.text += src.slice(i + 1, k);
       i = k;
       continue;
@@ -167,7 +170,9 @@ function commands(src, depth = 0) {
           if (line.replace(/^\t+/, "") === h.delim) break;
           lines.push(line);
         }
-        h.owner.heredocs.push(lines.join("\n"));
+        const body = lines.join("\n");
+        h.owner.heredocs.push(body);
+        if (!h.quoted) out.push(...substitutionsIn(body, depth));
       }
       pendingHeredocs.length = 0;
       close();
@@ -196,6 +201,26 @@ function commands(src, depth = 0) {
   return out;
 }
 
+// FIX (ported): the $( … ) and `…` commands inside an unquoted heredoc body — the same
+// expansion the double-quote branch already scans. A backslash escapes the next char.
+function substitutionsIn(text, depth) {
+  const found = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") { i++; continue; }
+    if (text.startsWith("$(", i)) {
+      const k = matchParen(text, i + 1);
+      found.push(...commands(text.slice(i + 2, k), depth + 1));
+      i = k;
+    } else if (text[i] === "`") {
+      const k = text.indexOf("`", i + 1);
+      const end = k === -1 ? text.length : k;
+      found.push(...commands(text.slice(i + 1, end), depth + 1));
+      i = end;
+    }
+  }
+  return found;
+}
+
 function matchParen(src, at) {
   let depth = 0;
   for (let i = at; i < src.length; i++) {
@@ -222,6 +247,9 @@ const WRAP = {
   xargs: { v: ["-I", "-n", "-P", "-L", "-d", "-E", "-s", "-a", "--arg-file", "--delimiter", "--max-args", "--max-procs", "--replace", "--max-lines", "--eof"] },
   caffeinate: { v: ["-t", "-w"] },
   stdbuf: { v: ["-i", "-o", "-e"] },
+  arch: { v: ["-arch", "-e", "-d"] }, // -arm64 / -x86_64 are plain flags
+  script: { v: ["-t", "-T", "-B", "-I", "-O", "--log-io", "--log-out", "--log-in", "--log-timing", "-E", "--echo"], pos: 1 },
+  flock: { v: ["-w", "--wait", "--timeout", "-E", "--conflict-exit-code"], pos: 1 },
 };
 for (const k of Object.keys(WRAP)) WRAP[k].v = new Set(WRAP[k].v);
 const KEYWORDS = new Set(["{", "}", "!", "if", "then", "else", "elif", "do", "while", "until", "fi", "done"]);
@@ -246,6 +274,10 @@ function commandWord(words) {
       }
       i = j;
       continue;
+    }
+    // script/flock -c STRING run a string, not their next word: let nestedOf() see them.
+    if ((base === "script" || base === "flock") && words.slice(i + 1).some((a) => a === "-c" || a === "--command")) {
+      return { word: base, rest: words.slice(i + 1) };
     }
     const spec = WRAP[base];
     if (!spec) return { word: base, rest: words.slice(i + 1) };
@@ -284,6 +316,65 @@ function shellArgs(rest) {
   }
 }
 
+// Command lines that `word` runs from its arguments, or null. su/script/flock -c STRING,
+// watch (runs its words through sh -c), parallel, `nix run <installable> -- args`,
+// `nix shell/develop … -c/--command cmd…` and `nix-shell --run/--command STRING`.
+function nestedOf(word, rest) {
+  const strings = [];
+  const valueOf = (flags) => {
+    for (let k = 0; k < rest.length; k++) {
+      if (flags.includes(rest[k])) strings.push(rest[k + 1] || "");
+      else if (rest[k].startsWith("--command=")) strings.push(rest[k].slice(10));
+    }
+  };
+  if (word === "su" || ((word === "script" || word === "flock") && rest.some((a) => a === "-c" || a === "--command"))) {
+    valueOf(["-c", "--command"]);
+    return strings;
+  }
+  if (word === "nix-shell") { valueOf(["--run", "--command"]); return strings; }
+  if (word === "watch") {
+    let j = 0;
+    while (j < rest.length && rest[j].startsWith("-")) j += /^(-n|--interval|-q|--equexit)$/.test(rest[j]) ? 2 : 1;
+    return [rest.slice(j).join(" ")];
+  }
+  if (word === "parallel") return [rest.join(" ")];
+  if (word === "nix") {
+    const r = rest.indexOf("run");
+    if (r !== -1 && rest.slice(0, r).every((a) => a.startsWith("-"))) {
+      const inst = rest.slice(r + 1).find((a) => !a.startsWith("-")) || "";
+      const prog = inst.includes("#") ? inst.split("#").pop().split(".").pop() : inst.split("/").pop();
+      const dd = rest.indexOf("--");
+      strings.push([prog, ...(dd === -1 ? [] : rest.slice(dd + 1))].join(" "));
+    }
+    const k = rest.findIndex((a) => a === "-c" || a === "--command");
+    if (k !== -1) strings.push(rest.slice(k + 1).join(" "));
+    return strings;
+  }
+  return null;
+}
+
+// The code an interpreter runs from its arguments (perl/ruby -e, node -e/-p, python -c,
+// short-flag clusters such as -le or -Ic) plus any heredoc fed to it; null otherwise.
+// osascript is NOT here: it is the INJECTOR rule's own target.
+function interpreterCode(word, args, heredocs) {
+  let flag;
+  if (/^python(\d(\.\d+)?)?$/.test(word)) flag = "c";
+  else if (/^(perl|ruby)$/.test(word)) flag = "eE";
+  else if (/^(node|nodejs|bun|deno)$/.test(word)) flag = "ep";
+  else return null;
+  const parts = [...heredocs];
+  const re = new RegExp(`^-[A-Za-z]*?[${flag}](.*)$`);
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (a === "--eval" || a === "--print") { parts.push(args[k + 1] || ""); k++; continue; }
+    if (a.startsWith("--eval=") || a.startsWith("--print=")) { parts.push(a.slice(a.indexOf("=") + 1)); continue; }
+    if (a.startsWith("--")) continue;
+    const m = a.match(re);
+    if (m) { if (m[1]) parts.push(m[1]); else { parts.push(args[k + 1] || ""); k++; } }
+  }
+  return parts.join("\n");
+}
+
 class Unsure extends Error {}
 const MAX_DEPTH = 64;
 // The text-level danger pattern used only when parsing is unsure: cliclick anywhere, or
@@ -307,6 +398,17 @@ function injects(cmd, depth = 0) {
     // FIX (ported): eval / env -S run their argument as a command line.
     if (evalText !== undefined) {
       if (injects(evalText, depth + 1)) return true;
+      continue;
+    }
+    // FIX (ported): commands that run a STRING or the rest of their words.
+    const nested = nestedOf(word, rest);
+    if (nested) {
+      if (nested.some((t) => injects(t, depth + 1))) return true;
+      continue;
+    }
+    const code = interpreterCode(word, rest, c.heredocs);
+    if (code !== null) {
+      if (danger(code)) return true;
       continue;
     }
     if (SHELLS.test(word)) {
@@ -353,8 +455,8 @@ const RULE1 =
   "mac-app-send: osascript/cliclick input injection works around a computer-use refusal that forbids it — prefer request_full_control then computer_batch (reading a value with osascript is fine). Allow anyway?";
 
 let rawCmd = null;
+let raw = "";
 try {
-  let raw = "";
   try {
     raw = fs.readFileSync(0, "utf8");
   } catch {
@@ -362,7 +464,7 @@ try {
   }
   if (!raw.trim()) process.exit(0);
 
-  const ev = JSON.parse(raw);
+  const ev = JSON.parse(raw.replace(/^\uFEFF/, "")); // a BOM is not JSON
   const tool = ev.tool_name || "";
   const input = ev.tool_input || {};
 
@@ -399,6 +501,7 @@ try {
 } catch {
   // Never wedge a turn. FIX (ported): an Unsure (nesting too deep) or any parse error
   // asks when the raw Bash text is dangerous; only otherwise does it fail open.
-  if (rawCmd !== null && danger(rawCmd)) ask(RULE1);
+  // FIX (ported): malformed or truncated JSON leaves rawCmd unset; test the raw stdin.
+  if ((rawCmd !== null && danger(rawCmd)) || (rawCmd === null && danger(raw))) ask(RULE1);
   process.exit(0);
 }

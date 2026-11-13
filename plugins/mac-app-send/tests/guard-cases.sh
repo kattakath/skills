@@ -144,6 +144,21 @@ expect "eval of a harmless command"                       "$(mkb 'eval "ls -la"'
 expect "cat <<EOF | bash with nothing dangerous"          "$(mkb $'cat <<EOF | bash\necho hello\nEOF')" allow
 expect "echo naming keystroke | grep (no shell)"          "$(mkb "echo 'osascript keystroke System Events' | grep -c keystroke")" allow
 
+echo "smtp-egress 1.1.0 review fixes, ported (cases are DATA: decoded by node from JSON, never by a shell)"
+mkj() { node -e 'process.stdout.write(JSON.stringify({tool_name:"Bash",tool_input:{command:JSON.parse(process.argv[1])}}))' "$1"; }
+nrv=0
+while IFS=$'\t' read -r want name cmdjson; do
+  case "$want" in ask | allow) ;; *) continue ;; esac
+  nrv=$((nrv+1))
+  expect "$name" "$(mkj "$cmdjson")" "$want"
+done < "$(dirname "${BASH_SOURCE[0]}")/fixtures/review-cases.tsv"
+if [ "$nrv" -ge 20 ]; then printf '  ok    %-52s %s\n' "review cases read" "$nrv"; pass=$((pass+1))
+else printf '  FAIL  %-52s %s\n' "review cases read (want >= 20)" "$nrv"; fail=$((fail+1)); fi
+RAWB=$(printf '\357\273\277{"tool_name":"Bash","tool_input":{"command":"cliclick c:1,2"}}')
+expect "BOM before valid JSON → parsed, asks"            "$RAWB" ask
+expect "truncated JSON naming cliclick → asks"           '{"tool_name":"Bash","tool_input":{"command":"cliclick c:1' ask
+expect "truncated JSON naming nothing → allow"           '{"tool_name":"Bash","tool_input":{"command":"ls -l' allow
+
 echo "must NEVER THROW (exit 0, no output)"
 expect "empty stdin"        '' allow
 expect "malformed json"     '{not json' allow
