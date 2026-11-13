@@ -31,7 +31,7 @@ one-line reason names the better route, and it is also what Claude reads if you 
 `tests/guard-cases.sh` asserts that, plus every ask, plus that the guard never throws.
 
 ```bash
-bash tests/guard-cases.sh    # 16 cases
+bash tests/guard-cases.sh    # ask, allow, never-throw, one-line reasons
 ```
 
 The never-throw half matters: the guard exits 0 on any error so it cannot wedge a turn, which

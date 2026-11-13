@@ -31,8 +31,9 @@
  * permissionDecision "ask", and exits 0: the operator gets a confirm prompt whose
  * reason is also what Claude reads if the call is declined or nobody is present,
  * so the reason is one line, verdict first, then the better route. No match:
- * exit 0 with no output. ANY unexpected error exits 0 with no output — a guard
- * that throws must not wedge a turn. That fail-open is also why tests assert the
+ * exit 0 with no output. An unexpected error, or nesting too deep to parse, asks when
+ * the raw text is dangerous (cliclick, or osascript with an input verb) and otherwise
+ * exits 0 with no output — a guard that throws must not wedge a turn. That fail-open is also why tests assert the
  * must-ALLOW half: a guard that silently matches nothing is not a weak guard, it
  * is NO guard.
  */
@@ -47,13 +48,6 @@ const fs = require("node:fs");
 // body or an echo that merely contained "osascript" and "System Events".
 const INJECTOR = /^(osascript|cliclick)$/i;
 const INPUT_VERB = /\b(keystroke|key code|click at|perform action|System Events)\b/i;
-// Words that run the NEXT word as the command. timeout/nice take one value first.
-// Shell keywords that precede a command are skipped the same way.
-const WRAPPERS = new Set([
-  "sudo", "env", "exec", "nohup", "time", "command", "xargs", "caffeinate",
-  "{", "!", "if", "then", "else", "elif", "do", "while", "until",
-]);
-const WRAPPERS_WITH_ARG = new Set(["timeout", "nice"]);
 const SHELLS = /^(ba|z|da|k)?sh$/;
 
 // Splits a shell command into simple commands, quote-aware, without running it.
@@ -61,7 +55,9 @@ const SHELLS = /^(ba|z|da|k)?sh$/;
 // `text` its raw source, `heredocs` the bodies fed to it. Command substitutions
 // $( … ) and backticks open a nested command. Not a full shell parser — it only has
 // to place the command word correctly, and an unparseable tail just ends a word.
-function commands(src) {
+function commands(src, depth = 0) {
+  // FIX (ported from smtp-egress): bounded recursion; the caller treats the throw as "unsure".
+  if (depth > MAX_DEPTH) throw new Error("nesting too deep");
   const out = [];
   let cur = null;
   const pendingHeredocs = [];
@@ -80,6 +76,15 @@ function commands(src) {
   while (i < src.length) {
     const c = src[i];
     cur.text += c;
+    if (c === "#" && word === null) {
+      // FIX (ported from smtp-egress): a comment runs to the end of the line and is never part of
+      // a command (it used to become arguments, so the words of a comment could read as an input verb).
+      let nl = src.indexOf("\n", i);
+      if (nl === -1) nl = src.length;
+      cur.text = cur.text.slice(0, -1);
+      i = nl;
+      continue;
+    }
     if (c === "\\" && i + 1 < src.length) {
       word = (word ?? "") + src[i + 1];
       cur.text += src[i + 1];
@@ -104,12 +109,12 @@ function commands(src) {
           j += 2;
         } else if (src.startsWith("$(", j)) {
           const k = matchParen(src, j + 1);
-          out.push(...commands(src.slice(j + 2, k)));
+          out.push(...commands(src.slice(j + 2, k), depth + 1));
           j = k + 1;
         } else if (src[j] === "`") {
           const k = src.indexOf("`", j + 1);
           const end = k === -1 ? src.length : k;
-          out.push(...commands(src.slice(j + 1, end)));
+          out.push(...commands(src.slice(j + 1, end), depth + 1));
           j = end + 1;
         } else val += src[j++];
       }
@@ -120,7 +125,7 @@ function commands(src) {
     }
     if (src.startsWith("$(", i)) {
       const k = matchParen(src, i + 1);
-      out.push(...commands(src.slice(i + 2, k)));
+      out.push(...commands(src.slice(i + 2, k), depth + 1));
       cur.text += src.slice(i + 1, k + 1);
       word = (word ?? "") + "$()";
       i = k + 1;
@@ -129,7 +134,7 @@ function commands(src) {
     if (c === "`") {
       const k = src.indexOf("`", i + 1);
       const end = k === -1 ? src.length : k;
-      out.push(...commands(src.slice(i + 1, end)));
+      out.push(...commands(src.slice(i + 1, end), depth + 1));
       cur.text += src.slice(i + 1, end + 1);
       i = end + 1;
       continue;
@@ -200,40 +205,130 @@ function matchParen(src, at) {
   return src.length;
 }
 
-// The word a simple command actually runs: skips VAR=value prefixes and wrappers,
-// and takes the basename, so `sudo /usr/bin/osascript` is osascript.
+// Wrappers that run the rest of their words as a command. `v` = flags that take the next
+// word as a value (so `sudo -u X cmd` runs cmd, not X); `pos` = positional words before
+// the command (timeout's duration). FIX (ported from smtp-egress): the old version took
+// the value of such a flag for the command word.
+const WRAP = {
+  sudo: { v: ["-u", "-g", "-h", "-p", "-C", "-U", "-r", "-t", "-T", "-D", "--user", "--group", "--host", "--prompt", "--close-from", "--other-user", "--role", "--type", "--command-timeout", "--chdir"] },
+  doas: { v: ["-u", "-C"] },
+  env: { v: ["-u", "--unset", "-C", "--chdir"] },
+  exec: { v: ["-a"] },
+  nohup: { v: [] },
+  time: { v: ["-f", "--format", "-o", "--output"] },
+  nice: { v: ["-n", "--adjustment"] },
+  timeout: { v: ["-s", "--signal", "-k", "--kill-after"], pos: 1 },
+  gtimeout: { v: ["-s", "--signal", "-k", "--kill-after"], pos: 1 },
+  xargs: { v: ["-I", "-n", "-P", "-L", "-d", "-E", "-s", "-a", "--arg-file", "--delimiter", "--max-args", "--max-procs", "--replace", "--max-lines", "--eof"] },
+  caffeinate: { v: ["-t", "-w"] },
+  stdbuf: { v: ["-i", "-o", "-e"] },
+};
+for (const k of Object.keys(WRAP)) WRAP[k].v = new Set(WRAP[k].v);
+const KEYWORDS = new Set(["{", "}", "!", "if", "then", "else", "elif", "do", "while", "until", "fi", "done"]);
+
+// The word a simple command actually runs: skips VAR=value prefixes, shell keywords and
+// wrappers (with their flag values), and takes the basename, so `sudo -u x /usr/bin/osascript`
+// is osascript. Returns { word: "" } for `command -v X` (a lookup that runs nothing), and
+// { evalText } for `eval …` / `env -S …`, whose argument is itself a command line.
 function commandWord(words) {
   let i = 0;
   while (i < words.length) {
     const w = words[i];
     const base = w.split("/").pop();
-    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w) || w.startsWith("-")) i++;
-    else if (WRAPPERS.has(base)) i++;
-    else if (WRAPPERS_WITH_ARG.has(base)) i += 2;
-    else return { word: base, rest: words.slice(i + 1) };
+    if (/^[A-Za-z_][A-Za-z0-9_]*=/.test(w) || KEYWORDS.has(w)) { i++; continue; }
+    if (base === "eval") return { word: "eval", rest: [], evalText: words.slice(i + 1).join(" ") };
+    if (base === "command") {
+      // FIX (ported): `command -v osascript` looks the name up; it never runs it.
+      let j = i + 1;
+      while (j < words.length && words[j].startsWith("-")) {
+        if (/^-[a-zA-Z]*[vV]/.test(words[j])) return { word: "", rest: [] };
+        j++;
+      }
+      i = j;
+      continue;
+    }
+    const spec = WRAP[base];
+    if (!spec) return { word: base, rest: words.slice(i + 1) };
+    let j = i + 1, pos = spec.pos || 0;
+    while (j < words.length) {
+      const a = words[j];
+      if ((base === "env" || base === "sudo") && /^[A-Za-z_][A-Za-z0-9_]*=/.test(a)) { j++; continue; }
+      if (a === "--") { j++; break; }
+      if (spec.v.has(a)) { j += 2; continue; }
+      if (base === "env" && (a === "-S" || a === "--split-string")) return { word: "eval", rest: [], evalText: words[j + 1] || "" };
+      if (a.startsWith("-") && a.length > 1) { j++; continue; }
+      if (pos > 0) { pos--; j++; continue; }
+      break;
+    }
+    i = j;
   }
   return { word: "", rest: [] };
 }
 
+// A shell's own arguments: { cmd } for a -c string (any flag cluster containing c, so
+// -lc/-ec count — FIX, ported), { script } for a script path, {} when it reads stdin.
+function shellArgs(rest) {
+  let c = false;
+  for (let i = 0; i < rest.length; i++) {
+    const w = rest[i];
+    if (/^[-+][oO]$/.test(w) || w === "--rcfile" || w === "--init-file") { i++; continue; }
+    if (w === "--") return pick(i + 1);
+    if (/^--/.test(w)) continue;
+    if (/^[-+][A-Za-z]+$/.test(w)) { if (w[0] === "-" && w.includes("c")) c = true; continue; }
+    return pick(i);
+  }
+  return c ? { cmd: "" } : {};
+  function pick(i) {
+    if (i >= rest.length) return c ? { cmd: "" } : {};
+    return c ? { cmd: rest[i] } : { script: rest[i] };
+  }
+}
+
+class Unsure extends Error {}
+const MAX_DEPTH = 64;
+// The text-level danger pattern used only when parsing is unsure: cliclick anywhere, or
+// osascript together with an input verb.
+function danger(text) {
+  return /\bcliclick\b/i.test(text) || (/\bosascript\b/i.test(text) && INPUT_VERB.test(text));
+}
+
 function injects(cmd, depth = 0) {
-  if (depth > 3) return false;
+  // FIX (ported): this used to return false past depth 3, failing open.
+  if (depth > MAX_DEPTH) throw new Unsure("depth");
   const all = commands(cmd);
   // A script written by a heredoc in the SAME call and then run by path
   // (`cat > s.applescript <<EOF … EOF; osascript s.applescript`) carries its verb
   // in another command's heredoc — seen in the 2026-11-07 replay — so any heredoc
   // in the call counts once osascript actually runs.
   const heredocs = all.flatMap((c) => c.heredocs);
+  let stdinShell = false;
   for (const c of all) {
-    const { word, rest } = commandWord(c.words);
+    const { word, rest, evalText } = commandWord(c.words);
+    // FIX (ported): eval / env -S run their argument as a command line.
+    if (evalText !== undefined) {
+      if (injects(evalText, depth + 1)) return true;
+      continue;
+    }
     if (SHELLS.test(word)) {
-      const ci = rest.indexOf("-c");
-      if (ci !== -1 && injects(rest[ci + 1] || "", depth + 1)) return true;
+      const sa = shellArgs(rest);
+      if ("cmd" in sa) {
+        if (injects(sa.cmd || "", depth + 1)) return true;
+        continue;
+      }
       if (c.heredocs.some((h) => injects(h, depth + 1))) return true;
+      if (sa.script === undefined) stdinShell = true;
       continue;
     }
     if (!INJECTOR.test(word)) continue;
     if (/^cliclick$/i.test(word)) return true;
     if (INPUT_VERB.test([...rest, ...heredocs].join("\n"))) return true;
+  }
+  // FIX (ported): a shell reading stdin (`cat <<EOF | bash`, `echo … | sh`) runs what is
+  // piped in. Scan every heredoc in the call, and ask if the call's text is dangerous at
+  // all, since a pipe's content cannot be seen.
+  if (stdinShell) {
+    if (heredocs.some((h) => injects(h, depth + 1))) return true;
+    if (danger(cmd)) return true;
   }
   return false;
 }
@@ -254,6 +349,10 @@ function ask(reason) {
   process.exit(0);
 }
 
+const RULE1 =
+  "mac-app-send: osascript/cliclick input injection works around a computer-use refusal that forbids it — prefer request_full_control then computer_batch (reading a value with osascript is fine). Allow anyway?";
+
+let rawCmd = null;
 try {
   let raw = "";
   try {
@@ -269,12 +368,8 @@ try {
 
   // ── Rule 1 ────────────────────────────────────────────────────────────────
   if (tool === "Bash") {
-    const cmd = String(input.command || "");
-    if (injects(cmd)) {
-      ask(
-        "mac-app-send: osascript/cliclick input injection works around a computer-use refusal that forbids it — prefer request_full_control then computer_batch (reading a value with osascript is fine). Allow anyway?"
-      );
-    }
+    rawCmd = String(input.command || "");
+    if (injects(rawCmd)) ask(RULE1);
   }
 
   // ── Rule 2 ────────────────────────────────────────────────────────────────
@@ -302,6 +397,8 @@ try {
 
   process.exit(0);
 } catch {
-  // Never wedge a turn.
+  // Never wedge a turn. FIX (ported): an Unsure (nesting too deep) or any parse error
+  // asks when the raw Bash text is dangerous; only otherwise does it fail open.
+  if (rawCmd !== null && danger(rawCmd)) ask(RULE1);
   process.exit(0);
 }

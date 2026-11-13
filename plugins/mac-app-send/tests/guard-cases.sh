@@ -1,4 +1,6 @@
 #!/usr/bin/env bash
+# The single-quoted $( ) strings are literal commands fed to the guard, never expanded.
+# shellcheck disable=SC2016
 # Case suite for mac-send-guard.js.
 #
 # Every case exits 0 now (a match ASKS rather than blocks), so the exit code alone
@@ -111,6 +113,36 @@ expect "request_access for a normal app" \
   '{"tool_name":"mcp__computer-use__request_access","tool_input":{"apps":["WhatsApp"]}}' allow
 expect "element_index 0 is a real target, not falsy" \
   '{"tool_name":"mcp__computer-use__app_type","tool_input":{"text":"a\nb","element_index":0}}' allow
+
+DEEP_BAD=$(python3 -I -c 'print("echo " + "$(" * 5000 + "osascript -e \"tell application \\\"System Events\\\" to keystroke \\\"a\\\"\"" + ")" * 5000)')
+DEEP_OK=$(python3 -I -c 'print("echo " + "$(" * 5000 + "ls" + ")" * 5000)')
+mkb() { node -e 'process.stdout.write(JSON.stringify({tool_name:"Bash",tool_input:{command:process.argv[1]}}))' "$1"; }
+KS="osascript -e 'tell application \"System Events\" to keystroke \"a\"'"
+
+echo "parser fixes ported from smtp-egress — must ASK"
+expect "depth: 5000-deep \$( around an injection"         "$(mkb "$DEEP_BAD")" ask
+expect "comment: cliclick before a # comment"             "$(mkb 'cliclick c:1,2 # done')" ask
+expect "wrapper value: sudo -u X osascript keystroke"     "$(mkb "sudo -u someuser $KS")" ask
+expect "wrapper value: timeout -s KILL 5 osascript"       "$(mkb "timeout -s KILL 5 $KS")" ask
+expect "wrapper value: nice -n 5 cliclick"                "$(mkb 'nice -n 5 cliclick c:1,2')" ask
+expect "command (no -v) still runs: command cliclick"     "$(mkb 'command cliclick c:1,2')" ask
+expect "combined flags: bash -lc '…keystroke'"            "$(mkb "bash -lc 'osascript -e \"tell application \\\"System Events\\\" to keystroke \\\"a\\\"\"'")" ask
+expect "combined flags: sh -ec 'cliclick'"                "$(mkb "sh -ec 'cliclick c:1,2'")" ask
+expect "eval \"osascript … keystroke\""                   "$(mkb "eval \"$KS\"")" ask
+expect "env -S 'cliclick …'"                              "$(mkb "env -S 'cliclick c:1,2'")" ask
+expect "heredoc piped to a shell: cat <<EOF | bash"       "$(mkb $'cat <<EOF | bash\nosascript -e \'tell application "System Events" to keystroke "a"\'\nEOF')" ask
+expect "echo '…' | sh"                                    "$(mkb "echo 'cliclick c:1,2' | sh")" ask
+
+echo "parser fixes ported from smtp-egress — must ALLOW"
+expect "depth: 5000-deep \$( with nothing dangerous"      "$(mkb "$DEEP_OK")" allow
+expect "comment naming keystroke after an osascript read" "$(mkb "osascript -e 'id of app \"Finder\"' # not a keystroke via System Events")" allow
+expect "wrapper value: sudo -u osascript ls (value word)" "$(mkb 'sudo -u osascript ls -la')" allow
+expect "wrapper value: timeout -s KILL 5 ls"              "$(mkb 'timeout -s KILL 5 ls')" allow
+expect "command -v osascript / command -v cliclick"       "$(mkb 'command -v osascript; command -v cliclick')" allow
+expect "combined flags: bash -lc with a read only"        "$(mkb "bash -lc \"osascript -e 'id of app \\\"Finder\\\"'\"")" allow
+expect "eval of a harmless command"                       "$(mkb 'eval "ls -la"')" allow
+expect "cat <<EOF | bash with nothing dangerous"          "$(mkb $'cat <<EOF | bash\necho hello\nEOF')" allow
+expect "echo naming keystroke | grep (no shell)"          "$(mkb "echo 'osascript keystroke System Events' | grep -c keystroke")" allow
 
 echo "must NEVER THROW (exit 0, no output)"
 expect "empty stdin"        '' allow
