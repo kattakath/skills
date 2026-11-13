@@ -52,8 +52,17 @@ KNOWN_TOP = frozenset(
 )
 KNOWN_CONSUMER = frozenset(
     {"cli", "env_prefix", "data_env", "state_env", "state_dirname", "default_site", "default_region",
-     "approval_key_fingerprint", "secret_envs", "site_hosts"}
+     "approval_key_fingerprint", "secret_envs", "site_hosts", "site_overlay"}
 )  # fmt: skip
+# A consumer may keep its SITE specifics outside its repo: with [consumer].site_overlay = true, these paths
+# come from its site file's [pipeline.*] tables (the harness's own rule and allowlist, pipeline.py): the file
+# is $<PREFIX>_SITE_CONFIG, else $<data_env>/config/site.toml. Anything else in that file is the consumer's.
+OVERLAY_ALLOWED = {
+    "consumer": ("default_site", "default_region", "site_hosts"),
+    "plugins": ("sources",),
+    "crawl": ("proxy", "refresh"),
+}
+SITE_CONFIG_DEFAULT = ("config", "site.toml")  # under the data root
 UPDATE_PLUGIN = "update the plugin: `claude plugin marketplace update kattakath && claude plugin update scrape-harness@kattakath`"
 UPDATE_HARNESS = "update the harness: `nix flake update scrape-harness` (or add the key to pipeline.toml)"
 # A NANP phone number that is not in the fictional 555-01xx block.
@@ -103,6 +112,7 @@ def pipeline_file() -> Path:
 
 
 _DOC: dict | None = None
+_OVERLAY_ERR: str | None = None  # why a declared site overlay could not be read (None: read, or none declared)
 
 
 def doc() -> dict:
@@ -119,7 +129,51 @@ def doc() -> dict:
                 f"blocked: cannot read the pipeline declaration {p} ({type(e).__name__}: {e}); failing closed"
             )
         skew(_DOC, p)
+        overlay(_DOC)
     return _DOC
+
+
+def overlay_file(d: dict) -> Path | None:
+    """The site file of a consumer that declares site_overlay; None when neither env names one."""
+    c = d.get("consumer") or {}
+    if raw := os.environ.get(f"{c.get('env_prefix')}_SITE_CONFIG"):
+        return Path(raw).expanduser()
+    if data := os.environ.get(str(c.get("data_env"))):
+        return Path(data).expanduser().joinpath(*SITE_CONFIG_DEFAULT)
+    return None
+
+
+def overlay(d: dict) -> None:
+    """Merge a declared site overlay's allowlisted [pipeline.*] keys into the pipeline (a table value updates
+    the repo's table, anything else replaces it). Unreadable: remembered in _OVERLAY_ERR, so the Bash gate
+    refuses what needs the site (network commands, direct HTTP) and nothing else. A key outside the
+    allowlist blocks everything, as a broken pipeline does."""
+    global _OVERLAY_ERR
+    c = d.get("consumer")
+    if not isinstance(c, dict) or c.get("site_overlay") is not True:
+        return
+    p = overlay_file(d)
+    if p is None:
+        _OVERLAY_ERR = f"neither {c.get('env_prefix')}_SITE_CONFIG nor {c.get('data_env')} is set"
+        return
+    try:
+        ov = tomllib.loads(p.read_text(encoding="utf-8")).get("pipeline", {})
+    except (OSError, tomllib.TOMLDecodeError) as e:
+        _OVERLAY_ERR = f"the site file {p} is unreadable ({type(e).__name__})"
+        return
+    for table, keys in ov.items() if isinstance(ov, dict) else [("pipeline", None)]:
+        allowed = OVERLAY_ALLOWED.get(table, ())
+        if not isinstance(keys, dict) or set(keys) - set(allowed):
+            block(
+                f"blocked: the site file {p}: [pipeline.{table}] may hold only "
+                f"{', '.join(allowed) or 'nothing (not an overlay table)'}; failing closed"
+            )
+        base = d.setdefault(table, {})
+        for k, v in keys.items():
+            if isinstance(v, dict) and isinstance(base.get(k), dict):
+                base[k] = {**base[k], **v}
+            else:
+                base[k] = v
 
 
 def skew(d: dict, p: Path) -> None:
@@ -220,6 +274,13 @@ def bash(event: dict) -> None:
     if re.search(r"\bsecret\s+reveal\b", cmd):
         block(
             f"blocked: `secret reveal` prints a secret. Use `secret exec NAME=<item> -- {consumer()['cli']} ...` instead."
+        )
+    if _OVERLAY_ERR and (re.search(r"\b(curl|wget|http|xh)\b", cmd, re.I) or network_rules()[0].search(cmd)):
+        block(
+            f"blocked: this project keeps its site specifics in a site file (pipeline.toml site_overlay), and "
+            f"{_OVERLAY_ERR}, so the guard cannot tell the site's hosts: network commands and direct HTTP "
+            f"clients are refused until it is readable (set {c['env_prefix']}_SITE_CONFIG, or write "
+            f"${c['data_env']}/{'/'.join(SITE_CONFIG_DEFAULT)}); failing closed"
         )
     hosts = "|".join(map(re.escape, c["site_hosts"])) or r"(?!)"
     if re.search(rf"\b(curl|wget|http|xh)\b[^|;&]*(?:{hosts})", cmd, re.I):

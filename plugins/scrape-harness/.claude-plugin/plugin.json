@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "scrape-harness",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "Gates, agents, runbooks and a monitor for a polite, typed scraping pipeline whose every rule is declared in the project's pipeline.toml: networked runs only with an operator-signed plan, no data in the repo, no secret on a command line, a task per declared stage, an incident record the run-steward agent cannot walk away from, and a plan-pipeline workflow that designs a pipeline without fetching anything.",
   "author": {
     "name": "Ismail Kattakath"

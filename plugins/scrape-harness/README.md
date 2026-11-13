@@ -28,6 +28,13 @@ A project normally enables it from its generated `.claude/settings.json` instead
 Every gate fails **closed** on a broken or missing `pipeline.toml`; the context-only hooks (session,
 steward, compaction) fail open on an internal error, so they never block a compaction or trap an agent.
 
+**Site overlay.** A project whose `pipeline.toml` sets `[consumer] site_overlay = true` keeps its site
+specifics (`default_site`, `default_region`, `site_hosts`, `[plugins.sources]`, `[crawl] proxy` and
+`refresh`) in a site file outside the repo: `$<PREFIX>_SITE_CONFIG`, else `$<data_env>/config/site.toml`,
+under `[pipeline.*]` tables. The guard merges only those keys (any other key under `[pipeline.*]` blocks).
+When that file is unreadable, the Bash gate refuses the network commands and direct HTTP clients (it cannot
+tell the site's hosts) and lets everything else through. A project without `site_overlay` is unaffected.
+
 ## Requirements and version skew
 
 The project runs a pipeline built on the `scrape_harness` Python core and holds a `pipeline.toml`
