@@ -21,6 +21,16 @@ The plugin does four things a hand-run `msmtp` or `himalaya` does not:
 
 It never stores or reads a secret: msmtp's own `passwordeval` does.
 
+## Where it runs
+
+- **Local sessions only** (macOS or Linux with msmtp, himalaya and a SOCKS5 proxy).
+- **Not Claude Code cloud sessions.** There, all egress goes through an HTTP(S) proxy, so raw
+  SMTP/IMAP and a WireGuard tunnel are not available, marketplace plugins (and this guard) do
+  not load, and environment variables are readable by every process. A cloud session also
+  leaves from the provider's network, so there is no home IP to hide.
+- **For mail in the cloud,** use a provider API with a narrowly scoped token held as a
+  network secret (for example, read-only), and keep sending on a local machine.
+
 ## What the guard is — and isn't
 
 - **A seatbelt, not a sandbox.** The PreToolUse guard reliably prompts on the plugin's own
