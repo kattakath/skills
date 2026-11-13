@@ -17,7 +17,7 @@
 # Exit: 0 PASS, 1 FAIL or refused, 2 config error.
 #
 # A PASS for a probe this script sent (IMAP read-back, or --headers on that probe's saved
-# headers) is recorded as $XDG_STATE_HOME/smtp-egress/probe-<key>.pass, where <key> hashes
+# headers) is recorded as $XDG_STATE_HOME/mail-cloak/probe-<key>.pass, where <key> hashes
 # the msmtp account and the SOCKS endpoint; doctor.sh reports whether it exists.
 #
 # Asserts: no Received: hop IP (the first one included) is in the direct IPv4 /24 or
@@ -42,7 +42,7 @@ se_same_mailbox() {
 import email.utils, os, sys
 # Domains whose local part ignores dots; the first is canonical. Overridable so the tests
 # need no real-provider address.
-DOTLESS = [d.strip().lower() for d in os.environ.get("SMTP_EGRESS_DOTLESS_DOMAINS", "gmail.com,googlemail.com").split(",") if d.strip()]
+DOTLESS = [d.strip().lower() for d in os.environ.get("MAIL_CLOAK_DOTLESS_DOMAINS", "gmail.com,googlemail.com").split(",") if d.strip()]
 def norm(a):
     a = email.utils.parseaddr(a)[1].strip().lower()
     local, _, dom = a.rpartition("@")
@@ -61,7 +61,7 @@ se_record_pass() { # headers-file
   mid=$(python3 -I -c '
 import email, sys
 print((email.message_from_binary_file(open(sys.argv[1], "rb")).get("Message-ID") or "").strip())' "$1")
-  case "$mid" in "<smtp-egress-probe-"*) ;; *) return 0 ;; esac
+  case "$mid" in "<mail-cloak-probe-"*) ;; *) return 0 ;; esac
   probe=$(grep -lF "Message-ID: $mid" "$SE_STATE_DIR"/probe-*.eml 2>/dev/null | head -1)
   [ -n "$probe" ] || return 0
   se_load_config
@@ -185,12 +185,12 @@ se_header_main() {
   local ts eml mid
   ts=$(date -u +%Y%m%dT%H%M%SZ)
   eml="$SE_STATE_DIR/probe-$ts.eml"
-  mid="<smtp-egress-probe-$ts-$$@${from##*@}>"
+  mid="<mail-cloak-probe-$ts-$$@${from##*@}>"
   {
-    printf 'From: %s\r\nTo: %s\r\nSubject: smtp-egress header probe %s\r\n' "$from" "$SE_PROBE_RECIPIENT" "$ts"
+    printf 'From: %s\r\nTo: %s\r\nSubject: mail-cloak header probe %s\r\n' "$from" "$SE_PROBE_RECIPIENT" "$ts"
     printf 'Date: %s\r\nMessage-ID: %s\r\nMIME-Version: 1.0\r\n' "$(LC_ALL=C date -u '+%a, %d %b %Y %H:%M:%S +0000')" "$mid"
     printf 'Content-Type: text/plain; charset=utf-8\r\n\r\n'
-    printf 'Header probe from smtp-egress. Safe to delete.\r\n'
+    printf 'Header probe from mail-cloak. Safe to delete.\r\n'
   } >"$eml"
 
   bash "$HERE/send.sh" ${dry:+"$dry"} "$eml" || die "send.sh failed"
@@ -217,7 +217,7 @@ EOF
     "$SE_PROBE_IMAP_PASSWORDCOMMAND" "$SE_PROBE_RECIPIENT" || exit 2
   local cfg="$SE_TMP_CFG"
   python3 -I - "$cfg" "${SE_PROBE_IMAP_MAILBOX:-INBOX}" "$ts" "$mid" "$hdr" \
-    "${SMTP_EGRESS_PROBE_TRIES:-24}" "${SMTP_EGRESS_PROBE_SLEEP:-5}" <<'PY' || die "IMAP read-back failed"
+    "${MAIL_CLOAK_PROBE_TRIES:-24}" "${MAIL_CLOAK_PROBE_SLEEP:-5}" <<'PY' || die "IMAP read-back failed"
 import json, re, subprocess, sys, time
 cfg, box, token, mid, out, tries, pause = sys.argv[1:8]
 H = ["himalaya", "-c", cfg]

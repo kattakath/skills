@@ -44,7 +44,7 @@ printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\n' "$TMP/msmtprc" "$P
 
 I() { # inbox.sh with the stubs; CFG overrides the config file
   rm -f "$TMP/him.argv" "$TMP/him.conf" "$TMP/him.mode"
-  env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="${CFG:-$TMP/config}" \
+  env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="${CFG:-$TMP/config}" \
     XDG_STATE_HOME="$TMP/state" bash "$ROOT/scripts/inbox.sh" "$@"
 }
 argv() { [ -f "$TMP/him.argv" ] && tr '\037' ' ' <"$TMP/him.argv" || true; }
@@ -126,12 +126,12 @@ I list --help >/dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && ok "inbox.sh list --help exits 0" || bad "list --help" "rc=$rc"
 mkdir -p "$TMP/co:lon"
 rm -f "$TMP/him.argv"
-env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/co:lon" \
+env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/co:lon" \
   bash "$ROOT/scripts/inbox.sh" list >/dev/null 2>"$TMP/colon.err"; rc=$?
 [ "$rc" = 2 ] && [ ! -s "$TMP/him.argv" ] && grep -q "contains ':'" "$TMP/colon.err" && ok "a ':' in the state dir → refuse before himalaya (exit 2)" || bad "colon" "rc=$rc $(cat "$TMP/colon.err")"
 QD="$TMP/it's \"quoted\" dir"; mkdir -p "$QD"
 rm -f "$TMP/him.argv"
-env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$QD" \
+env -u SMTP_PW PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config" XDG_STATE_HOME="$QD" \
   bash "$ROOT/scripts/inbox.sh" folders >/dev/null 2>&1; rc=$?
 [ "$rc" = 0 ] && [ -z "$(find "$QD" -name 'himalaya-*.toml')" ] && ok "a state dir with quotes and spaces: runs, and the config is removed" || bad "quoted dir" "rc=$rc left=$(find "$QD" -name 'himalaya-*.toml')"
 # A run killed while himalaya is running must still remove its config (trap set first).
@@ -140,7 +140,7 @@ printf '%s\n' '#!/usr/bin/env bash' 'cfg=""; prev=""; for a in "$@"; do [ "$prev
   'printf "%s" "$cfg" >"$STUB_DIR/slow.cfg"' 'exec sleep 30' >"$TMP/slowbin/himalaya"
 chmod +x "$TMP/slowbin/himalaya"
 rm -f "$TMP/slow.cfg"
-env -u SMTP_PW PATH="$TMP/slowbin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/killstate" \
+env -u SMTP_PW PATH="$TMP/slowbin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/killstate" \
   bash "$ROOT/scripts/inbox.sh" folders >/dev/null 2>&1 &
 KP=$!
 for _ in $(seq 1 100); do [ -s "$TMP/slow.cfg" ] && break; sleep 0.1; done
@@ -161,7 +161,7 @@ SE_SOCKS_HOST=127.0.0.1 SE_SOCKS_PORT="" se_himalaya_config "$SE_STATE_DIR/a.tom
 SE_SOCKS_HOST="" SE_SOCKS_PORT=1080 se_himalaya_config "$SE_STATE_DIR/b.toml" imap.example.com u@example.com cmd >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && [ ! -e "$SE_STATE_DIR/b.toml" ] && ok "empty SOCKS_HOST → refuse, no file" || bad "no host" "rc=$rc"
 SE_SOCKS_HOST=127.0.0.1 SE_SOCKS_PORT=1080 se_himalaya_config "$SE_STATE_DIR/c.toml" imap.example.com u@example.com 'a "q" \ b' >/dev/null 2>&1 \
-  && python3 -I -c 'import sys, tomllib; d=tomllib.load(open(sys.argv[1],"rb")); a=d["accounts"]["smtp-egress"]; assert a["imap"]["sasl"]["plain"]["password"]["command"]=="a \"q\" \\ b"; assert a["proxy"]["url"]=="socks5h://127.0.0.1:1080"' "$SE_STATE_DIR/c.toml" 2>/dev/null \
+  && python3 -I -c 'import sys, tomllib; d=tomllib.load(open(sys.argv[1],"rb")); a=d["accounts"]["mail-cloak"]; assert a["imap"]["sasl"]["plain"]["password"]["command"]=="a \"q\" \\ b"; assert a["proxy"]["url"]=="socks5h://127.0.0.1:1080"' "$SE_STATE_DIR/c.toml" 2>/dev/null \
   && ok "quotes/backslashes in values stay valid TOML" || bad "toml" "$(cat "$SE_STATE_DIR/c.toml" 2>/dev/null)"
 [ "$(python3 -I -c 'import os,sys; print(format(os.stat(sys.argv[1]).st_mode & 0o777,"o"))' "$SE_STATE_DIR/c.toml" 2>/dev/null)" = 600 ] && ok "written mode 600" || bad "mode" "not 600"
 ln -s "$TMP/elsewhere" "$SE_STATE_DIR/d.toml"

@@ -72,21 +72,21 @@ SOCKS_PORT = 1080
 EVIL=\$(touch $TMP/pwned)
 ALLOWLIST_FILE=\$(touch $TMP/pwned2)
 EOF
-SMTP_EGRESS_CONFIG="$CFG" se_load_config
+MAIL_CLOAK_CONFIG="$CFG" se_load_config
 [ "$SE_MSMTP_CONFIG" = "$HOME/mail/msmtprc" ] && ok "~/ expands to \$HOME" || bad "tilde" "$SE_MSMTP_CONFIG"
 [ "$SE_MSMTP_ACCOUNT" = work ] && ok "double quotes stripped" || bad "dquote" "$SE_MSMTP_ACCOUNT"
 [ "$SE_PROBE_RECIPIENT" = probe@example.net ] && ok "single quotes stripped" || bad "squote" "$SE_PROBE_RECIPIENT"
 [ "$SE_SOCKS_PORT" = 1080 ] && ok "spaces around = tolerated" || bad "spaces" "$SE_SOCKS_PORT"
 [ "$SE_SOCKS_HOST" = 127.0.0.1 ] && ok "SOCKS_HOST defaults to 127.0.0.1" || bad "default host" "$SE_SOCKS_HOST"
 [ ! -e "$TMP/pwned" ] && [ ! -e "$TMP/pwned2" ] && ok "a \$(…) value never executes" || bad "exec" "config ran a command"
-SMTP_EGRESS_CONFIG="$TMP/absent" se_load_config
+MAIL_CLOAK_CONFIG="$TMP/absent" se_load_config
 [ "$SE_SOCKS_PORT" = 25344 ] && ok "SOCKS_PORT defaults to 25344" || bad "default port" "$SE_SOCKS_PORT"
 
 echo "end to end (stub curl, local listener)"
 # A port that is closed: bind, read the number, close.
 CLOSED=$(python3 -I -c 'import socket; s=socket.socket(); s.bind(("127.0.0.1",0)); print(s.getsockname()[1]); s.close()')
 printf 'SOCKS_PORT=%s\n' "$CLOSED" >"$TMP/c-closed"
-out=$(SMTP_EGRESS_CONFIG="$TMP/c-closed" bash "$ROOT/scripts/egress-check.sh" 2>"$TMP/err"); rc=$?
+out=$(MAIL_CLOAK_CONFIG="$TMP/c-closed" bash "$ROOT/scripts/egress-check.sh" 2>"$TMP/err"); rc=$?
 [ "$rc" = 1 ] && grep -q 'not listening' "$TMP/err" && printf '%s' "$out" | grep -q '"ok": false' \
   && ok "closed port, no WIREPROXY_CONFIG → refuse before any network call" || bad "closed port" "rc=$rc out=$out err=$(cat "$TMP/err")"
 
@@ -110,7 +110,7 @@ EOF
 chmod +x "$TMP/bin/curl"
 e2e() { # name want-rc v4 v6 proxied
   local out rc
-  out=$(PATH="$TMP/bin:$PATH" STUB_V4="$3" STUB_V6="$4" STUB_PROXIED="$5" SMTP_EGRESS_CONFIG="$TMP/c-open" \
+  out=$(PATH="$TMP/bin:$PATH" STUB_V4="$3" STUB_V6="$4" STUB_PROXIED="$5" MAIL_CLOAK_CONFIG="$TMP/c-open" \
     bash "$ROOT/scripts/egress-check.sh" 2>/dev/null); rc=$?
   [ "$rc" = "$2" ] && ok "$(printf '%-52s rc=%s %s' "$1" "$rc" "$out")" || bad "$1" "rc=$rc out=$out"
 }

@@ -120,7 +120,7 @@
     {
       "goal": "Send email over SMTP without exposing the sending machine's IP",
       "steps": [
-        "smtp-egress"
+        "mail-cloak"
       ],
       "note": "Needs msmtp and a SOCKS5 proxy (wireproxy or any other); a human approves every send in the permission prompt.",
       "gap": true

@@ -73,10 +73,10 @@ eml() { # file [extra-header-lines…]; From alice, To bob, Subject, Date, then 
 }
 
 S() { # run send.sh with the stubs; extra env via `env` before args is not needed
-  PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="${CFG:-$TMP/config}" XDG_STATE_HOME="$TMP/state" \
+  PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="${CFG:-$TMP/config}" XDG_STATE_HOME="$TMP/state" \
     bash "$SEND" "$@"
 }
-LOG="$TMP/state/smtp-egress/sent.jsonl"
+LOG="$TMP/state/mail-cloak/sent.jsonl"
 
 echo "send.sh --dry-run"
 eml "$TMP/a.eml" "Message-ID: <a1@example.com>"
@@ -187,19 +187,19 @@ echo "header-check.sh pass marker"
 # shellcheck source=../scripts/header-check.sh
 . "$HC"
 export PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" XDG_STATE_HOME="$TMP/state"
-export SMTP_EGRESS_CONFIG="$TMP/config"
-SE_STATE_DIR="$TMP/state/smtp-egress"; mkdir -p "$SE_STATE_DIR"
+export MAIL_CLOAK_CONFIG="$TMP/config"
+SE_STATE_DIR="$TMP/state/mail-cloak"; mkdir -p "$SE_STATE_DIR"
 se_load_config; MARK=$(se_probe_marker)
 case "$MARK" in "$SE_STATE_DIR"/probe-*.pass) ok "marker path is probe-<key>.pass" ;; *) bad "marker path" "$MARK" ;; esac
 H "$TMP/h-pass"; [ ! -e "$MARK" ] && ok "a PASS on headers that are not our probe records nothing" || bad "no marker" "written"
-PMID="<smtp-egress-probe-20261112T100000Z-1@example.com>"
+PMID="<mail-cloak-probe-20261112T100000Z-1@example.com>"
 printf 'From: alice@example.com\r\nTo: probe@example.net\r\nMessage-ID: %s\r\n\r\nx\r\n' "$PMID" >"$SE_STATE_DIR/probe-20261112T100000Z.eml"
 sed "s/^Subject: probe$/Subject: probe\nMessage-ID: $PMID/" "$TMP/h-pass" >"$TMP/h-probe"
 H "$TMP/h-probe"; [ -s "$MARK" ] && grep -qF "$PMID" "$MARK" && ok "a PASS on our probe's headers records the marker" || bad "marker" "$(cat "$TMP/hc.out")"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=1\n' "$TMP/msmtprc" >"$TMP/config-other"
-[ "$(SMTP_EGRESS_CONFIG="$TMP/config-other"; se_load_config; se_probe_marker)" != "$MARK" ] \
+[ "$(MAIL_CLOAK_CONFIG="$TMP/config-other"; se_load_config; se_probe_marker)" != "$MARK" ] \
   && ok "another SOCKS endpoint → another marker key" || bad "key" "same key"
-unset SMTP_EGRESS_CONFIG
+unset MAIL_CLOAK_CONFIG
 
 echo "header-check.sh self-probe normalisation"
 same() { # want a b
@@ -208,28 +208,28 @@ same() { # want a b
 }
 same same      "alice@example.com"            "ALICE@Example.COM"
 same same      "Alice <alice@example.com>"    "alice+probe@example.com"
-# The Gmail rule, exercised on example domains (SMTP_EGRESS_DOTLESS_DOMAINS) so no
+# The Gmail rule, exercised on example domains (MAIL_CLOAK_DOTLESS_DOMAINS) so no
 # real-provider address sits in this public repo.
-export SMTP_EGRESS_DOTLESS_DOMAINS="example.org,example.net"
+export MAIL_CLOAK_DOTLESS_DOMAINS="example.org,example.net"
 same same      "a.li.ce@example.org"          "alice+x@example.net"
 same different "a.li.ce@example.com"          "alice@example.com"
-unset SMTP_EGRESS_DOTLESS_DOMAINS
+unset MAIL_CLOAK_DOTLESS_DOMAINS
 same different "a.lice@example.com"           "alice@example.com"
 same different "alice@example.com"            "probe@example.net"
 
 echo "header-check.sh refuses a self-probe"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_RECIPIENT=Alice+probe@Example.com\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-self"
-out=$(PATH="$TMP/bin:$PATH" SMTP_EGRESS_CONFIG="$TMP/config-self" XDG_STATE_HOME="$TMP/state" bash "$HC" --dry-run 2>&1); rc=$?
+out=$(PATH="$TMP/bin:$PATH" MAIL_CLOAK_CONFIG="$TMP/config-self" XDG_STATE_HOME="$TMP/state" bash "$HC" --dry-run 2>&1); rc=$?
 [ "$rc" != 0 ] && case "$out" in *"sending mailbox"*) true ;; *) false ;; esac \
   && ok "PROBE_RECIPIENT == the account's from → refuse" || bad "self probe" "rc=$rc $out"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_RECIPIENT=probe@example.net\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-probe"
-out=$(PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config-probe" XDG_STATE_HOME="$TMP/state" bash "$HC" --dry-run 2>&1); rc=$?
+out=$(PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config-probe" XDG_STATE_HOME="$TMP/state" bash "$HC" --dry-run 2>&1); rc=$?
 [ "$rc" = 0 ] && case "$out" in *"DRY RUN"*) true ;; *) false ;; esac && ok "--dry-run builds a probe and sends nothing" || bad "probe dry" "rc=$rc $out"
 
 echo "header-check.sh probe read-back with himalaya (stub) through the proxy"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_RECIPIENT=probe@example.net\nPROBE_IMAP_SERVER=imap.example.net\nPROBE_IMAP_PASSWORDCOMMAND=printenv PROBE_PW\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-rb"
-RB() { PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config-rb" XDG_STATE_HOME="$TMP/rbstate" \
-  SMTP_EGRESS_PROBE_TRIES=2 SMTP_EGRESS_PROBE_SLEEP=0 bash "$HC" 2>&1; }
+RB() { PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config-rb" XDG_STATE_HOME="$TMP/rbstate" \
+  MAIL_CLOAK_PROBE_TRIES=2 MAIL_CLOAK_PROBE_SLEEP=0 bash "$HC" 2>&1; }
 rm -f "$TMP/him.argv"; out=$(RB); rc=$?
 [ "$rc" = 0 ] && case "$out" in *"header-check: PASS"*"recorded PASS"*) true ;; *) false ;; esac \
   && ok "probe sent, read back, asserted PASS and recorded" || bad "read-back" "rc=$rc $out"
@@ -241,11 +241,11 @@ grep -q -- '--seen' "$TMP/him.argv" && bad "rb seen" "--seen passed" || ok "read
 [ -z "$(find "$TMP/rbstate" -name 'himalaya-*.toml')" ] && ok "read-back config removed" || bad "rb cleanup" "left"
 out=$(STUB_HOP=198.51.100.99 RB); rc=$?
 [ "$rc" = 1 ] && case "$out" in *"LEAK: 198.51.100.99"*) true ;; *) false ;; esac && ok "a leaking first hop read back → FAIL" || bad "rb leak" "rc=$rc $out"
-grep -rl imaplib "$ROOT/scripts" | grep -v smtp-egress-guard.js | grep -q . && bad "no imaplib" "a script still uses imaplib" || ok "no script connects with imaplib"
+grep -rl imaplib "$ROOT/scripts" | grep -v mail-cloak-guard.js | grep -q . && bad "no imaplib" "a script still uses imaplib" || ok "no script connects with imaplib"
 
 echo "new-eml.sh"
 printf 'Hello Bob,\nsee you on Friday.\n' >"$TMP/body.txt"
-NE=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to '"Doe, Bob" <bob@example.net>' --cc carol@example.net \
+NE=$(MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to '"Doe, Bob" <bob@example.net>' --cc carol@example.net \
   --bcc dave@example.org --subject 'Grüße — plan' --body-file "$TMP/body.txt" 2>&1); rc=$?
 [ "$rc" = 0 ] && case "$NE" in "$SE_STATE_DIR/outbox/"*.eml) true ;; *) false ;; esac && ok "writes to outbox/<msgid>.eml" || bad "path" "rc=$rc $NE"
 python3 -I - "$NE" <<'PY' && ok "CRLF, UTC Date, Message-ID, MIME, utf-8, CTE, RFC 2047 Subject, From from msmtp" || bad "eml shape" "$(head -c 600 "$NE")"
@@ -273,7 +273,7 @@ bash "$ROOT/scripts/new-eml.sh" --to nobody --subject x --body-file "$TMP/body.t
 [ "$rc" = 2 ] && ok "a --to that is not an address → exit 2" || bad "bad --to" "rc=$rc"
 
 echo "msmtprc parsing (1.0.0 regression: from read without the password env)"
-NE2=$(env -u SMTP_PW SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject x --body-file "$TMP/body.txt" 2>&1); rc=$?
+NE2=$(env -u SMTP_PW MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject x --body-file "$TMP/body.txt" 2>&1); rc=$?
 [ "$rc" = 0 ] && grep -q '^From: alice@example.com' "$NE2" && ok "new-eml.sh reads from with SMTP_PW unset (stub --pretend exits 78)" || bad "regression" "rc=$rc $NE2"
 field() { SE_MSMTP_CONFIG="$1" SE_MSMTP_ACCOUNT="$2" se_msmtp_field "$3"; }
 printf '# c\ndefaults\nfrom default@example.com\nport 587\n\naccount base\nuser base@example.com\n\naccount child : base\nfrom "child@example.com"\n\naccount plain\nhost h\n\naccount default : child\n' >"$TMP/rc-many"
@@ -288,7 +288,7 @@ printf 'account t\nfrom t@example.com\npasswordeval "touch %s/pw-ran"\n' "$TMP" 
 
 echo "doctor.sh"
 chmod 600 "$TMP/config"
-D() { SMTP_EGRESS_CONFIG="${1:-$TMP/config}" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1; }
+D() { MAIL_CLOAK_CONFIG="${1:-$TMP/config}" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1; }
 D; rc=$?
 [ "$rc" = 0 ] && ok "all rows ok → exit 0" || bad "doctor ok" "rc=$rc $(cat "$TMP/doc.out")"
 grep -q 'SECRET-COMMAND' "$TMP/doc.out" && bad "doctor secret" "--pretend block printed" || ok "never prints the --pretend block"
@@ -311,15 +311,15 @@ D "$TMP/config-closed"; rc=$?
 [ "$rc" = 1 ] && grep -q 'socks *: FAIL' "$TMP/doc.out" && ok "closed SOCKS port → FAIL, exit 1" || bad "doctor closed" "rc=$rc $(cat "$TMP/doc.out")"
 
 echo "new-eml.sh threading"
-NR=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: Hello' \
+NR=$(MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: Hello' \
   --body-file "$TMP/body.txt" --in-reply-to 'm2@example.net' --references '<m0@example.net> <m1@example.net>' 2>&1); rc=$?
 [ "$rc" = 0 ] && grep -q $'^In-Reply-To: <m2@example.net>\r$' "$NR" && ok "--in-reply-to (brackets added)" || bad "irt" "rc=$rc $NR"
 grep -q $'^References: <m0@example.net> <m1@example.net> <m2@example.net>\r$' "$NR" && ok "--references keeps the chain and ends with the parent" || bad "refs" "$(grep -i references "$NR")"
-NR2=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: x' --body-file "$TMP/body.txt" --in-reply-to '<p@example.net>' 2>&1)
+NR2=$(MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: x' --body-file "$TMP/body.txt" --in-reply-to '<p@example.net>' 2>&1)
 grep -q $'^References: <p@example.net>\r$' "$NR2" && ok "--in-reply-to alone sets References to the parent" || bad "refs default" "$(grep -i references "$NR2")"
 bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject x --body-file "$TMP/body.txt" --from alice@example.com --in-reply-to 'not an id' >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "a malformed --in-reply-to → exit 2" || bad "bad irt" "rc=$rc"
-NE3=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'plain' --body-file "$TMP/body.txt" 2>&1)
+NE3=$(MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'plain' --body-file "$TMP/body.txt" 2>&1)
 grep -qiE '^(In-Reply-To|References):' "$NE3" && bad "no thread headers" "added without asking" || ok "no threading headers unless asked"
 
 echo "doctor.sh send/read readiness, sweep, warnings"
@@ -327,17 +327,17 @@ printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nIMAP_USER=reader@exa
 D "$TMP/config-readonly"; rc=$?
 [ "$rc" = 1 ] && grep -q 'send-ready *: NO' "$TMP/doc.out" && grep -q 'read-ready *: yes' "$TMP/doc.out" \
   && ok "no msmtprc: not send-ready (exit 1) but read-ready" || bad "doc split" "rc=$rc $(cat "$TMP/doc.out")"
-SMTP_EGRESS_CONFIG="$TMP/config-readonly" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
+MAIL_CLOAK_CONFIG="$TMP/config-readonly" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
 [ "$rc" = 0 ] && ok "doctor.sh --read exits 0 when read-ready, msmtp rows aside" || bad "doc --read" "rc=$rc $(cat "$TMP/doc.out")"
 mkdir -p "$TMP/nohim"; for t in curl msmtp; do cp "$TMP/bin/$t" "$TMP/nohim/"; done
 env PATH="$TMP/nohim:/usr/bin:/bin:$(dirname "$(command -v python3)"):$(dirname "$(command -v node)")" STUB_DIR="$TMP" \
-  SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
+  MAIL_CLOAK_CONFIG="$TMP/config" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
 [ "$rc" = 1 ] && grep -q 'read-ready *: NO' "$TMP/doc.out" && ok "no himalaya → --read exits 1" || bad "doc nohim" "rc=$rc $(cat "$TMP/doc.out")"
 bash "$ROOT/scripts/doctor.sh" --bogus >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "doctor.sh with an unknown argument → exit 2" || bad "doc arg" "rc=$rc"
-SD="$TMP/sweep/smtp-egress"; mkdir -p "$SD"
+SD="$TMP/sweep/mail-cloak"; mkdir -p "$SD"
 : >"$SD/himalaya-1-old.toml"; touch -t 202601010000 "$SD/himalaya-1-old.toml"; : >"$SD/himalaya-2-new.toml"
-PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/sweep" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1
+PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" MAIL_CLOAK_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/sweep" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1
 [ ! -e "$SD/himalaya-1-old.toml" ] && [ -e "$SD/himalaya-2-new.toml" ] && grep -q 'removed 1 himalaya temp config' "$TMP/doc.out" \
   && ok "sweeps temp configs older than 1 h, keeps a fresh one" || bad "sweep" "$(ls "$SD") $(grep stale "$TMP/doc.out")"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_IMAP_SERVER=imap.example.net\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-half"; chmod 600 "$TMP/config-half"

@@ -8,7 +8,7 @@
 #   inbox.sh folders
 #
 # Every run: egress-check first (abort on failure), then a himalaya TOML GENERATED from
-# the plugin config into a mode-600 temp file under $XDG_STATE_HOME/smtp-egress/, removed
+# the plugin config into a mode-600 temp file under $XDG_STATE_HOME/mail-cloak/, removed
 # on exit. Its proxy is always socks5h://SOCKS_HOST:SOCKS_PORT, so inbox.sh has no unproxied
 # path. Keys: IMAP_SERVER (default imap.gmail.com), IMAP_USER (default the msmtp
 # account's user) and IMAP_PASSWORDCOMMAND (default the msmtp account's passwordeval).

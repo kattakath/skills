@@ -1,5 +1,5 @@
 ---
-name: smtp-egress
+name: mail-cloak
 description: >-
   Sends plain-text email over SMTP through a local SOCKS5 proxy (wireproxy or Tor) so
   the sender's IP never reaches Received: headers, with a human approving every send;
@@ -56,7 +56,7 @@ bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" read 12 --folder "[Gmail]/Spam"   
 bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" folders                                          # allow: mailbox names
 ```
 
-State lives in `${XDG_STATE_HOME:-~/.local/state}/smtp-egress/`:
+State lives in `${XDG_STATE_HOME:-~/.local/state}/mail-cloak/`:
 
 - `outbox/` holds the `.eml` files `new-eml.sh` writes.
 - `sent.jsonl` gets one line per send: ts, message_id, to/cc/bcc arrays, subject, sha256,
@@ -90,7 +90,7 @@ The prompt lists **every To, Cc and Bcc recipient**, the Subject and sha256[:12]
 
 - **egress-check runs first**, and a refusal aborts the read.
 - **The himalaya config is generated per run** into a mode-600 file under
-  `$XDG_STATE_HOME/smtp-egress/`, removed on exit (a killed run's leftover is swept by
+  `$XDG_STATE_HOME/mail-cloak/`, removed on exit (a killed run's leftover is swept by
   doctor.sh after 1 h). Its proxy is always `socks5h://SOCKS_HOST:SOCKS_PORT`, so DNS also
   resolves at the proxy. It holds no SMTP backend, so it cannot send.
 - **`read` never marks a message `\Seen`.** It runs `himalaya message read` without
@@ -121,7 +121,7 @@ The prompt lists **every To, Cc and Bcc recipient**, the Subject and sha256[:12]
 It protects **sends and mailbox changes**, and it **asks on any read that is not
 inbox.sh**: himalaya with an explicit config (`-c`, `--config`, `HIMALAYA_CONFIG`), curl
 to `imap(s)://`/`pop3(s)://`, python that uses IMAP, `message read --seen`, and any
-`SMTP_EGRESS_*` override in front of a plugin script. It cannot make an arbitrary read
+`MAIL_CLOAK_*` override in front of a plugin script. It cannot make an arbitrary read
 proxied: only inbox.sh is. A plain `himalaya envelope list` with the user's own default
 config is allowed, and goes wherever that config says.
 
@@ -138,7 +138,7 @@ config is allowed, and goes wherever that config says.
 
 ## Config (the operator writes it by hand; never in a repo)
 
-`${SMTP_EGRESS_CONFIG:-$XDG_CONFIG_HOME/smtp-egress/config}`, `KEY=VALUE`, mode **600**.
+`${MAIL_CLOAK_CONFIG:-$XDG_CONFIG_HOME/mail-cloak/config}`, `KEY=VALUE`, mode **600**.
 It is parsed, never sourced, so a `$(…)` in a value is inert text.
 
 | Key | Meaning |

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * PreToolUse guard for smtp-egress: a human approves every email before it leaves.
+ * PreToolUse guard for mail-cloak: a human approves every email before it leaves.
  *
  * Design rule: ASK WHEN UNSURE. This guard can only ask, never deny, so a false ask
  * costs one click and a false allow lets an email leave with no human in the loop.
@@ -240,7 +240,7 @@ class Unsure extends Error {}
 
 const base = (w) => String(w).split("/").pop();
 // Every script the plugin ships. send/header-check/inbox have argument rules; the others
-// only read or write local files, and ask only under an SMTP_EGRESS_* override.
+// only read or write local files, and ask only under a MAIL_CLOAK_* override.
 const PLUGIN_SCRIPT = /^(send|header-check|inbox|doctor|egress-check|new-eml)\.sh$/;
 const SHELL = /^(ba|z|da|k|mk|a)?sh$/;
 const SMTP_PORT_WORD = /^(25|465|587)$/;
@@ -285,7 +285,7 @@ function stripRedirects(words) {
 // ── Rule 1 ─────────────────────────────────────────────────────────────────────────
 function pluginRule(script, argv, ctx) {
   const args = stripRedirects(argv);
-  // An SMTP_EGRESS_* assignment anywhere in the call (prefix, env, export) can swap the
+  // An MAIL_CLOAK_* assignment anywhere in the call (prefix, env, export) can swap the
   // config, the state dir or a test-only switch under the script: never sanctioned.
   if (ENV_OVERRIDE.test(ctx.raw)) return ENV_REASON;
   if (/^(doctor|egress-check|new-eml)\.sh$/.test(base(script))) return null;
@@ -310,14 +310,14 @@ function pluginRule(script, argv, ctx) {
   if (dry || (headers && !headers.startsWith("-"))) return null;
   return HC_REASON;
 }
-const ENV_OVERRIDE = /\bSMTP_EGRESS_[A-Za-z0-9_]*=/;
+const ENV_OVERRIDE = /\b(MAIL_CLOAK|SMTP_EGRESS)_[A-Za-z0-9_]*=/; // SMTP_EGRESS_*: the pre-rename prefix
 const ENV_REASON =
-  "smtp-egress: a plugin script runs with an SMTP_EGRESS_* override in the same call, which can swap its config or switch off a safety check. Allow anyway?";
+  "mail-cloak: a plugin script runs with a MAIL_CLOAK_* override in the same call, which can swap its config or switch off a safety check. Allow anyway?";
 const INBOX_OK = new Set(["list", "search", "read", "folders", "-h", "--help"]);
 const INBOX_REASON =
-  "smtp-egress: inbox.sh takes list, search, read or folders; this call is none of them. Allow anyway?";
+  "mail-cloak: inbox.sh takes list, search, read or folders; this call is none of them. Allow anyway?";
 const HC_REASON =
-  "smtp-egress: header-check sends a REAL probe email to PROBE_RECIPIENT through send.sh (egress-check runs inside it, after approval). Approve this send?";
+  "mail-cloak: header-check sends a REAL probe email to PROBE_RECIPIENT through send.sh (egress-check runs inside it, after approval). Approve this send?";
 
 // Addresses in a header value: the addr-spec of each mailbox, display names dropped.
 function addrs(v) {
@@ -368,7 +368,7 @@ function emlSummary(p, cwd) {
 function sendReason(args, cwd) {
   const eml = args.find((a) => !a.startsWith("-"));
   const s = emlSummary(eml, cwd);
-  const head = "smtp-egress: send a REAL email?";
+  const head = "mail-cloak: send a REAL email?";
   const tail = "egress-check runs after approval, inside send.sh, and a refusal aborts the send. Approve?";
   if (!s) return `${head} Recipients: unread, Subject: unread, sha256: unread (${cap(eml || "no .eml argument", 80)}). ${tail}`;
   return `${head} ${s.rcpts}. Subject: ${s.subject}. sha256: ${s.sha}. ${tail}`;
@@ -411,15 +411,15 @@ function himalayaRule(args, ctx) {
   }
   // An explicit config may have no proxy (or a different one): inbox.sh, which generates
   // a proxied config per run, is the sanctioned way to read.
-  if (config) return `smtp-egress: himalaya with an explicit config (-c / --config / HIMALAYA_CONFIG) may connect without this plugin's proxy ${READ_ROUTE}`;
-  if (!pos.length) return info ? null : `smtp-egress: bare himalaya runs its interactive account setup, which connects without this plugin's proxy ${MAILBOX}`;
+  if (config) return `mail-cloak: himalaya with an explicit config (-c / --config / HIMALAYA_CONFIG) may connect without this plugin's proxy ${READ_ROUTE}`;
+  if (!pos.length) return info ? null : `mail-cloak: bare himalaya runs its interactive account setup, which connects without this plugin's proxy ${MAILBOX}`;
   if (HIM_ANY.has(pos[0])) return null;
   const pair = pos.slice(0, 2).map((p) => HIM_ALIAS[p] || p).join(" ");
   if (info && pos.length <= 2) return null; // `himalaya message delete --help` only prints help
-  if (pair === "message read" && seen) return `smtp-egress: himalaya message read --seen marks the message \\Seen ${MAILBOX}`;
+  if (pair === "message read" && seen) return `mail-cloak: himalaya message read --seen marks the message \\Seen ${MAILBOX}`;
   if (HIM_READ.has(pair)) return null;
-  if (HIM_SEND.has(pair) || pos[0] === "smtp") return `smtp-egress: himalaya ${pair} SENDS mail outside the msmtp gate ${BYPASS}`;
-  return `smtp-egress: himalaya ${pair} is not a known read-only command ${MAILBOX}`;
+  if (HIM_SEND.has(pair) || pos[0] === "smtp") return `mail-cloak: himalaya ${pair} SENDS mail outside the msmtp gate ${BYPASS}`;
+  return `mail-cloak: himalaya ${pair} is not a known read-only command ${MAILBOX}`;
 }
 
 // Shell flags: returns { cmd } for -c strings, { script, args } for a script, or {} for stdin.
@@ -474,8 +474,8 @@ function analyse(words, ctx, depth) {
 
   if (PLUGIN_SCRIPT.test(word)) return pluginRule(w0, rest, ctx);
   // An unexpanded command word ($X, $(…)) cannot be resolved: unsure.
-  if (/[*?[]/.test(w0) || /^\$.*\\/.test(w0)) return "smtp-egress: the command word is a glob or an escaped $'…' string the guard cannot resolve — " + BYPASS;
-  if (w0.includes("$")) return DANGER.test(ctx.raw) ? "smtp-egress: cannot resolve a variable command word in a call that names a mail tool — " + BYPASS : null;
+  if (/[*?[]/.test(w0) || /^\$.*\\/.test(w0)) return "mail-cloak: the command word is a glob or an escaped $'…' string the guard cannot resolve — " + BYPASS;
+  if (w0.includes("$")) return DANGER.test(ctx.raw) ? "mail-cloak: cannot resolve a variable command word in a call that names a mail tool — " + BYPASS : null;
 
   if (word === "su" || ((word === "script" || word === "flock") && rest.some((a) => a === "-c" || a === "--command"))) {
     // su/script/flock -c STRING run that string through a shell.
@@ -516,11 +516,11 @@ function analyse(words, ctx, depth) {
   if (word === "eval") return check(rest.join(" "), ctx, depth + 1);
   if (word === "alias") {
     // An alias whose value names a mail tool turns a later innocent-looking word into it.
-    if (rest.some((a) => DANGER.test(a.slice(a.indexOf("=") + 1)))) return `smtp-egress: an alias that names a mail tool hides what a later command runs ${BYPASS}`;
+    if (rest.some((a) => DANGER.test(a.slice(a.indexOf("=") + 1)))) return `mail-cloak: an alias that names a mail tool hides what a later command runs ${BYPASS}`;
     return null;
   }
   if (word === "shopt" && rest.includes("expand_aliases") && rest.some((a) => /^-[a-z]*s/.test(a))) {
-    return "smtp-egress: shopt -s expand_aliases lets an alias hide what a later command runs, which this guard cannot follow. Allow anyway?";
+    return "mail-cloak: shopt -s expand_aliases lets an alias hide what a later command runs, which this guard cannot follow. Allow anyway?";
   }
   if (word === "nix") {
     const r = rest.indexOf("run");
@@ -551,7 +551,7 @@ function analyse(words, ctx, depth) {
     return check(rest.slice(j).join(" "), ctx, depth + 1);
   }
   if (word === "parallel") {
-    return DANGER.test(rest.join(" ")) ? `smtp-egress: parallel runs a command line that names a mail tool ${BYPASS}` : null;
+    return DANGER.test(rest.join(" ")) ? `mail-cloak: parallel runs a command line that names a mail tool ${BYPASS}` : null;
   }
   if (word === "find") {
     for (let k = 0; k < rest.length; k++) {
@@ -575,35 +575,35 @@ function analyse(words, ctx, depth) {
     if (sa.script !== undefined) {
       if (sa.noexec) return null; // sh -n only parses the script; it never runs it
       if (PLUGIN_SCRIPT.test(base(sa.script))) return pluginRule(sa.script, sa.args, ctx);
-      if (sa.script.includes("$") && DANGER.test(ctx.raw)) return "smtp-egress: a shell runs a script named by a variable in a call that names a mail tool — " + BYPASS;
+      if (sa.script.includes("$") && DANGER.test(ctx.raw)) return "mail-cloak: a shell runs a script named by a variable in a call that names a mail tool — " + BYPASS;
       return null;
     }
     ctx.stdinShell = true; // reads commands from stdin: decided after the whole call
     return null;
   }
   const args = stripRedirects(rest);
-  if (/^msmtp(q|-queue)$/.test(word)) return `smtp-egress: ${word} queues and sends mail ${BYPASS}`;
-  if (word === "git" && args.some((a) => a === "send-email" || a === "imap-send")) return `smtp-egress: git ${args.find((a) => a === "send-email" || a === "imap-send")} sends mail or writes a mailbox ${BYPASS}`;
+  if (/^msmtp(q|-queue)$/.test(word)) return `mail-cloak: ${word} queues and sends mail ${BYPASS}`;
+  if (word === "git" && args.some((a) => a === "send-email" || a === "imap-send")) return `mail-cloak: git ${args.find((a) => a === "send-email" || a === "imap-send")} sends mail or writes a mailbox ${BYPASS}`;
   if (word === "msmtp") {
     if (args.some((a) => a === "--version" || a === "--serverinfo" || a === "-S" || a === "--help" || a === "-h")) return null;
-    return `smtp-egress: msmtp run directly ${BYPASS}`;
+    return `mail-cloak: msmtp run directly ${BYPASS}`;
   }
-  if (word === "sendmail" || word === "swaks") return `smtp-egress: ${word} ${BYPASS}`;
+  if (word === "sendmail" || word === "swaks") return `mail-cloak: ${word} ${BYPASS}`;
   if (word === "mail" || word === "mailx" || word === "mutt" || word === "neomutt") {
     const VAL = new Set(["-s", "-a", "-r", "-S", "-q", "-u", "-A", "-F", "-e", "-H", "-i"]);
     for (let k = 0; k < args.length; k++) {
       const a = args[k];
-      if (a === "-c" || a === "-b") return `smtp-egress: ${word} with a recipient ${BYPASS}`;
+      if (a === "-c" || a === "-b") return `mail-cloak: ${word} with a recipient ${BYPASS}`;
       if (a === "-f") return null; // reads a mailbox
       if (VAL.has(a)) { k++; continue; }
       if (a.startsWith("-")) continue;
-      return `smtp-egress: ${word} with a recipient ${BYPASS}`;
+      return `mail-cloak: ${word} with a recipient ${BYPASS}`;
     }
     return null;
   }
   if (word === "curl") {
-    if (args.some((a) => /^(--url=)?smtps?:\/\//i.test(a))) return `smtp-egress: curl to an smtp(s):// URL ${BYPASS}`;
-    if (args.some((a) => /^--mail-(rcpt|from|auth)(=|$)/.test(a))) return `smtp-egress: curl with SMTP envelope flags sends mail ${BYPASS}`;
+    if (args.some((a) => /^(--url=)?smtps?:\/\//i.test(a))) return `mail-cloak: curl to an smtp(s):// URL ${BYPASS}`;
+    if (args.some((a) => /^--mail-(rcpt|from|auth)(=|$)/.test(a))) return `mail-cloak: curl with SMTP envelope flags sends mail ${BYPASS}`;
     const req = [];
     let upload = false, cfg = false;
     for (let k = 0; k < args.length; k++) {
@@ -622,11 +622,11 @@ function analyse(words, ctx, depth) {
       else if (m[2] === "T") upload = true;
       else cfg = true;
     }
-    if (cfg) return "smtp-egress: curl -K / --config reads its options and URLs from a file the guard cannot see. Allow anyway?";
+    if (cfg) return "mail-cloak: curl -K / --config reads its options and URLs from a file the guard cannot see. Allow anyway?";
     if (args.some((a) => /^(--url=)?(imaps?|pop3s?):\/\//i.test(a))) {
-      if (upload || req.some((r) => MAIL_MUTATION.test(r))) return `smtp-egress: curl changes a mailbox over IMAP/POP3 ${MAILBOX}`;
+      if (upload || req.some((r) => MAIL_MUTATION.test(r))) return `mail-cloak: curl changes a mailbox over IMAP/POP3 ${MAILBOX}`;
       // curl's IMAP FETCH uses BODY[] (sets \Seen) and does not go through the plugin's proxy.
-      return `smtp-egress: curl reads IMAP/POP3 directly, unproxied, and its FETCH marks mail \\Seen ${READ_ROUTE}`;
+      return `mail-cloak: curl reads IMAP/POP3 directly, unproxied, and its FETCH marks mail \\Seen ${READ_ROUTE}`;
     }
   }
   if (word === "himalaya") {
@@ -634,20 +634,20 @@ function analyse(words, ctx, depth) {
     if (r) return r;
   }
   if (word === "openssl" && args.includes("s_client") && args.some((a) => SMTP_PORT_IN.test(a) || SMTP_PORT_WORD.test(a))) {
-    return `smtp-egress: openssl s_client to an SMTP port ${BYPASS}`;
+    return `mail-cloak: openssl s_client to an SMTP port ${BYPASS}`;
   }
   if (/^(nc|ncat|netcat|socat|telnet)$/.test(word) && args.some((a) => SMTP_PORT_WORD.test(a) || SMTP_PORT_IN.test(a))) {
-    return `smtp-egress: ${word} to an SMTP port ${BYPASS}`;
+    return `mail-cloak: ${word} to an SMTP port ${BYPASS}`;
   }
   const interp = interpreterCode(word, args, ctx.heredocs);
   if (interp !== null) {
     if (/^python/.test(word)) {
-      if (/\bsmtplib\b/.test(interp) && /\bSMTP(_SSL)?\s*\(/.test(interp)) return `smtp-egress: python smtplib ${BYPASS}`;
+      if (/\bsmtplib\b/.test(interp) && /\bSMTP(_SSL)?\s*\(/.test(interp)) return `mail-cloak: python smtplib ${BYPASS}`;
       // Any IMAP use asks: FETCH RFC822/BODY[] sets \Seen, and getattr or
       // _simple_command defeat matching method names.
-      if (/imap/i.test(interp)) return `smtp-egress: python uses IMAP directly (unproxied; a FETCH of BODY[] or RFC822 marks mail \\Seen) ${READ_ROUTE}`;
+      if (/imap/i.test(interp)) return `mail-cloak: python uses IMAP directly (unproxied; a FETCH of BODY[] or RFC822 marks mail \\Seen) ${READ_ROUTE}`;
     }
-    if (DANGER.test(interp)) return `smtp-egress: ${word} runs code that names a mail tool ${BYPASS}`;
+    if (DANGER.test(interp)) return `mail-cloak: ${word} runs code that names a mail tool ${BYPASS}`;
   }
   return null;
 }
@@ -669,7 +669,7 @@ function check(cmd, ctx, depth = 0) {
       const hr = check(h, ctx, depth + 1);
       if (hr) return hr;
     }
-    if (DANGER.test(cmd)) return "smtp-egress: a shell reads commands from a pipe that names a mail tool — " + BYPASS;
+    if (DANGER.test(cmd)) return "mail-cloak: a shell reads commands from a pipe that names a mail tool — " + BYPASS;
   }
   return null;
 }
@@ -711,7 +711,7 @@ try {
   // Unsure: overflow or a parse failure. Ask if the text names a mail tool; else fail open.
   // Malformed or truncated JSON leaves rawCmd unset, so test the raw stdin text too.
   if ((rawCmd !== null && DANGER.test(rawCmd)) || (rawCmd === null && DANGER.test(raw))) {
-    ask("smtp-egress: this command could not be parsed with confidence and names a mail tool or send script — check it is not an unapproved send. Allow?");
+    ask("mail-cloak: this command could not be parsed with confidence and names a mail tool or send script — check it is not an unapproved send. Allow?");
   }
   process.exit(0);
 }

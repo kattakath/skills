@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doctor.sh [--read] — one-shot preflight for smtp-egress. Reads and measures; changes
+# doctor.sh [--read] — one-shot preflight for mail-cloak. Reads and measures; changes
 # nothing except that egress-check may start wireproxy when WIREPROXY_CONFIG is set, and
 # stale himalaya-*.toml temp configs (older than 1 h, left by a killed run) are removed.
 #
@@ -62,6 +62,7 @@ echo "── config"
 se_load_config
 if [ -r "$SE_CONFIG_FILE" ]; then
   m=$(mode_of "$SE_CONFIG_FILE")
+  [ -n "${SE_CONFIG_LEGACY:-}" ] && warn legacy "using the pre-rename config $SE_CONFIG_FILE; move the directory to ${XDG_CONFIG_HOME:-$HOME/.config}/mail-cloak/"
   if [ "$m" = 600 ]; then row config "$SE_CONFIG_FILE (mode 600)"
   else bad both config "$SE_CONFIG_FILE has mode ${m:-?}; chmod 600 it"; fi
 else

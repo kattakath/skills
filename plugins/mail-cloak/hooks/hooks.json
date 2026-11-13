@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/smtp-egress-guard.js\"",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/mail-cloak-guard.js\"",
             "timeout": 10
           }
         ]

@@ -7,7 +7,7 @@
 # and no --references, References is set to the parent alone; pass --references to carry
 # the whole chain (read it from the parent with inbox.sh read --raw).
 #
-# Writes a send-ready plain-text .eml to $XDG_STATE_HOME/smtp-egress/outbox/<msgid>.eml
+# Writes a send-ready plain-text .eml to $XDG_STATE_HOME/mail-cloak/outbox/<msgid>.eml
 # and prints its path. Built with Python's email package (policy SMTP), so it has:
 #   CRLF line ends, an RFC 5322 Date (UTC, so no time zone leaks), a Message-ID, MIME-Version 1.0,
 #   Content-Type: text/plain; charset=utf-8, a Content-Transfer-Encoding chosen for the

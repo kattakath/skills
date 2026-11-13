@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # the single-quoted ${CLAUDE_PLUGIN_ROOT} and $( ) are literal commands fed to the guard.
 # shellcheck disable=SC2016
-# Case suite for smtp-egress-guard.js (harness shape copied from mac-app-send's).
+# Case suite for mail-cloak-guard.js (harness shape copied from mac-app-send's).
 #
 # Every case exits 0 (a match ASKS, it never denies), so each is classified from stdout:
 #   ask   — exit 0 and stdout is hook JSON with permissionDecision "ask"
@@ -14,7 +14,7 @@
 set -uo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-GUARD="$ROOT/scripts/smtp-egress-guard.js"
+GUARD="$ROOT/scripts/mail-cloak-guard.js"
 SEND="$ROOT/scripts/send.sh"
 pass=0; fail=0
 
@@ -83,7 +83,7 @@ DEEP_LS=$(python3 -I -c 'print("echo " + "$(" * 5000 + "ls" + ")" * 5000)')
 echo "must ASK — the plugin's scripts, wherever they live"
 expect "S=/x; bash \"\$S/send.sh\" m.eml (review C1)"      "$(mk 'S=/x; bash "$S/send.sh" m.eml')" ask
 expect "\"\$S/send.sh\" m.eml run as the command word"     "$(mk '"$S/send.sh" m.eml')" ask
-expect "bash …/smtp-egress/scripts/send.sh msg.eml"        "$(mk "bash $SEND $EML")" ask
+expect "bash …/mail-cloak/scripts/send.sh msg.eml"        "$(mk "bash $SEND $EML")" ask
 expect "send.sh via \${CLAUDE_PLUGIN_ROOT}"               "$(mk 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/send.sh" /tmp/none.eml')" ask
 expect "send.sh run directly by absolute path"             "$(mk "cd /tmp && $SEND $EML")" ask
 expect "cd elsewhere && ./send.sh (any location)"          "$(mk 'cd /tmp/work && ./send.sh m.eml')" ask
@@ -239,7 +239,7 @@ expect "truncated JSON naming msmtp → asks (raw stdin)"  '{"tool_name":"Bash",
 expect "truncated JSON naming nothing → allow"           '{"tool_name":"Bash","tool_input":{"command":"ls -l' allow
 
 echo "SKILL.md command lines, read from the file (verdict from each line's comment)"
-SKILL="$ROOT/skills/smtp-egress/SKILL.md"
+SKILL="$ROOT/skills/mail-cloak/SKILL.md"
 n=0
 while IFS= read -r line; do
   n=$((n+1))
@@ -257,7 +257,7 @@ expect "null tool_input"    '{"tool_name":"Bash","tool_input":null}' allow
 expect "unrelated tool"     '{"tool_name":"Read","tool_input":{"file_path":"/tmp/x"}}' allow
 
 echo "reason carries the facts, verdict first"
-contains "verdict first"                    "$(mk "bash $SEND $EML")" "smtp-egress: send a REAL email?"
+contains "verdict first"                    "$(mk "bash $SEND $EML")" "mail-cloak: send a REAL email?"
 contains "readable .eml: To"                "$(mk "bash $SEND $EML")" "To: bob@example.net"
 contains "readable .eml: Subject"           "$(mk "bash $SEND $EML")" "Subject: Quarterly notes"
 contains "readable .eml: sha256[:12]"       "$(mk "bash $SEND $EML")" "sha256: $SHA12"

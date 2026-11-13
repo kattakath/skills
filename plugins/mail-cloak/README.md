@@ -1,4 +1,4 @@
-# smtp-egress
+# mail-cloak
 
 Send plain-text email over authenticated SMTP (STARTTLS) through a local **SOCKS5 proxy**,
 so the sending machine's own IP never appears in the `Received:` headers — with a human
@@ -9,14 +9,14 @@ checks the exit before every send, gates every send on a person, and checks the 
 a delivered message.
 
 ```
-/plugin install smtp-egress@kattakath
+/plugin install mail-cloak@kattakath
 ```
 
 ## What it ships
 
 | Component | What it does |
 |---|---|
-| `skills/smtp-egress` | The procedure, the config, and the measured edge cases |
+| `skills/mail-cloak` | The procedure, the config, and the measured edge cases |
 | `scripts/egress-check.sh` | Direct v4/v6 vs proxied exit; **refuses** on the same IP, the same IPv4 /24 or the same IPv6 /48; one JSON line |
 | `scripts/new-eml.sh` | Writes a send-ready `.eml` (CRLF, UTC Date, Message-ID, MIME, RFC 2047 Subject) to the outbox; `--in-reply-to` / `--references` thread a reply |
 | `scripts/send.sh` | egress-check → header and From checks → optional allowlist → `msmtp` with the proxy flags explicit → requires `smtpstatus=250` → `sent.jsonl` with every To/Cc/Bcc recipient and no body. `--dry-run` skips msmtp. A non-250 is reported, never retried |
@@ -50,7 +50,7 @@ a delivered message.
 | `himalaya` deleting, moving, copying, flagging, appending, expunging, `read --seen`, or sending (`message send/compose/reply/forward`, `smtp`) | It changes the mailbox, or sends outside the msmtp gate |
 | `curl imap(s)://` / `pop3(s)://` (any: its FETCH is unproxied and uses `BODY[]`), `curl -K`; python that uses IMAP at all | Same, and the read is unproxied |
 | `himalaya` with an explicit config (`-c`, `--config`, `HIMALAYA_CONFIG`) | It may connect without the proxy: inbox.sh is the sanctioned read |
-| any plugin script with an `SMTP_EGRESS_*` assignment in the same call | It can swap the config or switch off a safety check |
+| any plugin script with an `MAIL_CLOAK_*` assignment in the same call | It can swap the config or switch off a safety check |
 
 **It asks when unsure.** A guard that can only ask, never deny, makes a false ask cheap
 and a false allow the failure. So:

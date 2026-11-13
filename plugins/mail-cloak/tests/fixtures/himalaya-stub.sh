@@ -4,7 +4,7 @@
 #   - copies the -c config to $STUB_DIR/him.conf and its octal mode to $STUB_DIR/him.mode
 #   - answers like himalaya 2.2.1 --json; mail content carries an ANSI escape on purpose
 #   - for header-check: `envelope search … subject <token>` finds the probe .eml whose
-#     name holds <token> in $XDG_STATE_HOME/smtp-egress/ and returns its Message-ID, and
+#     name holds <token> in $XDG_STATE_HOME/mail-cloak/ and returns its Message-ID, and
 #     `message read --raw` returns Gmail-shaped headers for it ($STUB_HOP is the first hop)
 #   - exits $STUB_HIM_RC (default 0)
 set -u
@@ -18,7 +18,7 @@ if [ -n "$cfg" ] && [ -f "$cfg" ]; then
 fi
 rc="${STUB_HIM_RC:-0}"
 words=" $* "
-state="${XDG_STATE_HOME:-$HOME/.local/state}/smtp-egress"
+state="${XDG_STATE_HOME:-$HOME/.local/state}/mail-cloak"
 case "$words" in
   " --version ") echo "himalaya v2.2.1 (stub)" ;;
   *" mailbox list "*)
@@ -29,7 +29,7 @@ case "$words" in
       [ -f "$f" ] && mid=$(sed -n 's/^Message-ID: <\(.*\)>\r*$/\1/p' "$f" | head -1)
     done
     if [ -n "$mid" ]; then
-      printf '{"envelopes":[{"id":"77","message-id":"%s","subject":"smtp-egress header probe %s","from":[{"name":null,"email":"alice@example.com"}],"date":"2026-11-13T10:00:00Z"}]}\n' "$mid" "$token"
+      printf '{"envelopes":[{"id":"77","message-id":"%s","subject":"mail-cloak header probe %s","from":[{"name":null,"email":"alice@example.com"}],"date":"2026-11-13T10:00:00Z"}]}\n' "$mid" "$token"
     else
       printf '{"queued":0,"envelopes":[{"id":"12","message-id":"m1@example.net","subject":"Hello \\u001b[31mthere\\u001b[0m","from":[{"name":"Bob","email":"bob@example.net"}],"date":"2026-11-12T10:00:00Z"}]}\n'
     fi ;;

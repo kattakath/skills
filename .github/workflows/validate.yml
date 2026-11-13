@@ -248,20 +248,20 @@ jobs:
       - name: mac-app-send guard cases
         run: bash plugins/mac-app-send/tests/guard-cases.sh
 
-      # smtp-egress's guard is the human gate in front of every email, so both halves are
+      # mail-cloak's guard is the human gate in front of every email, so both halves are
       # pinned: every send.sh run and every raw SMTP bypass must ASK, and reading or grepping
       # the same words must stay quiet. The egress and send cases feed fixed documentation
       # IPs to the range logic and run send.sh against stub msmtp/curl: nothing is ever sent.
-      - name: smtp-egress cases
+      - name: mail-cloak cases
         run: |
-          bash plugins/smtp-egress/tests/guard-cases.sh
-          bash plugins/smtp-egress/tests/egress-cases.sh
-          bash plugins/smtp-egress/tests/send-cases.sh
-          bash plugins/smtp-egress/tests/inbox-cases.sh
+          bash plugins/mail-cloak/tests/guard-cases.sh
+          bash plugins/mail-cloak/tests/egress-cases.sh
+          bash plugins/mail-cloak/tests/send-cases.sh
+          bash plugins/mail-cloak/tests/inbox-cases.sh
           # The real himalaya against a loopback fake IMAP + SOCKS server (no network in
           # the test): inbox.sh read must fetch BODY.PEEK[] and send no STORE. Run under
           # nix so a himalaya upgrade that starts marking mail \Seen turns this red.
-          nix shell nixpkgs#himalaya -c bash plugins/smtp-egress/tests/himalaya-wire-cases.sh
+          nix shell nixpkgs#himalaya -c bash plugins/mail-cloak/tests/himalaya-wire-cases.sh
 
       # The script's own cases run gpg against throwaway keys with a file-backed clipboard.
       # zsh is the script's interpreter and is not on the ubuntu image; gnupg is.

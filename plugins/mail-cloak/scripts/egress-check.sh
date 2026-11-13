@@ -2,7 +2,7 @@
 # egress-check — is the SOCKS5 proxy really a different network exit than this machine?
 #
 #   1. The SOCKS port must be listening. If it is not and WIREPROXY_CONFIG is set,
-#      start wireproxy detached (log in $XDG_STATE_HOME/smtp-egress/) and wait up to 10 s.
+#      start wireproxy detached (log in $XDG_STATE_HOME/mail-cloak/) and wait up to 10 s.
 #   2. Measure the DIRECT egress, v4 and v6 separately (a missing v6 is fine).
 #   3. Measure the PROXIED egress through the SOCKS port (remote DNS: --socks5-hostname).
 #   4. Refuse when the proxied IP is unmeasured, equals a direct IP, or shares the direct
@@ -19,15 +19,22 @@
 # se_load_config / se_judge / se_port_open; main runs only when executed directly.
 set -uo pipefail
 
-SE_TRACE_URL="${SMTP_EGRESS_TRACE_URL:-https://www.cloudflare.com/cdn-cgi/trace}"
-SE_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/smtp-egress"
+SE_TRACE_URL="${MAIL_CLOAK_TRACE_URL:-https://www.cloudflare.com/cdn-cgi/trace}"
+SE_STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/mail-cloak"
 
 # KEY=VALUE config, parsed — never sourced, so a `$(…)` in a value is inert text.
 # Known keys become SE_<KEY>; anything else is ignored. A leading ~/ expands to $HOME.
 # The SE_* values are read by the scripts that source this file.
 # shellcheck disable=SC2034
 se_load_config() {
-  SE_CONFIG_FILE="${SMTP_EGRESS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/smtp-egress/config}"
+  SE_CONFIG_FILE="${MAIL_CLOAK_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/mail-cloak/config}"
+  # Renamed from smtp-egress (1.2.0): fall back to the old config path so a hand-placed
+  # setup keeps working; doctor.sh says to move it.
+  SE_CONFIG_LEGACY=""
+  if [ -z "${MAIL_CLOAK_CONFIG:-}" ] && [ ! -e "$SE_CONFIG_FILE" ]; then
+    _old="${XDG_CONFIG_HOME:-$HOME/.config}/smtp-egress/config"
+    if [ -e "$_old" ]; then SE_CONFIG_FILE="$_old"; SE_CONFIG_LEGACY=1; fi
+  fi
   SE_MSMTP_CONFIG="" SE_MSMTP_ACCOUNT="" SE_SOCKS_HOST="" SE_SOCKS_PORT=""
   SE_WIREPROXY_CONFIG="" SE_PROBE_RECIPIENT="" SE_ALLOWLIST_FILE=""
   SE_IMAP_SERVER="" SE_IMAP_USER="" SE_IMAP_PASSWORDCOMMAND=""
@@ -129,7 +136,7 @@ se_himalaya_path() {
   mkdir -p "$SE_STATE_DIR" && chmod 700 "$SE_STATE_DIR" 2>/dev/null
   SE_TMP_CFG="$SE_STATE_DIR/himalaya-$$-$RANDOM$RANDOM.toml"
   case "$SE_TMP_CFG" in *:*)
-    echo "smtp-egress: the state dir contains ':', which himalaya -c would split into two paths; set XDG_STATE_HOME to a path without ':'" >&2
+    echo "mail-cloak: the state dir contains ':', which himalaya -c would split into two paths; set XDG_STATE_HOME to a path without ':'" >&2
     SE_TMP_CFG=""; return 2 ;;
   esac
 }
@@ -141,22 +148,22 @@ se_himalaya_path() {
 # SOCKS_HOST/SOCKS_PORT; without a valid endpoint this refuses. No SMTP backend is
 # written, so `message send` through this file cannot work. Values are written as TOML
 # basic strings (JSON escapes); the password command is stored, never run, here.
-# A cleartext imap:// server is refused unless SMTP_EGRESS_TEST_CLEARTEXT_IMAP=1 (the
+# A cleartext imap:// server is refused unless MAIL_CLOAK_TEST_CLEARTEXT_IMAP=1 (the
 # loopback wire test).
 se_himalaya_config() {
-  case "$SE_SOCKS_PORT" in '' | *[!0-9]*) echo "smtp-egress: no valid SOCKS_PORT, refusing to write an unproxied IMAP config" >&2; return 2 ;; esac
-  [ -n "$SE_SOCKS_HOST" ] || { echo "smtp-egress: no SOCKS_HOST, refusing to write an unproxied IMAP config" >&2; return 2; }
-  [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ] || { echo "smtp-egress: config path, IMAP server, user and password command are all required" >&2; return 2; }
-  python3 -I - "$1" "$SE_SOCKS_HOST" "$SE_SOCKS_PORT" "$2" "$3" "$4" "${5:-$3}" "${SMTP_EGRESS_TEST_CLEARTEXT_IMAP:-}" <<'PY'
+  case "$SE_SOCKS_PORT" in '' | *[!0-9]*) echo "mail-cloak: no valid SOCKS_PORT, refusing to write an unproxied IMAP config" >&2; return 2 ;; esac
+  [ -n "$SE_SOCKS_HOST" ] || { echo "mail-cloak: no SOCKS_HOST, refusing to write an unproxied IMAP config" >&2; return 2; }
+  [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ] || { echo "mail-cloak: config path, IMAP server, user and password command are all required" >&2; return 2; }
+  python3 -I - "$1" "$SE_SOCKS_HOST" "$SE_SOCKS_PORT" "$2" "$3" "$4" "${5:-$3}" "${MAIL_CLOAK_TEST_CLEARTEXT_IMAP:-}" <<'PY'
 import json, os, sys
 path, shost, sport, server, user, pwcmd, email, cleartext = sys.argv[1:9]
 if server.lower().startswith("imap://") and cleartext != "1":
-    print("smtp-egress: refusing a cleartext imap:// server; use a bare host (implicit TLS on 993) or imaps://host:port", file=sys.stderr)
+    print("mail-cloak: refusing a cleartext imap:// server; use a bare host (implicit TLS on 993) or imaps://host:port", file=sys.stderr)
     sys.exit(2)
 host = f"[{shost}]" if ":" in shost else shost
 q = json.dumps
 lines = [
-    "[accounts.smtp-egress]",
+    "[accounts.mail-cloak]",
     "default = true",
     f"email = {q(email)}",
     f"proxy.url = {q(f'socks5h://{host}:{sport}')}",

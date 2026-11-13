@@ -382,6 +382,28 @@
       "source": "./plugins/mac-app-send"
     },
     {
+      "name": "mail-cloak",
+      "description": "Send plain-text email over authenticated SMTP through a local SOCKS5 proxy so the sending machine's IP never reaches the Received: headers. Ships an egress check that refuses unless the proxied exit is outside the direct IPv4 /24 and IPv6 /48, a send script that runs it first and logs every send without the body, a header check on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass, plus read-only IMAP through the same proxy via himalaya.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "smtp",
+        "email",
+        "socks5",
+        "proxy",
+        "privacy",
+        "msmtp",
+        "wireproxy",
+        "imap",
+        "himalaya"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mail-cloak",
+      "license": "MIT",
+      "source": "./plugins/mail-cloak"
+    },
+    {
       "name": "mcp-utilities",
       "description": "Two keyless, account-free MCP servers: a persistent knowledge graph (memory, stored under XDG data, not the npx cache) and a sequential-reasoning scaffold. Both pinned; nothing to configure.",
       "author": {
@@ -643,28 +665,6 @@
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-etiquette",
       "license": "MIT",
       "source": "./plugins/slack-etiquette"
-    },
-    {
-      "name": "smtp-egress",
-      "description": "Send plain-text email over authenticated SMTP through a local SOCKS5 proxy so the sending machine's IP never reaches the Received: headers. Ships an egress check that refuses unless the proxied exit is outside the direct IPv4 /24 and IPv6 /48, a send script that runs it first and logs every send without the body, a header check on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass, plus read-only IMAP through the same proxy via himalaya.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "productivity",
-      "keywords": [
-        "smtp",
-        "email",
-        "socks5",
-        "proxy",
-        "privacy",
-        "msmtp",
-        "wireproxy",
-        "imap",
-        "himalaya"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/smtp-egress",
-      "license": "MIT",
-      "source": "./plugins/smtp-egress"
     },
     {
       "name": "statement-extract",

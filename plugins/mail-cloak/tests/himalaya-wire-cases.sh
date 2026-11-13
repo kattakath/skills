@@ -44,8 +44,8 @@ printf 'account test\nfrom alice@example.com\nuser alice@example.com\npasswordev
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nIMAP_SERVER=imap://imap.example.com:143\n' "$TMP/msmtprc" "$SOCKS" >"$TMP/config"
 I() { # label args… — run inbox.sh, mark the log, keep stdout
   printf '=== %s\n' "$1" >>"$LOG"; shift
-  PATH="$TMP/bin:$PATH" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/state" \
-    SMTP_EGRESS_TEST_CLEARTEXT_IMAP=1 bash "$ROOT/scripts/inbox.sh" "$@" 2>&1
+  PATH="$TMP/bin:$PATH" MAIL_CLOAK_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/state" \
+    MAIL_CLOAK_TEST_CLEARTEXT_IMAP=1 bash "$ROOT/scripts/inbox.sh" "$@" 2>&1
 }
 section() { awk -v s="=== $1" '$0==s{on=1;next} /^=== /{on=0} on' "$LOG"; }
 
