@@ -66,7 +66,7 @@ const DAEMON = /\[daemon\]/i;
 
 // A reply that says it is waiting. Checked against the whole reply.
 const WAIT =
-  /\b(?:wait(?:ing)?|watch(?:ing|er)?|background|I'll report|I will report|resume|notif(?:y|ied|ications?)|still running|in flight|when it (?:finishes|lands|completes))\b|⏳/i;
+  /\b(?:wait(?:ing)?|watch(?:ing|er)?|background|I'll report|I will report|resume|notif(?:y|ied|ications?)|still (?:running|working|building|going)|in (?:flight|progress)|(?:when|once) it (?:finishes|lands|completes|is done|returns))\b|⏳/i;
 
 // Prose offers that hand a decision back as free text. Checked on the last paragraph.
 const OFFER =

@@ -30,7 +30,7 @@ It fixes one problem: a reply ends and you cannot tell if Claude is waiting on s
 | Case | Fires when |
 |---|---|
 | `open-question` | The reply's last paragraph ends in `?` or is a prose offer ("want me to", "let me know", "should I", "say the word"…), and no `AskUserQuestion` call came after it. A decision should be click-to-select options, not a question you must type an answer to. |
-| `silent-wait` | Background work is still running and the reply never says it is waiting ("waiting", "watch", "background", "I'll report", "resume", "notified", `⏳`…). |
+| `silent-wait` | Background work is still running and the reply never says it is waiting ("waiting", "watch", "background", "I'll report", "resume", "notified", "still working", "in progress", `⏳`…). |
 
 **Not counted as in flight:** teammates, a `paused` task (nothing is moving), and a deliberate daemon whose description carries `[daemon]` (an SSM tunnel, a log tail). Launch a session-long background loop with `[daemon]` in its description, or every reply that does not mention it warns.
 
