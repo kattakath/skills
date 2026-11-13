@@ -15,8 +15,8 @@
 #
 # Exit: 0 sent (or dry run ok), 1 refused or not accepted (never retried), 2 config error.
 #
-# The plugin never reads a secret: msmtp's own `passwordeval` does. Nothing here prints
-# msmtp's --pretend block (it names the passwordeval command), only single fields of it.
+# The plugin never reads a secret: msmtp's own `passwordeval` does. The account's from and
+# user are read from the msmtprc file itself (se_msmtp_field), never via passwordeval.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

@@ -54,11 +54,49 @@ se_load_config() {
   SE_SOCKS_PORT="${SE_SOCKS_PORT:-25344}"
 }
 
-# One field of msmtp's --pretend block for the configured account (e.g. from, user).
-# Only the named field is ever printed: the block also names the passwordeval command.
+# One setting (e.g. from, user) of the configured msmtp account, read from the msmtprc
+# itself. NOT `msmtp --pretend`: that evaluates passwordeval first, so without the
+# password env it exits 78 and prints nothing (measured with msmtp 1.8.32). Follows
+# msmtp's file rules: `#` comments, `defaults` (settings apply to accounts defined after
+# them), `account NAME [: PARENT[, PARENT…]]`, `account default : NAME`, quoted values.
+# Prints nothing when the account or the setting is missing. Never runs a command.
 se_msmtp_field() {
-  msmtp -C "$SE_MSMTP_CONFIG" -a "$SE_MSMTP_ACCOUNT" --pretend </dev/null 2>/dev/null \
-    | sed -n "s/^$1 = //p" | head -1
+  python3 -I - "$SE_MSMTP_CONFIG" "$SE_MSMTP_ACCOUNT" "$1" <<'PY'
+import shlex, sys
+path, want, key = sys.argv[1:4]
+defaults, accounts, cur = {}, {}, None
+try:
+    lines = open(path, encoding="utf-8", errors="replace").read().splitlines()
+except OSError:
+    sys.exit(0)
+for line in lines:
+    line = line.strip()
+    if not line or line.startswith("#"):
+        continue
+    parts = line.split(None, 1)
+    cmd, arg = parts[0], (parts[1].strip() if len(parts) > 1 else "")
+    if cmd == "defaults":
+        cur = defaults
+        continue
+    if cmd == "account":
+        name, _, parents = arg.partition(":")
+        name = name.strip()
+        acct = dict(defaults)
+        for par in filter(None, (x.strip() for x in parents.split(","))):
+            acct.update(accounts.get(par, {}))
+        accounts[name] = cur = acct
+        continue
+    if cur is None:
+        continue
+    try:
+        val = " ".join(shlex.split(arg)) if arg else ""
+    except ValueError:
+        val = arg
+    cur[cmd] = val
+acct = accounts.get(want)
+if acct and key in acct:
+    print(acct[key])
+PY
 }
 
 # The key a passing header-check is recorded under: the msmtp account, its from and the

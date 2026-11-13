@@ -9,8 +9,8 @@
 # exact account + SOCKS endpoint.
 #
 # Exit: 0 when every row is ok (WARN rows do not fail), 1 when any row FAILS.
-# Never prints a secret: paths, host, port and the account's from only — none of
-# msmtp's --pretend block beyond its from/user lines.
+# Never prints a secret: paths, host, port and the account's from only. from/user are
+# read from the msmtprc file; passwordeval is never run.
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

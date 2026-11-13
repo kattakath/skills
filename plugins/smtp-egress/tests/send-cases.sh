@@ -44,14 +44,24 @@ cat >"$TMP/bin/msmtp" <<'EOF'
 #!/usr/bin/env bash
 for a in "$@"; do
   case "$a" in --version) echo "msmtp version 1.8.32 (stub)"; exit 0 ;; esac
-  case "$a" in --pretend) printf 'host = smtp.example.com\nuser = %s\npasswordeval = SECRET-COMMAND\nfrom = alice@example.com\n' "${STUB_USER:-alice@example.com}"; exit 0 ;; esac
+  # Like real msmtp 1.8.32: --pretend evaluates passwordeval first and exits 78 when it fails.
+  case "$a" in --pretend) [ -n "${SMTP_PW:-}" ] || { echo "msmtp: cannot read output of 'printenv SMTP_PW'" >&2; exit 78; }
+    printf 'host = smtp.example.com\npasswordeval = SECRET-COMMAND\nfrom = wrong@example.org\n'; exit 0 ;; esac
 done
 printf '%s\n' "$@" >"$STUB_DIR/msmtp.argv"
 cat >"$STUB_DIR/msmtp.stdin"
 echo "host=smtp.example.com tls=on auth=on from=alice@example.com recipients=bob@example.net smtpstatus=${STUB_STATUS:-250} smtpmsg='250 OK'"
 EOF
 chmod +x "$TMP/bin/curl" "$TMP/bin/msmtp"
-: >"$TMP/msmtprc"
+# The shape that broke new-eml.sh in 1.0.0: a leading comment, a defaults block, then the
+# account, with passwordeval reading an env var that is NOT set in this suite.
+msmtprc() { # file user
+  printf '# msmtp config for the example account\ndefaults\ntls on\ntls_starttls on\nauth on\n\naccount test\nhost smtp.example.com\nport 587\nfrom alice@example.com\nuser %s\npasswordeval "printenv SMTP_PW"\n' "$2" >"$1"
+  chmod 600 "$1"
+}
+unset SMTP_PW
+msmtprc "$TMP/msmtprc" alice@example.com
+msmtprc "$TMP/msmtprc-alias" primary@example.org
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\n' "$TMP/msmtprc" "$PORT" >"$TMP/config"
 
 eml() { # file [extra-header-lines…]; From alice, To bob, Subject, Date, then extras
@@ -99,7 +109,8 @@ S --dry-run "$TMP/none.eml" >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "a config/usage error exits 2" || bad "exit 2" "rc=$rc"
 S --dry-run "$TMP/c.eml" >/dev/null 2>&1; rc=$?
 [ "$rc" = 1 ] && ok "a refusal exits 1" || bad "exit 1" "rc=$rc"
-out=$(STUB_USER=primary@example.org S --dry-run "$TMP/a.eml" 2>&1); rc=$?
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\n' "$TMP/msmtprc-alias" "$PORT" >"$TMP/config-alias"; chmod 600 "$TMP/config-alias"
+out=$(CFG="$TMP/config-alias" S --dry-run "$TMP/a.eml" 2>&1); rc=$?
 [ "$rc" = 0 ] && case "$out" in *"WARN — the account's from"*) true ;; *) false ;; esac \
   && ok "from != login user → WARN (send-as alias), not a refusal" || bad "send-as warn" "rc=$rc $out"
 STUB_PROXIED=198.51.100.7 refuse "proxy egress == direct" "EQUALS the direct" --dry-run "$TMP/a.eml"
@@ -243,16 +254,30 @@ bash "$ROOT/scripts/new-eml.sh" --subject x --body-file "$TMP/body.txt" >/dev/nu
 bash "$ROOT/scripts/new-eml.sh" --to nobody --subject x --body-file "$TMP/body.txt" --from alice@example.com >/dev/null 2>&1; rc=$?
 [ "$rc" = 2 ] && ok "a --to that is not an address → exit 2" || bad "bad --to" "rc=$rc"
 
+echo "msmtprc parsing (1.0.0 regression: from read without the password env)"
+NE2=$(env -u SMTP_PW SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject x --body-file "$TMP/body.txt" 2>&1); rc=$?
+[ "$rc" = 0 ] && grep -q '^From: alice@example.com' "$NE2" && ok "new-eml.sh reads from with SMTP_PW unset (stub --pretend exits 78)" || bad "regression" "rc=$rc $NE2"
+field() { SE_MSMTP_CONFIG="$1" SE_MSMTP_ACCOUNT="$2" se_msmtp_field "$3"; }
+printf '# c\ndefaults\nfrom default@example.com\nport 587\n\naccount base\nuser base@example.com\n\naccount child : base\nfrom "child@example.com"\n\naccount plain\nhost h\n\naccount default : child\n' >"$TMP/rc-many"
+[ "$(field "$TMP/rc-many" child from)" = child@example.com ] && ok "quoted from in a child account" || bad "child from" "$(field "$TMP/rc-many" child from)"
+[ "$(field "$TMP/rc-many" child user)" = base@example.com ] && ok "user inherited from the parent account" || bad "inherit" "$(field "$TMP/rc-many" child user)"
+[ "$(field "$TMP/rc-many" plain from)" = default@example.com ] && ok "from inherited from defaults" || bad "defaults" "$(field "$TMP/rc-many" plain from)"
+[ "$(field "$TMP/rc-many" default from)" = child@example.com ] && ok "account default : child" || bad "default alias" "$(field "$TMP/rc-many" default from)"
+[ -z "$(field "$TMP/rc-many" nosuch from)" ] && ok "unknown account → empty" || bad "unknown" "non-empty"
+[ -z "$(field "$TMP/absent-rc" test from)" ] && ok "missing msmtprc → empty, no error" || bad "missing rc" "non-empty"
+printf 'account t\nfrom t@example.com\npasswordeval "touch %s/pw-ran"\n' "$TMP" >"$TMP/rc-eval"
+[ "$(field "$TMP/rc-eval" t from)" = t@example.com ] && [ ! -e "$TMP/pw-ran" ] && ok "passwordeval is read as text, never run" || bad "passwordeval" "ran"
+
 echo "doctor.sh"
 chmod 600 "$TMP/config"
-D() { SMTP_EGRESS_CONFIG="${1:-$TMP/config}" STUB_USER="${2:-}" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1; }
+D() { SMTP_EGRESS_CONFIG="${1:-$TMP/config}" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1; }
 D; rc=$?
 [ "$rc" = 0 ] && ok "all rows ok → exit 0" || bad "doctor ok" "rc=$rc $(cat "$TMP/doc.out")"
 grep -q 'SECRET-COMMAND' "$TMP/doc.out" && bad "doctor secret" "--pretend block printed" || ok "never prints the --pretend block"
 awk '/── egress-check/{e=NR} /── proxy/{p=NR} END{exit !(e && p && e < p)}' "$TMP/doc.out" \
   && ok "SOCKS row comes after egress-check" || bad "order" "$(cat "$TMP/doc.out")"
 grep -q 'probe-pass *: recorded' "$TMP/doc.out" && ok "reports the recorded probe PASS" || bad "probe-pass" "$(cat "$TMP/doc.out")"
-D "$TMP/config" primary@example.org; rc=$?
+D "$TMP/config-alias"; rc=$?
 [ "$rc" = 0 ] && grep -q 'send-as *: WARN' "$TMP/doc.out" && ok "send-as alias → WARN row, still exit 0" || bad "doctor warn" "rc=$rc $(cat "$TMP/doc.out")"
 chmod 644 "$TMP/config"; D; rc=$?; chmod 600 "$TMP/config"
 [ "$rc" = 1 ] && grep -q 'config *: FAIL' "$TMP/doc.out" && ok "config not mode 600 → FAIL, exit 1" || bad "doctor mode" "rc=$rc"
