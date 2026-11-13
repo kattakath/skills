@@ -161,7 +161,7 @@ expect "echo naming sendmail and swaks"                    "$(mk 'echo "use send
 expect "cat heredoc writing an smtplib script"             "$(mk $'cat > s.py <<EOF\nimport smtplib\nsmtplib.SMTP("smtp.example.com")\nEOF')" allow
 expect "cat <<EOF | bash with no mail tool"                "$(mk $'cat <<EOF | bash\necho hello\nEOF')" allow
 expect "python3 -c without smtplib"                        "$(mk "python3 -c 'import json; print(1)'")" allow
-expect "python3 importing smtplib, no SMTP("               "$(mk "python3 -c 'import smtplib; print(smtplib.__file__)'")" allow
+expect "python3 code naming smtplib (now DANGER, 1.1.0)"   "$(mk "python3 -c 'import smtplib; print(smtplib.__file__)'")" ask
 expect "curl https://"                                     "$(mk 'curl -fsS https://www.example.com/')" allow
 expect "openssl s_client to :443"                          "$(mk 'openssl s_client -connect www.example.com:443')" allow
 expect "nc -z host 443; telnet host 80"                    "$(mk 'nc -z www.example.com 443; telnet www.example.com 80')" allow
@@ -169,6 +169,74 @@ expect "mail -f reads a mailbox; bare mutt"                "$(mk 'mail -f ~/mbox
 expect "cat / shellcheck / bash -n on send.sh"             "$(mk "cat $SEND; shellcheck $SEND; bash -n $SEND")" allow
 expect "5000-deep \$( with no mail tool"                   "$(mk "$DEEP_LS")" allow
 expect "ordinary bash"                                     "$(mk 'ls -la ~/Documents')" allow
+
+echo "1.1.0 reading mail — must ASK"
+expect "himalaya message delete"                          "$(mk 'himalaya message delete 12')" ask
+expect "himalaya msg rm (aliases)"                        "$(mk 'himalaya msg rm 12')" ask
+expect "himalaya message move"                            "$(mk 'himalaya message move Archive 12')" ask
+expect "himalaya message copy"                            "$(mk 'himalaya -c c.toml message copy Archive 12')" ask
+expect "himalaya message add (append)"                    "$(mk 'himalaya message add -m INBOX < m.eml')" ask
+expect "himalaya flag add seen"                           "$(mk 'himalaya flag add --flag seen 12')" ask
+expect "himalaya flag remove / set"                       "$(mk 'himalaya flag remove --flag flagged 12; himalaya flag set --flag seen 1')" ask
+expect "himalaya message read --seen"                     "$(mk 'himalaya message read --seen 12')" ask
+expect "himalaya message send (bypasses msmtp)"           "$(mk 'himalaya message send < m.eml')" ask
+expect "himalaya message write / reply / forward"         "$(mk 'himalaya message write --to bob@example.net')" ask
+expect "himalaya message reply"                           "$(mk 'himalaya message reply 12 --body hi')" ask
+expect "himalaya message forward"                         "$(mk 'himalaya msg fwd 12 --to bob@example.net')" ask
+expect "himalaya imap expunge"                            "$(mk 'himalaya imap expunge INBOX')" ask
+expect "himalaya imap store"                              "$(mk 'himalaya imap store 1 +FLAGS (\\Deleted)')" ask
+expect "himalaya imap create / delete mailbox"            "$(mk 'himalaya imap create Old; himalaya imap delete Old')" ask
+expect "himalaya imap fetch (can set \\Seen)"             "$(mk 'himalaya imap fetch 1 BODY[]')" ask
+expect "himalaya imap raw"                                "$(mk 'himalaya imap raw "a STORE 1 +FLAGS (\\Seen)"')" ask
+expect "himalaya smtp …"                                  "$(mk 'himalaya smtp send < m.eml')" ask
+expect "himalaya folder delete (older CLI)"               "$(mk 'himalaya folder delete Archive')" ask
+expect "bare himalaya (setup wizard)"                     "$(mk 'himalaya')" ask
+expect "sudo -u X himalaya message delete"                "$(mk 'sudo -u mail himalaya message delete 1')" ask
+expect "inbox.sh unknown subcommand"                      "$(mk 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" delete 12')" ask
+expect "curl imaps:// -X STORE"                           "$(mk "curl imaps://imap.example.com/INBOX -X 'STORE 1 +FLAGS \\\\Deleted'")" ask
+expect "curl imaps:// --request=EXPUNGE"                  "$(mk 'curl --url=imaps://imap.example.com/INBOX --request=EXPUNGE')" ask
+expect "curl pop3s:// -X DELE"                            "$(mk 'curl pop3s://pop.example.com/1 -XDELE')" ask
+expect "curl imaps:// -T (APPEND)"                        "$(mk 'curl imaps://imap.example.com/INBOX -T m.eml')" ask
+expect "python imaplib .store("                           "$(mk "python3 -c 'import imaplib; m=imaplib.IMAP4_SSL(\"imap.example.com\"); m.store(\"1\", \"+FLAGS\", \"\\\\Seen\")'")" ask
+expect "python heredoc imaplib .expunge("                 "$(mk $'python3 - <<EOF\nimport imaplib\nm = imaplib.IMAP4_SSL("imap.example.com")\nm.expunge()\nEOF')" ask
+expect "python imaplib .uid('STORE'"                      "$(mk "python3 -c \"import imaplib; m.uid('STORE', '1', '+FLAGS', 'x')\"")" ask
+
+echo "1.1.0 reading mail — must ALLOW"
+expect "inbox.sh list"                                    "$(mk 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" list -n 5')" allow
+expect "inbox.sh search"                                  "$(mk 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" search --from bob@example.net --since 2026-11-01')" allow
+expect "inbox.sh read"                                    "$(mk 'bash "${CLAUDE_PLUGIN_ROOT}/scripts/inbox.sh" read 12')" allow
+expect "inbox.sh folders"                                 "$(mk 'S=/x; bash "$S/inbox.sh" folders')" allow
+expect "himalaya envelope list (no explicit config)"      "$(mk 'himalaya envelope list --page-size 3')" allow
+expect "himalaya --json envelope search"                  "$(mk 'himalaya --json envelope search -m INBOX subject probe')" allow
+expect "himalaya envelope sr (alias)"                     "$(mk 'himalaya envelope sr from bob')" allow
+expect "himalaya message read (BODY.PEEK)"                "$(mk 'himalaya message read --raw 12')" allow
+expect "himalaya msg read -m Spam"                        "$(mk 'himalaya msg read -m "[Gmail]/Spam" 12')" allow
+expect "himalaya mailbox list / ls"                       "$(mk 'himalaya mailbox list --counts; himalaya mailbox ls')" allow
+expect "himalaya attachment list"                         "$(mk 'himalaya attachment list 12')" allow
+expect "himalaya account list / check"                    "$(mk 'himalaya account list; himalaya account check')" allow
+expect "himalaya imap search / status / list"             "$(mk 'himalaya imap search ALL; himalaya imap status INBOX; himalaya imap list')" allow
+expect "himalaya --version / --help / help"               "$(mk 'himalaya --version; himalaya --help; himalaya help message')" allow
+expect "himalaya message delete --help (help only)"       "$(mk 'himalaya message delete --help')" allow
+expect "command -v himalaya"                              "$(mk 'command -v himalaya')" allow
+expect "grep naming himalaya message delete"              "$(mk "grep -n 'himalaya message delete' notes.md")" allow
+expect "curl imaps:// fetch (unproxied, BODY[])"          "$(mk 'curl imaps://imap.example.com/INBOX;UID=1 -u x')" ask
+expect "curl imaps:// -X FETCH (unproxied)"               "$(mk "curl imaps://imap.example.com/INBOX -X 'FETCH 1 BODY.PEEK[HEADER]'")" ask
+expect "python imaplib fetch (any IMAP use asks)"         "$(mk "python3 -c 'import imaplib; m=imaplib.IMAP4_SSL(\"imap.example.com\"); m.fetch(\"1\", \"(BODY.PEEK[])\")'")" ask
+
+echo "1.1.0 review fixes (cases are DATA: decoded by node from JSON strings, never by a shell)"
+mkj() { node -e 'process.stdout.write(JSON.stringify({tool_name:"Bash",tool_input:{command:JSON.parse(process.argv[1])},cwd:"/tmp"}))' "$1"; }
+n110=0
+while IFS=$'\t' read -r want name cmdjson; do
+  case "$want" in ask | allow) ;; *) continue ;; esac
+  n110=$((n110+1))
+  expect "$name" "$(mkj "$cmdjson")" "$want"
+done < "$ROOT/tests/fixtures/guard-cases-110.tsv"
+if [ "$n110" -ge 60 ]; then printf '  ok    %-58s %s\n' "review-fix cases read" "$n110"; pass=$((pass+1))
+else printf '  FAIL  %-58s %s\n' "review-fix cases read (want >= 60)" "$n110"; fail=$((fail+1)); fi
+RAWB=$(printf '\357\273\277{"tool_name":"Bash","tool_input":{"command":"msmtp -t < m.eml"}}')
+expect "BOM before valid JSON → parsed, asks"            "$RAWB" ask
+expect "truncated JSON naming msmtp → asks (raw stdin)"  '{"tool_name":"Bash","tool_input":{"command":"msmtp -t < m.e' ask
+expect "truncated JSON naming nothing → allow"           '{"tool_name":"Bash","tool_input":{"command":"ls -l' allow
 
 echo "SKILL.md command lines, read from the file (verdict from each line's comment)"
 SKILL="$ROOT/skills/smtp-egress/SKILL.md"

@@ -52,7 +52,8 @@ printf '%s\n' "$@" >"$STUB_DIR/msmtp.argv"
 cat >"$STUB_DIR/msmtp.stdin"
 echo "host=smtp.example.com tls=on auth=on from=alice@example.com recipients=bob@example.net smtpstatus=${STUB_STATUS:-250} smtpmsg='250 OK'"
 EOF
-chmod +x "$TMP/bin/curl" "$TMP/bin/msmtp"
+cp "$ROOT/tests/fixtures/himalaya-stub.sh" "$TMP/bin/himalaya"
+chmod +x "$TMP/bin/curl" "$TMP/bin/msmtp" "$TMP/bin/himalaya"
 # The shape that broke new-eml.sh in 1.0.0: a leading comment, a defaults block, then the
 # account, with passwordeval reading an env var that is NOT set in this suite.
 msmtprc() { # file user
@@ -225,6 +226,23 @@ printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_RECIPIENT=prob
 out=$(PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config-probe" XDG_STATE_HOME="$TMP/state" bash "$HC" --dry-run 2>&1); rc=$?
 [ "$rc" = 0 ] && case "$out" in *"DRY RUN"*) true ;; *) false ;; esac && ok "--dry-run builds a probe and sends nothing" || bad "probe dry" "rc=$rc $out"
 
+echo "header-check.sh probe read-back with himalaya (stub) through the proxy"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_RECIPIENT=probe@example.net\nPROBE_IMAP_SERVER=imap.example.net\nPROBE_IMAP_PASSWORDCOMMAND=printenv PROBE_PW\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-rb"
+RB() { PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config-rb" XDG_STATE_HOME="$TMP/rbstate" \
+  SMTP_EGRESS_PROBE_TRIES=2 SMTP_EGRESS_PROBE_SLEEP=0 bash "$HC" 2>&1; }
+rm -f "$TMP/him.argv"; out=$(RB); rc=$?
+[ "$rc" = 0 ] && case "$out" in *"header-check: PASS"*"recorded PASS"*) true ;; *) false ;; esac \
+  && ok "probe sent, read back, asserted PASS and recorded" || bad "read-back" "rc=$rc $out"
+grep -qx "proxy.url = \"socks5h://127.0.0.1:$PORT\"" "$TMP/him.conf" && ok "read-back config carries the socks5h proxy" || bad "rb proxy" "$(cat "$TMP/him.conf" 2>/dev/null)"
+grep -qx 'imap.sasl.plain.username = "probe@example.net"' "$TMP/him.conf" && grep -qx 'imap.server = "imap.example.net"' "$TMP/him.conf" \
+  && ok "PROBE_IMAP_USER defaults to PROBE_RECIPIENT; PROBE_IMAP_SERVER used" || bad "rb user" "$(cat "$TMP/him.conf" 2>/dev/null)"
+tr '\037' ' ' <"$TMP/him.argv" | grep -q 'message read -m INBOX --raw 77' && ok "reads the matched probe with message read --raw" || bad "rb read" "$(tr '\037' ' ' <"$TMP/him.argv")"
+grep -q -- '--seen' "$TMP/him.argv" && bad "rb seen" "--seen passed" || ok "read-back never passes --seen"
+[ -z "$(find "$TMP/rbstate" -name 'himalaya-*.toml')" ] && ok "read-back config removed" || bad "rb cleanup" "left"
+out=$(STUB_HOP=198.51.100.99 RB); rc=$?
+[ "$rc" = 1 ] && case "$out" in *"LEAK: 198.51.100.99"*) true ;; *) false ;; esac && ok "a leaking first hop read back → FAIL" || bad "rb leak" "rc=$rc $out"
+grep -rl imaplib "$ROOT/scripts" | grep -v smtp-egress-guard.js | grep -q . && bad "no imaplib" "a script still uses imaplib" || ok "no script connects with imaplib"
+
 echo "new-eml.sh"
 printf 'Hello Bob,\nsee you on Friday.\n' >"$TMP/body.txt"
 NE=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to '"Doe, Bob" <bob@example.net>' --cc carol@example.net \
@@ -281,11 +299,58 @@ D "$TMP/config-alias"; rc=$?
 [ "$rc" = 0 ] && grep -q 'send-as *: WARN' "$TMP/doc.out" && ok "send-as alias → WARN row, still exit 0" || bad "doctor warn" "rc=$rc $(cat "$TMP/doc.out")"
 chmod 644 "$TMP/config"; D; rc=$?; chmod 600 "$TMP/config"
 [ "$rc" = 1 ] && grep -q 'config *: FAIL' "$TMP/doc.out" && ok "config not mode 600 → FAIL, exit 1" || bad "doctor mode" "rc=$rc"
+grep -q 'himalaya *: himalaya v2.2.1' "$TMP/doc.out" && ok "doctor reports himalaya's version" || bad "doc him" "$(cat "$TMP/doc.out")"
+grep -q 'imap *: reading configured: imap.gmail.com via socks5h://127.0.0.1:' "$TMP/doc.out" && ok "doctor imap row: reading configured (msmtp defaults)" || bad "doc imap" "$(cat "$TMP/doc.out")"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nIMAP_HOST=imap.example.net\nIMAP_PASSWORDEVAL=x\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-legacy"; chmod 600 "$TMP/config-legacy"
+D "$TMP/config-legacy"; rc=$?
+[ "$rc" = 0 ] && grep -q 'imap-keys *: WARN — IMAP_HOST IMAP_PASSWORDEVAL are 1.0.x keys' "$TMP/doc.out" && ok "1.0.x IMAP keys → WARN, still exit 0" || bad "doc legacy" "rc=$rc $(cat "$TMP/doc.out")"
 D "$TMP/absent"; rc=$?
 [ "$rc" = 1 ] && ok "missing config → exit 1" || bad "doctor missing" "rc=$rc"
 printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\n' "$TMP/msmtprc" "$CLOSEDP" >"$TMP/config-closed"; chmod 600 "$TMP/config-closed"
 D "$TMP/config-closed"; rc=$?
 [ "$rc" = 1 ] && grep -q 'socks *: FAIL' "$TMP/doc.out" && ok "closed SOCKS port → FAIL, exit 1" || bad "doctor closed" "rc=$rc $(cat "$TMP/doc.out")"
+
+echo "new-eml.sh threading"
+NR=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: Hello' \
+  --body-file "$TMP/body.txt" --in-reply-to 'm2@example.net' --references '<m0@example.net> <m1@example.net>' 2>&1); rc=$?
+[ "$rc" = 0 ] && grep -q $'^In-Reply-To: <m2@example.net>\r$' "$NR" && ok "--in-reply-to (brackets added)" || bad "irt" "rc=$rc $NR"
+grep -q $'^References: <m0@example.net> <m1@example.net> <m2@example.net>\r$' "$NR" && ok "--references keeps the chain and ends with the parent" || bad "refs" "$(grep -i references "$NR")"
+NR2=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'Re: x' --body-file "$TMP/body.txt" --in-reply-to '<p@example.net>' 2>&1)
+grep -q $'^References: <p@example.net>\r$' "$NR2" && ok "--in-reply-to alone sets References to the parent" || bad "refs default" "$(grep -i references "$NR2")"
+bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject x --body-file "$TMP/body.txt" --from alice@example.com --in-reply-to 'not an id' >/dev/null 2>&1; rc=$?
+[ "$rc" = 2 ] && ok "a malformed --in-reply-to → exit 2" || bad "bad irt" "rc=$rc"
+NE3=$(SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/new-eml.sh" --to bob@example.net --subject 'plain' --body-file "$TMP/body.txt" 2>&1)
+grep -qiE '^(In-Reply-To|References):' "$NE3" && bad "no thread headers" "added without asking" || ok "no threading headers unless asked"
+
+echo "doctor.sh send/read readiness, sweep, warnings"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nIMAP_USER=reader@example.com\nIMAP_PASSWORDCOMMAND=printenv R\n' "$TMP/absent-rc" "$PORT" >"$TMP/config-readonly"; chmod 600 "$TMP/config-readonly"
+D "$TMP/config-readonly"; rc=$?
+[ "$rc" = 1 ] && grep -q 'send-ready *: NO' "$TMP/doc.out" && grep -q 'read-ready *: yes' "$TMP/doc.out" \
+  && ok "no msmtprc: not send-ready (exit 1) but read-ready" || bad "doc split" "rc=$rc $(cat "$TMP/doc.out")"
+SMTP_EGRESS_CONFIG="$TMP/config-readonly" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
+[ "$rc" = 0 ] && ok "doctor.sh --read exits 0 when read-ready, msmtp rows aside" || bad "doc --read" "rc=$rc $(cat "$TMP/doc.out")"
+mkdir -p "$TMP/nohim"; for t in curl msmtp; do cp "$TMP/bin/$t" "$TMP/nohim/"; done
+env PATH="$TMP/nohim:/usr/bin:/bin:$(dirname "$(command -v python3)"):$(dirname "$(command -v node)")" STUB_DIR="$TMP" \
+  SMTP_EGRESS_CONFIG="$TMP/config" bash "$ROOT/scripts/doctor.sh" --read >"$TMP/doc.out" 2>&1; rc=$?
+[ "$rc" = 1 ] && grep -q 'read-ready *: NO' "$TMP/doc.out" && ok "no himalaya → --read exits 1" || bad "doc nohim" "rc=$rc $(cat "$TMP/doc.out")"
+bash "$ROOT/scripts/doctor.sh" --bogus >/dev/null 2>&1; rc=$?
+[ "$rc" = 2 ] && ok "doctor.sh with an unknown argument → exit 2" || bad "doc arg" "rc=$rc"
+SD="$TMP/sweep/smtp-egress"; mkdir -p "$SD"
+: >"$SD/himalaya-1-old.toml"; touch -t 202601010000 "$SD/himalaya-1-old.toml"; : >"$SD/himalaya-2-new.toml"
+PATH="$TMP/bin:$PATH" STUB_DIR="$TMP" SMTP_EGRESS_CONFIG="$TMP/config" XDG_STATE_HOME="$TMP/sweep" bash "$ROOT/scripts/doctor.sh" >"$TMP/doc.out" 2>&1
+[ ! -e "$SD/himalaya-1-old.toml" ] && [ -e "$SD/himalaya-2-new.toml" ] && grep -q 'removed 1 himalaya temp config' "$TMP/doc.out" \
+  && ok "sweeps temp configs older than 1 h, keeps a fresh one" || bad "sweep" "$(ls "$SD") $(grep stale "$TMP/doc.out")"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_IMAP_SERVER=imap.example.net\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-half"; chmod 600 "$TMP/config-half"
+D "$TMP/config-half"; rc=$?
+[ "$rc" = 0 ] && grep -q 'probe-imap *: WARN — only one of PROBE_IMAP_SERVER' "$TMP/doc.out" && ok "only PROBE_IMAP_SERVER set → WARN" || bad "half 1" "rc=$rc $(cat "$TMP/doc.out")"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nPROBE_IMAP_PASSWORDCOMMAND=x\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-half2"; chmod 600 "$TMP/config-half2"
+D "$TMP/config-half2"
+grep -q 'probe-imap *: WARN — only one of' "$TMP/doc.out" && ok "only PROBE_IMAP_PASSWORDCOMMAND set → WARN" || bad "half 2" "$(cat "$TMP/doc.out")"
+D "$TMP/config-rb" 2>/dev/null; chmod 600 "$TMP/config-rb"; D "$TMP/config-rb"
+grep -q 'probe-imap *: WARN' "$TMP/doc.out" && bad "both set" "warned with both keys set" || ok "both PROBE_IMAP keys set → no WARN"
+printf 'MSMTP_CONFIG=%s\nMSMTP_ACCOUNT=test\nSOCKS_PORT=%s\nIMAP_HOST=imap.example.net\nIMAP_USER=probe@example.net\n' "$TMP/msmtprc" "$PORT" >"$TMP/config-leguser"; chmod 600 "$TMP/config-leguser"
+D "$TMP/config-leguser"
+grep -q 'imap-keys *: WARN — IMAP_HOST IMAP_USER are 1.0.x keys' "$TMP/doc.out" && ok "IMAP_USER next to IMAP_HOST is named as a 1.0.x key" || bad "leg user warn" "$(grep imap-keys "$TMP/doc.out")"
 
 echo
 echo "passed ${pass}, failed ${fail}"

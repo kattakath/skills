@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 # new-eml.sh --to ADDR [--to …] [--cc ADDR …] [--bcc ADDR …] --subject TEXT --body-file FILE [--from ADDR]
+#            [--in-reply-to MSGID] [--references "MSGID MSGID …"]
+#
+# A reply threads when In-Reply-To names the parent's Message-ID and References lists the
+# parent's References plus the parent's Message-ID (RFC 5322 §3.6.4). With --in-reply-to
+# and no --references, References is set to the parent alone; pass --references to carry
+# the whole chain (read it from the parent with inbox.sh read --raw).
 #
 # Writes a send-ready plain-text .eml to $XDG_STATE_HOME/smtp-egress/outbox/<msgid>.eml
 # and prints its path. Built with Python's email package (policy SMTP), so it has:
@@ -18,7 +24,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 die_config() { echo "new-eml.sh: $*" >&2; exit 2; }
 
-to=() cc=() bcc=() subject="" body="" from="" have_subject=0
+to=() cc=() bcc=() subject="" body="" from="" have_subject=0 irt="" refs=""
 while [ $# -gt 0 ]; do
   case "$1" in
     --to) to+=("${2:-}"); shift ;;
@@ -27,6 +33,8 @@ while [ $# -gt 0 ]; do
     --subject) subject="${2:-}"; have_subject=1; shift ;;
     --body-file) body="${2:-}"; shift ;;
     --from) from="${2:-}"; shift ;;
+    --in-reply-to) irt="${2:-}"; shift ;;
+    --references) refs="${2:-}"; shift ;;
     -h | --help) sed -n '2,12p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) die_config "unknown argument $1" ;;
   esac
@@ -48,11 +56,26 @@ mkdir -p "$outbox"
 
 # Joined with the unit separator, since a display name may itself contain a comma.
 join() { local IFS=$'\x1f'; printf '%s' "$*"; }
-python3 -I - "$outbox" "$from" "$(join "${to[@]}")" "$(join "${cc[@]+"${cc[@]}"}")" "$(join "${bcc[@]+"${bcc[@]}"}")" "$subject" "$body" <<'PY' || exit 2
+python3 -I - "$outbox" "$from" "$(join "${to[@]}")" "$(join "${cc[@]+"${cc[@]}"}")" "$(join "${bcc[@]+"${bcc[@]}"}")" "$subject" "$body" "$irt" "$refs" <<'PY' || exit 2
 import datetime, email.policy, email.utils, os, re, sys
 from email.message import EmailMessage
 
-outbox, frm, to, cc, bcc, subject, body_path = sys.argv[1:8]
+outbox, frm, to, cc, bcc, subject, body_path, irt, refs = sys.argv[1:10]
+MSGID = re.compile(r"<[^<>\s@]+@[^<>\s@]+>")
+def msgids(v, name):
+    ids = [x if x.startswith("<") else f"<{x}>" for x in v.split()]
+    bad = [x for x in ids if not MSGID.fullmatch(x)]
+    if bad:
+        print(f"new-eml.sh: not a Message-ID in --{name}: {bad[0]!r}", file=sys.stderr)
+        sys.exit(2)
+    return ids
+irt_ids = msgids(irt, "in-reply-to")
+if len(irt_ids) > 1:
+    print("new-eml.sh: --in-reply-to takes one Message-ID", file=sys.stderr)
+    sys.exit(2)
+ref_ids = msgids(refs, "references")
+if irt_ids and irt_ids[0] not in ref_ids:
+    ref_ids.append(irt_ids[0])
 for name, v in (("from", frm), ("to", to), ("cc", cc), ("bcc", bcc)):
     for a in filter(None, v.split("\x1f")):
         if "@" not in email.utils.parseaddr(a)[1]:
@@ -72,6 +95,10 @@ m["Date"] = email.utils.format_datetime(datetime.datetime.now(datetime.timezone.
 domain = email.utils.parseaddr(frm)[1].rpartition("@")[2]
 mid = email.utils.make_msgid(domain=domain)
 m["Message-ID"] = mid
+if irt_ids:
+    m["In-Reply-To"] = irt_ids[0]
+if ref_ids:
+    m["References"] = " ".join(ref_ids)
 m.set_content(body, subtype="plain", charset="utf-8")
 name = re.sub(r"[^A-Za-z0-9._@-]", "_", mid.strip("<>")) + ".eml"
 out = os.path.join(outbox, name)

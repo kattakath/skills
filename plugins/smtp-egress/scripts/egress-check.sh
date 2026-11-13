@@ -30,7 +30,9 @@ se_load_config() {
   SE_CONFIG_FILE="${SMTP_EGRESS_CONFIG:-${XDG_CONFIG_HOME:-$HOME/.config}/smtp-egress/config}"
   SE_MSMTP_CONFIG="" SE_MSMTP_ACCOUNT="" SE_SOCKS_HOST="" SE_SOCKS_PORT=""
   SE_WIREPROXY_CONFIG="" SE_PROBE_RECIPIENT="" SE_ALLOWLIST_FILE=""
-  SE_IMAP_HOST="" SE_IMAP_PORT="" SE_IMAP_USER="" SE_IMAP_PASSWORDEVAL="" SE_IMAP_MAILBOX=""
+  SE_IMAP_SERVER="" SE_IMAP_USER="" SE_IMAP_PASSWORDCOMMAND=""
+  SE_PROBE_IMAP_SERVER="" SE_PROBE_IMAP_USER="" SE_PROBE_IMAP_PASSWORDCOMMAND="" SE_PROBE_IMAP_MAILBOX=""
+  SE_LEGACY_IMAP_KEYS=""
   if [ -r "$SE_CONFIG_FILE" ]; then
     local line key val
     while IFS= read -r line || [ -n "$line" ]; do
@@ -44,11 +46,20 @@ se_load_config() {
       case "$val" in '~/'*) val="$HOME/${val:2}" ;; esac
       case "$key" in
         MSMTP_CONFIG | MSMTP_ACCOUNT | SOCKS_HOST | SOCKS_PORT | WIREPROXY_CONFIG | \
-          PROBE_RECIPIENT | ALLOWLIST_FILE | IMAP_HOST | IMAP_PORT | IMAP_USER | \
-          IMAP_PASSWORDEVAL | IMAP_MAILBOX)
+          PROBE_RECIPIENT | ALLOWLIST_FILE | IMAP_SERVER | IMAP_USER | IMAP_PASSWORDCOMMAND | \
+          PROBE_IMAP_SERVER | PROBE_IMAP_USER | PROBE_IMAP_PASSWORDCOMMAND | PROBE_IMAP_MAILBOX)
           printf -v "SE_$key" '%s' "$val" ;;
+        # 1.0.x keys for header-check's read-back, renamed PROBE_IMAP_* in 1.1.0.
+        IMAP_HOST | IMAP_PORT | IMAP_PASSWORDEVAL | IMAP_MAILBOX)
+          SE_LEGACY_IMAP_KEYS="${SE_LEGACY_IMAP_KEYS:+$SE_LEGACY_IMAP_KEYS }$key" ;;
       esac
     done <"$SE_CONFIG_FILE"
+  fi
+  # IMAP_USER meant the PROBE mailbox's user in 1.0.x and the READING user since 1.1.0.
+  # Next to another 1.0.x key, and with no PROBE_IMAP_USER, it is the old meaning: ignore it.
+  if [ -n "$SE_LEGACY_IMAP_KEYS" ] && [ -n "$SE_IMAP_USER" ] && [ -z "$SE_PROBE_IMAP_USER" ]; then
+    SE_LEGACY_IMAP_KEYS="$SE_LEGACY_IMAP_KEYS IMAP_USER"
+    SE_IMAP_USER=""
   fi
   SE_SOCKS_HOST="${SE_SOCKS_HOST:-127.0.0.1}"
   SE_SOCKS_PORT="${SE_SOCKS_PORT:-25344}"
@@ -106,6 +117,80 @@ se_probe_key() {
     | python3 -I -c 'import hashlib,sys; print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()[:16])'
 }
 se_probe_marker() { printf '%s/probe-%s.pass' "$SE_STATE_DIR" "$(se_probe_key)"; }
+
+# The temp-config protocol, so a config is never left behind and never orphaned by a
+# signal between "created" and "trap set":
+#   SE_TMP_CFG=""; trap 'rm -f -- "$SE_TMP_CFG"' EXIT   (single quotes: expanded at exit,
+#   so a path with quotes or spaces is safe); se_himalaya_path; se_himalaya_config …
+# se_himalaya_path only PICKS the path (in this shell, no subshell); the file appears in
+# se_himalaya_config, after the trap exists. himalaya splits -c on ':' like $PATH, so a
+# state dir containing ':' is refused.
+se_himalaya_path() {
+  mkdir -p "$SE_STATE_DIR" && chmod 700 "$SE_STATE_DIR" 2>/dev/null
+  SE_TMP_CFG="$SE_STATE_DIR/himalaya-$$-$RANDOM$RANDOM.toml"
+  case "$SE_TMP_CFG" in *:*)
+    echo "smtp-egress: the state dir contains ':', which himalaya -c would split into two paths; set XDG_STATE_HOME to a path without ':'" >&2
+    SE_TMP_CFG=""; return 2 ;;
+  esac
+}
+
+# Writes a himalaya 2.x TOML for ONE read-only IMAP account to the NEW file $1 (mode 600,
+# O_EXCL, so an existing file or symlink there is refused). Args:
+#   path server user password-command email
+# The proxy is ALWAYS set (socks5h://, so DNS resolves at the proxy too) from
+# SOCKS_HOST/SOCKS_PORT; without a valid endpoint this refuses. No SMTP backend is
+# written, so `message send` through this file cannot work. Values are written as TOML
+# basic strings (JSON escapes); the password command is stored, never run, here.
+# A cleartext imap:// server is refused unless SMTP_EGRESS_TEST_CLEARTEXT_IMAP=1 (the
+# loopback wire test).
+se_himalaya_config() {
+  case "$SE_SOCKS_PORT" in '' | *[!0-9]*) echo "smtp-egress: no valid SOCKS_PORT, refusing to write an unproxied IMAP config" >&2; return 2 ;; esac
+  [ -n "$SE_SOCKS_HOST" ] || { echo "smtp-egress: no SOCKS_HOST, refusing to write an unproxied IMAP config" >&2; return 2; }
+  [ -n "$1" ] && [ -n "$2" ] && [ -n "$3" ] && [ -n "$4" ] || { echo "smtp-egress: config path, IMAP server, user and password command are all required" >&2; return 2; }
+  python3 -I - "$1" "$SE_SOCKS_HOST" "$SE_SOCKS_PORT" "$2" "$3" "$4" "${5:-$3}" "${SMTP_EGRESS_TEST_CLEARTEXT_IMAP:-}" <<'PY'
+import json, os, sys
+path, shost, sport, server, user, pwcmd, email, cleartext = sys.argv[1:9]
+if server.lower().startswith("imap://") and cleartext != "1":
+    print("smtp-egress: refusing a cleartext imap:// server; use a bare host (implicit TLS on 993) or imaps://host:port", file=sys.stderr)
+    sys.exit(2)
+host = f"[{shost}]" if ":" in shost else shost
+q = json.dumps
+lines = [
+    "[accounts.smtp-egress]",
+    "default = true",
+    f"email = {q(email)}",
+    f"proxy.url = {q(f'socks5h://{host}:{sport}')}",
+    f"imap.server = {q(server)}",
+]
+if server.lower().startswith("imap://"):
+    lines.append("imap.starttls = false")
+lines += [f"imap.sasl.plain.username = {q(user)}", f"imap.sasl.plain.password.command = {q(pwcmd)}"]
+fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, "O_NOFOLLOW", 0), 0o600)
+with os.fdopen(fd, "w") as f:
+    f.write("\n".join(lines) + "\n")
+PY
+}
+
+# Arms the temp-config cleanup for this shell: EXIT removes it; INT/TERM/HUP exit
+# (which runs EXIT). Call BEFORE se_himalaya_path.
+se_arm_cfg_trap() {
+  SE_TMP_CFG=""
+  trap 'rm -f -- "$SE_TMP_CFG"' EXIT
+  trap 'exit 130' INT
+  trap 'exit 143' TERM
+  trap 'exit 129' HUP
+}
+
+# Strips terminal control sequences and C0/C1 controls (keeping tab and newline) from
+# mail content, which is untrusted: a Subject or body must not drive the terminal.
+se_sanitize() {
+  python3 -I -c '
+import re, sys
+t = sys.stdin.buffer.read().decode("utf-8", "replace")
+t = re.sub(r"\x1b\[[0-?]*[ -/]*[@-~]|\x1b\][^\x07\x1b]*(\x07|\x1b\\)?|\x1b.", "", t)
+t = re.sub(r"[\x00-\x08\x0b-\x1f\x7f-\x9f]", "", t.replace("\r\n", "\n"))
+sys.stdout.write(t)'
+}
 
 # Is host:port accepting TCP connections? (python, so no nc/bash-/dev/tcp variance)
 se_port_open() {

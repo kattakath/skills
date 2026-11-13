@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "smtp-egress",
-  "version": "1.0.1",
-  "description": "Send plain-text email over authenticated SMTP (STARTTLS) through a local SOCKS5 proxy, so the sending machine's own IP never reaches the Received: headers — an egress check that refuses unless the proxied exit differs from the direct v4 /24 and v6 /48, a send script that runs it first and logs every send without the body, a header check that proves the result on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass.",
+  "version": "1.1.0",
+  "description": "Send plain-text email over authenticated SMTP (STARTTLS) through a local SOCKS5 proxy, so the sending machine's own IP never reaches the Received: headers — an egress check that refuses unless the proxied exit differs from the direct v4 /24 and v6 /48, a send script that runs it first and logs every send without the body, a header check that proves the result on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass, plus read-only IMAP through the same proxy via himalaya (never marks mail \\Seen).",
   "author": {
     "name": "Ismail Kattakath"
   },
@@ -16,6 +16,8 @@
     "proxy",
     "privacy",
     "msmtp",
-    "wireproxy"
+    "wireproxy",
+    "imap",
+    "himalaya"
   ]
 }

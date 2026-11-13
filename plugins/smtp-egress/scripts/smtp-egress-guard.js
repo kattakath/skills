@@ -20,6 +20,14 @@
  *   through (sudo -u X, timeout -s KILL 5, env, nice -n, xargs, nix … -c, find -exec),
  *   as are bash -lc/-ec strings, eval, and a heredoc or pipe into a shell on stdin.
  *
+ * Rule 3 (1.1.0) — mailbox changes outside inbox.sh. inbox.sh list/search/read/folders
+ *   is allowed (read-only, proxied). A direct `himalaya` is allowed only for its read-only
+ *   subcommands (tree from himalaya 2.2.1 --help); anything that deletes, moves, copies,
+ *   flags, appends, creates, expunges or SENDS (message send/compose/reply/forward, smtp)
+ *   asks, as does `message read --seen` and any subcommand not known to be read-only.
+ *   curl to imap(s)/pop3(s) with a mutating -X or an upload, and python imaplib calling
+ *   store/expunge/delete/move/copy/append, ask too.
+ *
  * Words as DATA never ask: a grep pattern, a printf/echo body, a heredoc to a file.
  *
  * Unsure → ask: nesting past MAX_DEPTH, any parse exception, and the outer catch ask
@@ -34,11 +42,12 @@ const path = require("node:path");
 const crypto = require("node:crypto");
 
 const MAX_DEPTH = 64;
-const DANGER = /\b(msmtp|sendmail|swaks|smtplib|send\.sh|header-check\.sh)\b|smtps?:\/\//i;
+const DANGER = /\b(msmtp[\w-]*|sendmail|swaks|smtplib|imaplib|himalaya|send\.sh|header-check\.sh)\b|(smtps?|imaps?|pop3s?):\/\//i;
 
 // ── Shell parser — copied from mac-app-send's mac-send-guard.js ─────────────────────
 // Plugins install independently, so a shared module cannot be required across them.
-// Two places differ from the original, each marked "FIX vs mac-app-send".
+// The places that differ from mac-app-send 1.1.4 are marked "FIX"; mac-app-send 1.1.5+
+// carries the same fixes.
 // Splits a shell command into simple commands, quote-aware, without running it.
 // Each command is { words, text, heredocs }: `words` are its unquoted-value words,
 // `text` its raw source, `heredocs` the bodies fed to it. Command substitutions
@@ -99,11 +108,13 @@ function commands(src, depth = 0) {
         } else if (src.startsWith("$(", j)) {
           const k = matchParen(src, j + 1);
           out.push(...commands(src.slice(j + 2, k), depth + 1));
+          val += "$()"; // the word now holds a substitution: the command word rule sees it
           j = k + 1;
         } else if (src[j] === "`") {
           const k = src.indexOf("`", j + 1);
           const end = k === -1 ? src.length : k;
           out.push(...commands(src.slice(j + 1, end), depth + 1));
+          val += "$()";
           j = end + 1;
         } else val += src[j++];
       }
@@ -125,6 +136,7 @@ function commands(src, depth = 0) {
       const end = k === -1 ? src.length : k;
       out.push(...commands(src.slice(i + 1, end), depth + 1));
       cur.text += src.slice(i + 1, end + 1);
+      word = (word ?? "") + "$()";
       i = end + 1;
       continue;
     }
@@ -135,8 +147,11 @@ function commands(src, depth = 0) {
       while (src[j] === " " || src[j] === "\t") j++;
       let k = j;
       while (k < src.length && !/[\s;&|<>()]/.test(src[k])) k++;
-      const delim = src.slice(j, k).replace(/['"\\]/g, "");
-      if (delim) pendingHeredocs.push({ delim, owner: cur });
+      const rawDelim = src.slice(j, k);
+      const delim = rawDelim.replace(/['"\\]/g, "");
+      // FIX (1.1.0 review): remember whether the delimiter was quoted. An UNQUOTED body
+      // still expands $( … ) and backticks when the shell reads it.
+      if (delim) pendingHeredocs.push({ delim, owner: cur, quoted: /['"\\]/.test(rawDelim) });
       cur.text += src.slice(i + 1, k);
       i = k;
       continue;
@@ -156,7 +171,9 @@ function commands(src, depth = 0) {
           if (line.replace(/^\t+/, "") === h.delim) break;
           lines.push(line);
         }
-        h.owner.heredocs.push(lines.join("\n"));
+        const body = lines.join("\n");
+        h.owner.heredocs.push(body);
+        if (!h.quoted) out.push(...substitutionsIn(body, depth));
       }
       pendingHeredocs.length = 0;
       close();
@@ -185,6 +202,26 @@ function commands(src, depth = 0) {
   return out;
 }
 
+// FIX (1.1.0 review): the $( … ) and `…` commands inside an unquoted heredoc body — the
+// same expansion the double-quote branch already scans. A backslash escapes the next char.
+function substitutionsIn(text, depth) {
+  const found = [];
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === "\\") { i++; continue; }
+    if (text.startsWith("$(", i)) {
+      const k = matchParen(text, i + 1);
+      found.push(...commands(text.slice(i + 2, k), depth + 1));
+      i = k;
+    } else if (text[i] === "`") {
+      const k = text.indexOf("`", i + 1);
+      const end = k === -1 ? text.length : k;
+      found.push(...commands(text.slice(i + 1, end), depth + 1));
+      i = end;
+    }
+  }
+  return found;
+}
+
 function matchParen(src, at) {
   let depth = 0;
   for (let i = at; i < src.length; i++) {
@@ -202,7 +239,9 @@ function matchParen(src, at) {
 class Unsure extends Error {}
 
 const base = (w) => String(w).split("/").pop();
-const PLUGIN_SCRIPT = /^(send|header-check)\.sh$/;
+// Every script the plugin ships. send/header-check/inbox have argument rules; the others
+// only read or write local files, and ask only under an SMTP_EGRESS_* override.
+const PLUGIN_SCRIPT = /^(send|header-check|inbox|doctor|egress-check|new-eml)\.sh$/;
 const SHELL = /^(ba|z|da|k|mk|a)?sh$/;
 const SMTP_PORT_WORD = /^(25|465|587)$/;
 const SMTP_PORT_IN = /:(25|465|587)\b/;
@@ -223,6 +262,9 @@ const WRAP = {
   xargs: { v: ["-I", "-n", "-P", "-L", "-d", "-E", "-s", "-a", "--arg-file", "--delimiter", "--max-args", "--max-procs", "--replace", "--max-lines", "--eof"] },
   caffeinate: { v: ["-t", "-w"] },
   stdbuf: { v: ["-i", "-o", "-e"] },
+  arch: { v: ["-arch", "-e", "-d"] }, // -arm64 / -x86_64 are plain flags
+  script: { v: ["-t", "-T", "-B", "-I", "-O", "--log-io", "--log-out", "--log-in", "--log-timing", "-E", "--echo"], pos: 1 }, // the typescript file
+  flock: { v: ["-w", "--wait", "--timeout", "-E", "--conflict-exit-code"], pos: 1 }, // the lock file
   nocorrect: { v: [] },
   builtin: { v: [] },
 };
@@ -243,6 +285,14 @@ function stripRedirects(words) {
 // ── Rule 1 ─────────────────────────────────────────────────────────────────────────
 function pluginRule(script, argv, ctx) {
   const args = stripRedirects(argv);
+  // An SMTP_EGRESS_* assignment anywhere in the call (prefix, env, export) can swap the
+  // config, the state dir or a test-only switch under the script: never sanctioned.
+  if (ENV_OVERRIDE.test(ctx.raw)) return ENV_REASON;
+  if (/^(doctor|egress-check|new-eml)\.sh$/.test(base(script))) return null;
+  if (base(script) === "inbox.sh") {
+    // Read-only by construction; anything else is not a known inbox.sh call: unsure.
+    return INBOX_OK.has(args[0]) ? null : INBOX_REASON;
+  }
   if (base(script) === "send.sh") {
     // send.sh reads every argument as a flag or the .eml, so an exact --dry-run IS the flag.
     if (args.includes("--dry-run")) return null;
@@ -260,6 +310,12 @@ function pluginRule(script, argv, ctx) {
   if (dry || (headers && !headers.startsWith("-"))) return null;
   return HC_REASON;
 }
+const ENV_OVERRIDE = /\bSMTP_EGRESS_[A-Za-z0-9_]*=/;
+const ENV_REASON =
+  "smtp-egress: a plugin script runs with an SMTP_EGRESS_* override in the same call, which can swap its config or switch off a safety check. Allow anyway?";
+const INBOX_OK = new Set(["list", "search", "read", "folders", "-h", "--help"]);
+const INBOX_REASON =
+  "smtp-egress: inbox.sh takes list, search, read or folders; this call is none of them. Allow anyway?";
 const HC_REASON =
   "smtp-egress: header-check sends a REAL probe email to PROBE_RECIPIENT through send.sh (egress-check runs inside it, after approval). Approve this send?";
 
@@ -322,6 +378,50 @@ function sendReason(args, cwd) {
 const BYPASS =
   "— it skips egress-check, so the sender's own IP may reach the Received: headers. Use the plugin's scripts/send.sh, which runs egress-check first. Allow anyway?";
 
+// ── Rule 3: mailbox changes ─────────────────────────────────────────────────────────
+const MAILBOX =
+  "— it changes the mailbox outside the plugin. The plugin reads mail only through inbox.sh (read-only, proxied, never marks \\Seen). Allow anyway?";
+const READ_ROUTE =
+  "— read through the plugin's inbox.sh instead, which always uses the SOCKS proxy and never marks \\Seen. Allow anyway?";
+const MAIL_MUTATION = /\b(STORE|EXPUNGE|DELETE|DELE|MOVE|COPY|APPEND|CREATE|RENAME)\b/i;
+// himalaya 2.2.1: global options that take a value, the subcommand aliases from its
+// --help, and the (command, subcommand) pairs that only read.
+const HIM_VAL = new Set(["-c", "--config", "-a", "--account", "-b", "--backend", "--log-level", "--log", "--log-file"]);
+const HIM_ALIAS = { msg: "message", ls: "list", sr: "search", rm: "delete", mv: "move", cp: "copy", save: "add", write: "compose", fwd: "forward", dl: "download", wizard: "configure" };
+const HIM_READ = new Set([
+  "mailbox list", "envelope list", "envelope search", "message read", "attachment list",
+  "account list", "account check",
+  "imap id", "imap list", "imap status", "imap search", "imap sort", "imap thread", "imap flag",
+]);
+const HIM_ANY = new Set(["help", "completion", "manual", "json-schema"]);
+const HIM_SEND = new Set(["message send", "message compose", "message reply", "message forward"]);
+function himalayaRule(args, ctx) {
+  const pos = [];
+  let seen = false, info = false, dd = false, config = /\bHIMALAYA_CONFIG=/.test(ctx.raw);
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (dd) { pos.push(a); continue; } // after `--` every word is positional, not a flag
+    if (a === "--") { dd = true; continue; }
+    if (a === "-c" || a === "--config" || a.startsWith("--config=") || /^-c./.test(a)) config = true;
+    if (HIM_VAL.has(a)) { k++; continue; }
+    if (a === "--seen") seen = true;
+    if (a === "-h" || a === "--help" || a === "-V" || a === "--version") info = true;
+    if (a.startsWith("-")) continue;
+    pos.push(HIM_ALIAS[a] || a);
+  }
+  // An explicit config may have no proxy (or a different one): inbox.sh, which generates
+  // a proxied config per run, is the sanctioned way to read.
+  if (config) return `smtp-egress: himalaya with an explicit config (-c / --config / HIMALAYA_CONFIG) may connect without this plugin's proxy ${READ_ROUTE}`;
+  if (!pos.length) return info ? null : `smtp-egress: bare himalaya runs its interactive account setup, which connects without this plugin's proxy ${MAILBOX}`;
+  if (HIM_ANY.has(pos[0])) return null;
+  const pair = pos.slice(0, 2).map((p) => HIM_ALIAS[p] || p).join(" ");
+  if (info && pos.length <= 2) return null; // `himalaya message delete --help` only prints help
+  if (pair === "message read" && seen) return `smtp-egress: himalaya message read --seen marks the message \\Seen ${MAILBOX}`;
+  if (HIM_READ.has(pair)) return null;
+  if (HIM_SEND.has(pair) || pos[0] === "smtp") return `smtp-egress: himalaya ${pair} SENDS mail outside the msmtp gate ${BYPASS}`;
+  return `smtp-egress: himalaya ${pair} is not a known read-only command ${MAILBOX}`;
+}
+
 // Shell flags: returns { cmd } for -c strings, { script, args } for a script, or {} for stdin.
 function shellArgs(rest) {
   let c = false, n = false;
@@ -340,6 +440,28 @@ function shellArgs(rest) {
   }
 }
 
+// The code an interpreter runs from its arguments (python -c, perl/ruby -e, node -e/-p,
+// osascript -e; short-flag clusters such as -Ic or -le count) plus any heredoc fed to it.
+// null when `word` is not one of them.
+function interpreterCode(word, args, heredocs) {
+  let flag;
+  if (/^python(\d(\.\d+)?)?$/.test(word)) flag = "c";
+  else if (/^(perl|ruby|osascript)$/.test(word)) flag = "eE";
+  else if (/^(node|nodejs|bun|deno)$/.test(word)) flag = "ep";
+  else return null;
+  const parts = [...heredocs];
+  const re = new RegExp(`^-[A-Za-z]*?[${flag}](.*)$`);
+  for (let k = 0; k < args.length; k++) {
+    const a = args[k];
+    if (a === "--eval" || a === "--print") { parts.push(args[k + 1] || ""); k++; continue; }
+    if (a.startsWith("--eval=") || a.startsWith("--print=")) { parts.push(a.slice(a.indexOf("=") + 1)); continue; }
+    if (a.startsWith("--")) continue;
+    const m = a.match(re);
+    if (m) { if (m[1]) parts.push(m[1]); else { parts.push(args[k + 1] || ""); k++; } }
+  }
+  return parts.join("\n");
+}
+
 // Analyse one simple command's words. Returns a reason or null.
 function analyse(words, ctx, depth) {
   if (depth > MAX_DEPTH) throw new Unsure("depth");
@@ -352,8 +474,18 @@ function analyse(words, ctx, depth) {
 
   if (PLUGIN_SCRIPT.test(word)) return pluginRule(w0, rest, ctx);
   // An unexpanded command word ($X, $(…)) cannot be resolved: unsure.
+  if (/[*?[]/.test(w0) || /^\$.*\\/.test(w0)) return "smtp-egress: the command word is a glob or an escaped $'…' string the guard cannot resolve — " + BYPASS;
   if (w0.includes("$")) return DANGER.test(ctx.raw) ? "smtp-egress: cannot resolve a variable command word in a call that names a mail tool — " + BYPASS : null;
 
+  if (word === "su" || ((word === "script" || word === "flock") && rest.some((a) => a === "-c" || a === "--command"))) {
+    // su/script/flock -c STRING run that string through a shell.
+    for (let k = 0; k < rest.length; k++) {
+      const a = rest[k];
+      if (a === "-c" || a === "--command") { const r = check(rest[k + 1] || "", ctx, depth + 1); if (r) return r; }
+      else if (a.startsWith("--command=")) { const r = check(a.slice(10), ctx, depth + 1); if (r) return r; }
+    }
+    return null;
+  }
   if (WRAP[word]) {
     const spec = WRAP[word];
     let j = 0, pos = spec.pos || 0;
@@ -382,9 +514,44 @@ function analyse(words, ctx, depth) {
     return analyse(rest.slice(j), ctx, depth + 1);
   }
   if (word === "eval") return check(rest.join(" "), ctx, depth + 1);
+  if (word === "alias") {
+    // An alias whose value names a mail tool turns a later innocent-looking word into it.
+    if (rest.some((a) => DANGER.test(a.slice(a.indexOf("=") + 1)))) return `smtp-egress: an alias that names a mail tool hides what a later command runs ${BYPASS}`;
+    return null;
+  }
+  if (word === "shopt" && rest.includes("expand_aliases") && rest.some((a) => /^-[a-z]*s/.test(a))) {
+    return "smtp-egress: shopt -s expand_aliases lets an alias hide what a later command runs, which this guard cannot follow. Allow anyway?";
+  }
   if (word === "nix") {
+    const r = rest.indexOf("run");
+    if (r !== -1 && rest.slice(0, r).every((a) => a.startsWith("-"))) {
+      // `nix run <installable> [-- args]` runs the installable's program with those args.
+      const inst = rest.slice(r + 1).find((a) => !a.startsWith("-")) || "";
+      const prog = inst.includes("#") ? inst.split("#").pop().split(".").pop() : base(inst);
+      const dd = rest.indexOf("--");
+      const r2 = analyse([prog, ...(dd === -1 ? [] : rest.slice(dd + 1))], ctx, depth + 1);
+      if (r2) return r2;
+    }
     const k = rest.findIndex((a) => a === "-c" || a === "--command");
     return k === -1 ? null : analyse(rest.slice(k + 1), ctx, depth + 1);
+  }
+  if (word === "nix-shell") {
+    for (let k = 0; k < rest.length; k++) {
+      if (rest[k] === "--run" || rest[k] === "--command") {
+        const r = check(rest[k + 1] || "", ctx, depth + 1);
+        if (r) return r;
+      }
+    }
+    return null;
+  }
+  if (word === "watch") {
+    // watch runs its arguments through `sh -c`: check them as one command line.
+    let j = 0;
+    while (j < rest.length && rest[j].startsWith("-")) j += /^(-n|--interval|-q|--equexit)$/.test(rest[j]) ? 2 : 1;
+    return check(rest.slice(j).join(" "), ctx, depth + 1);
+  }
+  if (word === "parallel") {
+    return DANGER.test(rest.join(" ")) ? `smtp-egress: parallel runs a command line that names a mail tool ${BYPASS}` : null;
   }
   if (word === "find") {
     for (let k = 0; k < rest.length; k++) {
@@ -415,6 +582,8 @@ function analyse(words, ctx, depth) {
     return null;
   }
   const args = stripRedirects(rest);
+  if (/^msmtp(q|-queue)$/.test(word)) return `smtp-egress: ${word} queues and sends mail ${BYPASS}`;
+  if (word === "git" && args.some((a) => a === "send-email" || a === "imap-send")) return `smtp-egress: git ${args.find((a) => a === "send-email" || a === "imap-send")} sends mail or writes a mailbox ${BYPASS}`;
   if (word === "msmtp") {
     if (args.some((a) => a === "--version" || a === "--serverinfo" || a === "-S" || a === "--help" || a === "-h")) return null;
     return `smtp-egress: msmtp run directly ${BYPASS}`;
@@ -432,17 +601,53 @@ function analyse(words, ctx, depth) {
     }
     return null;
   }
-  if (word === "curl" && args.some((a) => /^(--url=)?smtps?:\/\//i.test(a))) return `smtp-egress: curl to an smtp(s):// URL ${BYPASS}`;
+  if (word === "curl") {
+    if (args.some((a) => /^(--url=)?smtps?:\/\//i.test(a))) return `smtp-egress: curl to an smtp(s):// URL ${BYPASS}`;
+    if (args.some((a) => /^--mail-(rcpt|from|auth)(=|$)/.test(a))) return `smtp-egress: curl with SMTP envelope flags sends mail ${BYPASS}`;
+    const req = [];
+    let upload = false, cfg = false;
+    for (let k = 0; k < args.length; k++) {
+      const a = args[k];
+      if (a.startsWith("--")) {
+        if (a === "--request") req.push(args[k + 1] || "");
+        else if (a.startsWith("--request=")) req.push(a.slice(10));
+        else if (a === "--upload-file" || a.startsWith("--upload-file=")) upload = true;
+        else if (a === "--config" || a.startsWith("--config=")) cfg = true;
+        continue;
+      }
+      // Short-flag clusters: -sX VALUE, -XVALUE, -sT FILE, -sK FILE.
+      const m = a.match(/^-([A-Za-z]*?)([XTK])(.*)$/);
+      if (!m) continue;
+      if (m[2] === "X") req.push(m[3] || args[k + 1] || "");
+      else if (m[2] === "T") upload = true;
+      else cfg = true;
+    }
+    if (cfg) return "smtp-egress: curl -K / --config reads its options and URLs from a file the guard cannot see. Allow anyway?";
+    if (args.some((a) => /^(--url=)?(imaps?|pop3s?):\/\//i.test(a))) {
+      if (upload || req.some((r) => MAIL_MUTATION.test(r))) return `smtp-egress: curl changes a mailbox over IMAP/POP3 ${MAILBOX}`;
+      // curl's IMAP FETCH uses BODY[] (sets \Seen) and does not go through the plugin's proxy.
+      return `smtp-egress: curl reads IMAP/POP3 directly, unproxied, and its FETCH marks mail \\Seen ${READ_ROUTE}`;
+    }
+  }
+  if (word === "himalaya") {
+    const r = himalayaRule(args, ctx);
+    if (r) return r;
+  }
   if (word === "openssl" && args.includes("s_client") && args.some((a) => SMTP_PORT_IN.test(a) || SMTP_PORT_WORD.test(a))) {
     return `smtp-egress: openssl s_client to an SMTP port ${BYPASS}`;
   }
   if (/^(nc|ncat|netcat|socat|telnet)$/.test(word) && args.some((a) => SMTP_PORT_WORD.test(a) || SMTP_PORT_IN.test(a))) {
     return `smtp-egress: ${word} to an SMTP port ${BYPASS}`;
   }
-  if (/^python(3(\.\d+)?)?$/.test(word)) {
-    const ci = args.indexOf("-c");
-    const code = [ci !== -1 ? args[ci + 1] || "" : "", ...ctx.heredocs].join("\n");
-    if (/\bsmtplib\b/.test(code) && /\bSMTP(_SSL)?\s*\(/.test(code)) return `smtp-egress: python smtplib ${BYPASS}`;
+  const interp = interpreterCode(word, args, ctx.heredocs);
+  if (interp !== null) {
+    if (/^python/.test(word)) {
+      if (/\bsmtplib\b/.test(interp) && /\bSMTP(_SSL)?\s*\(/.test(interp)) return `smtp-egress: python smtplib ${BYPASS}`;
+      // Any IMAP use asks: FETCH RFC822/BODY[] sets \Seen, and getattr or
+      // _simple_command defeat matching method names.
+      if (/imap/i.test(interp)) return `smtp-egress: python uses IMAP directly (unproxied; a FETCH of BODY[] or RFC822 marks mail \\Seen) ${READ_ROUTE}`;
+    }
+    if (DANGER.test(interp)) return `smtp-egress: ${word} runs code that names a mail tool ${BYPASS}`;
   }
   return null;
 }
@@ -484,8 +689,8 @@ function ask(reason) {
 }
 
 let rawCmd = null;
+let raw = "";
 try {
-  let raw = "";
   try {
     raw = fs.readFileSync(0, "utf8");
   } catch {
@@ -493,7 +698,7 @@ try {
   }
   if (!raw.trim()) process.exit(0);
 
-  const ev = JSON.parse(raw);
+  const ev = JSON.parse(raw.replace(/^\uFEFF/, "")); // a BOM is not JSON
   if (ev.tool_name === "Bash") {
     const input = ev.tool_input || {};
     rawCmd = String(input.command || "");
@@ -504,7 +709,8 @@ try {
   process.exit(0);
 } catch {
   // Unsure: overflow or a parse failure. Ask if the text names a mail tool; else fail open.
-  if (rawCmd !== null && DANGER.test(rawCmd)) {
+  // Malformed or truncated JSON leaves rawCmd unset, so test the raw stdin text too.
+  if ((rawCmd !== null && DANGER.test(rawCmd)) || (rawCmd === null && DANGER.test(raw))) {
     ask("smtp-egress: this command could not be parsed with confidence and names a mail tool or send script — check it is not an unapproved send. Allow?");
   }
   process.exit(0);
