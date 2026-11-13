@@ -59,7 +59,7 @@ KNOWN_CONSUMER = frozenset(
 # is $<PREFIX>_SITE_CONFIG, else $<data_env>/config/site.toml. Anything else in that file is the consumer's.
 OVERLAY_ALLOWED = {
     "consumer": ("default_site", "default_region", "site_hosts"),
-    "plugins": ("sources",),
+    "plugins": ("sources", "python_path", "schema_dirs"),
     "crawl": ("proxy", "refresh"),
 }
 SITE_CONFIG_DEFAULT = ("config", "site.toml")  # under the data root
