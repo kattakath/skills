@@ -24,6 +24,14 @@ So the style lives in `scripts/house_style.py` as data, and the document is gene
 | `skills/gdoc-house-style/scripts/house_style.py` | `Markdown -> .docx` in the house style; all decisions in its `STYLE` table |
 | `skills/gdoc-house-style/scripts/font_probe.py` | Reads an exported PDF and reports which font drew each diagram character, and at what width |
 
+## Identity and style come from a config file
+
+The script carries built-in defaults and **no identity**. A JSON config supplies the author,
+the account expected to own the Doc, and any style override. It is read from `--config`,
+`$GDOC_HOUSE_STYLE_CONFIG`, or `$XDG_CONFIG_HOME/gdoc-house-style/config.json`. Generate that
+file from wherever identity is already declared (on the author's fleet, a Nix home module
+writes it); an unknown style key is an error, not a silent no-op.
+
 ## Measured, not assumed
 
 - **Consolas does not work for box-drawing diagrams in Google Docs.** Its Docs version lacks

@@ -38,10 +38,22 @@ and still could not add page numbers.
    python3 scripts/house_style.py report.md report.docx
    ```
 
+   The script prints the config it used, the author it set, and the account it expects to own
+   the Doc. **No name, account or personal colour belongs in the script or in a prompt:** they
+   come from a JSON config (`--config`, `$GDOC_HOUSE_STYLE_CONFIG`, or
+   `$XDG_CONFIG_HOME/gdoc-house-style/config.json`), which the operator's system configuration
+   generates. Without a config the built-in defaults apply and no author is set.
+
+   ```json
+   {"identity": {"author": "Full Name", "owner": "account@example.com"},
+    "style": {"primary": "0B57D0"}}
+   ```
+
 3. **Import it as a Google Doc.** Upload the `.docx` to Drive with conversion on. With the
    Google Drive connector: `create_file`, `contentMimeType`
    `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, conversion left
-   at its default. Drive returns a native Google Doc.
+   at its default. Drive returns a native Google Doc. **Check the returned `owner` against the
+   "expected owner" the script printed**; a mismatch means the upload went to the wrong account.
 
 4. **Check the rendered result, not the API reply.** Export the Doc to PDF and run:
 

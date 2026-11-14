@@ -1,14 +1,22 @@
 #!/usr/bin/env python3
 """Markdown -> a .docx in the Google Docs house style, ready for Drive to convert into a Google Doc.
 
-    house_style.py <in.md> <out.docx>
+    house_style.py [--config FILE] <in.md> <out.docx>
 
-Every style decision is data in STYLE below; nothing is left to a prompt. Pipeline: pandoc writes
+Every style decision is data; nothing is left to a prompt. STYLE below holds the built-in defaults.
+A JSON config overrides them and supplies the identity, so no person's name or account is written
+in this file:
+
+    {"identity": {"author": "Full Name", "owner": "account@example.com"},
+     "style":    {"primary": "0B57D0", "font": "Google Sans"}}
+
+Config path: --config, else $GDOC_HOUSE_STYLE_CONFIG, else $XDG_CONFIG_HOME/gdoc-house-style/config.json
+(~/.config when XDG_CONFIG_HOME is unset). A missing file means defaults and no author. Pipeline: pandoc writes
 the document through a reference template this script generates, then python-docx applies what a
 template cannot express (table formatting, diagram centring, blank lines, Title Case).
 Requires: pandoc, python-docx.
 """
-import copy, re, subprocess, sys, tempfile, pathlib
+import json, os, re, subprocess, sys, tempfile, pathlib
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
@@ -29,6 +37,25 @@ STYLE = {
     "para_after": 8, "list_after": 3,
     "page_width_pt": 612, "margin_pt": 72,
 }
+IDENTITY = {}        # "author" -> the document's author property; "owner" -> the account expected to own the Doc
+
+
+def load_config(path=None):
+    """Overlay a JSON config on STYLE and IDENTITY. Unknown style keys are an error, not a silent no-op."""
+    path = path or os.environ.get("GDOC_HOUSE_STYLE_CONFIG") or os.path.join(
+        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "gdoc-house-style", "config.json")
+    if not os.path.isfile(path):
+        return None
+    cfg = json.load(open(path, encoding="utf-8"))
+    unknown = set(cfg.get("style", {})) - set(STYLE)
+    if unknown:
+        sys.exit(f"{path}: unknown style key(s): {', '.join(sorted(unknown))}")
+    for k, v in cfg.get("style", {}).items():
+        STYLE[k] = tuple(v) if isinstance(v, list) else v
+    IDENTITY.update(cfg.get("identity", {}))
+    return path
+
+
 SMALL = {"a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "by", "with", "from", "as", "at", "vs", "per", "if", "nor", "but"}
 
 
@@ -248,6 +275,8 @@ def post_process(path):
                 if rf is not None:
                     for a in ("w:ascii", "w:hAnsi", "w:cs", "w:eastAsia"): rf.set(qn(a), S["mono"])
             _blank_after(p._p, d)
+    if IDENTITY.get("author"):
+        d.core_properties.author = d.core_properties.last_modified_by = IDENTITY["author"]
     d.save(path)
 
 
@@ -262,7 +291,15 @@ def build(md_path, out_path):
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
+    args = sys.argv[1:]
+    config = None
+    if args[:1] == ["--config"] and len(args) >= 2:
+        config, args = args[1], args[2:]
+        if not os.path.isfile(config):
+            sys.exit(f"no such config: {config}")
+    if len(args) != 2:
         sys.exit(__doc__)
-    build(sys.argv[1], sys.argv[2])
-    print("wrote", sys.argv[2])
+    used = load_config(config)
+    build(args[0], args[1])
+    print("wrote", args[1], "| config:", used or "none (built-in defaults)",
+          "| author:", IDENTITY.get("author", "not set"), "| expected owner:", IDENTITY.get("owner", "not set"))
