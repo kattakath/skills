@@ -32,7 +32,7 @@ enablement are documented once, in this repo's `CLAUDE.md` — not restated here
 
   | Hook | Does | Why |
   |---|---|---|
-  | PreToolUse `gate` | **Asks** before every call; `KATTAKATH_WORKSPACE_LOCATOR=auto` in settings `env` skips the ask | Off by default, on demand. Measured: headless and bypass-mode calls do not run without it |
+  | PreToolUse `gate` | **Asks** before every call; `KATTAKATH_WORKSPACE_LOCATOR=auto` in settings `env` skips the ask | Off by default, on demand. Measured: a headless (`claude -p`) call does not run, in default or bypass mode; interactive sessions show the prompt |
   | PostToolUse `reduce` | Replaces the result with a locator table (app, title, date, sender/type, link, the tool to open it); drops every Chat body and Gmail snippet | The server ignores `pageSize`: every query returns ~30 hits and ~100k chars, over Claude Code's cap. Measured 96,169 → 12,632 chars |
 
   Claude Code saves an overflowing result to `~/.claude/projects/…/tool-results/` and hands
