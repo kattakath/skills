@@ -79,15 +79,14 @@ Full click-path with the measured element behaviour: [`references/upload-flows.m
 
 1. `tabs_create_mcp`, then `navigate` to `tenor.com/gif-maker` — not `/upload`, which 404s. If the page shows **SIGN IN**, stop and ask
    the user to sign in (a Google account chooser opens in a popup window).
-2. The six `input[type=file]` are `display:none`, and attaching a file to the visible "Browse
-   Files" button failed on the old CDP rail. On Claude in Chrome: `find` the file input and call
-   `file_upload` with the ref `find` returns; never click a file input. **Not yet measured on
-   Claude in Chrome (2026-11-14).** If `file_upload` fails, **stop and report to the operator**; do
-   not substitute `upload_image` (it uploads only a `computer` screenshot, never the GIF). The
-   un-hide trick in the reference file is an **unverified** fallback, tried only if `find` cannot see
-   the hidden input.
+2. The six `input[type=file]` are `display:none`. `find` the file input (it returns refs listed as
+   "file-input ... (hidden)") and call `file_upload` on the first with the GIF path; never click a
+   file input. **Measured 2026-11-14 on Claude in Chrome:** this staged the GIF (thumbnail, tag box,
+   UPLOAD TO TENOR disabled until a tag). The GIF must sit in a shared path; the Claude Code session
+   scratchpad qualifies. If `file_upload` fails, **stop and report to the operator**; do not
+   substitute `upload_image` (it uploads only a `computer` screenshot, never the GIF).
 3. Tags: the box reads "Add Tags (minimum 1)"; one text entry plus Enter per tag worked at full speed
-   on the old rail (re-check on Claude in Chrome). Chips render upper-case; overflow shows as "+N".
+   on the old rail (tag entry not yet measured on Claude in Chrome). Chips render upper-case; overflow shows as "+N".
 4. Screenshot the staged form (`computer`), show it, **confirm**, then click **UPLOAD TO TENOR**.
 5. Success lands on `/users/<name>` reading **PROCESSING UPLOAD…**, then **CONTENT PENDING
    REVIEW**. There is **no public `/view/` URL until review passes** (up to 48 h). Report that as
