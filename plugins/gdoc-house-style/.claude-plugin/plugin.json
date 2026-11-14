@@ -1,0 +1,21 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "gdoc-house-style",
+  "version": "1.0.0",
+  "description": "Create Google Docs in one fixed house style from a script instead of from prose rules: Markdown in, a styled Word file out, which Drive converts into a Google Doc with real page-number fields, aligned box-drawing diagrams, full-width tables and Title Case titles. Includes a font probe that checks the exported result.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/gdoc-house-style",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "google-docs",
+    "google-drive",
+    "docx",
+    "pandoc",
+    "house-style",
+    "document-style",
+    "page-numbers"
+  ]
+}
