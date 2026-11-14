@@ -16,7 +16,8 @@
 # below — no restart needed. Failing the launch instead would show a red server in
 # every session without a phone attached.
 #
-# Port 9223, not 9222: page-lab's desktop Chromium owns 9222, and both run at once.
+# Port 9223, not 9222: 9222 is the conventional desktop remote-debugging port, avoided so
+# nothing here collides with it (no desktop CDP browser runs on this fleet).
 #
 # WHY THE FORWARD IS REMOVED ON EXIT: the forward makes the phone's LOGGED-IN Chrome an
 # unauthenticated CDP endpoint on 127.0.0.1 — any local process can drive it — and an

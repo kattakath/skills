@@ -90,7 +90,7 @@
       "note": "systematic-debugging is the adopted skill."
     },
     {
-      "goal": "Author a userscript or diagnose a live web page",
+      "goal": "Author a userscript or redesign a site with one",
       "steps": [
         "userscript-lab"
       ],
@@ -232,7 +232,7 @@
         "gif-meme"
       ],
       "gap": true,
-      "note": "Needs `media-gif` on PATH from kattakath/nix-config (local.mediaCli.enable) for the encode, and the chrome-devtools MCP attached to a Chromium on --remote-debugging-port=9222 for the two upload forms. Tenor is searchable after a review of up to 48 h; GIPHY never is from a plain account — search placement is an Artist/Brand channel approval, and the application form is gated behind five public uploads."
+      "note": "Needs `media-gif` on PATH from kattakath/nix-config (local.mediaCli.enable) for the encode, and Claude in Chrome (the browser extension, signed in to Tenor and GIPHY) for the two upload forms; the GIF must sit in a folder shared with the session and stay <= 10 MB (`file_upload`). Tenor is searchable after a review of up to 48 h; GIPHY never is from a plain account — search placement is an Artist/Brand channel approval, and the application form is gated behind five public uploads."
     },
     {
       "goal": "Encrypt, decrypt, compare and back up OpenPGP material from an agent session",

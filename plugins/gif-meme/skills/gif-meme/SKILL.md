@@ -34,6 +34,10 @@ Neither has an upload API you can use. Both are web forms, so the browser is the
   return the user's tab group. If it errors, say Claude in Chrome is not connected and stop.
   If a site hits a per-site permission wall, ask the user to grant it; do not reach for another
   browser.
+- **A shared GIF path.** `file_upload` accepts only paths the user shared with the session
+  (attachments, the session's outputs/uploads folders, or connected folders) and **at most 10 MB per
+  call**. Write the encoded GIF into such a folder, or ask the operator to share the file, and
+  keep it <= 10 MB for this rail (`--budget 8M` fits).
 - **The user's own accounts.** Tenor signs in with Google; GIPHY with its own login. The user
   authenticates; you never type a credential.
 
@@ -77,9 +81,11 @@ Full click-path with the measured element behaviour: [`references/upload-flows.m
    the user to sign in (a Google account chooser opens in a popup window).
 2. The six `input[type=file]` are `display:none`, and attaching a file to the visible "Browse
    Files" button failed on the old CDP rail. On Claude in Chrome: `find` the file input and call
-   `file_upload` with the ref `find` returns (`upload_image` is the fallback). **Not yet measured
-   on Claude in Chrome (2026-11-14).** If `find` cannot see a `display:none` input, un-hide it
-   with `javascript_tool` (see the reference file) and `find` again.
+   `file_upload` with the ref `find` returns; never click a file input. **Not yet measured on
+   Claude in Chrome (2026-11-14).** If `file_upload` fails, **stop and report to the operator**; do
+   not substitute `upload_image` (it uploads only a `computer` screenshot, never the GIF). The
+   un-hide trick in the reference file is an **unverified** fallback, tried only if `find` cannot see
+   the hidden input.
 3. Tags: the box reads "Add Tags (minimum 1)"; one text entry plus Enter per tag worked at full speed
    on the old rail (re-check on Claude in Chrome). Chips render upper-case; overflow shows as "+N".
 4. Screenshot the staged form (`computer`), show it, **confirm**, then click **UPLOAD TO TENOR**.

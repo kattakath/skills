@@ -24,7 +24,7 @@ wish → shelf → open tab → measure A vs B → diff → replay-or-select →
 **The rail is Claude in Chrome**, in the operator's own Chrome — the same profile, logins and
 Violentmonkey the script ships into.
 
-No trusted-event or `document-start` proof is available on this rail: Claude in Chrome runs after load, in an untrusted context. Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.
+No `document-start` proof is available on this rail: Claude in Chrome injects only after load. Its `computer` clicks and key presses are trusted (`isTrusted: true`, measured 2026-11-14). Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.
 
 **Delivery is out of scope.** This skill stops at a lint-clean, installed, proven file.
 
@@ -46,7 +46,7 @@ No trusted-event or `document-start` proof is available on this rail: Claude in 
 6. **A located element is a measurement only when** `javascript_tool` has shown
    `document.querySelectorAll(sel).length === 1` (or the exact count the script expects) on
    the page it ships against, and its reachability is known (`el.getRootNode() === document`,
-   `window.top === window`). A `find` hit or a screenshot is a **lead**, never a selector.
+   `window.top === window`). A shadow root → [`patterns.md`](references/patterns.md) § 11; a cross-frame target → `@match` the frame's own URL and drop `@noframes`. A `find` hit or a screenshot is a **lead**, never a selector.
 
 ## Checklist (run in order)
 
@@ -131,7 +131,7 @@ someone already solved this" is one fetch. Mechanics and the Sleazy Fork split:
 ### F. Lint
 
 ```bash
-scripts/userscript-meta-lint.sh <file.user.js>      # or a directory
+"${CLAUDE_PLUGIN_ROOT}/scripts/userscript-meta-lint.sh" <file.user.js>   # or a directory
 ```
 
 `node --check`, required/banned metadata keys, dotted-numeric `@version`, minified or bundled
@@ -238,7 +238,7 @@ count (rule 6).
 
 `[F-…]` tags in the references cite rows of a facts table that shipped with this plugin's
 predecessor; the fact itself is stated beside each tag. The table with its dates and
-reproduction recipes: `git show f110f8d:plugins/page-lab/references/facts.md` in this repo.
+reproduction recipes: https://github.com/kattakath/skills/blob/f110f8d7780d1bbdd68b9b87824281d2188d8a92/plugins/page-lab/references/facts.md.
 
 **Out of scope:** delivery (the fleet's own skill), whole-site redesigns
 (`userscript-lab:site-redesign`), and general page diagnosis (Claude in Chrome's own skill).

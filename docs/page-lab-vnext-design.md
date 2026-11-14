@@ -1,3 +1,5 @@
+> Superseded 2026-11-14: page-lab was removed; its userscript method lives in plugins/userscript-lab (Claude in Chrome only).
+
 # page-lab v-next — a dedicated browser profile; the human only when needed
 
 **Status: ACCEPTED, steps 1–5 implemented (2026-11-07).** Steps 6–8 (fleet) are open. Deviations found while

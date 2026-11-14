@@ -5,9 +5,17 @@
 with a CDP-driven Chromium and is a fact about the sites. Every Claude in Chrome tool call in the
 tables is the intended replacement, unverified. Tools (prefix `mcp__claude-in-chrome__`, deferred,
 load them in one ToolSearch call): `tabs_context_mcp`, `tabs_create_mcp`, `navigate`, `find`,
-`read_page`, `file_upload`, `upload_image`, `javascript_tool`, `computer`, `form_input`,
+`read_page`, `file_upload`, `javascript_tool`, `computer`, `form_input`,
 `read_console_messages`. The DOM details change without notice; when a step fails, re-read the page
 (`read_page`) and re-measure rather than trusting this file.
+
+## File rail rules (`file_upload`)
+
+- It accepts only paths the user shared with the session (attachments, the session's
+  outputs/uploads folders, or folders the user has connected), at most **10 MB per call**.
+- It targets a `read_page`/`find` ref; file inputs must not be clicked.
+- So: write the encoded GIF into a shared/connected folder (or ask the operator to share the
+  file) and keep it **<= 10 MB**.
 
 ## Preflight — is the browser really driveable?
 
@@ -29,7 +37,7 @@ not, un-hide with `javascript_tool` as in the Tenor table, then `find` again.
 | Sign-in check | `javascript_tool` (or `find`) → any `button` whose text matches /sign in/i | Signed-out shows **SIGN IN**; clicking it opens a modal with a Google button that opens `accounts.google.com/v3/signin/accountchooser` **in a new window** (it appears as a new page id). The user picks the account. Signed-in pages carry `a[href*="/users/"]`. |
 | File input | `javascript_tool` listing `input[type=file]` | **Six** inputs, all `display:none`, ids `upload_file_dropzone-*`, `accept=".gif, image/gif, .mp4, video/mp4, .jpg, image/jpeg, .png"`, `multiple`. On the CDP rail, attaching to the visible **Browse Files to Upload** button failed: "clicking it did not trigger a file chooser". Claude in Chrome: not yet measured. |
 | Un-hide (fallback) | `javascript_tool` | `i.style.display='block'; i.style.position='fixed'; i.setAttribute('aria-label','cc-file-input')` on `#upload_file_dropzone-upload-file-section-button`, then `find` it. Needed on the CDP rail; whether Claude in Chrome needs it is unmeasured. |
-| Attach | `file_upload` on the ref from `find` (fallback `upload_image`) | Not yet measured on Claude in Chrome. On the CDP rail the page showed the input `disabled value="<filename>"`, then the page re-renders. |
+| Attach | `file_upload` on the ref from `find`; if it fails, stop and report (`upload_image` cannot upload the GIF) | Not yet measured on Claude in Chrome. On the CDP rail the page showed the input `disabled value="<filename>"`, then the page re-renders. |
 | Wait | `read_page` until "Tags" and "UPLOAD TO TENOR" appear | New view: a staged image, textbox **"Add Tags (minimum 1)"** (focused), headings "Add more content" / "Edit and Tag your content", buttons **CANCEL** and **Upload Icon UPLOAD TO TENOR**. |
 | Tags | `computer` type + Enter per tag (unmeasured; CDP: `type_text submitKey=Enter`) | Fifteen in a row all registered. Chips are upper-cased (`COOL DUCK ×`); after three the rest collapse to a **"+N"** button. The textbox relabels to "Add More Tags". |
 | Submit | `computer` click the UPLOAD TO TENOR button | Navigates to `/users/<name>`. |

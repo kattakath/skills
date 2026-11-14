@@ -8,7 +8,7 @@ self="$here/$(basename "$0")"
 status=0
 
 pattern='chrome-devtools|chrome-lab|kapture|9222|evaluate_script|take_snapshot|remote-debugging|PAGE_LAB_CHROME|\.\./\.\./references/'
-sentence='No trusted-event or `document-start` proof is available on this rail: Claude in Chrome runs after load, in an untrusted context. Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.'
+sentence='No `document-start` proof is available on this rail: Claude in Chrome injects only after load. Its `computer` clicks and key presses are trusted (`isTrusted: true`, measured 2026-11-14). Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.'
 
 if [ ! -d "$root/skills" ]; then
   echo "no-cdp: FAIL — $root/skills does not exist" >&2

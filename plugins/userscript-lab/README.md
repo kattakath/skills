@@ -35,9 +35,10 @@ operator's logins, extensions and Violentmonkey — so post-install proof is rea
 
 **What it cannot give**, stated in both skills verbatim:
 
-> No trusted-event or `document-start` proof is available on this rail: Claude in Chrome runs
-> after load, in an untrusted context. Verify by installing in Violentmonkey and checking with
-> Claude in Chrome; say which checks ran.
+> No `document-start` proof is available on this rail: Claude in Chrome injects only after
+> load. Its `computer` clicks and key presses are trusted (`isTrusted: true`, measured
+> 2026-11-14). Verify by installing in Violentmonkey and checking with Claude in Chrome; say
+> which checks ran.
 
 The evidence for why that matters: a suite of **88 checks reported 0 failures** on a build with
 **five live defects**, because every check evaluated the script into an already-loaded page
@@ -86,7 +87,7 @@ Requires `bash` and `node`.
 
 `[F-ID]` tags cite rows of the facts table this plugin inherited from its predecessor; each
 fact is stated in the prose beside its tag. The full table, with dates and reproduction
-recipes: `git show f110f8d:plugins/page-lab/references/facts.md` in this repo.
+recipes: https://github.com/kattakath/skills/blob/f110f8d7780d1bbdd68b9b87824281d2188d8a92/plugins/page-lab/references/facts.md.
 
 ## Safety posture
 

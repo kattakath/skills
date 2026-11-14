@@ -205,7 +205,7 @@ Escalation is unchanged from `userscript-author` § I: **do not grow a bundler.*
 
 ### 4. Verify
 
-No trusted-event or `document-start` proof is available on this rail: Claude in Chrome runs after load, in an untrusted context. Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.
+No `document-start` proof is available on this rail: Claude in Chrome injects only after load. Its `computer` clicks and key presses are trusted (`isTrusted: true`, measured 2026-11-14). Verify by installing in Violentmonkey and checking with Claude in Chrome; say which checks ran.
 
 **Install, then reload.** The one-time *Allow User Scripts* toggle on Violentmonkey's
 `chrome://extensions` page is required on Chrome 138+ — that click and the install are the
@@ -261,7 +261,7 @@ A refactor lane without a net is a rewrite.
 
 ### 5. Ship
 
-- [ ] Both gates: the repo's lint config **and** `scripts/userscript-meta-lint.sh`.
+- [ ] Both gates: the repo's lint config **and** `${CLAUDE_PLUGIN_ROOT}/scripts/userscript-meta-lint.sh`.
 - [ ] **Bump `@version` first.** A same-version re-install is a silent no-op, and
       Violentmonkey never downgrades.
 - [ ] Header WHY block carries the dated measurements — a comment asserting behaviour
@@ -287,5 +287,5 @@ A refactor lane without a net is a rewrite.
 
 `[F-…]` tags cite rows of a facts table that shipped with this plugin's predecessor; the
 fact itself is stated beside each tag. The table with its dates and reproduction recipes:
-`git show f110f8d:plugins/page-lab/references/facts.md` in this repo — grep it by ID, never
+https://github.com/kattakath/skills/blob/f110f8d7780d1bbdd68b9b87824281d2188d8a92/plugins/page-lab/references/facts.md — grep it by ID, never
 read it whole (~13,000 words).
