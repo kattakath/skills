@@ -1,8 +1,9 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "displayName": "Kattakath Workspace",
   "name": "kattakath-workspace",
-  "version": "1.1.0",
-  "description": "One install for Google Workspace in Claude: declares the official Google connectors for Gmail, Calendar, Drive, Docs, Sheets and Slides (empty-URL entries, the shape Anthropic's own plugins use, so the account's existing claude.ai connectors are reused and nothing new signs in), plus a routing skill for which app and tool to reach for, and the confirm-before-write rules.",
+  "version": "1.2.0",
+  "description": "Google Workspace in Claude through the Kattakath MCP Gateway: a routing skill for the account's eight 'Kattakath <App>' claude.ai connectors (Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People; the same tools on web, phone and Claude Code), with confirm-before-write rules. Declares no connector of its own; Gmail drafts, the user sends.",
   "author": {
     "name": "Ismail Kattakath"
   },
@@ -19,6 +20,8 @@
     "google-sheets",
     "google-slides",
     "connectors",
-    "mcp"
+    "mcp",
+    "google-chat",
+    "google-people"
   ]
 }
