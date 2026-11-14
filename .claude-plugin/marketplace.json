@@ -205,7 +205,7 @@
     },
     {
       "name": "gif-meme",
-      "description": "Make a looping GIF that fits a byte budget from a short video, then publish it to Tenor and GIPHY over the Chrome DevTools Protocol, with the measured per-site footguns (hidden file inputs, a racing tag box, the 48-hour review, the five-upload gate on GIPHY search) pre-empted.",
+      "description": "Make a looping GIF that fits a byte budget from a short video, then publish it to Tenor and GIPHY through Claude in Chrome, with the measured per-site footguns (hidden file inputs, a racing tag box, the 48-hour review, the five-upload gate on GIPHY search) pre-empted.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -219,7 +219,7 @@
         "gifsicle",
         "looping",
         "upload",
-        "chrome-devtools",
+        "claude-in-chrome",
         "media"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/gif-meme",
