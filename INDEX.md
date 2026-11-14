@@ -12,7 +12,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | Goal | Route | Note |
 |---|---|---|
 | ● Audit a config monorepo's foundation | [`foundation-audit`](plugins/foundation-audit) |  |
-| ● Author a userscript or diagnose a live web page | [`page-lab`](plugins/page-lab) |  |
+| ● Author a userscript or diagnose a live web page | [`userscript-lab`](plugins/userscript-lab) |  |
 | ● Capture what a session figured out, so no session rediscovers it | [`harvest`](plugins/harvest) → `skill-creator` from [claude-plugins-official](https://github.com/anthropics/claude-plugins-official) → [`github-release-gate`](plugins/github-release-gate) | harvest triages and lands via PR; skill-creator tests; the gate validates before it ships. |
 | ● Encrypt, decrypt, compare and back up OpenPGP material from an agent session | [`pgp-ops`](plugins/pgp-ops) | Plaintext to the clipboard only; passphrase via a real terminal window when the agent has no TTY; every recipient / same-key / round-trip claim proved from the packets. |
 | ● Keep the skill library from only growing: find unused skills and retire them | [`skill-curator`](plugins/skill-curator) | Ported from Hermes Agent's curator; retires from the harness via PR, never deletes. |

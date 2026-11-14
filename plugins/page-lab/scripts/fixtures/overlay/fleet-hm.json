@@ -1,6 +1,0 @@
-{
-  "profiles": [
-    { "name": "lab", "executable": { "source": "env" } },
-    { "name": "lab-diag", "executable": { "source": "env" } }
-  ]
-}

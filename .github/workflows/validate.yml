@@ -228,15 +228,9 @@ jobs:
           echo "parsed $n Nix asset(s)"
           exit $rc
 
-      # The negative fixtures matter most: a validator that cannot reject anything
-      # is decoration.
-      - name: page-lab envelope self-test
-        run: node plugins/page-lab/scripts/pick-validate.mjs --self-test plugins/page-lab/scripts/fixtures
-
-      # block@1 / profile@1 fixtures both ways, the no-evasion argv, the gate's detectors and its
-      # run state. The live-browser half skips (loudly) unless PAGE_LAB_CHROME names a browser.
-      - name: page-lab cases
-        run: node --test plugins/page-lab/tests/*.test.mjs
+      # CDP is gone from the userscript toolchain; this fails if any of it creeps back in.
+      - name: userscript-lab no-CDP gate
+        run: bash plugins/userscript-lab/tests/no-cdp.sh
 
       # nix-flake-kit's hooks are part of nix-config's always-on safety floor, so both halves
       # are pinned: autostage must stage (worktrees and nested repos included) and must never

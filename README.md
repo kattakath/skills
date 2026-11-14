@@ -68,7 +68,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`nix-dev-toolkit`](plugins/nix-dev-toolkit) | Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue. | skills only | — |
 | [`nix-flake-kit`](plugins/nix-flake-kit) | Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. | 1 MCP server, hooks | — |
 | [`nixd`](plugins/nixd) | Nix language intelligence through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free; expects nixd on PATH. | 1 LSP server | — |
-| [`page-lab`](plugins/page-lab) | Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site. | 3 MCP servers | — |
+| [`userscript-lab`](plugins/userscript-lab) | Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter. | skills only | — |
 | [`pgp-ops`](plugins/pgp-ops) | Run GnuPG from an agent with no TTY: decrypt to the clipboard without plaintext in the transcript, encrypt to a recipient's key without importing it, prove who can decrypt and whether two keys match from the packets, and back up a key with a restore test. | skills only | — |
 | [`plaid-pfc`](plugins/plaid-pfc) | Plaid's Personal Finance Category (PFC) taxonomy, pinned and strictly enforced: the 127 v2 detailed names with Plaid's descriptions, a v1-to-v2 crosswalk (renames and splits), validation that refuses any invented name, standard I/O records with JSON Schema for enum-bound LLM output, and a refresh that diffs Plaid's published CSV. Stdlib Python only; holds no data. | skills only | — |
 | [`prior-art-recon`](plugins/prior-art-recon) | Before building, standardising or publishing anything meant to fill a perceived gap: find out whether it already exists, whether anyone wants it, whether the ecosystem is moving away from it, and whether the gap is an artifact of your own design. | skills only | — |
@@ -90,7 +90,7 @@ Where a plugin has its own `README.md`, it covers that plugin's commands, skills
 
 ## Scripts are the source of truth for rules
 
-`plugins/page-lab/scripts/userscript-meta-lint.sh` is the single Greasy Fork rulebook. It is what the plugin tells you to run, and it is what userscript repositories run in their own CI.
+`plugins/userscript-lab/scripts/userscript-meta-lint.sh` is the single Greasy Fork rulebook. It is what the plugin tells you to run, and it is what userscript repositories run in their own CI.
 
 ## License
 

@@ -1,1 +1,0 @@
-{"schema":"page-lab/block@1","measuredAt":"2026-11-07","url":"https://example.com/a","origin":"https://example.com","profile":"lab","runId":"r1","queuePos":0,"notes":[],"reason":"blocked","evidence":{"detector":"status","rule":"status.403","status":403}}

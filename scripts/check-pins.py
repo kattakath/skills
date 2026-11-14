@@ -150,8 +150,8 @@ def main():
         print(f"::error::{b}", file=sys.stderr)
     print(f"check-pins: {checked} runner spec(s) checked, {len(bad)} unpinned")
     # Floor: a moved plugins/ tree or a broken glob must not pass as zero specs.
-    if checked < 8:
-        print(f"::error::expected at least 8 runner specs, found {checked}", file=sys.stderr)
+    if checked < 5:
+        print(f"::error::expected at least 5 runner specs, found {checked}", file=sys.stderr)
         sys.exit(1)
     sys.exit(1 if bad else 0)
 

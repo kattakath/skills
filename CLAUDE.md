@@ -99,7 +99,7 @@ unpinned command is none of them — so "matching it locally" was false while th
 Raise the pin here only together with the one in `validate.yml`.
 
 This is otherwise exactly what `.github/workflows/validate.yml` runs. Plugins with test suites
-(`page-lab`, `mac-app-send`, `skill-curator`, `nix-flake-kit` and others) have their own commands in that workflow; check it
+(`userscript-lab`, `mac-app-send`, `skill-curator`, `nix-flake-kit` and others) have their own commands in that workflow; check it
 before assuming "validate passes" is sufficient for those. Two steps there cover assets the
 manifest validator never reads: `Nix assets parse`, and `Plugin workflows load-shape` — the latter
 exists because a workflow script whose `export const meta` literal is not the **first** statement

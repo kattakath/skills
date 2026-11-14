@@ -518,8 +518,8 @@
       "source": "./plugins/nixd"
     },
     {
-      "name": "page-lab",
-      "description": "Author Violentmonkey userscripts and diagnose live pages from one place — a measure-before-you-select method, a two-way element picker driven over the Chrome DevTools Protocol, a config-driven redesign acceptance runner that injects at document-start across real navigations and exercises the result with trusted events, performance/network/console diagnosis, and a Greasy Fork readiness linter, and a multi-agent method for redesigning a whole site.",
+      "name": "userscript-lab",
+      "description": "Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -528,16 +528,15 @@
         "userscript",
         "violentmonkey",
         "greasyfork",
-        "chrome",
-        "devtools",
-        "cdp",
+        "claude-in-chrome",
         "browser",
         "dark-mode",
-        "redesign"
+        "redesign",
+        "accessibility"
       ],
       "homepage": "https://greasyfork.org/en/help/code-rules",
       "license": "MIT",
-      "source": "./plugins/page-lab"
+      "source": "./plugins/userscript-lab"
     },
     {
       "name": "pgp-ops",

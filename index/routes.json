@@ -92,7 +92,7 @@
     {
       "goal": "Author a userscript or diagnose a live web page",
       "steps": [
-        "page-lab"
+        "userscript-lab"
       ],
       "gap": true
     },
