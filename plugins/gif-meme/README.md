@@ -7,7 +7,7 @@ search actually looks — with the per-site footguns measured and pre-empted.
 
 | Component | What it does |
 |---|---|
-| `skills/gif-meme` | The method: encode to a budget, choose the engines with the user, drive both upload forms over the Chrome DevTools Protocol, report honestly (pending vs. live) |
+| `skills/gif-meme` | The method: encode to a budget, choose the engines with the user, drive both upload forms through Claude in Chrome, report honestly (pending vs. live) |
 | `skills/gif-meme/references/upload-flows.md` | The measured click-paths for Tenor and GIPHY: which inputs are hidden, which tag box drops input, what each success state looks like |
 
 ## The facts it exists to carry
@@ -19,8 +19,8 @@ search actually looks — with the per-site footguns measured and pre-empted.
 | GIF has no rate control, so "fit under 1 MB" is a **ladder of encodes**, not a flag | 15 encodes of one clip; see the package header |
 | **Bayer dither** costs ~10%, **gifsicle `--lossy=100`** saves ~34% | 1.59 → 1.45 → 0.96 MB at 400 px |
 | A **256×256 centre crop was bigger** than the 400×308 letterbox of the same clip | 1.14 MB vs 0.96 MB raw — cropped-off background was free in LZW |
-| Tenor's six file inputs are `display:none`; the visible button does not open a chooser | `upload_file` fails until one input is un-hidden |
-| GIPHY's tag input **drops every other tag** when Enter follows the text in one call | 7 of 15 registered; one `type_text` + one `press_key Enter` per tag registers all |
+| Tenor's six file inputs are `display:none`; the visible button does not open a chooser | The visible button does not attach a file; target the hidden input itself (on Claude in Chrome: `find` + `file_upload`, not yet measured) |
+| GIPHY's tag input **drops every other tag** when Enter follows the text in one call | 7 of 15 registered; one text entry + one separate Enter per tag registers all |
 | `tenor.com/upload` is a **404**; the uploader is `/gif-maker` | — |
 
 ## Requires
@@ -29,10 +29,9 @@ search actually looks — with the per-site footguns measured and pre-empted.
   (`modules/features/media-cli/packages/media-gif.nix`, enabled by `local.mediaCli.enable`). It
   pins its own ffmpeg and gifsicle. This plugin ships **no** encoder of its own: one source of truth
   for the ladder, and the shellcheck/CI that the Nix build gives it.
-- **The chrome-devtools MCP attached to a Chromium on `--remote-debugging-port=9222`.** On this fleet
-  That MCP and its attach script ship with the `page-lab` plugin, which this plugin declares as a
-  dependency, so installing `gif-meme` installs and enables `page-lab` too. It runs no MCP server
-  of its own.
+- **Claude in Chrome** — the browser extension and its `mcp__claude-in-chrome__*` tools, acting in
+  the user's own Chrome. It is not a plugin dependency; this plugin runs no MCP server of its own.
+  A per-site permission wall is the operator's to grant.
 - **The user's Tenor (Google) and GIPHY accounts.** Sign-in is the user's step, every time.
 
 ## What it does not do

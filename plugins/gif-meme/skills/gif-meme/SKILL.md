@@ -7,8 +7,8 @@ description: >-
   "publish this GIF", "put it on Tenor / GIPHY", or "make my meme show up in GIF
   search" (Gboard, WhatsApp, Discord, Slack, iMessage). Encodes with `media-gif`
   (ffmpeg two-pass palette + gifsicle, walking a measured quality ladder to a byte
-  budget) and uploads through the chrome-devtools MCP against a Chromium with its
-  debug port open. NOT for video-to-video transcodes (that is `media-transcode`)
+  budget) and uploads through Claude in Chrome (the browser extension, in the
+  user's own Chrome). NOT for video-to-video transcodes (that is `media-transcode`)
   and NOT for stickers with transparency.
 ---
 
@@ -29,13 +29,11 @@ Neither has an upload API you can use. Both are web forms, so the browser is the
 - **`media-gif` on PATH** — from `kattakath/nix-config`'s media-cli capsule (`local.mediaCli.enable`).
   It carries ffmpeg and gifsicle itself; a bare `ffmpeg` on PATH is not enough.
   Check: `media-gif --help`.
-- **The chrome-devtools MCP attached to a Chromium with `--remote-debugging-port=9222`.**
-  Check it is really there, two ways that could disagree:
-  ```bash
-  lsof -nP -iTCP:9222 -sTCP:LISTEN            # a Chromium process owns the port
-  curl -fsS http://127.0.0.1:9222/json/version # the protocol answers with a webSocketDebuggerUrl
-  ```
-  `curl -s` without `-f` exits 0 on a 404 page and proves nothing.
+- **Claude in Chrome connected** (the `mcp__claude-in-chrome__*` tools; they are deferred, so
+  load them in one ToolSearch call first). Check it is really there: `tabs_context_mcp` must
+  return the user's tab group. If it errors, say Claude in Chrome is not connected and stop.
+  If a site hits a per-site permission wall, ask the user to grant it; do not reach for another
+  browser.
 - **The user's own accounts.** Tenor signs in with Google; GIPHY with its own login. The user
   authenticates; you never type a credential.
 
@@ -75,25 +73,28 @@ GIPHY allows 20.
 
 Full click-path with the measured element behaviour: [`references/upload-flows.md`](references/upload-flows.md).
 
-1. `tenor.com/gif-maker` — not `/upload`, which 404s. If the page shows **SIGN IN**, stop and ask
+1. `tabs_create_mcp`, then `navigate` to `tenor.com/gif-maker` — not `/upload`, which 404s. If the page shows **SIGN IN**, stop and ask
    the user to sign in (a Google account chooser opens in a popup window).
-2. The six `input[type=file]` are `display:none`, so `upload_file` on the visible "Browse Files"
-   button fails. Un-hide one with `evaluate_script`, give it an `aria-label`, re-snapshot, and
-   `upload_file` by its new uid.
-3. Tags: the box reads "Add Tags (minimum 1)"; `type_text` + Enter per tag works at full speed
-   here. Chips render upper-case; overflow shows as "+N".
-4. Screenshot the staged form, show it, **confirm**, then click **UPLOAD TO TENOR**.
+2. The six `input[type=file]` are `display:none`, and attaching a file to the visible "Browse
+   Files" button failed on the old CDP rail. On Claude in Chrome: `find` the file input and call
+   `file_upload` with the ref `find` returns (`upload_image` is the fallback). **Not yet measured
+   on Claude in Chrome (2026-11-14).** If `find` cannot see a `display:none` input, un-hide it
+   with `javascript_tool` (see the reference file) and `find` again.
+3. Tags: the box reads "Add Tags (minimum 1)"; one text entry plus Enter per tag worked at full speed
+   on the old rail (re-check on Claude in Chrome). Chips render upper-case; overflow shows as "+N".
+4. Screenshot the staged form (`computer`), show it, **confirm**, then click **UPLOAD TO TENOR**.
 5. Success lands on `/users/<name>` reading **PROCESSING UPLOAD…**, then **CONTENT PENDING
    REVIEW**. There is **no public `/view/` URL until review passes** (up to 48 h). Report that as
    pending, not as done.
 
 ## 4. GIPHY
 
-1. `giphy.com/upload`. A cookie banner may sit on top; if the page shows **Log In**, stop and ask.
-2. The "Choose Files" button accepts `upload_file` directly; the page moves to `/upload/finalize`.
-3. **Tags: one `type_text`, then a separate `press_key Enter`, per tag.** The box is a controlled
-   React input; firing `type_text` with `submitKey: Enter` fifteen times in a row **kept 7 of
-   15** and left the last one sitting in the box. After the batch, snapshot and count the chips.
+1. `tabs_create_mcp`, then `navigate` to `giphy.com/upload`. A cookie banner may sit on top; if the page shows **Log In**, stop and ask.
+2. The "Choose Files" button took the file directly on the old rail; on Claude in Chrome use
+   `find` + `file_upload` (not yet measured, 2026-11-14). The page moves to `/upload/finalize`.
+3. **Tags: type the text, then a separate Enter keypress, per tag** (`computer` actions). The box
+   is a controlled React input; typing with Enter in the same call fifteen times in a row **kept 7
+   of 15** and left the last one sitting in the box. After the batch, `read_page` and count the chips.
 4. Check **Visibility** reads "Anyone can see this." Source URL and Collection are optional.
 5. Show the form, **confirm**, click **Upload to GIPHY**. Success is an immediate redirect to
    `giphy.com/gifs/<tag-slug>-<id>` — that URL is the deliverable.
