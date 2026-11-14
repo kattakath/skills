@@ -31,6 +31,7 @@ connector name, never on a fixed prefix:
 | `slides_` | Read a deck, a page, a page thumbnail. Read-only |
 | `chat_` | Find a space or DM, list and search messages. **No posting** |
 | `people_` | Who am I; look up a contact's or colleague's email. Read-only |
+| `workspace_` | `workspace_search_corpus`: one search across Gmail, Drive, Calendar and Chat at once. Read-only. **Last resort**, see § 1 |
 
 When an official Google connector (Gmail, Drive, Calendar, Docs, Sheets, Slides, Chat) or a
 legacy `kattakath-<app>` server is also loaded, use Kattakath Workspace and ignore the
@@ -57,6 +58,14 @@ others: they are not a route around the allowlist. Never ask the user to connect
 - **Chat with a person** → find their email with `people_search_contacts` /
   `people_search_directory_people` first: Chat finds a DM only by participants' **email
   addresses**, never by name. An empty page with a `nextPageToken` is not "no results".
+- **Cross-app search ("where did X come up?")** → search each likely app with its own tool
+  first (`gmail_search_threads`, `drive_search_files`, `chat_search_messages`,
+  `calendar_search_events`). Use `workspace_search_corpus` only when the app is truly
+  unknown AND the term is rare (a ticket id, an invoice number, an unusual name). It
+  cannot be narrowed (`pageSize` and `pageToken` are ignored), and Chat hits carry full
+  message bodies: one search for "invoice" returned 30 hits and 136,585 characters,
+  over claude.ai's tool-result limit (measured 2026-11-14). If it overflows, do not
+  retry it: switch to the per-app tools.
 - **Editing a Doc, Sheet or deck, sharing, trashing, removing a label, posting to Chat,
   sending mail, creating or changing an event** → not available through this connector by
   design. Say which, and stop; do not look for a workaround.
