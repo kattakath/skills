@@ -36,10 +36,11 @@ an empty header row, directly under the title:
 
 ## 2a. Google Doc
 
-Needs `pandoc` and `python-docx`.
+Needs `pandoc` and `python-docx`. Where `$HOUSE_STYLE_PYTHON` is set, it names an interpreter
+that has them; use it for every script here.
 
 ```bash
-python3 scripts/gdoc.py report.md report.docx
+${HOUSE_STYLE_PYTHON:-python3} scripts/gdoc.py report.md report.docx
 ```
 
 - **Import it.** Upload the `.docx` to Drive with conversion on. With the Google Drive
@@ -58,7 +59,7 @@ python3 scripts/gdoc.py report.md report.docx
 Needs `pandoc`, and `typst` (the command, or the Python package).
 
 ```bash
-python3 scripts/pdf.py report.md report.pdf
+${HOUSE_STYLE_PYTHON:-python3} scripts/pdf.py report.md report.pdf
 ```
 
 - `--footer "Text"` sets the left side of the page footer; it defaults to the title. Use it for
