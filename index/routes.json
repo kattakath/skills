@@ -309,11 +309,11 @@
       "note": "Layers on Slack's own slack:slack-messaging skill; workspace IDs stay in the workspace's CLAUDE.md or memory."
     },
     {
-      "goal": "Create a Google Doc in a fixed house style, with page numbers and aligned diagrams",
+      "goal": "Create a Google Doc or a PDF in one fixed house style, with page numbers and aligned diagrams",
       "steps": [
-        "gdoc-house-style"
+        "house-style"
       ],
-      "note": "Markdown -> styled .docx -> Drive converts it. The style is a table in the script, not a prompt. Walked end to end 2026-11-14: converted Doc exported to PDF, fonts and footer fields checked."
+      "note": "Markdown -> styled .docx that Drive converts, or -> Typst -> PDF/UA-1. One style.json feeds both; the style is data, not a prompt. Walked end to end 2026-11-14: converted Doc exported to PDF and the PDF build both checked for fonts, diagram widths and page breaks."
     }
   ]
 }

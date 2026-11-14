@@ -1,20 +1,12 @@
 #!/usr/bin/env python3
-"""Markdown -> a .docx in the Google Docs house style, ready for Drive to convert into a Google Doc.
+"""Markdown -> a .docx in the house style, ready for Drive to convert into a Google Doc.
 
-    house_style.py [--config FILE] <in.md> <out.docx>
+    gdoc.py [--config FILE] <in.md> <out.docx>
 
-Every style decision is data; nothing is left to a prompt. STYLE below holds the built-in defaults.
-A JSON config overrides them and supplies the identity, so no person's name or account is written
-in this file:
-
-    {"identity": {"author": "Full Name", "owner": "account@example.com"},
-     "style":    {"primary": "0B57D0", "font": "Google Sans"}}
-
-Config path: --config, else $GDOC_HOUSE_STYLE_CONFIG, else $XDG_CONFIG_HOME/gdoc-house-style/config.json
-(~/.config when XDG_CONFIG_HOME is unset). A missing file means defaults and no author. Pipeline: pandoc writes
-the document through a reference template this script generates, then python-docx applies what a
-template cannot express (table formatting, diagram centring, blank lines, Title Case).
-Requires: pandoc, python-docx.
+Fonts and colours come from ../style.json, the identity from the config (see common.py).
+Pipeline: pandoc writes the document through a reference template this script generates, then
+python-docx applies what a template cannot express (table formatting, diagram centring, blank
+lines, Title Case). Requires: pandoc, python-docx.
 """
 import json, os, re, subprocess, sys, tempfile, pathlib
 from docx import Document
@@ -23,63 +15,17 @@ from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
-STYLE = {
-    "font": "Google Sans",
-    "mono": "JetBrains Mono",        # has every box-drawing and arrow glyph in Docs; Consolas does not
-    "primary": "0B57D0",             # Material blue, as Google uses it
-    "tint": "E8F0FE",                # table title row / title column
-    "border": "C4C7C5",              # neutral outline-variant
-    "text": "1F1F1F",
+from common import IDENTITY, STYLE, load_config, title_case
+
+# Layout numbers only a Word file needs. The fonts and colours come from ../style.json (common.py).
+STYLE.update({
     "body_pt": 10, "cell_pt": 9, "mono_pt": 8, "mono_advance": 0.6,   # advance = em fraction per character
     "line": 1.15,
-    # space above / below in points
+    # size, space above, space below, in points
     "title": (26, 0, 10), "h2": (16, 18, 6), "h3": (12, 14, 4), "h4": (10, 10, 3),
     "para_after": 8, "list_after": 3,
     "page_width_pt": 612, "margin_pt": 72,
-}
-IDENTITY = {}        # "author" -> the document's author property; "owner" -> the account expected to own the Doc
-
-
-def load_config(path=None):
-    """Overlay a JSON config on STYLE and IDENTITY. Unknown style keys are an error, not a silent no-op."""
-    path = path or os.environ.get("GDOC_HOUSE_STYLE_CONFIG") or os.path.join(
-        os.environ.get("XDG_CONFIG_HOME") or os.path.expanduser("~/.config"), "gdoc-house-style", "config.json")
-    if not os.path.isfile(path):
-        return None
-    cfg = json.load(open(path, encoding="utf-8"))
-    unknown = set(cfg.get("style", {})) - set(STYLE)
-    if unknown:
-        sys.exit(f"{path}: unknown style key(s): {', '.join(sorted(unknown))}")
-    for k, v in cfg.get("style", {}).items():
-        STYLE[k] = tuple(v) if isinstance(v, list) else v
-    IDENTITY.update(cfg.get("identity", {}))
-    return path
-
-
-SMALL = {"a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "by", "with", "from", "as", "at", "vs", "per", "if", "nor", "but"}
-
-
-# ── Title Case ────────────────────────────────────────────────────────────────────────────────
-def _tc_plain(s):
-    words, out = s.split(" "), []
-    for i, w in enumerate(words):
-        core = w.strip("()[]:;,.\"'*`")
-        first = i == 0 or (i == 1 and re.match(r"^[\d.]+$|^Appendix$", words[0])) or (out and out[-1].endswith(":"))
-        if not core or not core[0].isalpha() or core[0].isupper() or any(c.isupper() for c in core[1:]) or "_" in core or "`" in w:
-            out.append(w)
-        elif core.lower() in SMALL and not first and i != len(words) - 1:
-            out.append(w)
-        else:
-            j = w.index(core[0]); out.append(w[:j] + w[j].upper() + w[j + 1:])
-    return " ".join(out)
-
-
-def title_case(s):
-    links = []
-    def stash(m):
-        links.append(m.groups()); return f"\x00{len(links) - 1}\x00"
-    s = _tc_plain(re.sub(r"\[([^\]]+)\]\(([^)]+)\)", stash, s))
-    return re.sub(r"\x00(\d+)\x00", lambda m: f"[{_tc_plain(links[int(m[1])][0])}]({links[int(m[1])][1]})", s)
+})
 
 
 def prepare_markdown(md):
@@ -258,7 +204,7 @@ def post_process(path):
                         r.font.size = Pt(S["cell_pt"])
                         if title: r.font.bold = True
                     if title and key_value and len(p.runs) == 1:
-                        p.runs[0].text = _tc_plain(p.runs[0].text)       # labels are titles too
+                        p.runs[0].text = title_case(p.runs[0].text)       # labels are titles too
         _blank_after(t._tbl, d)
     for p in d.paragraphs:
         if p.style.name == "Source Code":
@@ -295,11 +241,9 @@ if __name__ == "__main__":
     config = None
     if args[:1] == ["--config"] and len(args) >= 2:
         config, args = args[1], args[2:]
-        if not os.path.isfile(config):
-            sys.exit(f"no such config: {config}")
     if len(args) != 2:
         sys.exit(__doc__)
     used = load_config(config)
     build(args[0], args[1])
-    print("wrote", args[1], "| config:", used or "none (built-in defaults)",
+    print("wrote", args[1], "| config:", used or "none (built-in style)",
           "| author:", IDENTITY.get("author", "not set"), "| expected owner:", IDENTITY.get("owner", "not set"))
