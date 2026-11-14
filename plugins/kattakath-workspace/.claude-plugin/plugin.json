@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "kattakath-workspace",
-  "version": "1.0.1",
+  "version": "1.1.0",
   "description": "One install for Google Workspace in Claude: declares the official Google connectors for Gmail, Calendar, Drive, Docs, Sheets and Slides (empty-URL entries, the shape Anthropic's own plugins use, so the account's existing claude.ai connectors are reused and nothing new signs in), plus a routing skill for which app and tool to reach for, and the confirm-before-write rules.",
   "author": {
     "name": "Ismail Kattakath"

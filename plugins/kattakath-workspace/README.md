@@ -44,6 +44,18 @@ The six Google connectors connected on the Claude account (claude.ai → Setting
 Connectors), signed in as the Google account to use. In Claude Code their tools appear as
 `mcp__claude_ai_Gmail__*`, `mcp__claude_ai_Google_Drive__*` and so on.
 
-## Not bundled
+## Google Chat and Google People (optional, not declared)
 
-Google Chat, Contacts, Tasks and Keep.
+The skill also covers Google's Developer Preview Chat and People MCP servers
+(`chatmcp.googleapis.com/mcp/v1`, `people.googleapis.com/mcp/v1`) **when the account has
+added them** as claude.ai custom connectors. They are not declared in `.mcp.json`: they
+need the account's own OAuth client and secret (no dynamic client registration), which a
+plugin cannot carry. Setup: enrol a GCP project in the Workspace Developer Preview, enable
+`chat.googleapis.com` + `chatmcp.googleapis.com` and `people.googleapis.com`, create a Web
+OAuth client with "Use this client for an AI-powered agent" and redirect
+`https://claude.ai/api/mcp/auth_callback`, then add each URL as a custom connector with
+that client's ID and secret.
+
+## No connector exists
+
+Google Tasks, Keep, and Google Messages (SMS).
