@@ -1,10 +1,10 @@
 # `kattakath-workspace` — Claude Code plugin
 
-Google Workspace in Claude through **one** claude.ai connector, **Kattakath Workspace**: a
+Google Workspace in Claude through **one** connector, **Kattakath Workspace**: a
 Cloudflare MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app —
 Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People — behind one sign-in page. This
-plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`). Nothing in it can
-send mail: Claude drafts, you press Send.
+plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`) and the connector
+entry. Nothing in it can send mail: Claude drafts, you press Send.
 
 Install: `/plugin install kattakath-workspace@kattakath`
 
@@ -17,18 +17,22 @@ enablement are documented once, in this repo's `CLAUDE.md` — not restated here
   sign-in fallback, and the confirm-before-write rules. It matches the connector by **name**,
   because the tool prefix differs by surface (`mcp__Kattakath_Workspace__…` in cloud
   sessions, `mcp__claude_ai_Kattakath_Workspace__…` in local Claude Code).
-- **No connector entries.** A plugin entry with the same URL as an account connector hides
-  it (see History).
+- **The connector** (since 2.1.0): `.mcp.json` declares `kattakath-workspace` →
+  `https://mcp.kattakath.com/mcp`, so the plugin page lists it and installing the plugin brings
+  it. Before 2.1.0 this was not possible (see History): Google's servers have no Dynamic Client
+  Registration, but the Cloudflare portal in front of them does, for claude.ai and local
+  (loopback) clients. Where a machine also has the account connector, denying the plugin copy
+  (`deniedMcpServers`: `plugin:kattakath-workspace:kattakath-workspace`) keeps one sign-in.
 
 ## Requires
 
 The **Kattakath Workspace** custom connector on the Claude account (claude.ai → Customize →
-Connectors → `https://mcp.kattakath.com/mcp`), connected once: the portal page lists every
-app with an **Authorize** button (one Google consent each). It is account-level, so it reaches
-claude.ai, the phone and Claude Code alike. The portal is infrastructure in
-`kattakath/nix-config` (`infra/cloudflare/mcp-portals.nix`), including the per-app tool
-allowlist; it replaced the 1.x Pomerium gateway and its eight `Kattakath <App>` connectors on
-2026-11-14.
+Connectors → `https://mcp.kattakath.com/mcp`) for claude.ai chat and Claude Code cloud/phone
+sessions; local Claude Code can use this plugin's `.mcp.json` instead. Connect once: the
+portal page lists every app with an **Authorize** button (one Google consent each). The
+portal is infrastructure in `kattakath/nix-config` (`infra/cloudflare/mcp-portals.nix`; the
+per-app tool allowlist is data in `infra/cloudflare/workspace-mcp-apps.nix`). It replaced the
+1.x Pomerium gateway and its eight `Kattakath <App>` connectors on 2026-11-14.
 
 ## History: why 1.0.1–1.1.0 used empty URLs (measured 2026-11-14)
 

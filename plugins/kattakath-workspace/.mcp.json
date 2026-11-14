@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "kattakath-workspace": {
+      "type": "http",
+      "url": "https://mcp.kattakath.com/mcp"
+    }
+  }
+}
