@@ -5,18 +5,21 @@ description: "Use before the first call to a Google Workspace connector — Gmai
 
 # Google Workspace connectors
 
-This plugin bundles six of Google's own hosted MCP servers. Each is declared as a bare
-URL, so the sign-in is whatever the account already uses for that URL — on claude.ai, the
-official Google connector of the same name.
+This plugin declares the six official Google connectors. The tools come from the
+account's own claude.ai connectors (in Claude Code: `mcp__claude_ai_<App>__*`); the
+plugin adds no server and no sign-in of its own.
 
-| Server (tool prefix contains) | URL | Use it for |
-|---|---|---|
-| `gmail` | `gmailmcp.googleapis.com/mcp/v1` | Find, read, draft, send, reply, forward, label, trash mail |
-| `google-calendar` | `calendarmcp.googleapis.com/mcp/v1` | List, search, create, update, respond to events; suggest a time |
-| `google-drive` | `drivemcp.googleapis.com/mcp/v1` | Find a file, read it as text, create, copy, rename, share, trash |
-| `google-docs` | `docsmcp.googleapis.com/mcp/v1` | Read and edit an existing Doc in place |
-| `google-sheets` | `sheetsmcp.googleapis.com/mcp/v1` | Read and write cell values, formulas, tabs |
-| `google-slides` | `slidesmcp.googleapis.com/mcp/v1` | Read and edit an existing deck in place |
+| Connector (tool prefix) | Use it for |
+|---|---|
+| Gmail (`mcp__claude_ai_Gmail__`) | Find, read, draft, send, reply, forward, label, trash mail |
+| Google Calendar (`mcp__claude_ai_Google_Calendar__`) | List, search, create, update, respond to events; suggest a time |
+| Google Drive (`mcp__claude_ai_Google_Drive__`) | Find a file, read it as text, create, copy, rename, share, trash |
+| Google Docs (`mcp__claude_ai_Google_Docs__`) | Read and edit an existing Doc in place |
+| Google Sheets (`mcp__claude_ai_Google_Sheets__`) | Read and write cell values, formulas, tabs |
+| Google Slides (`mcp__claude_ai_Google_Slides__`) | Read and edit an existing deck in place |
+
+Entries named `plugin:kattakath-workspace:*` show as `Not configured` in `/mcp`. That is
+by design — ignore them and use the claude.ai connector tools.
 
 ## 1. Route the request
 
@@ -32,10 +35,10 @@ official Google connector of the same name.
 
 ## 2. When a tool says "needs you to sign in"
 
-The servers list their tools without signing in, so a connector can look connected and
-still fail on the first real call. On that error, stop and tell the user which connector to
-connect: in Claude Code, `/mcp` → the server → Authenticate; on claude.ai, the plugin's
-Connectors tab (or Settings → Connectors). Do not retry the call in a loop and do not
+Google's servers list their tools without signing in, so a connector can look connected
+and still fail on the first real call. On that error, stop and tell the user which
+connector to sign in to: in Claude Code, `/mcp` → `claude.ai <App>` → Authenticate; on
+claude.ai, Settings → Connectors (or the plugin's Connectors tab). Do not retry the call in a loop and do not
 switch to browser automation instead.
 
 ## 3. Confirm before anything leaves the account or cannot be undone

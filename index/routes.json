@@ -320,7 +320,7 @@
       "steps": [
         "kattakath-workspace"
       ],
-      "note": "Bare-URL Google MCP servers reuse the account's Google connectors; the six connectors were measured answering on 2026-11-14, the plugin install itself is verified after release."
+      "note": "Empty-URL entries reuse the account's claude.ai Google connectors; measured 2026-11-14 that bare URLs displace them in Claude Code and fail (no dynamic client registration)."
     }
   ]
 }

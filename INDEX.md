@@ -53,7 +53,7 @@ this repo only keeps the combinations and hard-won routes nobody else has charte
 | Tailor a resume to a job posting | [`jsonresume-tailor`](plugins/jsonresume-tailor) |  |
 | Turn a repo's review history into agent instructions | `ai-ready` from [johnpapa/ai-ready](https://github.com/johnpapa/ai-ready) | Candidate; not declared in nix-config yet. |
 | Turn bank/card statements into reconciled, deduplicated transaction records | [`statement-extract`](plugins/statement-extract) | Fails closed (exit 3/4/5) rather than emit an unreconciled or unmasked row. QFX/OFX adapters for TD, CIBC, Scotiabank and Tangerine; PDF adapters for the same banks plus Desjardins Visa, Wise and closed Scotiabank and BMO chequing accounts; a declarative CSV driver with a Wise adapter (keys byte-identical to the legacy extractor); loan and mortgage balance snapshots (TD, CIBC, BMO, NSLSC) as opt-in position records. Sinks (a Sheet, a ledger) stay with the consumer. |
-| Work in Gmail, Calendar, Drive, Docs, Sheets or Slides from Claude | [`kattakath-workspace`](plugins/kattakath-workspace) | Bare-URL Google MCP servers reuse the account's Google connectors; the six connectors were measured answering on 2026-11-14, the plugin install itself is verified after release. |
+| Work in Gmail, Calendar, Drive, Docs, Sheets or Slides from Claude | [`kattakath-workspace`](plugins/kattakath-workspace) | Empty-URL entries reuse the account's claude.ai Google connectors; measured 2026-11-14 that bare URLs displace them in Claude Code and fail (no dynamic client registration). |
 
 ## Sources
 

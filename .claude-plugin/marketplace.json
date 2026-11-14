@@ -350,7 +350,7 @@
     },
     {
       "name": "kattakath-workspace",
-      "description": "Google Workspace in one install: Google's own hosted MCP servers for Gmail, Calendar, Drive, Docs, Sheets and Slides (bare URLs that reuse the account's existing Google connectors, no client ID), plus a routing skill with confirm-before-write rules.",
+      "description": "Google Workspace in one install: declares the official Google connectors for Gmail, Calendar, Drive, Docs, Sheets and Slides as empty-URL entries that reuse the account's existing claude.ai connectors (no client ID, no new sign-in), plus a routing skill with confirm-before-write rules.",
       "author": {
         "name": "Ismail Kattakath"
       },
