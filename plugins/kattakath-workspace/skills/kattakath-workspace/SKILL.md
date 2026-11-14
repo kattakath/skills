@@ -9,7 +9,7 @@ The account's Google Workspace runs through ONE connector, **Kattakath Workspace
 (`https://mcp.kattakath.com/mcp`), a Cloudflare MCP portal that holds one server per Google
 app. It is account-level, so the same connector appears in claude.ai chat, Claude Code cloud
 sessions (also from the phone) and local Claude Code. This plugin also declares the same URL
-(`.mcp.json`, server `kattakath-workspace`), so installing the plugin brings the connector.
+(`.mcp.json`, server `Kattakath Workspace`), so installing the plugin brings the connector.
 
 **Every tool name is `<app>_<tool>`**, and the surface adds its own prefix. Match on the
 connector name, never on a fixed prefix:
@@ -18,7 +18,7 @@ connector name, never on a fixed prefix:
 |---|---|
 | Claude Code cloud session (web, phone) | `mcp__Kattakath_Workspace__gmail_search_threads` |
 | Local Claude Code, account connector | `mcp__claude_ai_Kattakath_Workspace__gmail_search_threads` |
-| Claude Code, this plugin's entry | `mcp__plugin_kattakath-workspace_kattakath-workspace__gmail_search_threads` |
+| Claude Code, this plugin's entry | `mcp__plugin_kattakath-workspace_Kattakath_Workspace__gmail_search_threads` (a space in a server name becomes `_` in tool names) |
 | claude.ai chat | shown under "Kattakath Workspace" |
 
 | App prefix | What it can do (the portal's allowlist; nothing else exists) |
@@ -64,7 +64,7 @@ others: they are not a route around the allowlist. Never ask the user to connect
 ## 2. When a tool says it needs sign-in, or an app's tools are missing
 
 Stop and tell the user to reconnect: claude.ai → Customize → Connectors → **Kattakath
-Workspace** → Connect (in Claude Code: `/mcp` → `kattakath-workspace` or `claude.ai Kattakath
+Workspace** → Connect (in Claude Code: `/mcp` → `Kattakath Workspace` or `claude.ai Kattakath
 Workspace` → Authenticate). The portal page lists every app with an **Authorize** button; only
 the app that failed needs it. Do not retry in a loop, do not switch to another Google
 connector, and do not fall back to browser automation.

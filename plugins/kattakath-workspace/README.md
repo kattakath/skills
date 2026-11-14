@@ -17,12 +17,14 @@ enablement are documented once, in this repo's `CLAUDE.md` — not restated here
   sign-in fallback, and the confirm-before-write rules. It matches the connector by **name**,
   because the tool prefix differs by surface (`mcp__Kattakath_Workspace__…` in cloud
   sessions, `mcp__claude_ai_Kattakath_Workspace__…` in local Claude Code).
-- **The connector** (since 2.1.0): `.mcp.json` declares `kattakath-workspace` →
+- **The connector** (since 2.1.0): `.mcp.json` declares `Kattakath Workspace` →
   `https://mcp.kattakath.com/mcp`, so the plugin page lists it and installing the plugin brings
   it. Before 2.1.0 this was not possible (see History): Google's servers have no Dynamic Client
   Registration, but the Cloudflare portal in front of them does, for claude.ai and local
-  (loopback) clients. Where a machine also has the account connector, denying the plugin copy
-  (`deniedMcpServers`: `plugin:kattakath-workspace:kattakath-workspace`) keeps one sign-in.
+  (loopback) clients. The key is Title Case on purpose: claude.ai shows it as the connector's
+  name, and a spaced key is legal for plugins (Anthropic's knowledge-work-plugins use
+  `"google calendar"`); only `claude mcp add` restricts names. Where a machine also has the account connector, denying the plugin copy
+  (`deniedMcpServers`: `plugin:kattakath-workspace:Kattakath Workspace`) keeps one sign-in.
 
 ## Requires
 
