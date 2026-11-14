@@ -407,13 +407,15 @@ and seed a known clone first so a "0" is evidence rather than an empty scan.
 
 ## 11 · Targets `document.querySelector` cannot reach
 
-A selector that is unique and correct in the picker can still be **unreachable from a
+A selector that is unique and correct in the inspector can still be **unreachable from a
 userscript**, because `document.querySelector` does not cross a shadow boundary or a frame
-boundary. The pick envelope's **`reachability`** field is what routes this decision —
-`document` · `shadow` · `frame` · `shadow-in-frame` — and anything but `document` arrives
-carrying its own ship blocker ([`SKILL.md`](../SKILL.md) hard rule 6).
+boundary. Determine the target's **reachability** yourself with `javascript_tool` before
+writing a selector — `document` · `shadow` · `frame` · `shadow-in-frame` — from
+`el.getRootNode() !== document` (inside a shadow root) and `window.top !== window` (inside a
+frame); anything but `document` needs one of the shapes below ([`SKILL.md`](../SKILL.md) hard
+rule 6).
 
-### Shadow-root targets (`reachability: "shadow"`)
+### Shadow-root targets (`shadow`)
 
 Walk in explicitly, one hop per boundary, and **guard every hop** — the host may not exist
 yet, and the root may not be open:
@@ -426,7 +428,7 @@ if (!el) return;                                       // degrade to stock, neve
 ```
 
 - **A closed shadow root is unreachable, full stop.** `host.shadowRoot` is `null` and no
-  userscript API opens it. The pick is **abandoned or re-scoped to the host** — style the host,
+  userscript API opens it. The target is **abandoned or re-scoped to the host** — style the host,
   or use a `::part()` / custom-property hook if the component exposes one. Do not ship a
   selector that can only ever match `null`.
 - **CSS does not pierce either.** A `document`-level stylesheet — including
@@ -436,12 +438,12 @@ if (!el) return;                                       // degrade to stock, neve
   freely; the host element's tag name rarely does. Prefer the outermost node that achieves the
   wish.
 
-### Cross-frame targets (`reachability: "frame"`)
+### Cross-frame targets (`frame`)
 
 The node lives in a nested document, so a top-level script never sees it. Two changes, both
 required, neither sufficient alone:
 
-1. **`@match` the frame's own URL** — the envelope's `frameUrl` is that value. The top page's
+1. **`@match` the frame's own URL** — read it from the `<iframe>` element's `src` (a cross-origin frame is opaque to a top-level probe). The top page's
    `@match` does not cover its frames.
 2. **Drop the default `@noframes`** (§ 7), or the script is declined in the very frame it
    targets.
@@ -491,7 +493,7 @@ script.
    first. The committed state still gets a bump (`SKILL.md` § Editing an existing script).
 3. **Stop tracking when done**, or the next install fights it.
 
-`FileSystemObserver` (instant, no polling) needs **Chromium 133+**; older builds poll.
+`FileSystemObserver` (instant, no polling) needs **Chrome 133+**; older builds poll.
 
 **Prevents:** a debugging session spent on code that the browser never re-read.
 
@@ -499,88 +501,69 @@ script.
 
 ## 13 · Testing a new build against an already-installed copy
 
-The operator's profile runs the INSTALLED version, so a live test of the next version has to
-decide, before the first probe, which copy it is measuring. Measured 2026-10-31 across six
-scripts and four hosts, through the DevTools protocol (`evaluate_script` + `new_page`).
+The operator's profile runs the INSTALLED version, and Claude in Chrome measures that same
+profile, so a live test of the next version has to decide, before the first probe, which copy
+it is measuring. The shapes below were first measured 2026-10-31 across six scripts and four
+hosts; on this rail the build reaches the page **only by being installed**.
 
-1. **Find the installed copy's world first.** Look for its teardown global from the page
-   (`typeof window.__<script>Teardown`):
-
-   | Visible from the page | Meaning | Test there? |
-   |---|---|---|
-   | yes (typically `@grant none`; Violentmonkey's `auto` picks page context) | same world as an injected build | **yes** — the build's entry teardown replaces the installed copy cleanly |
-   | no (any `GM_*` grant pushes it to the content world) | two copies will run side by side | **no** — test in an `isolatedContext` page (no extensions), sign-in states aside |
-
-   A double copy does not error. It shows up as two of everything, or as two `fit()` loops
+1. **Replace, don't stack.** Install the new build over the old one (same `@name` +
+   `@namespace`, a bumped `@version`), or track the file (§ 12) — then **reload every open
+   tab** on the host. A tab open across a re-install keeps running the old body. A changed
+   `@name` installs as a NEW entry beside the old one; remove the old one, or both run.
+   A double copy does not error: it shows up as two of everything, or as two `fit()` loops
    fighting over one value, which reads like a layout bug.
 
-2. **Bundle, don't paste.** `esbuild --minify <file>.user.js --outfile=<dir>/x.min.js`, then
-   `evaluate_script` with `sourcePath` and `format: "script"`. `sourcePath` reads **only files
-   under the MCP server's workspace roots**, so `<dir>` is a gitignored folder inside one of them,
-   not `/tmp`. Delete the bundle when done.
+2. **Confirm which build is running before you measure.** Read the version marker the script
+   sets (`document.documentElement.dataset`, or its teardown global for `@grant none`
+   scripts) with `javascript_tool`. No marker ⇒ the install did not take (SKILL.md § Install
+   reality), not a code bug.
 
-3. **Shim what the build calls, and stub every side effect.** Injected code has no manager:
-   - `GM_addStyle` → `(css) => { const s = document.createElement('style'); s.textContent = css; document.head.appendChild(s); return s; }`
-   - `GM_xmlhttpRequest` → a stub that calls `onload` / `onerror` / `ontimeout` on a timer.
-     Never let a test reach a real local service (a download queue, a webhook).
-   - **Counted page views:** where every GET of a detail page bumps a public counter, stub
-     `fetch` to reject those paths and COUNT them. The count is the measurement. One such
-     test cut a phone-width load from 7 counted fetches to 2.
+3. **Never let a test reach a real side effect.** Exercising the build in the operator's own
+   profile drives real requests: a download queue, a webhook, a public view counter. Ask
+   before exercising any action that writes, and count what it fetched with
+   `read_network_requests` — the count is the measurement. One such check cut a phone-width
+   load from 7 counted fetches to 2.
 
-4. **Injected after load is not `document-start`.** `navigate_page`'s `initScript` runs at
-   document start, but a large bundle (~30 KB and up) is unwieldy to pass inline. Inject after
-   load for selector and behaviour checks, and say so in the report. Two bugs only appeared at
-   document start: a late-rendered button that a retry window gave up on, and a header that
-   only a scroll ever revealed. When the fix is about load timing, take the `initScript` route.
+4. **After load is not `document-start`.** Claude in Chrome only observes a page after it
+   loaded. Two bugs only appeared at document start: a late-rendered button that a retry
+   window gave up on, and a header that only a scroll ever revealed. When the fix is about load
+   timing, prove it by its effect after a real reload, and report the timing itself as **not
+   checked**.
 
 5. **Background tabs lie about motion.** Opacity transitions, scroll-reveal headers and
-   `requestAnimationFrame` loops are throttled or frozen in a background tab. Bring the page
-   to the front (`select_page` with `bringToFront`) for any scroll, opacity or animation
-   assertion, then close it.
+   `requestAnimationFrame` loops are throttled or frozen in a background tab. Keep the
+   agent's tab in front (`tabs_context_mcp` shows which is active) for any scroll, opacity or
+   animation assertion, then close it.
 
-6. **Prove the click, not the box.** For a control the script builds, an untrusted
-   `el.click()` passes where a real click may not. Use the snapshot `uid` + `click` tool. Test
-   anything that routes clicks (a viewer that opens on card click, a key that follows a link)
-   through the script's OWN interceptor: a viewer whose "open this item" key clicked the
-   card's link was caught by its own card-click handler and reopened itself.
+6. **Prove the click, not the box.** For a control the script builds, `el.click()` from
+   `javascript_tool` passes where a real click may not. Click with `computer` at the control,
+   then read the effect. Test anything that routes clicks (a viewer that opens on card click,
+   a key that follows a link) through the script's OWN interceptor: a viewer whose "open this
+   item" key clicked the card's link was caught by its own card-click handler and reopened
+   itself.
 
 7. **Re-installing for the real proof.** If the manager's own update check leaves the old
-   version in place, open the listing's `.user.js` URL in a fresh `about:blank` tab. The
-   manager's confirm page opens; one trusted click on Reinstall installs it. Navigating to
-   that URL from an extension page gets swallowed. A changed `@name` installs as a NEW entry
-   beside the old one; remove the old one, or both run.
+   version in place, open the listing's `.user.js` URL in a fresh tab. The manager's confirm
+   page opens; the operator's one click on Reinstall installs it. Navigating to that URL from
+   an extension page gets swallowed.
 
-8. **Classify a red suite before believing it.** A fresh test profile is not the operator's
-   profile. Age gates, consent modals and region prompts come up that the operator passed
-   long ago. They hold focus, cover the player and lock scrolling, so keyboard, player and
-   scroll checks fail for reasons that have nothing to do with the build. Measured
-   2026-10-31: one host failed 11 checks across three runs while the same build worked on
-   the operator's profile.
-   - **A/B against the base build in the SAME browser.** Identical failures on the old file
-     mean the environment, not the change. Only a failure the base build does not show
-     counts against the release.
-   - **Skip named overlays, never broad ones.** Before keyboard, player or scroll checks,
-     detect the host's own gate or consent signature (its class or id, or a fixed overlay
-     covering most of the viewport with a gate element inside). Report those checks as
-     SKIPPED-ENVIRONMENT, with the reason. A generic "anything covers the page → skip"
-     would also hide a real script bug that covers the page.
-   - **Pre-set the gate cookie in a throwaway profile, and keep one gated run.** A fresh test
-     profile needs the gate cookie the site itself sets on "I am 18+" (read its name and value
-     from the site's own JS, not from guesswork). Set it via the protocol before the first
-     navigation, so the armed-state checks run without anyone clicking. Keep ONE cookie-less
-     run per gated host: it is the only proof that the script stays inert while gated. Never
-     do this in the operator's own profile, and never script a click on the gate.
-   - **Repair a check that flakes repeatedly; don't re-run it.** One that fails now and
-     then on untouched code is a test bug. Diagnose first: did the event reach the
-     element, did a site handler or popunder eat it, or was it timing? Then fix the
-     check, and note the cause next to it.
+8. **Classify a red check before believing it.** A/B against the base build in the SAME
+   browser: identical failures on the old file mean the environment, not the change. Only a
+   failure the base build does not show counts against the release. Skip checks behind a
+   **named** host gate or consent overlay (its class or id) and report them as
+   SKIPPED-ENVIRONMENT with the reason — never a generic "anything covers the page → skip",
+   which would also hide a real script bug that covers the page. Never script a click on an
+   age or consent gate. Repair a check that flakes on untouched code instead of re-running it:
+   did the event reach the element, did a site handler or popunder eat it, or was it timing?
 
 **Prevents:** measuring the installed version and calling it the new one, test traffic that
-moves real counters or queues, a release that only works when injected late, and a suite left permanently red by the test profile rather than the code.
+moves real counters or queues, and a release whose load-timing behaviour was never checked
+being reported as proven.
 
 ---
 
 ## Flagged — NOT verified from primary docs
+
 
 **Unverified. Do not promote a row without re-verifying it, and do not cite one as settled.**
 

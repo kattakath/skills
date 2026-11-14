@@ -1,0 +1,23 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "userscript-lab",
+  "version": "1.0.0",
+  "description": "Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/userscript-lab",
+  "icon": "./icon.png",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "userscript",
+    "violentmonkey",
+    "greasyfork",
+    "claude-in-chrome",
+    "browser",
+    "dark-mode",
+    "redesign",
+    "accessibility"
+  ]
+}

@@ -149,16 +149,14 @@ page stock rather than blank it. This is the same rule as the elimination gate i
 
 ## Verifying a relocation
 
-The runner has **no group for this any more**: `drawer` and `actions` were deleted when the
-scope narrowed, because they verified machinery the keep-list does not build
-([`acceptance.md`](acceptance.md) § The groups). A site that really does relocate writes
-those assertions by hand as a `.mjs` spec against `scripts/userscript-acceptance.mjs` —
-open by control, Escape, trusted click-outside, focus trapped then restored, background
-`inert`, and **one assertion per moved control that it still performs its action**
-[F-PRESENT-NOT-WORKING]. Set `teardownFingerprint` in the redesign config so the `teardown`
-group still proves the node went back to its original parent **and** next sibling.
+The default checks in [`SKILL.md`](../SKILL.md) § 4 Verify have **no entry for this**: they verify the keep-list, which
+does not relocate. A site that really does relocate adds these checks by hand on Claude in
+Chrome — open by control, Escape (`computer` key), a `computer` click outside, focus trapped
+then restored, background `inert`, and **one check per moved control that it still performs
+its action** [F-PRESENT-NOT-WORKING]. Record each moved node's original parent and next
+sibling before the script runs, so the `teardown` check can prove it went back.
 
 ## Where to read next
 
 - [`keep-list.md`](keep-list.md) — **the default this file is the exception to.**
-- [`SKILL.md`](../SKILL.md) · [`survey.md`](survey.md) — M6, M7 and M8 feed this file.
+- [`SKILL.md`](../SKILL.md) § 1 Survey — M6, M7 and M8 feed this file.

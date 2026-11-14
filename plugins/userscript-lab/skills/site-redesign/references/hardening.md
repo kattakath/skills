@@ -5,7 +5,7 @@ tidy-up. On the run that produced this file it found a live **defect that scaled
 the number of script copies**, three comments describing features that no longer
 existed, ~76 lines of unreachable code, and a colour parser blind to half of CSS's
 modern serialisations — on a script that had already shipped five versions and passed
-66 acceptance checks.
+66 verification checks.
 
 ## Why a separate pass
 
@@ -33,7 +33,7 @@ ranges it touched** so the integrator can reconcile.
 **The brief matters more than the lane.** Hand each one the failure patterns already
 paid for — otherwise they rediscover them at full price. At minimum:
 [F-INJECT-IS-NOT-INSTALL], [F-BG-TAB-FREEZES-ANIM], [F-PRESENT-NOT-WORKING], and the
-spec-lies list in [`acceptance.md`](acceptance.md).
+spec-lies list in [`SKILL.md`](../SKILL.md) § 4 Verify.
 
 **Give them a regression net, not just a goal.** Point every lane at the existing
 suites and require the results to be *identical or better* after their changes. A
@@ -72,9 +72,9 @@ would have aborted the very callback the timeout exists to fire.
 - [ ] **Re-entry, at three copies not two.** If a bug's symptom is linear in copy count,
       a two-copy test looks exactly like the bug. Inject three times and assert **one**
       of every control, sheet and marker. Assert too that a re-run is **not a silent
-      no-op** — it must still apply. The runner's `lifecycle` group now does exactly this,
-      at document-start, `copies` in the config (default 3) — so the lane's job is to read
-      its failures, not to rebuild it.
+      no-op** — it must still apply. On this rail the copies are injected after load with
+      `javascript_tool` (the script's own IIFE, three times), so name the check as
+      after-load, not `document-start`.
 - [ ] **Bootstrap listeners.** A teardown that starts `const life = L; if (!life) return`
       cannot cancel work belonging to a copy that has not started yet. Abort a
       module-scope bootstrap controller **first**, before that return.
@@ -92,30 +92,25 @@ would have aborted the very callback the timeout exists to fire.
 
 ## Harness lane
 
-Generalise the specs into something the next site configures rather than rewrites, and
-make the correct thing the easy thing — see [`acceptance.md`](acceptance.md) § the
-runner. Two rules learned the expensive way: a check that cannot be configured must
-**skip loudly**, naming the missing config path, rather than pass silently; and the
-runner should be exercised against a **purpose-built fixture** whose defects you chose,
-because a runner that has never failed has never been tested.
+Generalise the checks into a list the next site fills in rather than rewrites, and
+make the correct thing the easy thing — the named checks in [`SKILL.md`](../SKILL.md) § 4 Verify. Two rules learned the
+expensive way: a check that cannot run must **skip loudly**, naming why, rather than pass
+silently; and every check should be seen to **fail** once against a defect you chose,
+because a check that has never failed has never been tested.
 
 ## Rules of engagement with the operator's browser
 
 The operator's browser holds their tabs, sessions and logins. This project killed it
 **three times, by three different mechanisms**, before these rules existed.
 
-- **Never `Target.createBrowserContext` / `disposeBrowserContext`.** Disposing takes the
-  last window with it and the browser exits.
-- **Never close the last page target** — it quits the browser and takes the debugging
-  port with it [F-LAST-TAB-KILLS-BROWSER]. Park on `about:blank` instead.
-- **Never `Target.activateTarget`.** `Emulation.setFocusEmulationEnabled` gives a
-  background tab a real clock without stealing the window [F-FOCUS-EMULATION].
-- **Default to refusal, not to the default port.** A harness that defaults to the
-  operator's browser will eventually drive it, because a spec only has to *forget*.
-  Require an explicit test-browser URL and exit with instructions otherwise. This is the
-  only one of these rules that does not depend on anyone remembering.
-- **Prefer a throwaway profile**, and close it when the work ends — a debugging port is
-  unauthenticated and any local process can drive it.
+- **Work only in tabs you opened** (`tabs_create_mcp`), and close them when done. Touch an
+  operator tab only when asked to.
+- **Never close the last window's last tab** — it quits the browser [F-LAST-TAB-KILLS-BROWSER].
+  Park on `about:blank` instead.
+- **Never trigger `alert` / `confirm` / `prompt`.** A modal blocks every later browser event
+  and the extension stops answering; prefer `console.log` + `read_console_messages`.
+- **A per-site permission wall is the operator's call** — ask, and wait. Never route around
+  it with another browser.
 
 ## Done when
 
@@ -123,10 +118,10 @@ The operator's browser holds their tabs, sessions and logins. This project kille
 - [ ] The pre-existing suites are **identical or better**, not merely green.
 - [ ] Every lane's refusals are recorded with a reason.
 - [ ] Anything unverified is marked **UNVERIFIED**, never assumed.
-- [ ] New facts are in [`../../references/facts.md`](../../../references/facts.md) with a
-      date and a re-measure recipe.
+- [ ] New facts are recorded with a date and a re-measure recipe, in the script's WHY block
+      or changelog.
 
 ## Where to read next
 
 - [`SKILL.md`](../SKILL.md) — the phases this closes.
-- [`acceptance.md`](acceptance.md) — the runner, and the ways a spec lies.
+- [`SKILL.md`](../SKILL.md) § 4 Verify — the checks, and the ways a check lies.

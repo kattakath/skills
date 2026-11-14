@@ -79,7 +79,7 @@ Three practical rules, all paid for:
 
 Whatever the gate is, the **out-of-scope** shapes it has to reject are the ones worth
 verifying: put the lookalikes — the watch page, the profile strip, the photo gallery — in
-the runner's `stockShapes` and prove they come back byte-identical to a stock load.
+the verify step's **stock shapes** and prove they come back identical to a stock load.
 
 ## Executing it — mark, then hide the complement
 
@@ -146,8 +146,7 @@ not removed and then rebuilt.
 
 ## Verifying it
 
-These are runner groups, not hand-written probes — see
-[`acceptance.md`](acceptance.md) § The groups.
+These are the named checks in [`SKILL.md`](../SKILL.md) § 4 Verify.
 
 | Claim | Group |
 |---|---|
@@ -223,4 +222,3 @@ answer.
 - [`SKILL.md`](../SKILL.md) § Scope first — why the list is this short.
 - [`topbar.md`](topbar.md) — the hidden bar, measured.
 - [`relocation.md`](relocation.md) — the exception: when a control must actually move.
-- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.

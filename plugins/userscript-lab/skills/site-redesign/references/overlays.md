@@ -106,5 +106,4 @@ Assert the property that carries the claim, not a keyword:
 - [`keep-list.md`](keep-list.md) — the shape this card belongs to.
 - [`topbar.md`](topbar.md) — the other standard component.
 - [`SKILL.md`](../SKILL.md) · [`theming.md`](theming.md) — motion and media rules.
-- [`acceptance.md`](acceptance.md) — how these get verified.
-- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.
+- [`SKILL.md`](../SKILL.md) § 4 Verify — how these get verified.

@@ -1,38 +1,32 @@
 # Probes — the measurement instruments
 
-**Which route runs these bodies is not decided here.** One ladder, one file:
-[`../../references/routes.md`](../../../references/routes.md) — the six tiers, their gates, how to
-probe each gate, and how to open one. Run `scripts/page-route.sh` before the first probe.
+**The rail is Claude in Chrome's `mcp__claude-in-chrome__javascript_tool`**, run in a tab the
+agent opened with `tabs_create_mcp` + `navigate` (SKILL.md § A.5). The bodies below are
+plain JavaScript, so they run anywhere JavaScript can be evaluated in the page.
 
-If **no** route is reachable, say so and stop — **do not substitute a guessed selector for a
-measurement.** Ask the operator to paste the probe into their own console and hand back the
-JSON; that is a valid measurement, just not one you took.
+If the page cannot be reached (extension not connected, site permission declined), say so and
+stop — **do not substitute a guessed selector for a measurement.** Ask the operator to paste
+the probe into their own DevTools console and hand back the JSON; that is a valid
+measurement, just not one you took.
 
-## Tier-1 upgrades — when the DevTools Protocol is reachable
+## Running on Claude in Chrome — four traps the tool does not announce
 
-The bodies below are the **portable baseline**: they run anywhere JavaScript can be evaluated in
-the page. On the tier-1 (CDP) route two of them have a strictly better instrument, because it
-asks the *engine* instead of the page:
-
-| Probe | Tier-1 upgrade | What the upgrade buys |
-|---|---|---|
-| **1 · `dumpSubtree`** | `DOMSnapshot.captureSnapshot` (`computedStyles`, `includePaintOrder`, `includeDOMRects`) | **Pierces shadow roots, iframes and template contents**, adds paint order and DOM rects, and runs **no page JS** — so no CSP exposure and nothing to mutate |
-| **2 · `mediaRules`** | `CSS.getMediaQueries` (+ `CSS.getStyleSheetText`) | **Not blocked by cross-origin sheets.** The `crossOrigin` count that makes a Probe-2 finding incomplete simply does not arise |
-| **3 · `diff`** | none — it is pure arithmetic over two Probe-1 payloads | Feed it snapshot-derived payloads in the same shape |
-| **4 · `assertEffect`** | **none, and there can be none — see below** | — |
-
-Command details and the ordering rules (`DOM.enable` before any nodeId, `CSS.enable` after it):
-[`../../references/cdp-extras.md`](../../../references/cdp-extras.md).
+| Trap | Consequence and the shape that avoids it |
+|---|---|
+| **Each call is its own block scope.** Top-level `let`/`const` are gone by the next call; one evaluation is capped at ~40 s and ~50 KB of output [F-CIC-REPLMODE]. | Hang state off `window` (`window.__probeA = dump()`). When state B needs a **navigation**, `window` is wiped: store the payload in `sessionStorage` (same origin, same tab) instead. |
+| **Output is sanitized silently** — no error, the value is replaced [F-CIC-SANITIZER]. A class chain like `div.card.active` reads as `[BLOCKED: JWT token]`; a key named `author` trips the `/auth/i` sensitive-key rule; strings over 1000 chars are truncated, arrays over 100 items truncated, a DOM node returns `[DOM Node]`. | **Run Probe 3 in the page** against the two stored payloads and return only its summary. Return selectors and labels inside an object under neutral keys, and count rather than list. |
+| **A navigation inside the call fails it** — the tool re-checks the origin after execution and answers *"Security check failed"* [F-CIC-ORIGIN-RECHECK]. | Navigate with the `navigate` tool, then probe in a separate call. |
+| **The first script on a new domain raises a per-site permission prompt.** | Tell the operator and wait; a declined site is a stop, never a reason to switch browser. |
 
 ## Honest caveats — read before blaming the page
 
 | Caveat | Consequence |
 |---|---|
-| A missing **tool surface** is the single most common reason a measurement never happens. | Before concluding the site is odd, re-check that the route's tools are actually loaded in this session — `routes.md` says which check is shell-probeable and which is not. |
-| A route's extension being *installed* proves nothing; each has a **per-tab or per-session gate** a human flips. | An empty tab list is the expected state for a tab nobody connected — the gate, not a bug. Kapture's connect toggle is in the **toolbar popup**, and DevTools is **not** required [F-KAPTURE-POPUP]. |
-| Measurement happens in a **different browser profile from the one the script ships into**. | Extension set, CSP handling and `@run-at` timing can differ. That is exactly why Probe 4 re-measures **after the real install**, and why a green Probe 3 is evidence, not proof. |
+| A missing **tool surface** is the single most common reason a measurement never happens. | Before concluding the site is odd, re-check that the Claude in Chrome tools are loaded in this session (one ToolSearch `select:` call) and that `tabs_context_mcp` answers. |
+| **No engine-side instrument on this rail.** The probes run as page JavaScript: they do not pierce closed shadow roots or cross-origin iframes, and **cannot read a cross-origin stylesheet**. | A high Probe 2 `crossOrigin` count means the finding is incomplete — say so in the report rather than reading it as "no breakpoint". |
+| Probes run **after load**. | Anything the script does at `document-start` is observed only by its effect afterwards. Name such checks as not run. |
 
-**Every probe returns JSON.** Screenshots and blind-waiting are not measurements — they cannot be diffed, so they cannot settle the DOM-differs vs DOM-identical question.
+**Every probe returns JSON.** Screenshots and blind-waiting are not measurements — they cannot be diffed, so they cannot settle the DOM-differs vs DOM-identical question. A `computer` screenshot or `gif_creator` recording is evidence **for the operator**, beside the JSON.
 
 ---
 
@@ -113,8 +107,8 @@ Command details and the ordering rules (`DOM.enable` before any nodeId, `CSS.ena
 
 ```js
 (() => {
-  const A = /* paste Probe 1 payload — state A */ null;
-  const B = /* paste Probe 1 payload — state B */ null;
+  const A = /* window.__probeA, or the pasted Probe 1 payload — state A */ null;
+  const B = /* window.__probeB, or the pasted Probe 1 payload — state B */ null;
   if (!A || !B) return { err: 'paste both Probe 1 payloads' };
   const KEYS = ['tag', 'role', 'label', 'classCount', 'w', 'h',
                 'display', 'position', 'width', 'overflow-x', 'visibility'];
@@ -152,11 +146,11 @@ Command details and the ordering rules (`DOM.enable` before any nodeId, `CSS.ena
 
 ## Probe 4 — `assertEffect()`
 
-> **Probe 4 has NO CDP equivalent, and never will.** The DevTools Protocol measures the **page**
-> — it never measures the **userscript runtime**. `@grant` sandboxing, which `GM_*` actually
-> materialised, and Violentmonkey's real injection timing are only ever proven by running this
-> after a real install, in the profile the script ships into. No tier, no upgrade and no amount
-> of protocol access substitutes for it.
+> **Probe 4 measures the page, never the manager.** On this rail it runs in **the profile the
+> script ships into** (the operator's Chrome, with Violentmonkey), which makes it real
+> post-install evidence. What it still cannot see: `@grant` sandboxing from the inside,
+> which `GM_*` actually materialised, and Violentmonkey's injection timing — infer those
+> only from their effect after load, and say so.
 
 **Why:** post-install proof. Eyeballing the page is not a check, and this is also how you detect the **most common non-bug**: the *Allow User Scripts* toggle is off, so the script never ran at all.
 **Gotcha:** absent marker + zero adopted sheets ⇒ **the script did not execute** — check `chrome://extensions` (*Allow User Scripts*, *Allow access to file URLs*) and whether the `@version` bump was actually re-installed, **before** touching the code.

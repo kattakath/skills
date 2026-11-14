@@ -59,8 +59,8 @@ addEventListener('focusout', (e) => { if (!bar.contains(e.relatedTarget)) show(f
 
 `BAND` is a working range of **4-8 px**: large enough to catch a fast throw at the edge,
 small enough that it never fires while the reader is using the first row. Put whichever
-number you pick in the acceptance config, so the run tests the number the script uses
-rather than a second copy of it.
+number you pick in one constant the verify step reads back from the page, so the check tests
+the number the script uses rather than a second copy of it.
 
 **Verify the leave path on the live page.** A pointer that exits the window *through* the
 top edge is exactly the case that leaves a bar latched open, and which leave event covers it
@@ -103,7 +103,7 @@ rule.
 
 ## Verifying it
 
-The `topbar` group in [`acceptance.md`](acceptance.md) asserts all of it. What it measures,
+The `topbar` check in [`SKILL.md`](../SKILL.md) § 4 Verify asserts all of it, by hand on Claude in Chrome. What it measures,
 and why each one is not redundant:
 
 | Assertion | Catches |
@@ -123,14 +123,14 @@ Three ways this check reports a dead keyboard path on a bar whose keyboard path 
 | focusing the **first** match | passes, then fails one shape later | a bar's leading controls are routinely **0x0** icon toggles; `el.focus()` cannot move focus to one [F-ZERO-SIZE-CONTROL-DOES-NOT-TAKE-FOCUS] |
 | reading `bar.contains(activeElement)` | a trivial pass | on a site that autofocuses its own search box, focus is *already* inside the bar — the read says nothing about the element you tried |
 
-So: press a **trusted `Tab`** first, walk every match, and require the element to *become*
-`document.activeElement`. All three are in the `topbar` group; a config's `focusable` can
-stay broad because the walk does the work.
+So: press a real `Tab` first (`computer` key action, never a synthetic `KeyboardEvent`), walk
+every match, and require the element to *become* `document.activeElement`. A broad
+`focusable` selector is fine because the walk does the work.
 
 | **still hidden after a scroll**, pointer parked away | a scroll-driven reveal that crept back in |
 | no transformed ancestor above a fixed descendant | [F-TRANSFORM-CONTAINING-BLOCK], before it presents as "fixed is not fixed" |
 
-**Park the pointer deliberately.** A harness that parks at `(1, 1)` is parking *inside the
+**Park the pointer deliberately.** A check that parks at `(1, 1)` is parking *inside the
 reveal band*, so it reads the revealed state as the rest state. Worse, it breaks a check
 that has nothing to do with the bar: the reveal lands **after** the hit-test that set
 `:hover`, so `:hover` stays on the card underneath while `elementFromPoint` reports the bar,
@@ -142,5 +142,4 @@ Park at the viewport centre for any at-rest read, and choose the element to meas
 
 - [`keep-list.md`](keep-list.md) — the shape this belongs to.
 - [`overlays.md`](overlays.md) — the other standard component, the hover title.
-- [`acceptance.md`](acceptance.md) — the `topbar` group.
-- [`../../references/facts.md`](../../../references/facts.md) — every `[F-…]` above.
+- [`SKILL.md`](../SKILL.md) § 4 Verify — the `topbar` check.

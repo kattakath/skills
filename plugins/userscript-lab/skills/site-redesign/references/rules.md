@@ -15,7 +15,7 @@ item here was paid for by a defect that shipped or nearly shipped; none of it is
    else is stock, including its theme. A rule that exists only because an earlier rule
    widened the scope is a rule neither of them needed.
 2. **No selector may be written before the survey is complete.** The survey is a
-   blocking phase with its own deliverable ([`survey.md`](survey.md)). "I will measure
+   blocking phase with its own deliverable ([`SKILL.md`](../SKILL.md) § 1 Survey). "I will measure
    it when I get there" is how a redesign ships a guess.
 3. **Prefer hiding to moving — and IF a control must move, move the site's node, never
    rebuild it.** The keep-list moves nothing, which is most of its value. Relocation is the
@@ -35,8 +35,8 @@ item here was paid for by a defect that shipped or nearly shipped; none of it is
    `window.CSS` and `CSS.escape` then throws a TDZ error that reads like something else
    entirely [F-CSS-SHADOWS-GLOBAL].
 8. **Geometry proves presence, never function** — the reference plugin's own
-   `[F-PRESENT-NOT-WORKING]`. Every primary action is re-exercised under a **trusted**
-   event, before and after. A redesign is not verified until the site still works.
+   `[F-PRESENT-NOT-WORKING]`. Every primary action is re-exercised with a real `computer`
+   click (never `el.click()`), before and after. A redesign is not verified until the site still works.
 9. **Record numbers, not adjectives.** "Contrast is fine" is not a measurement; "4.8:1"
    is. Every claim in the header block and the changelog carries the figure and the date.
 
@@ -59,14 +59,14 @@ item here was paid for by a defect that shipped or nearly shipped; none of it is
 - **`transform` for off-canvas** — it re-anchors every fixed descendant
   [F-TRANSFORM-CONTAINING-BLOCK].
 - **A fixed sleep in a spec** [F-TRANSITION-RACE], and **anything measured in a
-  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM] — the fix is a live
-  clock via `Emulation.setFocusEmulationEnabled`, not stealing the operator's window with
-  `Target.activateTarget` [F-FOCUS-EMULATION].
-- **Verifying by `eval` into a loaded page** [F-INJECT-IS-NOT-INSTALL]. Run
-  `scripts/redesign-acceptance.mjs`, which injects at document-start across real
-  navigations, rather than writing that harness again.
-- **Trusting a null result before asserting the rig** [F-INPUT-SILENTLY-DROPPED] — a dead
-  target makes every working control look broken.
+  background tab** [F-IO-BACKGROUND-TAB], [F-BG-TAB-FREEZES-ANIM] — keep the agent's own
+  tab in front for any motion, lazy-load or colour check.
+- **Verifying by `eval` into a loaded page** [F-INJECT-IS-NOT-INSTALL]. Install the script in
+  Violentmonkey and reload, then check with Claude in Chrome — an injected copy is not the
+  installed one.
+- **Trusting a null result before asserting the rig** [F-INPUT-SILENTLY-DROPPED] — click a
+  plain stock control first and require its effect; a dead rail makes every working control
+  look broken.
 - **Treating a site class as a lever without checking its rule is in scope**
   [F-MEDIA-GATED-CLASS-INERT].
 
