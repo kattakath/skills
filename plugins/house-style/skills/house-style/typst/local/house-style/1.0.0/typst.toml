@@ -1,0 +1,7 @@
+[package]
+name = "house-style"
+version = "1.0.0"
+entrypoint = "lib.typ"
+authors = []
+license = "MIT"
+description = "The house style as Typst tokens: fonts and colours from style.json, the Material 3 print scale, and the long-form document layout."

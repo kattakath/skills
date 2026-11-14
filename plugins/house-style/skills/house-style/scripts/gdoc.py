@@ -8,14 +8,14 @@ Pipeline: pandoc writes the document through a reference template this script ge
 python-docx applies what a template cannot express (table formatting, diagram centring, blank
 lines, Title Case). Requires: pandoc, python-docx.
 """
-import json, os, re, subprocess, sys, tempfile, pathlib
+import pathlib, subprocess, sys, tempfile
 from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
 from docx.shared import Pt, RGBColor
 
-from common import IDENTITY, STYLE, load_config, title_case
+from common import IDENTITY, STYLE, load_config, title_case, title_case_markdown
 
 # Layout numbers only a Word file needs. The fonts and colours come from ../style.json (common.py).
 STYLE.update({
@@ -26,19 +26,6 @@ STYLE.update({
     "para_after": 8, "list_after": 3,
     "page_width_pt": 612, "margin_pt": 72,
 })
-
-
-def prepare_markdown(md):
-    """Title Case for headings and table header rows; the first table becomes a key-value block."""
-    lines, in_code = md.split("\n"), False
-    for n, l in enumerate(lines):
-        if l.startswith("```"): in_code = not in_code
-        if in_code: continue
-        if l.startswith("#"):
-            m = re.match(r"^(#+ )(.*)$", l); lines[n] = m[1] + title_case(m[2])
-        elif l.startswith("|") and n + 1 < len(lines) and re.match(r"^\|[-:| ]+\|$", lines[n + 1]):
-            lines[n] = "|" + "|".join(" " + title_case(c.strip()) + " " if c.strip() else c for c in l.strip().strip("|").split("|")) + "|"
-    return "\n".join(lines)
 
 
 # ── reference template ────────────────────────────────────────────────────────────────────────
@@ -227,7 +214,7 @@ def post_process(path):
 
 
 def build(md_path, out_path):
-    md = prepare_markdown(open(md_path, encoding="utf-8").read())
+    md = "\n".join(title_case_markdown(open(md_path, encoding="utf-8").read().split("\n")))
     with tempfile.TemporaryDirectory() as tmp:
         ref = str(pathlib.Path(tmp) / "reference.docx")
         make_reference(ref)

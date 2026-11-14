@@ -14,10 +14,11 @@ description: >-
 
 # House style: Google Docs and PDF from one definition
 
-The style is data. `style.json` holds the two fonts and five colours; `scripts/gdoc.py` and
-`scripts/pdf.py` apply them. Do not restate the style in a prompt, do not restyle a Doc through
-the Docs API, and do not build a PDF another way. Styling by hand took a full session of
-corrections and still could not add page numbers or keep tables on one page.
+The style is data. `typst/local/house-style/1.0.0/style.json` holds the two fonts and five
+colours; `scripts/gdoc.py` and `scripts/pdf.py` apply them. Do not restate the style in a
+prompt, do not restyle a Doc through the Docs API, and do not build a PDF another way. Styling
+by hand took a full session of corrections and still could not add page numbers or keep tables
+on one page.
 
 ## 1. Write the content as Markdown
 
@@ -68,16 +69,15 @@ ${HOUSE_STYLE_PYTHON:-python3} scripts/pdf.py report.md report.pdf
   `CID TrueType`. Then look at the first pages and every diagram page. For a PDF that software
   will parse, also run the `ats-safe-pdf` plugin's `/pdf-check`.
 
-## Identity and overrides come from a config file
+## The identity comes from a config file
 
-**No name, account or personal colour belongs in a script or a prompt.** Both scripts read a
-JSON config from `--config`, `$HOUSE_STYLE_CONFIG`, or `$XDG_CONFIG_HOME/house-style/config.json`,
-which the operator's system configuration generates. Each script prints the config it used and
-the author it set. Without a config the built-in style applies and no author is set.
+**No name or account belongs in a script or a prompt.** Both scripts read a JSON config from
+`--config`, `$HOUSE_STYLE_CONFIG`, or `$XDG_CONFIG_HOME/house-style/config.json`, which the
+operator's system configuration generates. Each script prints the config it used and the
+author it set. Without a config no author is set.
 
 ```json
-{"identity": {"author": "Full Name", "owner": "account@example.com"},
- "style": {"primary": "0B57D0"}}
+{"identity": {"author": "Full Name", "owner": "account@example.com"}}
 ```
 
 ## What is fixed, and where
@@ -92,7 +92,7 @@ the author it set. Without a config the built-in style applies and no author is 
 | Details block | Label **column** tinted and bold, no header row | both |
 | Diagrams | Monospace bold, no background, centred as a block, kept on one page | both |
 | Page numbers | Doc: `page/total` bottom right, not on page 1. PDF: "Page N of M" beside the footer text | each script |
-| PDF type and spacing | Material 3 scale at 0.75pt per px, 1in side margins, a primary strip on the top edge | `theme/theme.typ` |
+| PDF type and spacing | Material 3 scale at 0.75pt per px, 1in side margins, a primary strip on the top edge | the Typst package (`base.typ`, `document.typ`) |
 | Doc sizes and spacing | Docs' default heading rhythm | `scripts/gdoc.py` |
 
 Why these cannot be left to a prompt, all measured:
@@ -113,5 +113,8 @@ Why these cannot be left to a prompt, all measured:
 - **PDF/UA-1 is strict.** Typst refuses a document that skips a heading level (`##` straight to
   `####`). Fix the Markdown. `--no-ua` writes a tagged PDF without the claim, as a last resort.
 - **Word styles carry regular or bold only**, so Doc section headings are regular weight.
-- **Changing the style means changing `style.json`** (or `theme/theme.typ` for PDF layout) and
-  bumping this plugin's version, never adding a rule to a prompt.
+- **Changing the style means changing `style.json`** (or the package's `document.typ` for PDF
+  layout) and bumping this plugin's version, never adding a rule to a prompt.
+- **Other Typst layouts reuse the tokens**: `#import "@local/house-style:1.0.0": color, font,
+  scale, space, tok, styled` with `--package-path typst --font-path fonts`. A résumé theme in
+  another repository does exactly that.

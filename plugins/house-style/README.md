@@ -18,24 +18,21 @@ Three findings (2026-11-14) decided the design:
 
 ## What it ships
 
+All under `skills/house-style/`:
+
 | Path | Purpose |
 |---|---|
-| `skills/house-style/SKILL.md` | When to use it, the steps for each output, the limits |
-| `skills/house-style/style.json` | **The style**: two fonts and five colours |
-| `skills/house-style/scripts/common.py` | Loads the style and the config; Title Case |
-| `skills/house-style/scripts/gdoc.py` | `Markdown -> .docx` for Drive to convert |
-| `skills/house-style/scripts/pdf.py` | `Markdown -> PDF/UA-1` through pandoc and Typst |
-| `skills/house-style/theme/theme.typ` | PDF layout: type scale, spacing, tables, diagrams, footer |
-| `skills/house-style/theme/fonts/` | Google Sans and JetBrains Mono static files, each with its `OFL.txt` |
-| `skills/house-style/scripts/font_probe.py` | Reads a PDF and reports which font drew each diagram character, and at what width |
+| `SKILL.md` | When to use it, the steps for each output, what is fixed, the limits |
+| `typst/local/house-style/1.0.0/` | A Typst package. `style.json` is **the style**; `base.typ` turns it into tokens (colours, fonts, the Material 3 print scale, spacing); `document.typ` is the long-form layout |
+| `fonts/` | Google Sans and JetBrains Mono static files, each with its `OFL.txt` |
+| `scripts/common.py` | Loads the style and the identity config; Title Case |
+| `scripts/gdoc.py` | `Markdown -> .docx` for Drive to convert |
+| `scripts/pdf.py` | `Markdown -> PDF/UA-1` through pandoc and Typst |
+| `scripts/font_probe.py` | Reads a PDF and reports which font drew each diagram character, and at what width |
 
-## Identity and overrides come from a config file
-
-The scripts carry **no identity**. A JSON config supplies the author, the account expected to
-own a Google Doc, and any style override. It is read from `--config`, `$HOUSE_STYLE_CONFIG`, or
-`$XDG_CONFIG_HOME/house-style/config.json`. Generate that file from wherever identity is
-already declared (on the author's fleet, a Nix home module writes it). An unknown key is an
-error, not a silent no-op.
+The package is importable by any Typst document (`--package-path` at the `typst` folder), so a
+layout kept elsewhere, such as a résumé theme, takes its fonts and tokens from here instead of
+keeping a copy.
 
 ## Why not an existing tool
 
@@ -48,15 +45,14 @@ error, not a silent no-op.
 
 ## Measured, not assumed
 
-- **Consolas does not work for box-drawing diagrams in Google Docs.** Its Docs version lacks
-  `─ │ ┌ ┐ └ ┘ ┬ ┴ ▼ ▲ →`; they render in Arial at three different widths. JetBrains Mono,
-  Source Code Pro and Courier New draw all of them at the letter width.
 - **A converted `.docx` keeps:** both fonts by name, heading spacing, keep-with-next, table
   shading and borders, column widths, "row cannot split", repeated header rows and the footer
   fields. Checked by exporting the converted Doc to PDF.
 - **The PDF** embeds three Google Sans cuts and two JetBrains Mono cuts as CID TrueType and
   nothing else; every diagram character comes from one font at one width; no table that fits
   on a page is split and no title sits alone at a page end (34-page document, Typst 0.15.2).
+- **The résumé that imports the package** renders the same 5 pages with identical text as it
+  did from its own copy of the tokens.
 - **Moving the style into one file changed nothing in the Doc**: the Word file's document,
   styles and footer parts are byte-identical before and after.
 

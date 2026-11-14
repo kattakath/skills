@@ -3,17 +3,15 @@
 
     pdf.py [--config FILE] [--footer TEXT] [--no-ua] <in.md> <out.pdf>
 
-Fonts and colours come from ../style.json, the identity from the config (see common.py); the
-layout is ../theme/theme.typ. Only the fonts in ../theme/fonts are used, so the result is the
-same on every machine. Pipeline: this script applies Title Case and lifts the title and the
-details block out of the Markdown, pandoc turns the rest into Typst, and Typst compiles it.
+The look is the Typst package ../typst/local/house-style and the fonts in ../fonts; only those
+fonts are used, so the result is the same on every machine. The author comes from the config
+(see common.py). Pipeline: this script applies Title Case and lifts the title and the details
+block out of the Markdown, pandoc turns the rest into Typst, and Typst compiles it.
 Requires: pandoc, and either the `typst` command or the `typst` Python package.
 """
-import argparse, json, os, pathlib, re, shutil, subprocess, sys, tempfile
+import argparse, pathlib, re, shutil, subprocess, sys, tempfile
 
-from common import IDENTITY, SHARED, SKILL, STYLE, load_config, title_case
-
-THEME = SKILL / "theme"
+from common import IDENTITY, PACKAGES, SKILL, load_config, title_case, title_case_markdown
 
 
 # ── Markdown -> Typst ─────────────────────────────────────────────────────────────────────────
@@ -48,29 +46,13 @@ def split_front(md):
     return title, rows, lines[i:]
 
 
-def prepare_body(body):
-    """Title Case for headings and table header rows. A short bold line standing alone becomes a
-    heading one level below the current one, so it stays with the table or list it introduces."""
-    in_code, level = False, 1
-    for n, l in enumerate(body):
-        if l.startswith("```"): in_code = not in_code
-        if in_code: continue
-        if l.startswith("#"):
-            m = re.match(r"^(#+ )(.*)$", l); body[n] = m[1] + title_case(m[2]); level = len(m[1]) - 1
-        elif l.startswith("|") and n + 1 < len(body) and re.match(r"^\|[-:| ]+\|$", body[n + 1]):
-            body[n] = "|" + "|".join(" " + title_case(c.strip()) + " " if c.strip() else c for c in l.strip().strip("|").split("|")) + "|"
-        elif re.match(r"^\*\*[^*]+\*\*$", l.strip()) and len(l) < 70:
-            body[n] = "#" * (level + 1) + " " + title_case(l.strip().strip("*"))
-    return body
-
-
 def typ_string(s):
     return '"' + s.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 def to_typst(md, footer=None):
     title, rows, body = split_front(md)
-    typ_body = pandoc("\n".join(prepare_body(body)))
+    typ_body = pandoc("\n".join(title_case_markdown(body, bold_lines_as_headings=True)))
     typ_body = typ_body.replace("#align(center)[#table(", "#[#table(")  # pandoc centres tables; the theme wants full width
     # each appendix starts on a new page, so its title never sits alone at a page end
     typ_body = re.sub(r"(?m)^(== Appendix )", r"#pagebreak(weak: true)\n\1", typ_body)
@@ -82,21 +64,19 @@ def to_typst(md, footer=None):
     if rows:
         cells = ",\n  ".join(f"([{pandoc(title_case(a.strip('*'))).strip()}], [{pandoc(b).strip()}])" for a, b in rows)
         details = f"#details(\n  {cells},\n)\n\n"
-    return f'#import "theme.typ": *\n#show: setup.with({", ".join(setup)})\n\n= {pandoc(title).strip()}\n\n{details}{typ_body}'
+    return f'#import "@local/house-style:1.0.0": *\n#show: setup.with({", ".join(setup)})\n\n= {pandoc(title).strip()}\n\n{details}{typ_body}'
 
 
 # ── Compile ───────────────────────────────────────────────────────────────────────────────────
 def compile_pdf(typ, out, ua=True):
-    """Compile in a scratch folder holding a copy of the theme. Fonts come from theme/fonts only;
-    system fonts are ignored. The style reaches the theme as one JSON input."""
-    fonts = str(THEME / "fonts")
-    style = json.dumps({k: STYLE[k] for k in sorted(SHARED)})
+    """Compile with fonts from ../fonts only (system fonts are ignored) and the house-style
+    package from ../typst."""
+    fonts, packages = str(SKILL / "fonts"), str(PACKAGES)
     with tempfile.TemporaryDirectory() as tmp:
-        shutil.copy(THEME / "theme.typ", tmp)
         src = pathlib.Path(tmp) / "doc.typ"
         src.write_text(typ, encoding="utf-8")
         if shutil.which("typst"):
-            cmd = ["typst", "compile", "--font-path", fonts, "--ignore-system-fonts", "--input", "style=" + style]
+            cmd = ["typst", "compile", "--font-path", fonts, "--ignore-system-fonts", "--package-path", packages]
             cmd += ["--pdf-standard", "ua-1"] if ua else []
             r = subprocess.run(cmd + [str(src), out], capture_output=True, text=True)
             if r.returncode:
@@ -107,7 +87,7 @@ def compile_pdf(typ, out, ua=True):
         except ImportError:
             sys.exit("neither the `typst` command nor the `typst` Python package is available")
         try:
-            typst.compile(str(src), output=out, font_paths=[fonts], ignore_system_fonts=True, sys_inputs={"style": style},
+            typst.compile(str(src), output=out, font_paths=[fonts], ignore_system_fonts=True, package_path=packages,
                           **({"pdf_standards": ["ua-1"]} if ua else {}))
         except Exception as e:  # the binding raises its own error types; report and stop
             sys.exit(str(e).strip())
