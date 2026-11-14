@@ -350,7 +350,7 @@
     },
     {
       "name": "kattakath-workspace",
-      "description": "Google Workspace through the Kattakath MCP Gateway: routing skill for the eight 'Kattakath <App>' claude.ai connectors (Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People) with confirm-before-write rules; declares no connector of its own.",
+      "description": "Google Workspace in Claude through ONE claude.ai connector, 'Kattakath Workspace' (a Cloudflare MCP portal at mcp.kattakath.com holding Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat and People; the same tools on web, phone and Claude Code): a routing skill with confirm-before-write rules. Read-mostly by design: Gmail drafts (the user sends), no Chat posts, no edits, no sharing or trash. Declares no connector of its own.",
       "author": {
         "name": "Ismail Kattakath"
       },

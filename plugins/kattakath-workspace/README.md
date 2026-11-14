@@ -1,9 +1,10 @@
 # `kattakath-workspace` — Claude Code plugin
 
-Google Workspace in Claude through the **Kattakath MCP Gateway**: a routing skill
-(`kattakath-workspace:kattakath-workspace`) for the account's eight **`Kattakath <App>`**
-claude.ai connectors — Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People. Nothing in
-it can send mail: Claude drafts, you press Send.
+Google Workspace in Claude through **one** claude.ai connector, **Kattakath Workspace**: a
+Cloudflare MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app —
+Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People — behind one sign-in page. This
+plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`). Nothing in it can
+send mail: Claude drafts, you press Send.
 
 Install: `/plugin install kattakath-workspace@kattakath`
 
@@ -12,21 +13,22 @@ enablement are documented once, in this repo's `CLAUDE.md` — not restated here
 
 ## What it ships
 
-- **The skill**: which connector and tool to use, the sign-in fallback, and the
-  confirm-before-write rules. It matches connectors by **name**, because the tool prefix
-  differs by surface (`mcp__Kattakath_Gmail__…` in cloud sessions,
-  `mcp__claude_ai_Kattakath_Gmail__…` in local Claude Code).
-- **No connector entries** (since 1.2.0). The official Google connectors move to a separate
-  plugin, and the Kattakath connectors are never declared here: a plugin entry with the same
-  URL as an account connector hides it.
+- **The skill**: which tool to use (`<app>_<tool>`, e.g. `gmail_search_threads`), the
+  sign-in fallback, and the confirm-before-write rules. It matches the connector by **name**,
+  because the tool prefix differs by surface (`mcp__Kattakath_Workspace__…` in cloud
+  sessions, `mcp__claude_ai_Kattakath_Workspace__…` in local Claude Code).
+- **No connector entries.** A plugin entry with the same URL as an account connector hides
+  it (see History).
 
 ## Requires
 
-The eight `Kattakath <App>` custom connectors on the Claude account (claude.ai → Customize →
-Connectors), each at `https://<app>.kattakath.com/mcp/v1` and signed in once. They are
-account-level, so they reach claude.ai, the phone and Claude Code alike. The gateway itself is
-infrastructure in `kattakath/nix-config` (`infra/gcp/workspace-gateway.nix`), not part of this
-plugin.
+The **Kattakath Workspace** custom connector on the Claude account (claude.ai → Customize →
+Connectors → `https://mcp.kattakath.com/mcp`), connected once: the portal page lists every
+app with an **Authorize** button (one Google consent each). It is account-level, so it reaches
+claude.ai, the phone and Claude Code alike. The portal is infrastructure in
+`kattakath/nix-config` (`infra/cloudflare/mcp-portals.nix`), including the per-app tool
+allowlist; it replaced the 1.x Pomerium gateway and its eight `Kattakath <App>` connectors on
+2026-11-14.
 
 ## History: why 1.0.1–1.1.0 used empty URLs (measured 2026-11-14)
 
