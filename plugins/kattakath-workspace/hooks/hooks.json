@@ -1,0 +1,29 @@
+{
+  "description": "search_corpus locator: ask before each cross-app search, then reduce its ~100k-char result to a locator table (no bodies)",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "mcp__.*workspace_search_corpus",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js\" gate",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "mcp__.*workspace_search_corpus",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js\" reduce",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

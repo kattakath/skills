@@ -2,7 +2,7 @@
 
 Google Workspace in Claude through **one** connector, **Kattakath Workspace**: a
 Cloudflare MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app —
-Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, plus Google's cross-app search — behind one sign-in page. This
+Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, plus Google's cross-app search (a locator, off by default) — behind one sign-in page. This
 plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`) and the connector
 entry. Nothing in it can send mail: Claude drafts, you press Send.
 
@@ -25,6 +25,21 @@ enablement are documented once, in this repo's `CLAUDE.md` — not restated here
   name, and a spaced key is legal for plugins (Anthropic's knowledge-work-plugins use
   `"google calendar"`); only `claude mcp add` restricts names. Where a machine also has the account connector, denying the plugin copy
   (`deniedMcpServers`: `plugin:kattakath-workspace:Kattakath Workspace`) keeps one sign-in.
+
+- **The locator** (since 2.3.0, Claude Code only): `/kattakath-workspace:where <term>` runs
+  Google's cross-app search (`workspace_search_corpus`) when the thing could be anywhere.
+  Two hooks (`hooks/hooks.json` → `scripts/corpus-locator.js`) wrap it:
+
+  | Hook | Does | Why |
+  |---|---|---|
+  | PreToolUse `gate` | **Asks** before every call; `KATTAKATH_WORKSPACE_LOCATOR=auto` in settings `env` skips the ask | Off by default, on demand. Measured: headless and bypass-mode calls do not run without it |
+  | PostToolUse `reduce` | Replaces the result with a locator table (app, title, date, sender/type, link, the tool to open it); drops every Chat body and Gmail snippet | The server ignores `pageSize`: every query returns ~30 hits and ~100k chars, over Claude Code's cap. Measured 96,169 → 12,632 chars |
+
+  Claude Code saves an overflowing result to `~/.claude/projects/…/tool-results/` and hands
+  the hook only a pointer, so the reducer reads that file, and **only** from that directory.
+  On anything it cannot parse it prints nothing, and the original result passes through.
+  claude.ai chat runs no plugin hooks, so there the skill routes to the per-app search tools.
+  Tests: `node --test plugins/kattakath-workspace/tests/corpus-locator.test.js`.
 
 ## Requires
 

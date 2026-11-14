@@ -236,6 +236,11 @@ jobs:
       # are pinned: autostage must stage (worktrees and nested repos included) and must never
       # run a shell or reach outside the project; the lint must flag and must stay quiet.
       # The autostage cases ask git what was staged, so they need git, not just node.
+      # kattakath-workspace's search_corpus hooks: the gate must ask by default, the reducer
+      # must drop every body and snippet and read the overflow file only from tool-results.
+      - name: kattakath-workspace locator cases
+        run: node --test plugins/kattakath-workspace/tests/corpus-locator.test.js
+
       - name: nix-flake-kit hook cases
         run: node --test plugins/nix-flake-kit/tests/*.test.js
 

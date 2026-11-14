@@ -31,7 +31,7 @@ connector name, never on a fixed prefix:
 | `slides_` | Read a deck, a page, a page thumbnail. Read-only |
 | `chat_` | Find a space or DM, list and search messages. **No posting** |
 | `people_` | Who am I; look up a contact's or colleague's email. Read-only |
-| `workspace_` | `workspace_search_corpus`: one search across Gmail, Drive, Calendar and Chat at once. Read-only. **Last resort**, see § 1 |
+| `workspace_` | `workspace_search_corpus`: one search across Gmail, Drive, Calendar and Chat at once. Read-only. **A locator, off by default**, see § 1 "Where is it?" |
 
 When an official Google connector (Gmail, Drive, Calendar, Docs, Sheets, Slides, Chat) or a
 legacy `kattakath-<app>` server is also loaded, use Kattakath Workspace and ignore the
@@ -58,14 +58,21 @@ others: they are not a route around the allowlist. Never ask the user to connect
 - **Chat with a person** → find their email with `people_search_contacts` /
   `people_search_directory_people` first: Chat finds a DM only by participants' **email
   addresses**, never by name. An empty page with a `nextPageToken` is not "no results".
-- **Cross-app search ("where did X come up?")** → search each likely app with its own tool
-  first (`gmail_search_threads`, `drive_search_files`, `chat_search_messages`,
-  `calendar_search_events`). Use `workspace_search_corpus` only when the app is truly
-  unknown AND the term is rare (a ticket id, an invoice number, an unusual name). It
-  cannot be narrowed (`pageSize` and `pageToken` are ignored), and Chat hits carry full
-  message bodies: one search for "invoice" returned 30 hits and 136,585 characters,
-  over claude.ai's tool-result limit (measured 2026-11-14). If it overflows, do not
-  retry it: switch to the per-app tools.
+- **"Where is it?" — the app is unknown** (could be mail, a file, a chat or an event) →
+  `workspace_search_corpus` as a **locator**, once: `/kattakath-workspace:where <term>`,
+  or call it directly when the user asks to look everywhere. Otherwise, when the app is
+  known or likely, use that app's own search tool (`gmail_search_threads`,
+  `drive_search_files`, `chat_search_messages`, `calendar_search_events`).
+  - **Off by default:** in Claude Code this plugin's hook asks before every call; the
+    user's click is the switch. `KATTAKATH_WORKSPACE_LOCATOR=auto` (settings.json `env`)
+    removes the ask. A declined ask means stop, not retry.
+  - **The result is a locator table** (app, title, date, sender or type, link, "Open with"
+    tool), because the hook replaces the raw result. Raw, every query returns ~30 hits and
+    ~100k characters, Chat bodies included, and the server ignores `pageSize` (measured
+    2026-11-14: "invoice" 96,169; a rare phrase 100,798).
+  - **Open a hit with its "Open with" tool**; never re-run the search to read content.
+  - **No hook (claude.ai chat, or a result that says it was saved to a file):** do not read
+    the saved file; use the per-app search tools instead.
 - **Editing a Doc, Sheet or deck, sharing, trashing, removing a label, posting to Chat,
   sending mail, creating or changing an event** → not available through this connector by
   design. Say which, and stop; do not look for a workaround.
