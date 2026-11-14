@@ -349,6 +349,27 @@
       "source": "./plugins/jsonresume-tailor"
     },
     {
+      "name": "kattakath-workspace",
+      "description": "Google Workspace in one install: Google's own hosted MCP servers for Gmail, Calendar, Drive, Docs, Sheets and Slides (bare URLs that reuse the account's existing Google connectors, no client ID), plus a routing skill with confirm-before-write rules.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "google-workspace",
+        "gmail",
+        "google-calendar",
+        "google-drive",
+        "google-docs",
+        "google-sheets",
+        "google-slides",
+        "connectors"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/kattakath-workspace",
+      "license": "MIT",
+      "source": "./plugins/kattakath-workspace"
+    },
+    {
       "name": "llmstxt",
       "description": "Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document.",
       "author": {

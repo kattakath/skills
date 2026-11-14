@@ -1,0 +1,24 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "kattakath-workspace",
+  "version": "1.0.0",
+  "description": "One install for Google Workspace in Claude: bundles Google's own hosted MCP servers for Gmail, Calendar, Drive, Docs, Sheets and Slides as bare URLs — the same servers the official claude.ai Google connectors use, so an account that already connected them sees them as connected — plus a routing skill for which app and tool to reach for, and the confirm-before-write rules.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/kattakath-workspace",
+  "icon": "./icon.png",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "google-workspace",
+    "gmail",
+    "google-calendar",
+    "google-drive",
+    "google-docs",
+    "google-sheets",
+    "google-slides",
+    "connectors",
+    "mcp"
+  ]
+}
