@@ -286,6 +286,29 @@
       "source": "./plugins/history-scrub"
     },
     {
+      "name": "house-style",
+      "description": "Create Google Docs and PDFs in one fixed house style from a script instead of from prose rules. One style file feeds both: Markdown in, then a styled Word file that Drive converts into a Google Doc with real page-number fields, or a tagged PDF/UA-1 set by a Typst theme with vendored fonts. Aligned box-drawing diagrams, full-width tables, Title Case titles.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "productivity",
+      "keywords": [
+        "google-docs",
+        "google-drive",
+        "pdf",
+        "typst",
+        "docx",
+        "pandoc",
+        "pdf-ua",
+        "house-style",
+        "document-style",
+        "page-numbers"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/house-style",
+      "license": "MIT",
+      "source": "./plugins/house-style"
+    },
+    {
       "name": "job-search",
       "description": "Job-application skills vendored unmodified from Paramchoudhary/ResumeSkills (MIT): posting analysis and match scoring, ATS resume optimization, cover letters, interview STAR prep and salary negotiation.",
       "author": {

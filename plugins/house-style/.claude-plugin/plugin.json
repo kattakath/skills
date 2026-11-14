@@ -1,0 +1,24 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "house-style",
+  "version": "1.0.0",
+  "description": "Create Google Docs and PDFs in one fixed house style from a script instead of from prose rules. One style file feeds both: Markdown in, then a styled Word file that Drive converts into a Google Doc with real page-number fields, or a tagged PDF/UA-1 set by a Typst theme with vendored fonts. Aligned box-drawing diagrams, full-width tables, Title Case titles.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/house-style",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "google-docs",
+    "google-drive",
+    "pdf",
+    "typst",
+    "docx",
+    "pandoc",
+    "pdf-ua",
+    "house-style",
+    "document-style",
+    "page-numbers"
+  ]
+}

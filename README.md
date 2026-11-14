@@ -56,6 +56,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`github-release-gate`](plugins/github-release-gate) | Make a GitHub repo's default branch a safe release: require the CI check with a ruleset, then allow auto-merge and arm it on same-repo PRs only (forks wait), verifying each step against GitHub. Covers the admin-token limits and the gh --auto immediate-merge footgun. | skills only | — |
 | [`harvest`](plugins/harvest) | At the end of a task worth repeating: pick the right artifact type (skill, agent, workflow), strip anything machine- or secret-specific, and write it in the standard format. | skills only | — |
 | [`history-scrub`](plugins/history-scrub) | Take a literal that must not be public out of a public git repo's history: census every copy, fix the tip forward, back up by SHA, rewrite the minimal range, prove the tip tree is unchanged, push with a SHA-pinned lease, then chase refs/pull, cached views and PR edit history. | skills only | — |
+| [`house-style`](plugins/house-style) | Create Google Docs and PDFs in one fixed house style from a script instead of from prose rules. One style file feeds both: Markdown in, then a styled Word file that Drive converts into a Google Doc with real page-number fields, or a tagged PDF/UA-1 set by a Typst theme with vendored fonts. Aligned box-drawing diagrams, full-width tables, Title Case titles. | skills only | — |
 | [`job-search`](plugins/job-search) | Job-application skills vendored unmodified from Paramchoudhary/ResumeSkills (MIT): posting analysis and match scoring, ATS resume optimization, cover letters, interview STAR prep and salary negotiation. | skills only | — |
 | [`jsonresume-tailor`](plugins/jsonresume-tailor) | Tailor a JSON Resume (resume.json) to a specific job posting without fabricating anything, then validate it and render a PDF. | skills only | — |
 | [`llmstxt`](plugins/llmstxt) | Author spec-compliant llms.txt (and the de-facto llms-full.txt) from any body of written work — docs, a site, a repo, or a developer accomplishment document. | skills only | — |
@@ -81,7 +82,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`vercel-workflow`](plugins/vercel-workflow) | Vercel Workflow SDK skills vendored unmodified from vercel/workflow (Apache-2.0): durable, resumable workflows, SDK setup, and migration from Temporal, Inngest, Trigger.dev and AWS Step Functions. | skills only | — |
 | [`wordpress`](plugins/wordpress) | WordPress site administration over the REST API — posts, pages, media, taxonomies, comments, users and SEO — against a PRODUCTION site. Credentials come from the macOS login Keychain via a Nix-installed launcher, never from this repo. | 1 MCP server | — |
 
-38 plugins. An MCP server, LSP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
+39 plugins. An MCP server, LSP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
 <!-- plugins:end -->
 
 Where a plugin has its own `README.md`, it covers that plugin's commands, skills and design notes.
