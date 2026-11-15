@@ -2,7 +2,7 @@
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "displayName": "Kattakath Workspace",
   "name": "kattakath-workspace",
-  "version": "2.4.1",
+  "version": "2.4.2",
   "description": "Google Workspace in Claude through ONE connector, 'Kattakath Workspace' (a Cloudflare MCP portal at mcp.kattakath.com holding Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat and People; the same tools on web, phone and Claude Code): a routing skill with confirm-before-write rules. Read-mostly by design: Gmail drafts (the user sends), no Chat posts, no edits, no sharing or trash. Ships the connector itself.",
   "author": {
     "name": "Ismail Kattakath"
