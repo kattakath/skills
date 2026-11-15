@@ -2,7 +2,7 @@
 
 Google Workspace in Claude through **one** connector, **Kattakath Workspace**: a
 Cloudflare MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app —
-Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, plus Google's cross-app search (a locator, off by default) — behind one sign-in page. This
+Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, Home (read-only), Maps, plus Google's cross-app search (a locator, off by default) — behind one sign-in page. This
 plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`) and the connector
 entry. Nothing in it can send mail: Claude drafts, you press Send.
 
