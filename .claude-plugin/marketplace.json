@@ -521,6 +521,24 @@
       "source": "./plugins/nixd"
     },
     {
+      "name": "page-tools",
+      "description": "Drive a Chrome tab that is already connected to the Kapture extension: list it, click, fill, read the DOM, screenshot, and run JavaScript only while that tab allows it.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "browser",
+      "keywords": [
+        "kapture",
+        "chrome",
+        "browser",
+        "mcp",
+        "page"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/page-tools",
+      "license": "MIT",
+      "source": "./plugins/page-tools"
+    },
+    {
       "name": "userscript-lab",
       "description": "Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter.",
       "author": {

@@ -68,6 +68,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`nix-dev-toolkit`](plugins/nix-dev-toolkit) | Make a repo self-contained with a Nix flake for development, deployment and maintenance: dev shells, local Postgres with pgvector, self-hosted runners, and an env-var catalogue. | skills only | — |
 | [`nix-flake-kit`](plugins/nix-flake-kit) | Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. | 1 MCP server, hooks | — |
 | [`nixd`](plugins/nixd) | Nix language intelligence through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free; expects nixd on PATH. | 1 LSP server | — |
+| [`page-tools`](plugins/page-tools) | Drive a Chrome tab that is already connected to the Kapture extension: list it, click, fill, read the DOM, screenshot, and run JavaScript only while that tab allows it. | 1 MCP server | — |
 | [`userscript-lab`](plugins/userscript-lab) | Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter. | skills only | — |
 | [`pgp-ops`](plugins/pgp-ops) | Run GnuPG from an agent with no TTY: decrypt to the clipboard without plaintext in the transcript, encrypt to a recipient's key without importing it, prove who can decrypt and whether two keys match from the packets, and back up a key with a restore test. | skills only | — |
 | [`plaid-pfc`](plugins/plaid-pfc) | Plaid's Personal Finance Category (PFC) taxonomy, pinned and strictly enforced: the 127 v2 detailed names with Plaid's descriptions, a v1-to-v2 crosswalk (renames and splits), validation that refuses any invented name, standard I/O records with JSON Schema for enum-bound LLM output, and a refresh that diffs Plaid's published CSV. Stdlib Python only; holds no data. | skills only | — |
@@ -83,7 +84,7 @@ outside sources first and to what's here only where nobody else has charted it.
 | [`vercel-workflow`](plugins/vercel-workflow) | Vercel Workflow SDK skills vendored unmodified from vercel/workflow (Apache-2.0): durable, resumable workflows, SDK setup, and migration from Temporal, Inngest, Trigger.dev and AWS Step Functions. | skills only | — |
 | [`wordpress`](plugins/wordpress) | WordPress site administration over the REST API — posts, pages, media, taxonomies, comments, users and SEO — against a PRODUCTION site. Credentials come from the macOS login Keychain via a Nix-installed launcher, never from this repo. | 1 MCP server | — |
 
-40 plugins. An MCP server, LSP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
+41 plugins. An MCP server, LSP server or hook runs as a local process, so it needs a surface that runs local processes (Claude Code); a skills-only plugin needs only the skill loader.
 <!-- plugins:end -->
 
 Where a plugin has its own `README.md`, it covers that plugin's commands, skills and design notes.

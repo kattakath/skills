@@ -1,0 +1,19 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "page-tools",
+  "version": "1.0.0",
+  "description": "Drive a Chrome tab that is already connected to the Kapture extension: list it, click, fill, read the DOM, screenshot, and run JavaScript only while that tab allows it.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/page-tools",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "kapture",
+    "chrome",
+    "browser",
+    "mcp",
+    "page"
+  ]
+}

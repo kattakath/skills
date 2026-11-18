@@ -97,6 +97,14 @@
       "gap": true
     },
     {
+      "goal": "Drive a Chrome tab that is connected to Kapture",
+      "steps": [
+        "page-tools"
+      ],
+      "note": "Popup must read Connected. evaluate is listed only while that tab allows JS. The bridge reuses 127.0.0.1:61822.",
+      "gap": true
+    },
+    {
       "goal": "Operate a physical Android phone over ADB",
       "steps": [
         "android-phone"
