@@ -59,17 +59,22 @@ fs.writeFileSync(saved, JSON.stringify(corpus));
 const outside = path.join(base, "elsewhere-search_corpus.txt");
 fs.writeFileSync(outside, JSON.stringify(corpus));
 
-function runRaw(args, input) {
+function runRaw(args, input, locatorMode) {
+  const env = { ...process.env, CLAUDE_CONFIG_DIR: cfg };
+  delete env.CLAUDE_PLUGIN_OPTION_LOCATOR_MODE;
+  if (locatorMode !== undefined) env.CLAUDE_PLUGIN_OPTION_LOCATOR_MODE = locatorMode;
   const r = spawnSync("node", [HOOK, ...args], {
     input: typeof input === "string" ? input : JSON.stringify(input),
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_CONFIG_DIR: cfg },
+    env,
   });
   assert.equal(r.status, 0, `hook must exit 0, stderr: ${r.stderr}`);
   return r.stdout ? JSON.parse(r.stdout) : null;
 }
-function run(mode, input, modeArg) {
-  const out = runRaw(modeArg === undefined ? [mode] : [mode, modeArg], input);
+// locatorMode is the saved `locator_mode` setting, delivered as Claude Code does:
+// CLAUDE_PLUGIN_OPTION_LOCATOR_MODE in the hook's environment (absent when never saved).
+function run(mode, input, locatorMode) {
+  const out = runRaw([mode], input, locatorMode);
   return out ? out.hookSpecificOutput : null;
 }
 const pointer = (p) => `Error: result (96,169 characters) exceeds maximum allowed tokens. Output has been saved to ${p}\nFormat: JSON`;
@@ -83,7 +88,7 @@ test("gate asks by default, under all 3 known prefixes", () => {
   }
 });
 
-test("gate: locator_mode via argv (ask, auto, off) and unknown values ask", () => {
+test("gate: locator_mode via CLAUDE_PLUGIN_OPTION_LOCATOR_MODE (ask, auto, off) and unknown values ask", () => {
   assert.equal(run("gate", { tool_name: TOOL }, "ask").permissionDecision, "ask");
   assert.equal(run("gate", { tool_name: TOOL }, "auto"), null);
   const off = run("gate", { tool_name: TOOL }, "off");
@@ -94,8 +99,17 @@ test("gate: locator_mode via argv (ask, auto, off) and unknown values ask", () =
   }
 });
 
+test("gate ignores a mode passed in argv (hooks.json no longer substitutes one)", () => {
+  assert.equal(runRaw(["gate", "auto"], { tool_name: TOOL }).hookSpecificOutput.permissionDecision, "ask");
+});
+
+test("hooks.json never substitutes ${user_config.*} (an unsaved option skips the hook on 2.1.323)", () => {
+  const hooks = fs.readFileSync(path.join(__dirname, "..", "hooks", "hooks.json"), "utf8");
+  assert.doesNotMatch(hooks, /\$\{user_config\./);
+});
+
 test("gate ignores the retired KATTAKATH_WORKSPACE_LOCATOR env var", () => {
-  const r = spawnSync("node", [HOOK, "gate"], { input: JSON.stringify({ tool_name: TOOL }), encoding: "utf8", env: { ...process.env, KATTAKATH_WORKSPACE_LOCATOR: "auto" } });
+  const r = spawnSync("node", [HOOK, "gate"], { input: JSON.stringify({ tool_name: TOOL }), encoding: "utf8", env: { ...process.env, KATTAKATH_WORKSPACE_LOCATOR: "auto", CLAUDE_PLUGIN_OPTION_LOCATOR_MODE: "" } });
   assert.equal(JSON.parse(r.stdout).hookSpecificOutput.permissionDecision, "ask");
 });
 

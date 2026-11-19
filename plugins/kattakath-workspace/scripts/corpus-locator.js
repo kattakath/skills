@@ -2,10 +2,16 @@
 // Locator harness for Google's cross-app search tool, `workspace_search_corpus`.
 //
 // Two hook modes, one file (hooks/hooks.json, exec form):
-//   gate <mode>  PreToolUse   <mode> is the plugin's `locator_mode` setting (/config),
-//                             substituted by Claude Code into the args:
-//                               ask (default, and any value it does not know) → ask
+//   gate         PreToolUse   reads the plugin's `locator_mode` setting (/config) from
+//                             CLAUDE_PLUGIN_OPTION_LOCATOR_MODE, which Claude Code exports
+//                             to hook processes:
+//                               ask (default: unset, and any value it does not know) → ask
 //                               auto → silent        off → deny ("disabled in /config")
+//                             Not `${user_config.locator_mode}` in the args: on CLI 2.1.323
+//                             an option the user never saved makes Claude Code skip the
+//                             hook before it starts (with onFailure "block", every search
+//                             is refused). The env var is simply absent instead (measured
+//                             2026-11-19 with a probe plugin, `default` declared both times).
 //   reduce       PostToolUse  replaces the result with a compact locator table: which
 //                             app, the title, a date, a link and the tool + id to open
 //                             it with. Every Chat body and Gmail snippet is dropped.
@@ -242,7 +248,7 @@ function main(argv) {
   // The gate fails closed: unreadable, empty or nameless input asks.
   if (argv[2] === 'gate' && (!input || typeof input !== 'object' || !input.tool_name)) return gate('ask');
   if (!input || !TOOL_RE.test(String(input.tool_name || ''))) return null;
-  if (argv[2] === 'gate') return gate(argv[3]);
+  if (argv[2] === 'gate') return gate(process.env.CLAUDE_PLUGIN_OPTION_LOCATOR_MODE);
   if (argv[2] === 'reduce') return reduce(input);
   return null;
 }

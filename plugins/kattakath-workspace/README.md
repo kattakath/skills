@@ -49,6 +49,10 @@ are documented once, in this repo's `CLAUDE.md`.
 
 - **Gate:** the `locator_mode` setting (`/config`): `ask` (default), `auto` (silent) or `off`
   (refuse). It replaces 2.x's `KATTAKATH_WORKSPACE_LOCATOR` env var.
+  - The gate reads it from `CLAUDE_PLUGIN_OPTION_LOCATOR_MODE`, never `${user_config.…}` in the
+    hook args. On CLI 2.1.323 a setting the user never saved makes Claude Code skip a hook
+    that substitutes it, even with a `default` declared, and `onFailure: block` then refuses
+    every search. The env var is just absent, so the gate asks (probe plugin, 2026-11-19).
 - **Reducer:** writes `updatedToolOutput`. Rows are grouped per app and open tool, bodies and
   snippets are dropped, and the table is capped at 10,000 chars (a token-budget choice).
   Measured on 2.x: 96,169 → 12,632 chars.

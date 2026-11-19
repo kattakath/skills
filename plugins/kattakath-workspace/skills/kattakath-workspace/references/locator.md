@@ -11,7 +11,7 @@ own search: `gmail_search_threads`, `drive_search_files`, `chat_search_messages`
   ignores `pageSize`. See `limits.md` for the measurements.
 - In Claude Code this plugin's hooks wrap it:
   - **Gate (PreToolUse).** Driven by the plugin's `locator_mode` setting (`/config`):
-    `ask` (default) asks before each call, `auto` runs it silently, `off` refuses it.
+    `ask` (default, also when never set) asks before each call, `auto` runs it silently, `off` refuses it.
     A declined ask means stop, not retry.
   - **Reducer (PostToolUse).** Replaces the raw result with a locator table: one group per
     app and open tool, then title, date, sender or file type, link and ID per hit. Every

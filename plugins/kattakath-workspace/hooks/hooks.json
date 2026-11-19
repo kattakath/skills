@@ -8,7 +8,7 @@
           {
             "type": "command",
             "command": "node",
-            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js", "gate", "${user_config.locator_mode}"],
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js", "gate"],
             "timeout": 10,
             "onFailure": "block",
             "statusMessage": "Kattakath: cross-app search gate"
