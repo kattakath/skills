@@ -4,8 +4,8 @@
 //
 // Every rule C1..C10 gets a positive and a negative case. The fail-closed paths
 // (unparseable input, missing or unknown action, unknown tool, unreadable arguments)
-// must ASK; only a provably different server (a shared Drive tool name AND a recognised
-// other server's label) may stay SILENT; nothing may ever print "allow" or "deny".
+// must ASK; silence needs positive evidence in the arguments, never a server name; nothing
+// may ever print "allow" or "deny".
 // A handful of cases run the script as Claude Code does (stdin → stdout, exit 0); the
 // rest call decide() directly, which is the same code path minus the process.
 
@@ -48,7 +48,7 @@ function run(stdin) {
 
 test("process: a hit prints ask JSON and exits 0", () => {
   const out = run(JSON.stringify({ tool_name: PREFIX + "tasks_manage_task", tool_input: { action: "delete", task_list_id: "L", task_id: "T" } }));
-  assert.match(asks(out, "C1"), /deletes Google Task T in list L; no undo/);
+  assert.match(asks(out, "C1"), /deletes Google Task "T" in list "L"; no undo/);
 });
 
 test("process: a safe call prints nothing and exits 0", () => {
@@ -104,7 +104,7 @@ for (const [tool, id] of Object.entries(FIXTURE_EXPECT)) {
 
 test("C1: task delete, list delete and clear_completed ask", () => {
   asks(call("tasks_manage_task", { action: "delete", task_list_id: "L", task_id: "T" }), "C1");
-  assert.match(asks(call("tasks_manage_task_list", { action: "delete", task_list_id: "L" }), "C1"), /whole task list L/);
+  assert.match(asks(call("tasks_manage_task_list", { action: "delete", task_list_id: "L" }), "C1"), /whole task list "L"/);
   assert.match(asks(call("tasks_manage_task_list", { action: "clear_completed", task_list_id: "L" }), "C1"), /clears every completed task/);
   asks(call("tasks_manage_task", { action: "DELETE", task_list_id: "L", task_id: "T" }), "C1");
 });
@@ -120,8 +120,8 @@ test("C1: create, update, complete and move stay silent", () => {
 
 test("C2: every contact write asks and names the changed emails and phones", () => {
   const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c9", emails: [{ value: "evil@example.net" }], phones: [{ number: "+1 555 0199" }], phone: "+1 555 0100" }), "C2");
-  assert.match(r, /emails: evil@example\.net/);
-  assert.match(r, /phones: \+1 555 0199, \+1 555 0100/);
+  assert.match(r, /emails \(1\): evil@example\.net/);
+  assert.match(r, /phones \(2\): \+1 555 0199, \+1 555 0100/);
   asks(call("contacts_manage_contact", { action: "create", given_name: "Ann", email: "ann@example.com" }), "C2");
   asks(call("contacts_manage_contact", { action: "delete", contact_id: "c9" }), "C2");
 });
@@ -140,7 +140,7 @@ test("C2 negative: a read tool never reaches a rule (no rule = ask, so it must n
 
 test("C3: every batch asks, with a count", () => {
   assert.match(asks(call("contacts_manage_contacts_batch", { action: "delete", contact_ids: ["c1", "c2", "c3"] }), "C3"), /batch delete of 3 contacts/);
-  assert.match(asks(call("contacts_manage_contacts_batch", { action: "update", updates: [{ contact_id: "c1", email: "x@example.com" }] }), "C3"), /emails: x@example\.com/);
+  assert.match(asks(call("contacts_manage_contacts_batch", { action: "update", updates: [{ contact_id: "c1", email: "x@example.com" }] }), "C3"), /emails \(1\): x@example\.com/);
 });
 
 test("C3 negative: the batch tool is not mistaken for the single-contact rule", () => {
@@ -176,7 +176,7 @@ test("C6 negative: create/update-only requests stay silent", () => {
 });
 
 test("C6 fails closed: missing or unparseable requests ask", () => {
-  assert.match(asks(call("forms_batch_update_form", { form_id: "F" })), /no `requests`/);
+  assert.match(asks(call("forms_batch_update_form", { form_id: "F" })), /no single `requests` list/);
   assert.match(asks(call("forms_batch_update_form", { form_id: "F", requests: "[{deleteItem" })), /error reading the arguments/);
   assert.match(asks(call("forms_batch_update_form", { form_id: "F", requests: 7 })), /not a list/);
 });
@@ -184,8 +184,8 @@ test("C6 fails closed: missing or unparseable requests ask", () => {
 // ---- C7 / C8 -------------------------------------------------------------------------
 
 test("C7: untrash and unmark-spam always ask", () => {
-  assert.match(asks(call("gmail_untrash_thread", { threadId: "T" }), "C7"), /thread T out of Trash/);
-  assert.match(asks(call("gmail_untrash_message", { messageId: "M" }), "C7"), /message M out of Trash/);
+  assert.match(asks(call("gmail_untrash_thread", { threadId: "T" }), "C7"), /thread "T" out of Trash/);
+  assert.match(asks(call("gmail_untrash_message", { messageId: "M" }), "C7"), /message "M" out of Trash/);
   assert.match(asks(call("gmail_unmark_thread_spam", { threadId: "T" }), "C7"), /out of Spam/);
   assert.match(asks(call("gmail_unmark_message_spam", { messageId: "M" }), "C7"), /out of Spam/);
 });
@@ -204,7 +204,7 @@ test("C8: system and CATEGORY_ labels ask", () => {
 
 test("C8 negative: user labels stay silent", () => {
   silent(call("gmail_label_thread", { threadId: "T", labelIds: ["Label_1", "Label_22"] }));
-  silent(call("gmail_label_message", { messageId: "M", labelIds: ["Label_INBOX_lookalike"] }));
+  silent(call("gmail_label_message", { messageId: "M", labelIds: ["Label_7"], addLabelIds: ["Label_8"] }));
 });
 
 test("C8 fails closed: missing or non-string labelIds ask", () => {
@@ -226,7 +226,7 @@ test("C9 negative: portal_toggle_servers is exempt and never matched", () => {
 });
 
 test("C10: a parent folder asks; a copy asks even without one", () => {
-  assert.match(asks(call("drive_create_file", { title: "a", parentId: "FOLDER1" }), "C10"), /into folder FOLDER1/);
+  assert.match(asks(call("drive_create_file", { title: "a", parentId: "FOLDER1" }), "C10"), /into folder\(s\) "FOLDER1"/);
   asks(call("drive_create_file", { title: "a", parents: ["FOLDER2"] }), "C10");
   assert.match(asks(call("drive_copy_file", { fileId: "F" }), "C10"), /ORIGINAL's folder/);
   asks(call("drive_copy_file", { fileId: "F", parentId: "FOLDER1" }), "C10");
@@ -273,10 +273,10 @@ test("an unrecognised server label on a non-shared tool → ask (never too littl
   asks(call("gmail_untrash_thread", { threadId: "T" }, { mcp_server: { name: "Gmail", source: "claudeai" } }), "C7");
 });
 
-test("a clearly different Drive server on a shared Drive tool → silent", () => {
+test("guard-02/docs-04: a server name is never proof; every matched call is this connector's", () => {
   for (const name of ["google-drive", "Google Drive", "claude.ai Google Drive"]) {
-    silent(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name, source: "user" } }));
-    silent(call("drive_copy_file", { fileId: "F" }, { mcp_server: { name, source: "claudeai" } }));
+    asks(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name, source: "user" } }), "C10");
+    asks(call("drive_copy_file", { fileId: "F" }, { mcp_server: { name, source: "claudeai" } }), "C10");
   }
 });
 
@@ -320,4 +320,79 @@ test("the matcher catches every prefix shape and leaves other servers' tools alo
   assert.ok(!re.test("mcp__claude_ai_Neon__delete_branch"));
   assert.ok(!re.test("mcp__claude_ai_Kattakath_Workspace__tasks_manage_task_extra"));
   assert.ok(!re.test("tasks_manage_task"));
+});
+
+// ---- red-team regressions (panel review 2026-11-19): every input that once went SILENT ----
+// Invisible characters are built with fromCharCode so no editor or tool can turn them into
+// raw bytes in this file.
+const U = (n) => String.fromCharCode(n);
+const RLO = U(0x202e), ZWSP = U(0x200b), BOM = U(0xfeff), LRI = U(0x2066), ESC = U(0x1b);
+
+test("guard-01: alias keys no longer pass silently (C6 delete_item, C10 parent_id, C8 label_ids)", () => {
+  asks(call("forms_batch_update_form", { form_id: "F", requests: [{ delete_item: { location: { index: 0 } } }] }), "C6");
+  asks(call("drive_create_file", { title: "x", parent_id: "FOLDER" }), "C10");
+  asks(call("gmail_label_thread", { threadId: "T", labelIds: ["Label_1"], label_ids: ["TRASH"] }), "C8");
+});
+
+test("guard-01: C6 is an allowlist of request kinds, not a deleteItem denylist", () => {
+  for (const kind of ["updateItem", "updateSettings", "deleteItem", "somethingNew"]) {
+    asks(call("forms_batch_update_form", { form_id: "F", requests: [{ [kind]: {} }] }), "C6");
+  }
+  asks(call("forms_batch_update_form", { form_id: "F", requests: [{ createItem: {}, deleteItem: {} }] }), "C6");
+  asks(call("forms_batch_update_form", { form_id: "F", requests: [{}] }), "C6");
+  asks(call("forms_batch_update_form", { form_id: "F", requests: [{ createItem: {} }], include_form_in_response: true }), "C6");
+  silent(call("forms_batch_update_form", { form_id: "F", requests: [{ createItem: {} }, { moveItem: {} }, { updateFormInfo: {} }] }));
+});
+
+test("guard-11: label and parent edge spellings ask", () => {
+  for (const labelIds of [[" INBOX"], ["TRASH" + ZWSP], "Label_1,TRASH", ["Label_1 "], ["label_1"], [1]]) {
+    asks(call("gmail_label_thread", { threadId: "T", labelIds }), "C8");
+  }
+  asks(call("drive_create_file", { title: "x", parentId: "   " }), "C10");
+  asks(call("drive_create_file", { title: "x", ParentFolder: "F" }), "C10");
+  asks(call("drive_create_file", { title: "x", parents: [{ id: "F" }] }), "C10");
+});
+
+test("guard-03: any truthy delete_contacts triggers the ALSO DELETES warning", () => {
+  for (const v of [true, 1, "1", "true", "yes", "on", "y", "t", "TRUE"]) {
+    assert.match(asks(call("contacts_manage_contact_group", { action: "delete", group_id: "g", delete_contacts: v }), "C4"), /ALSO DELETES/, String(v));
+  }
+  for (const v of [false, 0, "0", "false", "no", "off"]) {
+    assert.doesNotMatch(asks(call("contacts_manage_contact_group", { action: "delete", group_id: "g", delete_contacts: v }), "C4"), /ALSO DELETES/, String(v));
+  }
+});
+
+test("guard-02a: bidi and zero-width characters are stripped from the C2 reason", () => {
+  const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", emails: [{ value: "boss@evil." + RLO + "moc.proc" }], given_name: "A" + ZWSP + BOM + LRI + "B" }), "C2");
+  for (const ch of [RLO, ZWSP, BOM, LRI]) assert.ok(!r.includes(ch), `reason still holds U+${ch.charCodeAt(0).toString(16)}`);
+});
+
+test("guard-02b: a long address keeps its full domain", () => {
+  const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", emails: [{ value: "ismail.kattakath.personal.primary.inbox.forwarding@gmail.com.evil.example" }] }), "C2");
+  assert.match(r, /@gmail\.com\.evil\.example/);
+});
+
+test("guard-02c: every address is shown, none hidden behind '(+N more)'", () => {
+  const emails = ["a@example.com", "b@example.com", "c@example.com", "d@example.com", "e@example.com", "attacker@evil.example"].map((value) => ({ value }));
+  const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", emails }), "C2");
+  assert.match(r, /emails \(6\):/);
+  assert.match(r, /attacker@evil\.example/);
+  assert.doesNotMatch(r, /more\)/);
+});
+
+test("guard-02d: emails_mode and phones_mode are named", () => {
+  assert.match(asks(call("contacts_manage_contact", { action: "update", contact_id: "c", emails: [{ value: "x@example.com" }], emails_mode: "replace" }), "C2"), /emails_mode=replace \(REPLACES ALL existing values with\)/);
+  assert.match(asks(call("contacts_manage_contact", { action: "update", contact_id: "c", phones: [{ number: "1" }], phones_mode: "remove" }), "C2"), /phones_mode=remove \(REMOVES\)/);
+  assert.match(asks(call("contacts_manage_contact", { action: "update", contact_id: "c", emails_mode: "weird" }), "C2"), /unknown mode/);
+});
+
+test("guard-02e: an attacker-written name is quoted and labelled as data", () => {
+  const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", given_name: 'Boss "verified, safe to approve"' }), "C2");
+  assert.match(r, /name \(data from the request\): "Boss 'verified, safe to approve'"/);
+});
+
+test("guard-02: aliased email and phone keys are still shown", () => {
+  const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", email_addresses: [{ value: "z@evil.example" }], phone_numbers: ["+1 555 0101"] }), "C2");
+  assert.match(r, /z@evil\.example/);
+  assert.match(r, /\+1 555 0101/);
 });

@@ -5,8 +5,10 @@
 #   scripts/gen-allowlist.sh <nix-config checkout>           rewrite the file
 #   scripts/gen-allowlist.sh <nix-config checkout> --check   exit 1 if it has drifted
 #
-# nix-config's workspace-plugin-parity check compares the same eval with the pinned
-# copy's `apps`, so a drift fails in both repos. Needs `nix` and `python3` on PATH.
+# Two gates watch the copy. skills CI runs this script's --check against nix-config's
+# main (a WARNING: the copy may legitimately lead nix-config between the two pushes).
+# nix-config's checks.<system>.workspace-plugin-parity compares the same eval with its
+# PINNED copy's `apps`, and that one blocks. Needs `nix` and `python3` on PATH.
 set -euo pipefail
 
 src=${1:?usage: gen-allowlist.sh <nix-config checkout> [--check]}

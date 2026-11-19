@@ -35,6 +35,9 @@ jobs:
 
       - name: Tag each plugin version that has no tag yet
         run: |
+          # ONE CLI pin for this workflow and validate.yml: .github/claude-cli-version.
+          cli=$(tr -d '[:space:]' < .github/claude-cli-version)
+          [[ "$cli" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad .github/claude-cli-version: $cli"; exit 1; }
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           made=0
@@ -46,8 +49,7 @@ jobs:
             if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
               continue
             fi
-            # Pinned with validate.yml's CLI; raise both together.
-            npx -y @anthropic-ai/claude-code@2.1.268 plugin tag "$dir" --push -m "$name %s"
+            npx -y "@anthropic-ai/claude-code@$cli" plugin tag "$dir" --push -m "$name %s"
             made=$((made + 1))
           done
           echo "tagged $made plugin release(s)"

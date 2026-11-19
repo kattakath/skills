@@ -27,13 +27,19 @@ are documented once, in this repo's `CLAUDE.md`.
 - **Why a hook:** a settings-file `mcp__…` permission rule matches a tool name, never its
   arguments, so it cannot tell a task "complete" from a task "delete".
 - **Matcher:** `^mcp__.+__<bare name>$` for the 16 guarded tools, so every surface prefix
-  matches. Every call counts as this connector's, and the rule decides, unless the bare name
-  is one another known server also exposes (today only `drive_create_file` / `drive_copy_file`)
-  AND `mcp_server.name` positively names that server (Google Drive) → silent. A missing field
-  (builds before 2.1.274) or an unrecognised label asks.
+  matches. Every matched call is treated as this connector's: `mcp_server` is not read,
+  because a server name proves nothing and a wrong guess would ask too little.
+- **Silence needs positive evidence.** C6 is silent only when every request kind is
+  `createItem`, `moveItem` or `updateFormInfo`; C8 only when every label-ish value is a user
+  label `Label_<digits>`; C10 only when no parent-like key carries a value. Keys are matched
+  case- and underscore-insensitively (`label_ids`, `parent_id`, `delete_item`).
 - **Fails closed:** unreadable input, a missing or unknown `action`, unparseable arguments,
   or a tool with no rule → `ask`. It never emits `allow`, and always exits 0.
-- **`onFailure: "block"`** is defence in depth only (needs 2.1.295+). `engines` says
+- **Prompt text is sanitized** by `scripts/sanitize.js`, shared with the locator: no
+  control, bidi or zero-width characters; every address in full with its whole domain;
+  `*_mode` named; names quoted as data.
+- **`onFailure: "block"`** on both PreToolUse hooks (guard and search gate), so a missing
+  `node`, a crash or a timeout blocks the call. It needs 2.1.295+. `engines` says
   `>=2.1.295` but is enforced only from 2.1.323, so it is advisory.
 - **Depends on managed settings.** Without them, a non-organization mod's approval can skip a
   hook prompt (nix-config `modules/darwin/claude-managed-settings.nix`).
@@ -63,8 +69,10 @@ are documented once, in this repo's `CLAUDE.md`.
 - **Only the portal allowlist holds on every surface.** Every rule is also in the skill text.
 - **Bypass mode (spike S1).** 3.0.0 ships the branch where a hook `ask` prompts under
   bypassPermissions. If S1 shows it does not, nix-config adds name-only `permissions.ask`
-  entries, **only for the high-risk tools** (C3, C5, C7, C9). The others then rely on the
-  skill text in bypass.
+  entries **only for the high-risk tools** (C3, C5, C7, C9): operator decision D6, which
+  supersedes the design's "all 16 guarded tools". The others (C1, C2, C4, C6, C8, C10)
+  then rest on the skill's own rule: name the change and get an explicit yes, unless a
+  permission prompt for that exact call was just shown.
 - **Later step (D4):** set claude.ai per-tool "ask" on the C1–C10 tools for chat and phone,
   once S9 shows the account can.
 
@@ -79,6 +87,11 @@ It runs `nix eval --json --file infra/cloudflare/workspace-mcp-apps.nix` and kee
 `apps.<app>.tools`. Order of a change: regenerate and push here, then in ONE nix-config
 commit change the apps file and bump the `kattakath-skills` pin, then `cf-mcp-portals-apply`.
 
+- **skills CI** runs `--check` against nix-config's `main` and **warns** on drift (between
+  the two pushes this copy may lead).
+- **nix-config's `checks.<system>.workspace-plugin-parity`** compares the apps file with its
+  pinned copy, plus the `.mcp.json` key with the `deniedMcpServers` entry. It **blocks**.
+
 ## Tests
 
 ```bash
@@ -90,7 +103,7 @@ node --test plugins/kattakath-workspace/tests/*.test.js
 - `consistency.test.js`: allowlist ↔ skills ↔ RULES ↔ hooks.json ↔ descriptions.
 - **Evals** (`evals/`, 10 cases, mocks in `evals/mocks/Kattakath_Workspace/`) run locally
   before a release, not in CI: `claude plugin eval plugins/kattakath-workspace`. A machine
-  whose managed `deniedMcpServers` lists `plugin:kattakath-workspace:Kattakath Workspace`
+  whose user-scope (Home Manager) `deniedMcpServers` lists `plugin:kattakath-workspace:Kattakath Workspace`
   blocks the mock stand-in, so the run needs that entry lifted for the eval.
 - **Fixtures are not live captures.** `tests/fixtures/tools-list/` holds annotations read from
   the pinned workspace-mcp 2.5.0 source (self-hosted apps only). `tests/fixtures/tool-inputs/`

@@ -167,3 +167,16 @@ test("plugin.json and the marketplace entry agree on the description", () => {
   assert.equal(mk.description, pj.description);
   assert.equal(mk.version, undefined, "the marketplace entry never carries a version");
 });
+
+test("every PreToolUse hook blocks on failure (a crashed or missing node must not let a call through)", () => {
+  const pre = JSON.parse(read("hooks", "hooks.json")).hooks.PreToolUse;
+  for (const entry of pre) for (const h of entry.hooks) assert.equal(h.onFailure, "block", `${entry.matcher} lacks onFailure: block`);
+});
+
+test("both hook scripts share the one sanitizer", () => {
+  for (const f of ["write-guard.js", "corpus-locator.js"]) {
+    const src = read("scripts", f);
+    assert.match(src, /require\('\.\/sanitize\.js'\)/, `${f} must use scripts/sanitize.js`);
+    assert.doesNotMatch(src, /function clean\(/, `${f} must not define its own clean()`);
+  }
+});

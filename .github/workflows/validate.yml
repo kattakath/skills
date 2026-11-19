@@ -109,12 +109,20 @@ jobs:
         with:
           fetch-depth: 0
 
+      # ONE CLI pin, read by this job and release-tags.yml: .github/claude-cli-version.
+      - name: Claude CLI pin
+        id: cli
+        run: |
+          v=$(tr -d '[:space:]' < .github/claude-cli-version)
+          [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "::error::bad .github/claude-cli-version: $v"; exit 1; }
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+
       - name: Validate marketplace and plugins
         uses: anthropics/claude-plugins-community/.github/actions/validate-plugins@a727be1c7bd6064419b6f60d71993a19198adc17
         with:
           marketplace-path: .claude-plugin/marketplace.json
           # See the header: pinned on purpose; raise it on a PR of its own.
-          claude-cli-version: 2.1.296
+          claude-cli-version: ${{ steps.cli.outputs.version }}
 
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
@@ -143,8 +151,9 @@ jobs:
       # `require`s or `import`s it at run time.
       #
       # Pins, all exact, from package-lock.json via `npm ci` (integrity-checked):
-      #   - claude-agent-sdk 0.3.296: its `claudeCodeVersion` is 2.1.296, the same CLI the
-      #     validator above is pinned to. Raise the two together.
+      #   - claude-agent-sdk 0.3.296: its `claudeCodeVersion` is 2.1.296. It now LAGS the CLI
+      #     pin (.github/claude-cli-version, 2.1.323 since 2026-11-19): only the hook TYPES
+      #     come from it. Raising it is a package-lock change of its own.
       #   - typescript 6.0.3: the last JavaScript tsc. 7.x is native and arrives as an
       #     optionalDependency (@typescript/typescript-<platform>), which --omit=optional drops.
       #   - --omit=optional is load-bearing: the SDK's optionalDependencies are its native CLI
@@ -228,6 +237,24 @@ jobs:
           echo "parsed $n Nix asset(s)"
           exit $rc
 
+      # kattakath-workspace's allowlist.json is a GENERATED copy of nix-config's
+      # infra/cloudflare/workspace-mcp-apps.nix. Checked against nix-config's main (public).
+      # A WARNING, not a failure: between the skills push and the nix-config commit that
+      # bumps its `kattakath-skills` pin, this copy may legitimately lead. The blocking gate
+      # is nix-config's checks.<system>.workspace-plugin-parity, which reads the PIN.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: kattakath/nix-config
+          ref: main
+          path: .nix-config
+          persist-credentials: false
+
+      - name: kattakath-workspace allowlist parity with nix-config main
+        run: |
+          if ! plugins/kattakath-workspace/scripts/gen-allowlist.sh .nix-config --check; then
+            echo "::warning file=plugins/kattakath-workspace/skills/kattakath-workspace/references/allowlist.json::allowlist.json differs from nix-config main; push the matching nix-config commit (apps edit + pin bump)"
+          fi
+
       # CDP is gone from the userscript toolchain; this fails if any of it creeps back in.
       - name: userscript-lab no-CDP gate
         run: bash plugins/userscript-lab/tests/no-cdp.sh
@@ -241,6 +268,10 @@ jobs:
       # consistency suite keeps the generated allowlist, skills, RULES and hooks.json agreeing.
       - name: kattakath-workspace guard, locator and consistency cases
         run: node --test plugins/kattakath-workspace/tests/*.test.js
+
+      # The action's fail-on-warnings is repo-wide, so strict runs for this plugin alone.
+      - name: kattakath-workspace validate --strict
+        run: npx -y "@anthropic-ai/claude-code@${{ steps.cli.outputs.version }}" plugin validate --strict plugins/kattakath-workspace
 
       - name: nix-flake-kit hook cases
         run: node --test plugins/nix-flake-kit/tests/*.test.js

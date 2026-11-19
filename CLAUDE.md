@@ -81,8 +81,9 @@ it until it was removed wholesale (#31); do not reintroduce it.
 ## Validating before you push
 
 ```bash
-npx -y @anthropic-ai/claude-code@2.1.296 plugin validate .
-for p in plugins/*/; do npx -y @anthropic-ai/claude-code@2.1.296 plugin validate "$p"; done
+cli=$(cat .github/claude-cli-version)
+npx -y "@anthropic-ai/claude-code@$cli" plugin validate .
+for p in plugins/*/; do npx -y "@anthropic-ai/claude-code@$cli" plugin validate "$p"; done
 python3 scripts/build-index.py --check
 npm ci --ignore-scripts --omit=optional && npx --no-install tsc -p tsconfig.hooks.json
 ```
@@ -92,11 +93,14 @@ brain-signals) against the hook types in `@anthropic-ai/claude-agent-sdk`, pinne
 `package.json`. Those are dev-only: the scripts carry the types as JSDoc and import nothing at
 run time. A new hook script in one of those plugins goes into `tsconfig.hooks.json`'s `files`.
 
-**The `@2.1.296` pin is load-bearing — do not drop it back to bare `npx`.** Measured 2026-10-06 on
+**The CLI pin is load-bearing — do not drop it back to bare `npx`.** It lives in ONE file,
+`.github/claude-cli-version`, read by `validate.yml`, `release-tags.yml` and the lines above
+(raised to 2.1.323 on 2026-11-19: 2.1.268 in release-tags rejected `userConfig.options`, and
+2.1.296 failed `--strict` on `engines`). Measured 2026-10-06 on
 this machine: bare `npx -y @anthropic-ai/claude-code --version` resolves to a **cached 2.1.197**,
 the local `claude` is **2.1.278**, and CI pins **2.1.268**. Three different CLIs, and the
 unpinned command is none of them — so "matching it locally" was false while this said `npx` alone.
-Raise the pin here only together with the one in `validate.yml`.
+Raise it by editing that one file.
 
 This is otherwise exactly what `.github/workflows/validate.yml` runs. Plugins with test suites
 (`userscript-lab`, `mac-app-send`, `skill-curator`, `nix-flake-kit` and others) have their own commands in that workflow; check it

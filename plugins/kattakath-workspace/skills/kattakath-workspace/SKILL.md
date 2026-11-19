@@ -20,14 +20,14 @@ description: "Use for the user's own Google Workspace through the 'Kattakath Wor
 | C3 | Always (batch) | `contacts_manage_contacts_batch` |
 | C4 | Every write. Say so when `delete_contacts=true` (members get deleted too) | `contacts_manage_contact_group` |
 | C5 | Always (defaults to publish + accept responses) | `forms_set_publish_settings` |
-| C6 | Any request contains `deleteItem` | `forms_batch_update_form` |
+| C6 | Any request is not `createItem`, `moveItem` or `updateFormInfo` (so `deleteItem` and any unknown kind ask) | `forms_batch_update_form` |
 | C7 | Always (restores mail Google filtered) | `gmail_untrash_thread`, `gmail_untrash_message`, `gmail_unmark_thread_spam`, `gmail_unmark_message_spam` |
-| C8 | `labelIds` has a system label (`INBOX`, `STARRED`, `UNREAD`, `IMPORTANT`, `SPAM`, `TRASH`, `SENT`, `DRAFT`, `CHAT`) or `CATEGORY_*` | `gmail_label_thread`, `gmail_label_message` |
+| C8 | Any label is not a user label `Label_<digits>`: a system label (`INBOX`, `STARRED`, `UNREAD`, `IMPORTANT`, `SPAM`, `TRASH`, `SENT`, `DRAFT`, `CHAT`), `CATEGORY_*` or anything else | `gmail_label_thread`, `gmail_label_message` |
 | C9 | Always (acts with no page for the user) | `portal_toggle_single_server` |
-| C10 | `parentId` is set (saving into a folder that may be someone else's); `drive_copy_file` always, since with no `parentId` the copy lands next to the original | `drive_create_file`, `drive_copy_file` |
+| C10 | Any parent-like argument (`parentId`, `parents`, `parent_id`…) is set (saving into a folder that may be someone else's); `drive_copy_file` always, since with no `parentId` the copy lands next to the original | `drive_create_file`, `drive_copy_file` |
 | — | Any write the user did not ask for | any |
 
-In Claude Code a hook asks for C1–C10. Elsewhere, ask in chat yourself, naming what will change.
+Before a C1–C10 call, or any write the user did not ask for, name the change and get an explicit yes, unless a permission prompt for that exact call was just shown. This holds with or without the Claude Code hook.
 
 ## Route
 
