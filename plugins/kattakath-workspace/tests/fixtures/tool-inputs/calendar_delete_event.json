@@ -1,0 +1,7 @@
+{
+  "$comment": "SYNTHETIC tool_input for calendar_delete_event, schema-derived from the tool's Input Schema on developers.google.com/workspace/calendar/api/v3/reference/mcp/tools_list/delete_event read 2026-11-19.",
+  "tool": "calendar_delete_event",
+  "tool_input": {
+    "eventId": "E1"
+  }
+}

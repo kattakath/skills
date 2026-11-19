@@ -18,11 +18,13 @@
 // parse, a tool that reached it but has no rule, a missing sanitizer, or any thrown error
 // → ask. Silence needs POSITIVE evidence: an allowlist the arguments fully satisfy
 // (C6: every request kind is in SAFE_FORM_REQUESTS; C8: every label-ish value is a user
-// label `Label_<digits>`; C10: no parent-like key carries a value). Key names are compared
+// label `Label_<digits>`; C10: no parent-like key carries a value). C11-C17 never go
+// silent: they always ask, and exist to make the reason precise. Key names are compared
 // case- and underscore-insensitively, so `label_ids`, `parent_id` or `delete_item` count.
 //
 // RULES is the one copy of the confirm policy. The skill's confirm table quotes each
-// `summary` verbatim and tests/consistency.test.js fails when they drift.
+// `summary` verbatim, GUARDED (its tools) is generated into references/guarded.json for
+// nix-config's mcp-portal-posture gate, and tests/consistency.test.js fails on any drift.
 'use strict';
 
 const fs = require('fs');
@@ -112,6 +114,70 @@ function contactName(args) {
   return name ? `, name (data from the request): ${quote(name, 60)}` : '';
 }
 
+
+// ---- helpers for C11-C17 (the tools enabled 2026-11-19, operator: ALL, GUARDED) ----
+// These rules ALWAYS ask; their job is a precise reason. Every value in it is data from
+// the request, sanitized. Fields are read from the TOP LEVEL only (any key spelling): a
+// value nested somewhere else must never stand in for the one Google acts on. Schemas:
+// developers.google.com tool pages, and for the Gmail tools without one, the tool list
+// Cloudflare synced from Google's server (read 2026-11-19).
+
+// Every top-level value whose normalized key is in `names`.
+const topVals = (args, names) => Object.entries(args).filter(([k]) => names.includes(norm(k))).map(([, v]) => decode(v)).filter(present);
+
+// One id, or every distinct value when several spellings disagree.
+function idOf(args, names) {
+  const vals = [...new Set(topVals(args, names).map((v) => (typeof v === 'string' ? v : JSON.stringify(v))))];
+  if (!vals.length) return '(no id given)';
+  if (vals.length === 1) return quote(vals[0]);
+  return `CONFLICTING ids ${vals.map((v) => quote(v, 40)).join(' / ')}`;
+}
+const oneVal = (args, names) => {
+  const vals = topVals(args, names);
+  return vals.length ? vals[0] : undefined;
+};
+const labelList = (xs) => xs.map((x) => quote(typeof x === 'string' ? x : JSON.stringify(x), 40)).join(', ');
+
+// Attendee entries under top-level attendee-like keys: their addresses, and a count of the
+// entries with no readable address (an Attendee may carry only an `id`).
+function attendeesOf(args, removing) {
+  const keys = Object.keys(args).filter((k) => norm(k).includes('attendee') && norm(k).includes('remove') === removing);
+  const entries = flat(keys.map((k) => decode(args[k])));
+  const addr = (x) => (x && typeof x === 'object' ? x.email || x.emailAddress : x);
+  const list = entries.map(addr).filter((x) => typeof x === 'string' && x.trim());
+  return { list: [...new Set(list)], unreadable: entries.length - list.length };
+}
+function attendeeText(verb, a) {
+  const parts = [];
+  if (a.list.length) parts.push(`${verb} ${a.list.length}: ${a.list.map((e) => sanitize.email(e, 80)).join(', ')}`);
+  if (a.unreadable) parts.push(`${a.unreadable} attendee entr${a.unreadable === 1 ? 'y' : 'ies'} with no readable address`);
+  return parts.join('; ');
+}
+
+// notificationLevel defaults to ALL upstream, so only an explicit NONE means silence.
+function notifyOf(args) {
+  const vals = collectBy(args, (k) => k === 'notificationlevel' || k === 'sendupdates').filter(present);
+  const v = vals.length === 1 && typeof vals[0] === 'string' ? vals[0].toUpperCase().trim() : vals.length ? 'CONFLICTING' : 'ALL';
+  if (v === 'NONE') return 'nobody is emailed (notificationLevel=NONE)';
+  if (v === 'EXTERNAL_ONLY' || v === 'EXTERNALONLY') return 'Google emails EXTERNAL attendees only';
+  if (v === 'ALL') return `Google emails every attendee (notificationLevel=${vals.length ? 'ALL' : 'unset, default ALL'})`;
+  return `Google may email attendees (notificationLevel=${clean(v, 30)})`;
+}
+
+// The kinds of a top-level batchUpdate-style `requests` list ({insertText: …} → insertText).
+function requestKinds(args) {
+  const field = Object.keys(args).filter((k) => norm(k) === 'requests');
+  if (field.length !== 1) throw new Unreadable('no single `requests` list given');
+  const reqs = decode(args[field[0]]);
+  if (!Array.isArray(reqs)) throw new Unreadable('`requests` is not a list');
+  const kinds = reqs.flatMap((r) => (r && typeof r === 'object' && !Array.isArray(r) && Object.keys(r).length ? Object.keys(r) : ['<not a request>']));
+  const counts = {};
+  for (const k of kinds) counts[k] = (counts[k] || 0) + 1;
+  const shown = Object.entries(counts).map(([k, n]) => `${clean(k, 40)}${n > 1 ? ` x${n}` : ''}`);
+  const del = kinds.filter((k) => /delete|remove|clear|reject|accept|replaceall/i.test(k));
+  return `${reqs.length} request(s): ${shown.join(', ')}${del.length ? `; includes ${[...new Set(del)].map((k) => clean(k, 40)).join(', ')}, which delete, replace or settle content` : ''}`;
+}
+
 const RULES = [
   {
     id: 'C1',
@@ -176,7 +242,7 @@ const RULES = [
   {
     id: 'C6',
     tools: ['forms_batch_update_form'],
-    summary: 'Any request is not `createItem`, `moveItem` or `updateFormInfo` (so `deleteItem` and any unknown kind ask)',
+    summary: 'Any request is not `createItem`, `moveItem` or `updateFormInfo`',
     when(tool, args) {
       const reqField = Object.keys(args).filter((k) => norm(k) === 'requests');
       if (reqField.length !== 1) throw new Unreadable('no single `requests` list given to forms_batch_update_form');
@@ -203,7 +269,7 @@ const RULES = [
   {
     id: 'C8',
     tools: ['gmail_label_thread', 'gmail_label_message'],
-    summary: 'Any label is not a user label `Label_<digits>`: a system label (`INBOX`, `STARRED`, `UNREAD`, `IMPORTANT`, `SPAM`, `TRASH`, `SENT`, `DRAFT`, `CHAT`), `CATEGORY_*` or anything else',
+    summary: 'Any label is not a user label `Label_<digits>` (a system or `CATEGORY_*` label moves mail)',
     when(tool, args) {
       const raw = collectBy(args, (k) => k.includes('label'));
       if (!raw.length) throw new Unreadable('no `labelIds` given');
@@ -227,7 +293,7 @@ const RULES = [
   {
     id: 'C10',
     tools: ['drive_create_file', 'drive_copy_file'],
-    summary: 'Any parent-like argument (`parentId`, `parents`, `parent_id`…) is set (saving into a folder that may be someone else\'s); `drive_copy_file` always, since with no `parentId` the copy lands next to the original',
+    summary: 'A parent-like argument (`parentId`, `parents`…) is set; `drive_copy_file` always (lands beside the original)',
     when(tool, args) {
       const parent = flat(collectBy(args, (k) => k.includes('parent'))).filter(present);
       const title = args.title ? ` ${quote(args.title, 50)}` : '';
@@ -240,6 +306,141 @@ const RULES = [
       return null;
     },
   },
+  {
+    id: 'C11',
+    tools: ['gmail_trash_thread', 'gmail_trash_message', 'gmail_mark_thread_spam', 'gmail_mark_message_spam', 'gmail_apply_sensitive_thread_label', 'gmail_apply_sensitive_message_label'],
+    summary: 'Always (to Trash or Spam)',
+    when(tool, args) {
+      const kind = tool.includes('thread') ? 'thread' : 'message';
+      const id = idOf(args, kind === 'thread' ? ['threadid'] : ['messageid']);
+      let to = tool.includes('trash') ? 'TRASH' : 'SPAM';
+      if (tool.includes('sensitive')) {
+        const opt = topVals(args, ['labeloption']).map((v) => String(v).toUpperCase().trim());
+        to = opt.length === 1 && ['TRASH', 'SPAM'].includes(opt[0]) ? opt[0] : `labelOption=${opt.length ? opt.map((o) => clean(o, 30)).join('/') : 'unset'}`;
+      }
+      if (to === 'TRASH') return `moves ${kind} ${id} to Trash: it leaves the Inbox and Gmail deletes it for good after 30 days`;
+      if (to === 'SPAM') return `marks ${kind} ${id} as spam: it leaves the Inbox, and Gmail learns to filter mail like it`;
+      return `applies a sensitive label to ${kind} ${id} with ${to} (Trash or Spam expected)`;
+    },
+  },
+  {
+    id: 'C12',
+    tools: ['gmail_unlabel_thread', 'gmail_unlabel_message', 'gmail_update_message_labels'],
+    summary: 'Always; names labels added and removed',
+    when(tool, args) {
+      const kind = tool.includes('thread') ? 'thread' : 'message';
+      const id = idOf(args, kind === 'thread' ? ['threadid'] : ['messageid']);
+      const added = tool.includes('unlabel') ? [] : flat(topVals(args, ['addlabelids']));
+      const removed = flat(topVals(args, tool.includes('unlabel') ? ['labelids'] : ['removelabelids']));
+      const known = tool.includes('unlabel') ? ['threadid', 'messageid', 'labelids'] : ['messageid', 'addlabelids', 'removelabelids'];
+      const extra = Object.keys(args).filter((k) => !known.includes(norm(k)));
+      const parts = [];
+      if (added.length) parts.push(`adds ${labelList(added)}`);
+      if (removed.length) parts.push(`removes ${labelList(removed)}`);
+      if (!parts.length) parts.push('no label ids given');
+      if (extra.length) parts.push(`unexpected argument(s) ${extra.map((k) => quote(k, 30)).join(', ')}`);
+      const hides = removed.some((l) => ['INBOX', 'UNREAD'].includes(String(l).toUpperCase())) ? '; removing INBOX or UNREAD hides it from the Inbox or the unread count' : '';
+      return `relabels ${kind} ${id}: ${parts.join('; ')}${hides}`;
+    },
+  },
+  {
+    id: 'C13',
+    tools: ['calendar_create_event', 'calendar_update_event', 'calendar_delete_event', 'calendar_respond_to_event'],
+    summary: 'Always; lists attendees, says who is emailed',
+    when(tool, args) {
+      const cal = oneVal(args, ['calendarid']);
+      const where = cal !== undefined ? ` on calendar ${idOf(args, ['calendarid'])}` : ' on the primary calendar';
+      const notify = notifyOf(args);
+      const added = attendeesOf(args, false);
+      const removed = attendeesOf(args, true);
+      if (tool === 'calendar_create_event') {
+        const when = [oneVal(args, ['starttime']), oneVal(args, ['endtime'])].filter(present).map((x) => clean(x, 30)).join(' to ');
+        const who = added.list.length || added.unreadable ? attendeeText('sends invites to', added) : 'no attendees';
+        return `creates event ${quote(oneVal(args, ['summary']), 60)}${when ? ` (${when})` : ''}${where}; ${who}; ${notify}`;
+      }
+      const id = idOf(args, ['eventid']);
+      if (tool === 'calendar_update_event') {
+        const fields = Object.keys(args).filter((k) => !['eventid', 'calendarid', 'notificationlevel'].includes(norm(k))).map((k) => clean(k, 30));
+        const parts = [`updates event ${id}${where}`];
+        if (added.list.length || added.unreadable) parts.push(attendeeText('sends invites to', added));
+        if (removed.list.length || removed.unreadable) parts.push(attendeeText('removes', removed));
+        parts.push(`changes ${fields.length ? fields.join(', ') : 'nothing readable'}`);
+        parts.push(notify);
+        return parts.join('; ');
+      }
+      if (tool === 'calendar_delete_event') return `deletes event ${id}${where}; ${notify} about the cancellation`;
+      const comment = oneVal(args, ['responsecomment']);
+      return `answers event ${id}${where} with ${quote(oneVal(args, ['responsestatus']), 20)}${comment !== undefined ? `, comment ${quote(comment, 80)}` : ''}; the organizer sees it; ${notify}`;
+    },
+  },
+  {
+    id: 'C14',
+    tools: ['chat_send_message'],
+    summary: 'Always (outward: posts as you)',
+    when(tool, args) {
+      const conv = idOf(args, ['conversationid']);
+      const thread = oneVal(args, ['threadid']);
+      const texts = topVals(args, ['messagetext']);
+      let body = 'no messageText';
+      if (texts.length > 1) body = `CONFLICTING messageText values ${texts.map((t) => quote(t, 60)).join(' / ')}`;
+      else if (texts.length === 1) body = `text ${quote(texts[0], 120)}${String(texts[0]).length > 120 ? ` (${String(texts[0]).length} chars)` : ''}`;
+      const cards = flat(topVals(args, ['cards']));
+      // Card text is posted too, so it is excerpted, not just counted.
+      const cardText = flat(collectBy(cards, (k) => k === 'text' || k.endsWith('text') || k === 'title' || k === 'subtitle')).filter((x) => typeof x === 'string' && x.trim());
+      const cardPart = cards.length ? `; plus ${cards.length} card(s)${cardText.length ? ` with text ${quote(cardText.join(' / '), 120)}` : ''}` : '';
+      return `OUTWARD: posts to Chat conversation ${conv}${thread !== undefined ? ` in thread ${quote(thread, 40)}` : ''} as you: ${body}${cardPart}`;
+    },
+  },
+  {
+    id: 'C15',
+    tools: ['chat_mark_as_read', 'chat_mark_as_unread', 'chat_update_notification_settings'],
+    summary: 'Always (read state, notifications)',
+    when(tool, args) {
+      const ids = flat(topVals(args, ['conversationid', 'conversationids', 'threadid', 'threadids'])).map((x) => quote(x, 40));
+      const target = ids.length ? ids.join(', ') : '(no conversation given)';
+      if (tool === 'chat_mark_as_read') return `marks ${target} as read: new messages there stop showing as unread`;
+      if (tool === 'chat_mark_as_unread') return `marks ${target} as unread`;
+      const n = oneVal(args, ['notificationsetting']);
+      const m = oneVal(args, ['mutesetting']);
+      return `changes notifications for ${target}: notificationSetting=${clean(n ?? 'unchanged', 30)}, muteSetting=${clean(m ?? 'unchanged', 30)} (muting hides new messages)`;
+    },
+  },
+  {
+    id: 'C16',
+    tools: ['sheets_update_values', 'sheets_update_formulas', 'sheets_update_spreadsheet', 'sheets_insert_dimension', 'slides_update_presentation'],
+    summary: 'Always; names the file and range or request kinds',
+    when(tool, args) {
+      if (tool === 'slides_update_presentation') return `edits presentation ${idOf(args, ['presentationid'])} with ${requestKinds(args)}`;
+      const file = idOf(args, ['spreadsheetid']);
+      if (tool === 'sheets_update_spreadsheet') return `edits spreadsheet ${file} with ${requestKinds(args)}`;
+      if (tool === 'sheets_insert_dimension') {
+        const v = (n, d) => clean(oneVal(args, [n]) ?? d, 20);
+        return `inserts ${v('dimension', 'rows or columns')} ${v('startindex', '?')} to ${v('endindex', '?')} into sheet ${quote(oneVal(args, ['sheetid']), 20)} of spreadsheet ${file}: every cell below or right of it moves`;
+      }
+      const key = tool === 'sheets_update_formulas' ? 'formulas' : 'values';
+      const rows = oneVal(args, [key]);
+      const n = Array.isArray(rows) ? `${rows.length} row(s)` : 'an unreadable number of rows';
+      return `OVERWRITES range ${idOf(args, ['range'])} of spreadsheet ${file} with ${n} of ${key}; the old cells are replaced`;
+    },
+  },
+  {
+    id: 'C17',
+    tools: ['docs_update_doc'],
+    summary: 'Always; says "edits directly" unless `writeMode` is `SUGGEST`',
+    when(tool, args) {
+      // Suggestion mode counts ONLY as the top-level writeControl.writeMode, the one field
+      // Google reads; a writeMode anywhere else is shown and means "edits directly".
+      const wcs = topVals(args, ['writecontrol']).filter((w) => w && typeof w === 'object' && !Array.isArray(w));
+      const topModes = wcs.flatMap((w) => Object.entries(w).filter(([k]) => norm(k) === 'writemode').map(([, v]) => String(v).toUpperCase().trim()));
+      const allModes = collectBy(args, (k) => k === 'writemode').filter(present).map((m) => String(m).toUpperCase().trim());
+      const suggest = wcs.length === 1 && topModes.length === 1 && topModes[0] === 'SUGGEST' && allModes.length === 1;
+      const doc = idOf(args, ['documentid']);
+      const kinds = requestKinds(args);
+      if (suggest) return `suggests changes to Doc ${doc} (writeMode=SUGGEST, the owner accepts or rejects each) with ${kinds}`;
+      const why = allModes.length ? `writeMode=${allModes.map((m) => clean(m, 30)).join('/')}${topModes.length !== allModes.length ? ', not all in writeControl' : ''}` : 'no writeMode, which defaults to EDIT';
+      return `edits Doc ${doc} directly, not as suggestions (${why}; set writeControl.writeMode=SUGGEST to suggest instead) with ${kinds}`;
+    },
+  },
 ];
 
 const EXEMPT_WRITES = [
@@ -250,7 +451,8 @@ const EXEMPT_WRITES = [
   { tool: 'portal_toggle_servers', reason: 'The user finishes it on a portal page' },
 ];
 
-const GUARDED = [...new Set(RULES.flatMap((r) => r.tools))];
+// Sorted, so references/guarded.json (scripts/gen-guarded.js) is stable.
+const GUARDED = [...new Set(RULES.flatMap((r) => r.tools))].sort();
 
 function bareName(toolName) {
   const s = String(toolName || '');

@@ -1,0 +1,12 @@
+{
+  "$comment": "SYNTHETIC tool_input for slides_update_presentation, schema-derived from the tool's Input Schema on developers.google.com/workspace/slides/api/reference/mcp/tools_list/update_presentation read 2026-11-19.",
+  "tool": "slides_update_presentation",
+  "tool_input": {
+    "presentationId": "P1",
+    "requests": [
+      {
+        "createSlide": {}
+      }
+    ]
+  }
+}

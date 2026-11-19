@@ -1,0 +1,10 @@
+{
+  "$comment": "SYNTHETIC tool_input for gmail_unlabel_thread, schema-derived from the tool's Input Schema on developers.google.com/workspace/gmail/api/reference/mcp/tools_list/unlabel_thread read 2026-11-19.",
+  "tool": "gmail_unlabel_thread",
+  "tool_input": {
+    "threadId": "T1",
+    "labelIds": [
+      "INBOX"
+    ]
+  }
+}

@@ -16,7 +16,7 @@
         ]
       },
       {
-        "matcher": "^mcp__.+__(tasks_manage_task|tasks_manage_task_list|contacts_manage_contact|contacts_manage_contacts_batch|contacts_manage_contact_group|forms_set_publish_settings|forms_batch_update_form|gmail_untrash_thread|gmail_untrash_message|gmail_unmark_thread_spam|gmail_unmark_message_spam|gmail_label_thread|gmail_label_message|portal_toggle_single_server|drive_create_file|drive_copy_file)$",
+        "matcher": "^mcp__.+__(calendar_create_event|calendar_delete_event|calendar_respond_to_event|calendar_update_event|chat_mark_as_read|chat_mark_as_unread|chat_send_message|chat_update_notification_settings|contacts_manage_contact|contacts_manage_contact_group|contacts_manage_contacts_batch|docs_update_doc|drive_copy_file|drive_create_file|forms_batch_update_form|forms_set_publish_settings|gmail_apply_sensitive_message_label|gmail_apply_sensitive_thread_label|gmail_label_message|gmail_label_thread|gmail_mark_message_spam|gmail_mark_thread_spam|gmail_trash_message|gmail_trash_thread|gmail_unlabel_message|gmail_unlabel_thread|gmail_unmark_message_spam|gmail_unmark_thread_spam|gmail_untrash_message|gmail_untrash_thread|gmail_update_message_labels|portal_toggle_single_server|sheets_insert_dimension|sheets_update_formulas|sheets_update_spreadsheet|sheets_update_values|slides_update_presentation|tasks_manage_task|tasks_manage_task_list)$",
         "hooks": [
           {
             "type": "command",

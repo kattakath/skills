@@ -14,11 +14,12 @@ are documented once, in this repo's `CLAUDE.md`.
 
 | Part | Path | Does |
 |---|---|---|
-| Router skill | `skills/kattakath-workspace/` | Policy, the confirm table, intent → tool, what is refused. Detail in `references/` |
+| Router skill | `skills/kattakath-workspace/` | Policy, the confirm table, intent → tool. Edits in `references/editing.md`, detail in `references/` |
 | Tool list | `skills/kattakath-workspace/references/allowlist.json` | **GENERATED** from nix-config. Do not edit |
 | `/kattakath-workspace:where` | `skills/where/` | User-only: one cross-app search as a locator table |
 | `/kattakath-workspace:status` | `skills/status/` | User-only: which apps are missing, and where to Authorize |
-| Write guard | `scripts/write-guard.js` | PreToolUse `ask` for the risky writes C1–C10 (the router's confirm table) |
+| Write guard | `scripts/write-guard.js` | PreToolUse `ask` for the risky writes C1–C17 (the router's confirm table) |
+| Guarded list | `skills/kattakath-workspace/references/guarded.json` | **GENERATED** from RULES (`scripts/gen-guarded.js`); nix-config's `mcp-portal-posture` reads it |
 | Locator | `scripts/corpus-locator.js` | Gates `workspace_search_corpus` and reduces its ~100k-char result to a table |
 | Connector | `.mcp.json` | `Kattakath Workspace` → `https://mcp.kattakath.com/mcp` |
 
@@ -26,7 +27,7 @@ are documented once, in this repo's `CLAUDE.md`.
 
 - **Why a hook:** a settings-file `mcp__…` permission rule matches a tool name, never its
   arguments, so it cannot tell a task "complete" from a task "delete".
-- **Matcher:** `^mcp__.+__<bare name>$` for the 16 guarded tools, so every surface prefix
+- **Matcher:** `^mcp__.+__<bare name>$` for the 39 guarded tools, so every surface prefix
   matches. Every matched call is treated as this connector's: `mcp_server` is not read,
   because a server name proves nothing and a wrong guess would ask too little.
 - **Silence needs positive evidence.** C6 is silent only when every request kind is
@@ -85,7 +86,11 @@ are documented once, in this repo's `CLAUDE.md`.
   - The others (C1, C2, C4, C6, C8, C10) get **no prompt under bypass**. They rest on the
     skill's own rule: name the change and get an explicit yes, unless a permission prompt
     for that exact call was just shown.
-- **Later step (D4):** set claude.ai per-tool "ask" on the C1–C10 tools for chat and phone,
+- **3.1.0 (2026-11-19, operator: ALL, GUARDED):** every Google-hosted tool is enabled.
+  The 23 new writes (C11–C17) ALWAYS ask, and nix-config gives each an explicit ask rule,
+  so they prompt under bypass too. nix-config's `mcp-portal-posture` fails when the portal
+  enables an outward or edit tool that has no ask rule or is missing from `guarded.json`.
+- **Later step (D4):** set claude.ai per-tool "ask" on the C1–C17 tools for chat and phone,
   once S9 shows the account can.
 
 ## Regenerating the tool list

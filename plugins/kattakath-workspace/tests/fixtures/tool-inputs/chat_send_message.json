@@ -1,0 +1,8 @@
+{
+  "$comment": "SYNTHETIC tool_input for chat_send_message, schema-derived from the tool's Input Schema on developers.google.com/workspace/chat/api/reference/mcp/tools_list/send_message read 2026-11-19.",
+  "tool": "chat_send_message",
+  "tool_input": {
+    "conversationId": "spaces/AAA",
+    "messageText": "Hello"
+  }
+}

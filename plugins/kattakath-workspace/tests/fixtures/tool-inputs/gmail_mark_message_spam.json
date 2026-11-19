@@ -1,0 +1,7 @@
+{
+  "$comment": "SYNTHETIC tool_input for gmail_mark_message_spam, schema-derived from the inputSchema in the tool list Cloudflare synced from Google's Gmail MCP server (GET access/ai-controls/mcp/servers/gmail, read 2026-11-19); Google publishes no tool page for it.",
+  "tool": "gmail_mark_message_spam",
+  "tool_input": {
+    "messageId": "M1"
+  }
+}

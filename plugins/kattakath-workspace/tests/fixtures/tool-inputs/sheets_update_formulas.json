@@ -1,0 +1,13 @@
+{
+  "$comment": "SYNTHETIC tool_input for sheets_update_formulas, schema-derived from the tool's Input Schema on developers.google.com/workspace/sheets/api/reference/mcp/tools_list/update_formulas read 2026-11-19.",
+  "tool": "sheets_update_formulas",
+  "tool_input": {
+    "spreadsheetId": "S1",
+    "range": "Sheet1!C1",
+    "formulas": [
+      [
+        "=A1+B1"
+      ]
+    ]
+  }
+}

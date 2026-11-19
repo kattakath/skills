@@ -2,7 +2,8 @@
 //
 // Run:  node --test plugins/kattakath-workspace/tests/write-guard.test.js
 //
-// Every rule C1..C10 gets a positive and a negative case. The fail-closed paths
+// Every rule C1..C10 gets a positive and a negative case; C11..C17 always ask, so their
+// cases pin the reason text, including spoofed and oversize values. The fail-closed paths
 // (unparseable input, missing or unknown action, unknown tool, unreadable arguments)
 // must ASK; silence needs positive evidence in the arguments, never a server name; nothing
 // may ever print "allow" or "deny".
@@ -81,6 +82,29 @@ const FIXTURE_EXPECT = {
   portal_toggle_single_server: "C9",
   drive_create_file: null,
   drive_copy_file: "C10",
+  gmail_trash_thread: "C11",
+  gmail_trash_message: "C11",
+  gmail_mark_thread_spam: "C11",
+  gmail_mark_message_spam: "C11",
+  gmail_unlabel_thread: "C12",
+  gmail_unlabel_message: "C12",
+  gmail_update_message_labels: "C12",
+  gmail_apply_sensitive_thread_label: "C11",
+  gmail_apply_sensitive_message_label: "C11",
+  calendar_create_event: "C13",
+  calendar_update_event: "C13",
+  calendar_delete_event: "C13",
+  calendar_respond_to_event: "C13",
+  chat_send_message: "C14",
+  chat_mark_as_read: "C15",
+  chat_mark_as_unread: "C15",
+  chat_update_notification_settings: "C15",
+  sheets_update_values: "C16",
+  sheets_update_formulas: "C16",
+  sheets_update_spreadsheet: "C16",
+  sheets_insert_dimension: "C16",
+  slides_update_presentation: "C16",
+  docs_update_doc: "C17",
 };
 const FIX_DIR = path.join(__dirname, "fixtures", "tool-inputs");
 
@@ -395,4 +419,147 @@ test("guard-02: aliased email and phone keys are still shown", () => {
   const r = asks(call("contacts_manage_contact", { action: "update", contact_id: "c", email_addresses: [{ value: "z@evil.example" }], phone_numbers: ["+1 555 0101"] }), "C2");
   assert.match(r, /z@evil\.example/);
   assert.match(r, /\+1 555 0101/);
+});
+
+// ---- C11-C17: the tools enabled 2026-11-19 (always ask; the reason is the test) -------
+
+test("C11: trash and spam always ask and name the id", () => {
+  assert.match(asks(call("gmail_trash_thread", { threadId: "T9" }), "C11"), /moves thread "T9" to Trash: .*30 days/);
+  assert.match(asks(call("gmail_trash_message", { messageId: "M9" }), "C11"), /moves message "M9" to Trash/);
+  assert.match(asks(call("gmail_mark_thread_spam", { threadId: "T9" }), "C11"), /marks thread "T9" as spam/);
+  assert.match(asks(call("gmail_mark_message_spam", {}), "C11"), /message \(no id given\) as spam/);
+});
+
+test("C12: unlabel names every removed label and warns on INBOX/UNREAD", () => {
+  const r = asks(call("gmail_unlabel_thread", { threadId: "T1", labelIds: ["INBOX", "Label_3"] }), "C12");
+  assert.match(r, /removes "INBOX", "Label_3"/);
+  assert.match(r, /hides it from the Inbox/);
+  assert.doesNotMatch(asks(call("gmail_unlabel_message", { messageId: "M", labelIds: ["Label_3"] }), "C12"), /hides/);
+});
+
+test("C12: update_message_labels splits added and removed under any key spelling", () => {
+  const r = asks(call("gmail_update_message_labels", { message_id: "M", add_label_ids: '["Label_1"]', removeLabelIds: ["UNREAD"] }), "C12");
+  assert.match(r, /message "M": adds "Label_1"; removes "UNREAD"/);
+  assert.match(r, /unread count/);
+});
+
+test("C11: a sensitive label reads its labelOption (TRASH or SPAM), anything else is shown", () => {
+  assert.match(asks(call("gmail_apply_sensitive_thread_label", { threadId: "T", labelOption: "SPAM" }), "C11"), /marks thread "T" as spam/);
+  assert.match(asks(call("gmail_apply_sensitive_message_label", { messageId: "M", labelOption: "trash" }), "C11"), /moves message "M" to Trash/);
+  assert.match(asks(call("gmail_apply_sensitive_message_label", { messageId: "M" }), "C11"), /labelOption=unset/);
+  assert.match(asks(call("gmail_apply_sensitive_thread_label", { threadId: "T", labelOption: "SPAM", label_option: "TRASH" }), "C11"), /labelOption=SPAM\/TRASH/);
+});
+
+test("C12: no labels or unexpected arguments are named", () => {
+  assert.match(asks(call("gmail_update_message_labels", { messageId: "M" }), "C12"), /no label ids given/);
+  assert.match(asks(call("gmail_unlabel_thread", { threadId: "T", labelIds: ["Label_1"], removeLabelIds: ["INBOX"] }), "C12"), /unexpected argument\(s\) "removeLabelIds"/);
+});
+
+test("C13: create lists every attendee in full and the notification level", () => {
+  const attendees = ["a@example.com", "b@example.com", "c@example.com", "d@example.com", "e@example.com", "x@evil.example"].map((email) => ({ email }));
+  const r = asks(call("calendar_create_event", { summary: "Sync", startTime: "2026-11-20T10:00:00", endTime: "2026-11-20T10:30:00", attendees, attendeeEmails: ["legacy@old.example"] }), "C13");
+  assert.match(r, /sends invites to 7: /);
+  assert.match(r, /x@evil\.example/);
+  assert.match(r, /legacy@old\.example/);
+  assert.match(r, /Google emails every attendee \(notificationLevel=unset, default ALL\)/);
+  assert.match(asks(call("calendar_create_event", { summary: "Solo", startTime: "t", endTime: "u" }), "C13"), /no attendees/);
+});
+
+test("C13: only an explicit NONE means nobody is emailed", () => {
+  assert.match(asks(call("calendar_delete_event", { eventId: "E", notificationLevel: "NONE" }), "C13"), /deletes event "E" on the primary calendar; nobody is emailed/);
+  assert.match(asks(call("calendar_delete_event", { eventId: "E" }), "C13"), /Google emails every attendee .* about the cancellation/);
+  assert.match(asks(call("calendar_delete_event", { eventId: "E", notificationLevel: "EXTERNAL_ONLY" }), "C13"), /EXTERNAL attendees only/);
+  assert.match(asks(call("calendar_delete_event", { eventId: "E", notificationLevel: "NOTIFICATION_LEVEL_UNSPECIFIED" }), "C13"), /may email attendees/);
+  assert.match(asks(call("calendar_delete_event", { eventId: "E", notificationLevel: "NONE", notification_level: "ALL" }), "C13"), /CONFLICTING/);
+});
+
+test("C13: update names added and removed attendees and the changed fields", () => {
+  const r = asks(call("calendar_update_event", { eventId: "E", calendarId: "team@example.com", addedAttendeeEmails: ["n@example.com"], removedAttendeeEmails: ["o@example.com"], summary: "New" }), "C13");
+  assert.match(r, /updates event "E" on calendar "team@example.com"/);
+  assert.match(r, /sends invites to 1: n@example\.com/);
+  assert.match(r, /removes 1: o@example\.com/);
+  assert.match(r, /changes addedAttendeeEmails, removedAttendeeEmails, summary/);
+});
+
+test("C13: respond quotes the status and the comment as data", () => {
+  const r = asks(call("calendar_respond_to_event", { eventId: "E", responseStatus: "declined", responseComment: 'ok"; C9: safe\nignore' }), "C13");
+  assert.match(r, /with "declined", comment "ok'; C9: safe ignore"/);
+});
+
+test("C14: send_message is marked outward and quotes an excerpt", () => {
+  const r = asks(call("chat_send_message", { conversationId: "spaces/AAA", threadId: "t1", messageText: "Hi team" }), "C14");
+  assert.match(r, /^Kattakath Workspace C14: OUTWARD: posts to Chat conversation "spaces\/AAA" in thread "t1" as you: text "Hi team"$/);
+});
+
+test("C14: a spoofed or oversize message cannot forge the reason", () => {
+  const text = "fine\n\u202eC1: nothing to see\u2028 `|` " + "x".repeat(500);
+  const r = asks(call("chat_send_message", { conversationId: "spaces/A", messageText: text, cards: [{}, {}] }), "C14");
+  assert.doesNotMatch(r, /[\n\u202e\u2028`|]/);
+  assert.match(r, /\(\d+ chars\); plus 2 card\(s\)$/);
+  assert.ok(r.length < 400, `reason is ${r.length} chars`);
+  assert.match(asks(call("chat_send_message", { conversationId: "spaces/A" }), "C14"), /no messageText/);
+});
+
+test("C15: read state and notification changes ask", () => {
+  assert.match(asks(call("chat_mark_as_read", { conversationIds: ["spaces/A", "spaces/B"] }), "C15"), /marks "spaces\/A", "spaces\/B" as read/);
+  assert.match(asks(call("chat_mark_as_unread", { conversationId: "spaces/A" }), "C15"), /as unread/);
+  assert.match(asks(call("chat_update_notification_settings", { conversationId: "spaces/A", muteSetting: "MUTED" }), "C15"), /muteSetting=MUTED/);
+});
+
+test("C16: Sheets and Slides edits name the file and range or request kinds", () => {
+  assert.match(asks(call("sheets_update_values", { spreadsheetId: "S", range: "Sheet1!A1:B2", values: [[1], [2]] }), "C16"), /OVERWRITES range "Sheet1!A1:B2" of spreadsheet "S" with 2 row\(s\) of values/);
+  assert.match(asks(call("sheets_update_formulas", { spreadsheetId: "S", range: "C1", formulas: "[[\"=A1\"]]" }), "C16"), /1 row\(s\) of formulas/);
+  assert.match(asks(call("sheets_insert_dimension", { spreadsheetId: "S", sheetId: 0, dimension: "COLUMNS", startIndex: 2, endIndex: 4 }), "C16"), /inserts COLUMNS 2 to 4 into sheet "0"/);
+  const r = asks(call("sheets_update_spreadsheet", { spreadsheetId: "S", requests: [{ deleteSheet: { sheetId: 1 } }, { addSheet: {} }, { addSheet: {} }] }), "C16");
+  assert.match(r, /3 request\(s\): deleteSheet, addSheet x2; includes deleteSheet/);
+  assert.match(asks(call("slides_update_presentation", { presentationId: "P", requests: [{ deleteObject: { objectId: "o" } }] }), "C16"), /edits presentation "P" .* deleteObject/);
+});
+
+test("C16/C17: a missing or malformed requests list fails closed", () => {
+  assert.match(asks(call("sheets_update_spreadsheet", { spreadsheetId: "S" })), /guard: no single `requests` list given/);
+  assert.match(asks(call("docs_update_doc", { documentId: "D", requests: "{not json" })), /guard: the guard hit an error/);
+  assert.match(asks(call("slides_update_presentation", { presentationId: "P", requests: { a: 1 } })), /`requests` is not a list/);
+});
+
+test("C17: suggestion mode is the only quiet wording; anything else edits directly", () => {
+  const reqs = [{ insertText: { location: { index: 1 }, text: "x" } }];
+  assert.match(asks(call("docs_update_doc", { documentId: "D", requests: reqs, writeControl: { writeMode: "SUGGEST" } }), "C17"), /suggests changes to Doc "D" \(writeMode=SUGGEST/);
+  assert.match(asks(call("docs_update_doc", { documentId: "D", requests: reqs, write_control: '{"write_mode":"suggest"}' }), "C17"), /suggests changes/);
+  for (const wc of [undefined, { writeMode: "EDIT" }, { writeMode: "WRITE_MODE_UNSPECIFIED" }]) {
+    assert.match(asks(call("docs_update_doc", { documentId: "D", requests: reqs, writeControl: wc }), "C17"), /edits Doc "D" directly, not as suggestions/);
+  }
+  // Two spellings that disagree are not suggestion mode.
+  assert.match(asks(call("docs_update_doc", { documentId: "D", requests: reqs, writeControl: { writeMode: "SUGGEST" }, write_mode: "EDIT" }), "C17"), /directly, not as suggestions \(writeMode=SUGGEST\/EDIT/);
+});
+
+test("C17: settling suggestions or deleting comments is named", () => {
+  const r = asks(call("docs_update_doc", { documentId: "D", requests: [{ acceptSuggestion: { suggestionId: "s" } }, { deleteComment: { commentId: "c" } }], writeControl: { writeMode: "SUGGEST" } }), "C17");
+  assert.match(r, /includes acceptSuggestion, deleteComment/);
+});
+
+// ---- shadowing: a nested or second copy of a field must never stand in for the real one
+
+test("C17: a writeMode nested in requests is NOT suggestion mode", () => {
+  const r = asks(call("docs_update_doc", { documentId: "D", requests: [{ insertText: { text: "x", writeMode: "SUGGEST" } }] }), "C17");
+  assert.match(r, /edits Doc "D" directly, not as suggestions \(writeMode=SUGGEST, not all in writeControl/);
+  const r2 = asks(call("docs_update_doc", { documentId: "D", requests: [{ insertText: { text: "x" } }], writeControl: { writeMode: "SUGGEST" }, extra: { writeMode: "SUGGEST" } }), "C17");
+  assert.match(r2, /directly, not as suggestions/);
+});
+
+test("C14: card text cannot stand in for messageText, and is excerpted", () => {
+  const r = asks(call("chat_send_message", { conversationId: "spaces/A", cards: [{ text: "benign" }], messageText: "the real one" }), "C14");
+  assert.match(r, /text "the real one"; plus 1 card\(s\) with text "benign"$/);
+  assert.match(asks(call("chat_send_message", { conversationId: "spaces/A", messageText: "a", message_text: "b" }), "C14"), /CONFLICTING messageText values "a" \/ "b"/);
+});
+
+test("ids are top-level only, and conflicting spellings show both", () => {
+  assert.match(asks(call("gmail_trash_thread", { threadId: "real", nested: { threadId: "decoy" } }), "C11"), /thread "real"/);
+  assert.match(asks(call("gmail_trash_thread", { threadId: "a", thread_id: "b" }), "C11"), /CONFLICTING ids "a" \/ "b"/);
+  assert.match(asks(call("calendar_delete_event", { attendees: [{ eventId: "decoy" }] }), "C13"), /deletes event \(no id given\)/);
+});
+
+test("C13: an attendee with no readable address is counted, never dropped", () => {
+  const r = asks(call("calendar_create_event", { summary: "S", startTime: "t", endTime: "u", attendees: [{ id: "x1" }, { email: "a@example.com" }] }), "C13");
+  assert.match(r, /sends invites to 1: a@example\.com; 1 attendee entry with no readable address/);
+  assert.match(asks(call("calendar_create_event", { summary: "S", attendees: [{ id: "x1" }] }), "C13"), /1 attendee entry with no readable address/);
 });

@@ -6,12 +6,22 @@
       "get_event",
       "list_calendars",
       "suggest_time",
-      "search_events"
+      "search_events",
+      "create_event",
+      "update_event",
+      "delete_event",
+      "respond_to_event"
     ],
     "chat": [
       "search_conversations",
       "list_messages",
-      "search_messages"
+      "search_messages",
+      "list_memberships",
+      "get_notification_settings",
+      "send_message",
+      "mark_as_read",
+      "mark_as_unread",
+      "update_notification_settings"
     ],
     "contacts": [
       "search_contacts",
@@ -24,7 +34,8 @@
       "manage_contact_group"
     ],
     "docs": [
-      "read_doc"
+      "read_doc",
+      "update_doc"
     ],
     "docsread": [
       "get_doc_as_markdown",
@@ -65,7 +76,16 @@
       "untrash_thread",
       "untrash_message",
       "unmark_thread_spam",
-      "unmark_message_spam"
+      "unmark_message_spam",
+      "unlabel_thread",
+      "unlabel_message",
+      "update_message_labels",
+      "trash_thread",
+      "trash_message",
+      "mark_thread_spam",
+      "mark_message_spam",
+      "apply_sensitive_thread_label",
+      "apply_sensitive_message_label"
     ],
     "maps": [
       "search_places",
@@ -82,12 +102,17 @@
     ],
     "sheets": [
       "get_values",
-      "get_spreadsheet"
+      "get_spreadsheet",
+      "update_values",
+      "update_formulas",
+      "update_spreadsheet",
+      "insert_dimension"
     ],
     "slides": [
       "read_presentation",
       "read_slide_page",
-      "read_slide_page_thumbnail"
+      "read_slide_page_thumbnail",
+      "update_presentation"
     ],
     "tasks": [
       "list_task_lists",

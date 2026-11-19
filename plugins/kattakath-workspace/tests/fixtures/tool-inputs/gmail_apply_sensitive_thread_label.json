@@ -1,0 +1,8 @@
+{
+  "$comment": "SYNTHETIC tool_input for gmail_apply_sensitive_thread_label, schema-derived from the inputSchema in the tool list Cloudflare synced from Google's Gmail MCP server (GET access/ai-controls/mcp/servers/gmail, read 2026-11-19); Google publishes no tool page for it.",
+  "tool": "gmail_apply_sensitive_thread_label",
+  "tool_input": {
+    "threadId": "T1",
+    "labelOption": "SPAM"
+  }
+}

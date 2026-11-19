@@ -1,0 +1,20 @@
+{
+  "$comment": "SYNTHETIC tool_input for docs_update_doc, schema-derived from the tool's Input Schema on developers.google.com/workspace/docs/api/reference/mcp/tools_list/update_doc read 2026-11-19.",
+  "tool": "docs_update_doc",
+  "tool_input": {
+    "documentId": "D1",
+    "requests": [
+      {
+        "insertText": {
+          "location": {
+            "index": 1
+          },
+          "text": "Hi"
+        }
+      }
+    ],
+    "writeControl": {
+      "writeMode": "SUGGEST"
+    }
+  }
+}

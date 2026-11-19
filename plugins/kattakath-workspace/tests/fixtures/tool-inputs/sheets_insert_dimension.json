@@ -1,0 +1,11 @@
+{
+  "$comment": "SYNTHETIC tool_input for sheets_insert_dimension, schema-derived from the tool's Input Schema on developers.google.com/workspace/sheets/api/reference/mcp/tools_list/insert_dimension read 2026-11-19.",
+  "tool": "sheets_insert_dimension",
+  "tool_input": {
+    "spreadsheetId": "S1",
+    "sheetId": 0,
+    "dimension": "ROWS",
+    "startIndex": 1,
+    "endIndex": 3
+  }
+}

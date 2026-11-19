@@ -1,0 +1,9 @@
+{
+  "$comment": "SYNTHETIC tool_input for chat_mark_as_read, schema-derived from the tool's Input Schema on developers.google.com/workspace/chat/api/reference/mcp/tools_list/mark_as_read read 2026-11-19.",
+  "tool": "chat_mark_as_read",
+  "tool_input": {
+    "conversationIds": [
+      "spaces/AAA"
+    ]
+  }
+}

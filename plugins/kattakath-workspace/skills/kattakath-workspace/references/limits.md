@@ -4,9 +4,9 @@ Each measurement carries its value, the surface it was taken on, and the date.
 
 ## What the connector cannot do
 
-- **Refused by design** (not on the portal allowlist): send mail, post in Chat, edit a
-  Doc, Sheet or deck, create or change an event (no RSVP either), share, trash, remove a
-  label. A tool Google adds upstream stays hidden until nix-config's
+- **Refused by design:** send mail (Gmail drafts only) and share a file. Every other
+  Google-hosted tool is enabled and guarded since 2026-11-19 (`editing.md`). A tool
+  Google adds upstream stays hidden until nix-config's
   `infra/cloudflare/workspace-mcp-apps.nix` lists it.
 - **No connector exists** for Google Keep, Meet or Messages (SMS). Keep's MCP refuses
   `keep.readonly` (invalid_scope), and Meet's returns no tools (measured 2026-11-14, portal).
@@ -37,7 +37,7 @@ Each measurement carries its value, the surface it was taken on, and the date.
   breaks only (on one Doc, 1,105 non-breaking spaces became plain). Emoji: none in the
   sample, so untested.
 - **`docs_read_doc` adds nothing for reading.** Its extra bulk is layout, styles and
-  positions, which only an edit needs, and edits are refused here.
+  positions, which only an edit needs (`editing.md`).
 - **A Google Sheet: never read it through Drive.** Drive renders a sample of every tab; use
   `sheets_get_values` per tab.
 - **Drive search:** the query field is `title`; `name contains` fails with "Unsupported query
@@ -62,7 +62,10 @@ Sheets and Slides files, and it steers to Anthropic's Google connectors. Measure
 
 With the default budget the CLI listed that skill with no description (291 skills
 listed), and it never fired (0 of 14). The CLI drops descriptions of the least-used skills
-first, so that can change. To remove the overlap outright, turn the skill off: on claude.ai,
+first, so that can change. Since 3.1.0 the two divide the work: this router picks the
+account and connector and guards the write; Anthropic's skill may supply edit mechanics
+(positions, ranges, revision guards), used with this connector's tools
+(`editing.md`). To remove the overlap outright, turn the skill off: on claude.ai,
 or in Claude Code with `skillOverrides` set to `"off"`. That also removes its guidance for
 Anthropic's own Google connectors, so it is the user's call.
 
@@ -88,6 +91,14 @@ Anthropic's own Google connectors, so it is the user's call.
 |---|---|
 | `gmail_get_message`, `gmail_list_drafts`, `gmail_get_draft` | one message; the drafts folder |
 | `gmail_create_label` | a new user label (exempt from confirm: additive, private) |
+| `gmail_list_labels` → `gmail_label_thread` | organize mail (C8) |
+| `gmail_search_threads` (`in:trash` / `in:spam`) → the C7 tool | restore trash or spam |
+| `docsread_inspect_doc_structure` | a Doc's structure |
+| `drive_get_file_permissions` | who has access to a file |
+| `people_get_user_profile` | who am I |
+| `chat_search_messages` | search chats |
+| `forms_get_form` → `forms_list_form_responses` | form responses |
+| `forms_create_form` → `forms_batch_update_form` | make a form; publish only on request (C5) |
 | `calendar_list_calendars` | which calendars exist |
 | `drive_list_recent_files`, `drive_get_file_metadata` | recent files; one file's metadata |
 | `docs_read_doc` | full Docs JSON for positions; not needed to read (see Reading files) |
