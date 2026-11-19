@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "page-tools",
-  "version": "1.0.0",
-  "description": "Drive a Chrome tab that is already connected to the Kapture extension: list it, click, fill, read the DOM, screenshot, and run JavaScript only while that tab allows it.",
+  "version": "2.0.0",
+  "description": "Two browser rails for any MCP client: Playwright MCP drives the operator's real, logged-in Chrome tab by tab; chrome-devtools-mcp debugs in a throwaway, pinned Chrome for Testing.",
   "author": {
     "name": "Ismail Kattakath"
   },
@@ -10,10 +10,10 @@
   "repository": "https://github.com/kattakath/skills",
   "license": "MIT",
   "keywords": [
-    "kapture",
+    "playwright",
+    "chrome-devtools",
     "chrome",
     "browser",
-    "mcp",
-    "page"
+    "mcp"
   ]
 }

@@ -1,8 +1,10 @@
 {
   "mcpServers": {
-    "kapture": {
-      "command": "npx",
-      "args": ["-y", "kapture-mcp@2.6.1", "bridge"]
+    "playwright": {
+      "command": "playwright-chrome-mcp"
+    },
+    "chrome-devtools": {
+      "command": "chrome-devtools-cft-mcp"
     }
   }
 }

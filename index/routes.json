@@ -97,12 +97,11 @@
       "gap": true
     },
     {
-      "goal": "Drive a Chrome tab that is connected to Kapture",
+      "goal": "Drive the operator's real Chrome from an agent other than Claude, or debug a page in a throwaway Chrome",
       "steps": [
         "page-tools"
       ],
-      "note": "Popup must read Connected. evaluate is listed only while that tab allows JS. The bridge reuses 127.0.0.1:61822.",
-      "gap": true
+      "note": "Claude sessions use Claude in Chrome first. playwright drives the real Chrome per tab group; chrome-devtools launches a pinned headless CfT. Neither opens chrome:// pages."
     },
     {
       "goal": "Operate a physical Android phone over ADB",

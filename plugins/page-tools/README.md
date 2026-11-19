@@ -1,25 +1,41 @@
 # page-tools
 
-Drive a Chrome tab that is already connected to the Kapture extension. The
-method is the `page-tools` skill. The MCP server is this plugin's `.mcp.json`.
+Two browser rails for any MCP client that loads Claude Code plugins (Claude Code,
+grok, qwen). The method is the `page-tools` skill; the servers are this plugin's
+`.mcp.json`.
 
 ## What it ships
 
 | Piece | Role |
 |---|---|
-| `.mcp.json` server `kapture` | `npx -y kapture-mcp@2.6.1 bridge` — stdio MCP, reuses `127.0.0.1:61822` |
-| `skills/page-tools` | When to call `list_tabs`, when `evaluate` is hidden, what not to copy out |
+| server `playwright` → `playwright-chrome-mcp` | Microsoft Playwright MCP in `--extension` mode: the operator's real Chrome, one tab group per client |
+| server `chrome-devtools` → `chrome-devtools-cft-mcp` | Google chrome-devtools-mcp launching a pinned, headless Chrome for Testing with a throwaway profile |
+| `skills/page-tools` | Which rail, in what order, and what neither can do |
 
 ## Requires
 
-- `npx` on `PATH`. The spec is pinned to `kapture-mcp@2.6.1` (MIT, William Kapke, `github.com/williamkapke/kapture`).
-- The Kapture extension, popup reading **Connected**. Allow JS must be on or `evaluate` is omitted from `tools/list`.
-- A fresh session after the plugin is installed. A session already running does not gain the server.
+- Both launchers on `PATH`. They carry every argument, so no client config adds any.
+  In `kattakath/nix-config` they come from `modules/home/pinned-chrome.nix`:
+  - `playwright-chrome-mcp` = nixpkgs `playwright-mcp` + `--extension`
+  - `chrome-devtools-cft-mcp` = `npx -y chrome-devtools-mcp@1.13.0 --executablePath <pinned CfT> --isolated --headless --no-usage-statistics`
+  Elsewhere, put your own two scripts with those names on `PATH`.
+- The [Playwright Extension](https://chromewebstore.google.com/detail/playwright-extension/mmlmfjhmonkocbjadbfplnigmagldckm)
+  (`mmlmfjhmonkocbjadbfplnigmagldckm`) installed in Chrome.
+- A fresh session after the plugin is installed or updated.
 
-The bridge binds `127.0.0.1:61822` when nothing else has it. A request with no `Origin` can reach that control plane. That is the loopback trust the bridge itself uses.
+## Why these two
+
+| Option | Verdict |
+|---|---|
+| Playwright MCP `--extension` | **Chosen** for the real browser: per-tab-group scope, no listening port, in nixpkgs |
+| chrome-devtools-mcp `--autoConnect` | Rejected for the real browser: needs Chrome's remote-debugging switch, which grants any local app the whole browser |
+| chrome-devtools-mcp, launch mode | **Chosen** for debugging: richest tools, and the browser it drives holds nothing |
+| Kapture (`kapture-mcp`, 1.0.0 of this plugin) | Replaced: one maintainer, and its loopback port admits requests with no Origin |
 
 ## Install
 
 ```
 /plugin install page-tools@kattakath
 ```
+
+grok and qwen read the same plugin (`qwen extensions install <marketplace-url>:page-tools`).

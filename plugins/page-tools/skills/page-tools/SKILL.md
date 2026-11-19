@@ -1,59 +1,71 @@
 ---
 name: page-tools
 description: >-
-  Drive the operator's real Chrome through the Kapture MCP extension
-  (kapture-mcp@2.6.1 bridge on 127.0.0.1:61822). Use when a task needs the
-  connected Kapture tab: list tabs, click, fill, read the DOM, screenshot, or
-  run JavaScript. The extension popup must already say Connected. Do not use
-  this to author a userscript.
+  Pick and drive a browser rail. Use when a task needs a web page driven or
+  inspected: in the operator's real, logged-in Chrome through Playwright MCP
+  (`playwright` server, Playwright Extension), or in a throwaway headless Chrome
+  for Testing through chrome-devtools-mcp (`chrome-devtools` server) for
+  debugging, performance traces and Lighthouse. Covers which rail to use, in
+  what order, and what neither can do. Do not use this to author a userscript.
 ---
 
-# Page tools — Kapture
+# Page tools — two browser rails
 
-This plugin's `.mcp.json` starts `npx -y kapture-mcp@2.6.1 bridge`. The bridge
-speaks MCP on stdio and reuses whatever is already listening on
-`127.0.0.1:61822`. If nothing is listening, the bridge starts the server
-itself (detached, or in-process when a detached child cannot bind). Do not
-start a second server, and do not add Chrome policy.
+| Server | Browser | Sessions | Use it for |
+|---|---|---|---|
+| `playwright` → `playwright-chrome-mcp` | The operator's **real Chrome**, via the Playwright Extension | **The operator's own logins** | Acting as the operator: reading, forms, uploads |
+| `chrome-devtools` → `chrome-devtools-cft-mcp` | A **throwaway, headless Chrome for Testing**, pinned | **None** | Debugging, repro, performance traces, Lighthouse |
 
-## Before any tool call
+Both commands are launchers on `PATH` that carry every argument (in
+`kattakath/nix-config`, `modules/home/pinned-chrome.nix`). Never add arguments
+in a client config.
 
-1. Call `list_tabs`. A connected tab has a `tabId`.
-2. An empty `tabs` array means the popup is not Connected. `new_tab` opens
-   Kapture's own docs page and waits until that page connects. It takes no
-   URL. Use `navigate` for the page you actually want.
-3. `evaluate` is left out of `tools/list` until some connected tab has Allow JS
-   on (`tool-handler.js`). If it is absent, ask for that toggle. Do not call
-   `evaluate` to test the gate. When the toggle flips, the server sends
-   `notifications/tools/list_changed` — list the tools again.
+## Which rail — pick once per task, say which, never switch silently
 
-Spawn-tested 2026-11-18 against a tab that was Connected with Allow JS on:
-`initialize` returned server `kapture-mcp` 2.6.1, `list_tabs` returned that
-tab with `evalAllowed: true`, and `evaluate` was one of the 32 tools.
+1. **A Claude Code session whose Claude in Chrome connects** (`tabs_context_mcp`
+   answers) → use **Claude in Chrome**, not this plugin.
+2. **Anything else that needs the real browser** — grok, qwen, Antigravity, or
+   a Claude session whose Claude in Chrome is signed into another account →
+   **`playwright`**.
+3. **No logins needed, or a debugging job** → **`chrome-devtools`**.
+4. On a permission wall, a site that refuses, or a tool error: **stop and ask
+   the operator.** Do not fall back to the other rail on your own.
 
-## How to act
+## `playwright` (real Chrome)
 
-Prefer the purpose-built tool: `click`, `fill`, `select`, `type`, `dom`,
-`elements`, `screenshot`, `navigate`. Pass the `tabId` from `list_tabs`.
+- Start with `browser_tabs` (`action: "list"`) or `browser_navigate`. The client
+  gets **its own tab group**; it does not see or touch the operator's other tabs.
+- The first connection may show a Playwright **Allow / connect** page in Chrome.
+  The operator clicks it; do not try to.
+- Act from a fresh `browser_snapshot`. `browser_click` takes `element` (a human
+  description) and `target` (the `ref` from the snapshot, e.g. `e13`). Refs go
+  stale after a navigation: snapshot again.
+- **Measured 2026-11-18** (nixpkgs `playwright-mcp` 0.0.83, extension 0.6.0, Chrome
+  158): clicks are **trusted** (`event.isTrusted === true`), and it worked on an
+  https page with Claude in Chrome also installed.
+- A page that embeds another extension's `chrome-extension://` frame can detach
+  the debugger. If a tab drops mid-task, say so; don't retry in a loop.
+- Do not type a secret. Do not close a tab the operator opened.
 
-`getUniqueSelector` in extension 1.2.1 (`page-helpers.js`) writes
-`id="kapture-N"` when the element has no id, and otherwise adds the class
-`kapture-N`. That selector is real for this DOM and gone on reload. Use it
-for the next action in this tab. Never copy it into a userscript.
+## `chrome-devtools` (throwaway CfT)
 
-`:contains()` is rejected. Pass the tool's `xpath` argument instead.
+- Launches its own headless Chrome for Testing with an **isolated, temporary
+  profile** and talks to it over a pipe: no port, no operator data, nothing
+  survives the session.
+- Tools take a `pageId`: get it from `list_pages` or `new_page`, then pass it to
+  `take_snapshot`, `click` (`uid`), `evaluate_script`, `close_page`.
+- **Measured 2026-11-18** (`chrome-devtools-mcp` 1.13.0, CfT 156): clicks are
+  trusted.
+- The CfT version trails stable Chrome. A rendering difference may be the version,
+  not the site.
 
-`compose` runs several actions on one tab. Its last line may be a read
-(`screenshot`, `dom`, `elements`, `elementsFromPoint`, `console_logs`,
-`watch_console`). `evaluate` is not allowed inside `compose`.
+## Neither rail opens `chrome://` pages
 
-## Exposure
-
-The listener is loopback only. A request with no `Origin` is allowed on the
-HTTP and WebSocket control plane (`origin-policy.js` in `kapture-mcp@2.6.1`);
-that is how the bridge connects. The extension origin is accepted only on the
-root WebSocket. `/assistants` writes require a localhost browser Origin, so a
-caller with no Origin cannot use them.
-
-Do not navigate to `chrome://` or an extension page. Do not type a secret.
-Do not close a tab the operator did not name.
+- Extensions are not allowed to debug `chrome://` pages, and `chrome-devtools-mcp`
+  refuses them itself (`Navigating to chrome: URLs is not allowed`, measured).
+- Browser configuration (extensions, DevTools, settings) is **declared as Chrome
+  policy**, not clicked. To read what applied, ask the operator to open
+  `chrome://policy`.
+- The operator's real Chrome has remote debugging **disabled by policy**
+  (`RemoteDebuggingAllowed = false`), so there is no CDP port to attach to. Do not
+  ask for it to be turned on.
