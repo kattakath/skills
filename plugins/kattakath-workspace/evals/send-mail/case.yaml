@@ -1,0 +1,13 @@
+schema_version: "1.1"
+name: send-mail
+execution:
+  max_turns: 12
+graders:
+  - name: drafts
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__gmail_create_draft
+    min: 1
+  - name: says-user-sends
+    type: regex
+    pattern: 'draft'
+    flags: i

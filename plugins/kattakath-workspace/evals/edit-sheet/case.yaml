@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: edit-sheet
+execution:
+  max_turns: 12
+graders:
+  - name: refuses-sheet-edit
+    type: regex
+    pattern: "(can't|cannot|not able|refus|read-only|not available)"
+    flags: i

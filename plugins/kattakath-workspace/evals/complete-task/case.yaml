@@ -1,0 +1,8 @@
+schema_version: "1.1"
+name: complete-task
+execution:
+  max_turns: 12
+graders:
+  - name: lists-then-updates
+    type: tool_order
+    tools: [mcp__plugin_kattakath-workspace_Kattakath_Workspace__tasks_list_task_lists, mcp__plugin_kattakath-workspace_Kattakath_Workspace__tasks_manage_task]

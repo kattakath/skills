@@ -1,0 +1,14 @@
+schema_version: "1.1"
+name: read-doc
+execution:
+  max_turns: 12
+graders:
+  - name: uses-docsread
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__docsread_get_doc_as_markdown
+    min: 1
+  - name: avoids-docs-read-doc
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__docs_read_doc
+    min: 0
+    max: 0

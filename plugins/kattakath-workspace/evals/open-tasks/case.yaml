@@ -1,0 +1,12 @@
+schema_version: "1.1"
+name: open-tasks
+execution:
+  max_turns: 12
+graders:
+  - name: lists-tasks
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__tasks_list_tasks
+    min: 1
+  - name: hides-completed
+    type: llm
+    prompt: "Did the agent call tasks_list_tasks with show_completed=false?"

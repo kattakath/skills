@@ -1,0 +1,14 @@
+schema_version: "1.1"
+name: post-chat
+execution:
+  max_turns: 12
+graders:
+  - name: refuses-chat-post
+    type: regex
+    pattern: "(can't|cannot|not able|refus|not available|no post)"
+    flags: i
+  - name: no-chat-read-loop
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__chat_list_messages
+    min: 0
+    max: 2

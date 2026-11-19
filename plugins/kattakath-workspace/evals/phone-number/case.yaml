@@ -1,0 +1,9 @@
+schema_version: "1.1"
+name: phone-number
+execution:
+  max_turns: 12
+graders:
+  - name: people-lookup
+    type: tool_used
+    tool: mcp__plugin_kattakath-workspace_Kattakath_Workspace__people_search_contacts
+    min: 1
