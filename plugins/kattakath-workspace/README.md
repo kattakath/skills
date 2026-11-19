@@ -1,75 +1,108 @@
 # `kattakath-workspace` — Claude Code plugin
 
-Google Workspace in Claude through **one** connector, **Kattakath Workspace**: a
-Cloudflare MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app —
-Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, Maps, plus Google's cross-app search (a locator, off by default) — behind one sign-in page. This
-plugin ships the routing skill (`kattakath-workspace:kattakath-workspace`) and the connector
-entry. Nothing in it can send mail: Claude drafts, you press Send.
+Google Workspace in Claude through **one** connector, **Kattakath Workspace**: a Cloudflare
+MCP portal at `https://mcp.kattakath.com/mcp` that holds one server per Google app behind one
+sign-in page. The app list lives in `.claude-plugin/plugin.json`'s description; the tool list
+is generated (below). Nothing in this plugin can send mail: Claude drafts, you press Send.
 
 Install: `/plugin install kattakath-workspace@kattakath`
 
-Served from the `kattakath` marketplace (`github:kattakath/skills`). Delivery and
-enablement are documented once, in this repo's `CLAUDE.md` — not restated here.
+Served from the `kattakath` marketplace (`github:kattakath/skills`). Delivery and enablement
+are documented once, in this repo's `CLAUDE.md`.
 
 ## What it ships
 
-- **The skill**: which tool to use (`<app>_<tool>`, e.g. `gmail_search_threads`), the
-  sign-in fallback, and the confirm-before-write rules. It matches the connector by **name**,
-  because the tool prefix differs by surface (`mcp__Kattakath_Workspace__…` in cloud
-  sessions, `mcp__claude_ai_Kattakath_Workspace__…` in local Claude Code).
-- **The connector** (since 2.1.0): `.mcp.json` declares `Kattakath Workspace` →
-  `https://mcp.kattakath.com/mcp`, so the plugin page lists it and installing the plugin brings
-  it. Before 2.1.0 this was not possible (see History): Google's servers have no Dynamic Client
-  Registration, but the Cloudflare portal in front of them does, for claude.ai and local
-  (loopback) clients. The key is Title Case on purpose: claude.ai shows it as the connector's
-  name, and a spaced key is legal for plugins (Anthropic's knowledge-work-plugins use
-  `"google calendar"`); only `claude mcp add` restricts names. Where a machine also has the account connector, denying the plugin copy
-  (`deniedMcpServers`: `plugin:kattakath-workspace:Kattakath Workspace`) keeps one sign-in.
+| Part | Path | Does |
+|---|---|---|
+| Router skill | `skills/kattakath-workspace/` | Policy, the confirm table, intent → tool, what is refused. Detail in `references/` |
+| Tool list | `skills/kattakath-workspace/references/allowlist.json` | **GENERATED** from nix-config. Do not edit |
+| `/kattakath-workspace:where` | `skills/where/` | User-only: one cross-app search as a locator table |
+| `/kattakath-workspace:status` | `skills/status/` | User-only: which apps are missing, and where to Authorize |
+| Write guard | `scripts/write-guard.js` | PreToolUse `ask` for the risky writes C1–C10 (the router's confirm table) |
+| Locator | `scripts/corpus-locator.js` | Gates `workspace_search_corpus` and reduces its ~100k-char result to a table |
+| Connector | `.mcp.json` | `Kattakath Workspace` → `https://mcp.kattakath.com/mcp` |
 
-- **The locator** (since 2.3.0, Claude Code only): `/kattakath-workspace:where <term>` runs
-  Google's cross-app search (`workspace_search_corpus`) when the thing could be anywhere.
-  Two hooks (`hooks/hooks.json` → `scripts/corpus-locator.js`) wrap it:
+## The write guard
 
-  | Hook | Does | Why |
-  |---|---|---|
-  | PreToolUse `gate` | **Asks** before every call; `KATTAKATH_WORKSPACE_LOCATOR=auto` in settings `env` skips the ask | Off by default, on demand. Measured: a headless (`claude -p`) call does not run, in default or bypass mode; interactive sessions show the prompt |
-  | PostToolUse `reduce` | Replaces the result with a locator table (app, title, date, sender/type, link, the tool to open it); drops every Chat body and Gmail snippet | The server ignores `pageSize`: every query returns ~30 hits and ~100k chars, over Claude Code's cap. Measured 96,169 → 12,632 chars |
+- **Why a hook:** a settings-file `mcp__…` permission rule matches a tool name, never its
+  arguments, so it cannot tell a task "complete" from a task "delete".
+- **Matcher:** `^mcp__.+__<bare name>$` for the 16 guarded tools, so every surface prefix
+  matches. Inside, the script checks `mcp_server.name`: another server → silent; this
+  connector, or no `mcp_server` field (builds before 2.1.274) → the rule decides.
+- **Fails closed:** unreadable input, a missing or unknown `action`, unparseable arguments,
+  or a tool with no rule → `ask`. It never emits `allow`, and always exits 0.
+- **`onFailure: "block"`** is defence in depth only (needs 2.1.295+). `engines` says
+  `>=2.1.295` but is enforced only from 2.1.323, so it is advisory.
+- **Depends on managed settings.** Without them, a non-organization mod's approval can skip a
+  hook prompt (nix-config `modules/darwin/claude-managed-settings.nix`).
+- **Exempt writes**, each with its reason, are `EXEMPT_WRITES` in the script.
 
-  Claude Code saves an overflowing result to `~/.claude/projects/…/tool-results/` and hands
-  the hook only a pointer, so the reducer reads that file, and **only** from that directory.
-  On anything it cannot parse it prints nothing, and the original result passes through.
-  claude.ai chat runs no plugin hooks, so there the skill routes to the per-app search tools.
-  Tests: `node --test plugins/kattakath-workspace/tests/corpus-locator.test.js`.
+## The locator
+
+- **Gate:** the `locator_mode` setting (`/config`): `ask` (default), `auto` (silent) or `off`
+  (refuse). It replaces 2.x's `KATTAKATH_WORKSPACE_LOCATOR` env var.
+- **Reducer:** writes `updatedToolOutput`. Rows are grouped per app and open tool, bodies and
+  snippets are dropped, and the table is capped at 10,000 chars (a token-budget choice).
+  Measured on 2.x: 96,169 → 12,632 chars.
+- **Fails open:** on anything it cannot parse, the raw result passes through and a
+  `systemMessage` says why.
+
+## Enforcement by surface
+
+| Surface | Allowlist | Skill | Hooks (guard + locator) | `locator_mode` |
+|---|---|---|---|---|
+| Claude Code CLI / Desktop Code tab | yes | yes | yes | `/config` |
+| Cowork | yes | yes | yes | fixed at `ask` |
+| claude.ai chat / phone | yes | if the plugin is enabled on the account | **no** | — |
+| Cloud sessions / routines | yes | per spike S5 | **no** | — |
+| Headless `-p`, scheduled | yes | yes | guarded writes **refused** | — |
+| Org per-tool ask (if S9 passes) | applies everywhere except Desktop local/SSH sessions | | | |
+
+- **Only the portal allowlist holds on every surface.** Every rule is also in the skill text.
+- **Bypass mode (spike S1).** 3.0.0 ships the branch where a hook `ask` prompts under
+  bypassPermissions. If S1 shows it does not, nix-config adds name-only `permissions.ask`
+  entries, **only for the high-risk tools** (C3, C5, C7, C9). The others then rely on the
+  skill text in bypass.
+- **Later step (D4):** set claude.ai per-tool "ask" on the C1–C10 tools for chat and phone,
+  once S9 shows the account can.
+
+## Regenerating the tool list
+
+```bash
+plugins/kattakath-workspace/scripts/gen-allowlist.sh <nix-config checkout>          # rewrite
+plugins/kattakath-workspace/scripts/gen-allowlist.sh <nix-config checkout> --check  # drift?
+```
+
+It runs `nix eval --json --file infra/cloudflare/workspace-mcp-apps.nix` and keeps
+`apps.<app>.tools`. Order of a change: regenerate and push here, then in ONE nix-config
+commit change the apps file and bump the `kattakath-skills` pin, then `cf-mcp-portals-apply`.
+
+## Tests
+
+```bash
+node --test plugins/kattakath-workspace/tests/*.test.js
+```
+
+- `write-guard.test.js`: a positive and a negative case per rule, plus every fail-closed path.
+- `corpus-locator.test.js`: gate modes, prefixes, the mimeType open map, the 10k cap.
+- `consistency.test.js`: allowlist ↔ skills ↔ RULES ↔ hooks.json ↔ descriptions.
+- **Fixtures are not live captures.** `tests/fixtures/tools-list/` holds annotations read from
+  the pinned workspace-mcp 2.5.0 source (self-hosted apps only). `tests/fixtures/tool-inputs/`
+  is schema-derived. Re-capture both when the Cloud Run image is bumped.
 
 ## Requires
 
-The **Kattakath Workspace** custom connector on the Claude account (claude.ai → Customize →
-Connectors → `https://mcp.kattakath.com/mcp`) for claude.ai chat and Claude Code cloud/phone
-sessions; local Claude Code can use this plugin's `.mcp.json` instead. Connect once: the
-portal page lists every app with an **Authorize** button (one Google consent each). The
-portal is infrastructure in `kattakath/nix-config` (`infra/cloudflare/mcp-portals.nix`; the
-per-app tool allowlist is data in `infra/cloudflare/workspace-mcp-apps.nix`). It replaced the
-1.x Pomerium gateway and its eight `Kattakath <App>` connectors on 2026-11-14.
+The **Kattakath Workspace** custom connector on the Claude account for chat and cloud
+sessions; local Claude Code can use this plugin's `.mcp.json`. Connect once, then press
+**Authorize** per app on the portal page. The portal is infrastructure in
+`kattakath/nix-config` (`infra/cloudflare/mcp-portals.nix`).
 
-## History: why 1.0.1–1.1.0 used empty URLs (measured 2026-11-14)
+## History
 
-| Shape tried | Claude Code result |
-|---|---|
-| URL + `oauth.clientId: "${user_config.…}"` | Google: `401 invalid_client — The OAuth client was not found` (userConfig is not substituted into `oauth`) |
-| URL + literal `oauth.clientId` | Consent screen, then `client_secret is missing.` (no plugin field carries a secret) |
-| **Bare URL** (1.0.0; the shape of `small-business` and `claude-for-financial-advisors`) | The plugin entry **displaces** the working claude.ai connector of the same URL, then every call fails: `Incompatible auth server: does not support dynamic client registration` |
-| **Empty URL** (1.0.1–1.1.0) | Plugin entries read `Not configured`; the claude.ai connectors stay `✔ Connected` and keep working |
-
-Two more facts behind those results:
-
-- **Google's Workspace MCP servers do no dynamic client registration**, so only a
-  pre-registered client plus its secret can sign in — which the claude.ai connectors have
-  and a plugin cannot carry.
-- **A green tick is not a sign-in.** These servers answer `initialize` and `tools/list`
-  with HTTP 200 and no token, so `/mcp` can show "✔ N tools" for an entry that fails on
-  the first real call.
-
-## No connector exists
-
-Google Keep, and Google Messages (SMS). (Tasks joined on 2026-11-18 through a self-hosted
-portal upstream; see the skill's § 5.)
+- **3.0.0:** write guard; `/where` and `/status` as user-only skills (commands/ removed);
+  `locator_mode` setting replaces the env var; generated allowlist.
+- **2.1.0:** the plugin declares the connector. 1.x used empty URLs because Google's servers
+  do no dynamic client registration, and a bare URL displaced the claude.ai connector. The
+  Cloudflare portal in front of them does DCR.
+- **A green tick is not a sign-in.** These servers answer `initialize` and `tools/list` with
+  no token, so `/mcp` can show tools for an entry that fails on the first real call.

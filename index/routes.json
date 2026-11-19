@@ -327,7 +327,7 @@
       "steps": [
         "kattakath-workspace"
       ],
-      "note": "Empty-URL entries reuse the account's claude.ai Google connectors; measured 2026-11-14 that bare URLs displace them in Claude Code and fail (no dynamic client registration)."
+      "note": "One connector for every app; the tool list is generated from nix-config and the confirm-before-write rules are a hook. See the plugin README."
     }
   ]
 }
