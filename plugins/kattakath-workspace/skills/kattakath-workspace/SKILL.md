@@ -1,6 +1,6 @@
 ---
 name: kattakath-workspace
-description: "Use for the user's own Google Workspace through the 'Kattakath Workspace' connector: Gmail (search, read, draft a reply or new mail, labels), Calendar (events, free time), Drive files, Google Docs/Sheets/Slides (read), Google Chat (find, read), Google Tasks (read, add, complete, edit), Google Forms (responses, create, edit), Google Contacts (look up, add, edit, groups), Maps (places, routes, weather), or a docs/drive/mail/calendar/chat.google.com link. Also use when asked to send mail, post in Chat, edit a Doc/Sheet/Slides or change an event, so it can say what this connector refuses and offer the draft instead. Not for local files, Keep or Meet."
+description: "Use this, not google-workspace, for the user's own Google Workspace through the 'Kattakath Workspace' connector: Gmail (search, read, draft a reply or new mail, labels), Calendar (events, free time), Drive files, Google Docs/Sheets/Slides (read), Google Chat (find, read), Google Tasks (read, add, complete, edit), Google Forms (responses, create, edit), Google Contacts (look up, add, edit), Maps (places, routes, weather), or a docs/drive/mail/calendar/chat.google.com link. Also use to make a Doc/Sheet/Slides, or to send mail, post in Chat, edit a file or change an event, so it can say what is refused and offer a draft. Not for local files, Keep or Meet."
 ---
 
 # Kattakath Workspace
@@ -39,12 +39,12 @@ Before a C1–C10 call, or any write the user did not ask for, name the change a
 | Reply / new mail | … → `gmail_create_draft`; show it; the user sends from Gmail |
 | Organize mail | `gmail_list_labels` → `gmail_label_thread` (C8) |
 | Restore trash/spam | `gmail_search_threads` (`in:trash` / `in:spam`) → the C7 tool |
-| File by name | `drive_search_files` (`title contains`; on rejection `name contains`) |
-| Read a Google Doc | `docsread_get_doc_as_markdown` first (`heading` for one section); if docsread is missing, `drive_read_file_content`. Avoid `docs_read_doc`: ~2 MB per Doc |
+| File by name | `drive_search_files` (`title contains`, not `name`); skip seen ids |
+| Read a Google Doc | `drive_read_file_content` (`includeComments` for comments); one section: `docsread_get_doc_as_markdown` (`heading`). Not `docs_read_doc` (10-28x larger) |
 | Doc structure | `docsread_inspect_doc_structure` |
 | Other file / PDF / .docx | `drive_read_file_content`; raw bytes only via `drive_download_file_content` |
-| Sheet | `sheets_get_spreadsheet` → `sheets_get_values` |
-| Deck | `slides_read_presentation` → `slides_read_slide_page` |
+| Sheet | `sheets_get_spreadsheet` → `sheets_get_values` (Drive gives a sample) |
+| Deck | `slides_read_presentation` with `fields` → `slides_read_slide_page` |
 | Who has access | `drive_get_file_permissions` |
 | Save output | `drive_create_file` / `drive_copy_file` (C10) |
 | Email/phone lookup | `people_search_contacts`; colleague → `people_search_directory_people` |

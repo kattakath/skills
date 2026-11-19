@@ -149,14 +149,14 @@ for (const [name, resp] of [
   });
 }
 
-test("reduce: Drive hits open by mimeType, with a fallback for Docs", () => {
+test("reduce: Drive hits open by mimeType; a Doc opens with Drive's read", () => {
   const mk = (id, mimeType) => ({ driveResult: { itemId: id, title: id, mimeType, viewUrl: "https://d/" + id } });
   const t = run("reduce", post({ items: [mk("doc", "application/vnd.google-apps.document"), mk("sheet", "application/vnd.google-apps.spreadsheet"), mk("deck", "application/vnd.google-apps.presentation"), mk("pdf", "application/pdf"), mk("nomime")] })).updatedToolOutput;
-  assert.ok(t.includes("### Drive: open with `docsread_get_doc_as_markdown` (if missing: `drive_read_file_content`)"));
+  assert.ok(!t.includes("docsread_get_doc_as_markdown"));
   assert.ok(t.includes("### Drive: open with `sheets_get_spreadsheet`"));
   assert.ok(t.includes("### Drive: open with `slides_read_presentation`"));
   const fallback = t.split("### ").find((g) => g.startsWith("Drive: open with `drive_read_file_content`"));
-  assert.ok(fallback && fallback.includes("`pdf`") && fallback.includes("`nomime`"), "unknown mimeTypes open with drive_read_file_content");
+  assert.ok(fallback && fallback.includes("`doc`") && fallback.includes("`pdf`") && fallback.includes("`nomime`"), "Docs and unknown mimeTypes open with drive_read_file_content");
 });
 
 test("reduce: a ~100k-character result shrinks to at most 10,000 characters", () => {

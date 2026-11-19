@@ -25,7 +25,7 @@ own search: `gmail_search_threads`, `drive_search_files`, `chat_search_messages`
 | Hit | Open with |
 |---|---|
 | Gmail thread | `gmail_get_thread` |
-| Google Doc | `docsread_get_doc_as_markdown` (if docsread is missing: `drive_read_file_content`) |
+| Google Doc | `drive_read_file_content` (`includeComments: true` for comments) |
 | Google Sheet | `sheets_get_spreadsheet` |
 | Google Slides | `slides_read_presentation` |
 | Any other Drive file | `drive_read_file_content` |

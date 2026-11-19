@@ -24,11 +24,58 @@ Each measurement carries its value, the surface it was taken on, and the date.
   seconds to the first call. A newly added app needs the user's own **Authorize** on the
   portal page; until then its tools are missing.
 
+## Reading files (measured 2026-11-19, Claude Code CLI)
+
+- **A Google Doc: Drive's read is enough.** On 5 single-tab Docs (399 to 106,211 chars, 2
+  with comments), `drive_read_file_content` and `docsread_get_doc_as_markdown` differed by
+  at most 15% in size (under 6% above 1k chars). Table counts matched on all 5 and heading
+  counts on 4 (0 vs 1 on the fifth). Both reached the Doc's end: the last 40 characters
+  were identical on 2 Docs and found in the Docs body on the other 3. With
+  `includeComments: true`, Drive gave the same comment threads as
+  `docsread_list_document_comments` and `docs_read_doc` (6 threads with 12 replies; 3
+  threads). Without the flag nothing was cut off; the text differed in whitespace and line
+  breaks only (on one Doc, 1,105 non-breaking spaces became plain). Emoji: none in the
+  sample, so untested.
+- **`docs_read_doc` adds nothing for reading.** Its extra bulk is layout, styles and
+  positions, which only an edit needs, and edits are refused here.
+- **A Google Sheet: never read it through Drive.** Drive renders a sample of every tab; use
+  `sheets_get_values` per tab.
+- **Drive search:** the query field is `title`; `name contains` fails with "Unsupported query
+  field: name". Fewer hits than the page size do not mean the end while a next-page token
+  is present. In relevance order a page can open with the final hit of the one before, so
+  keep a set of seen ids.
+- **Slides:** pass `fields`. A mask of ids, sizes, transforms and text cut the read by 78%
+  and 82% on two decks.
+- **docsread can be missing.** Its tools were absent from one claude.ai-connector session's
+  list while a fresh `claude -p` listed them. Drive's read needs no extra Authorize.
+
+## Another Google skill
+
+Anthropic's own `google-workspace` skill also fires on requests to edit or make Docs,
+Sheets and Slides files, and it steers to Anthropic's Google connectors. Measured 2026-11-19 in
+`claude -p` with the skill listing budget raised, so both descriptions show:
+
+| Router description | Edit/create probes won by `google-workspace` | Read/add-row probes |
+|---|---|---|
+| 3.0.0 | 4 of 4 | 0 of 4 |
+| 3.0.1, opening with "Use this, not google-workspace" | 0 of 4 (0 of 6 on a draft with the same opening) | 0 of 4 |
+
+With the default budget the CLI listed that skill with no description (291 skills
+listed), and it never fired (0 of 14). The CLI drops descriptions of the least-used skills
+first, so that can change. To remove the overlap outright, turn the skill off: on claude.ai,
+or in Claude Code with `skillOverrides` set to `"off"`. That also removes its guidance for
+Anthropic's own Google connectors, so it is the user's call.
+
 ## Measurements
 
 | What | Value | Surface | Date |
 |---|---|---|---|
-| `docs_read_doc`, one document | ~2 MB | surface not recorded (2.x skill) | 2026-11-14 |
+| `docs_read_doc` vs `drive_read_file_content`, 5 Docs | 11,251-2,032,523 vs 399-106,211 chars (10-28x) | Claude Code CLI, `claude -p` | 2026-11-19 |
+| `slides_read_presentation`, unmasked vs `fields` mask | 194,628 vs 43,722 chars (12 slides); 761,171 vs 140,398 (21 slides) | Claude Code CLI, `claude -p` | 2026-11-19 |
+| Drive read of a 10-tab Sheet vs `sheets_get_values` on tab 1 | 595 lines for the whole file vs 4,822 rows | Claude Code CLI, `claude -p` | 2026-11-19 |
+| `drive_search_files`, relevance order, page size 5, 9 pages | 9 of 45 ids repeated: each follow-up page began with the last id of the page before | Claude Code CLI, `claude -p` | 2026-11-19 |
+| `drive_search_files`, `modifiedTime desc`, page size 5, 9 pages | 0 of 45 repeated | Claude Code CLI, `claude -p` | 2026-11-19 |
+| `drive_search_files`, `fullText` query, snippets on, page size 20 | 5 files and a next-page token (a short page) | Claude Code CLI, `claude -p` | 2026-11-19 |
 | `workspace_search_corpus` "invoice", raw | 96,169 chars | Claude Code CLI, overflow file | 2026-11-14 |
 | `workspace_search_corpus` "invoice", raw | 136,585 chars, 30 hits | surface not recorded (nix-config `workspace-mcp-apps.nix` comment, read against claude.ai's cap); the same query as the row above, so the two counts conflict | 2026-11-14 |
 | `workspace_search_corpus`, a rare phrase, raw | 100,798 chars | Claude Code CLI | 2026-11-14 |
@@ -43,8 +90,8 @@ Each measurement carries its value, the surface it was taken on, and the date.
 | `gmail_create_label` | a new user label (exempt from confirm: additive, private) |
 | `calendar_list_calendars` | which calendars exist |
 | `drive_list_recent_files`, `drive_get_file_metadata` | recent files; one file's metadata |
-| `docs_read_doc` | full Docs structure; large, last resort (kept until spike S6 settles it) |
-| `docsread_get_doc_content`, `docsread_list_document_comments`, `docsread_search_docs` | plain text; comments; search Docs only |
+| `docs_read_doc` | full Docs JSON for positions; not needed to read (see Reading files) |
+| `docsread_get_doc_content`, `docsread_list_document_comments`, `docsread_search_docs` | plain text; comments (Drive's `includeComments` gives the same); search Docs only |
 | `slides_read_slide_page_thumbnail` | a slide as an image, for visual questions |
 | `contacts_list_contacts`, `contacts_get_contact` | all contacts; one contact |
 | `contacts_list_contact_groups`, `contacts_get_contact_group` | groups and their members |

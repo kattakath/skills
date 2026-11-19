@@ -47,9 +47,10 @@ const MAX_FIELD = 80;
 const MAX_LINK = 160;
 const MAX_OUTPUT = 10000;
 
-// mimeType → the tool that opens it, plus the fallback when that app is not on the portal.
+// mimeType → the tool that opens it.
+// A Google Doc takes the default: Drive's read matched docsread's Markdown on 5 Docs
+// (tables, comments and the ending; references/limits.md, 2026-11-19).
 const OPEN_BY_MIME = {
-  'application/vnd.google-apps.document': { tool: 'docsread_get_doc_as_markdown', fallback: 'drive_read_file_content' },
   'application/vnd.google-apps.spreadsheet': { tool: 'sheets_get_spreadsheet' },
   'application/vnd.google-apps.presentation': { tool: 'slides_read_presentation' },
 };
@@ -138,7 +139,7 @@ function row(item) {
     const d = item.driveResult;
     const kind = clean(String(d.mimeType || '').split(/[/.]/).pop(), 20);
     const o = openFor(d.mimeType);
-    return { app: 'Drive', open: o.tool, fallback: o.fallback, title: clean(d.title), when: '', who: kind, link: d.viewUrl, alt: byId('https://drive.google.com/open?id=', d.itemId), id: d.itemId };
+    return { app: 'Drive', open: o.tool, title: clean(d.title), when: '', who: kind, link: d.viewUrl, alt: byId('https://drive.google.com/open?id=', d.itemId), id: d.itemId };
   }
   if (item.gmailResult) {
     const th = item.gmailResult.thread || {};
@@ -182,8 +183,8 @@ function render(corpus, query) {
   }
   const body = [];
   for (const g of groups.values()) {
-    const { app, open, fallback } = g[0];
-    const how = open ? `open with \`${open}\`${fallback ? ` (if missing: \`${fallback}\`)` : ''}` : 'no open tool';
+    const { app, open } = g[0];
+    const how = open ? `open with \`${open}\`` : 'no open tool';
     body.push({ header: true, text: ['', `### ${app}: ${how}`, '| # | Title | When | From / type | Link | ID |', '|---|---|---|---|---|---|'].join('\n') });
     for (const r of g) {
       body.push({ text: `| ${r.n} | ${cell(r.title)} | ${cell(r.when, 25)} | ${cell(r.who, 60)} | ${link(r.link) || link(r.alt)} | ${cell(r.id, MAX_LINK)} |` });
