@@ -27,8 +27,9 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-// Shared with the write guard so both hooks read `mcp_server` the same way. If it cannot
-// load, every call counts as this connector's: the gate still asks.
+// Shared with the write guard so both hooks read `mcp_server` the same way. search_corpus
+// is not a shared tool name, so every call counts as this connector's; if the guard cannot
+// load, the same holds and the gate still asks.
 let isOurs = () => true;
 try {
   ({ isOurs } = require('./write-guard.js'));

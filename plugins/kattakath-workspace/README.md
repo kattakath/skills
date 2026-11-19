@@ -27,8 +27,10 @@ are documented once, in this repo's `CLAUDE.md`.
 - **Why a hook:** a settings-file `mcp__…` permission rule matches a tool name, never its
   arguments, so it cannot tell a task "complete" from a task "delete".
 - **Matcher:** `^mcp__.+__<bare name>$` for the 16 guarded tools, so every surface prefix
-  matches. Inside, the script checks `mcp_server.name`: another server → silent; this
-  connector, or no `mcp_server` field (builds before 2.1.274) → the rule decides.
+  matches. Every call counts as this connector's, and the rule decides, unless the bare name
+  is one another known server also exposes (today only `drive_create_file` / `drive_copy_file`)
+  AND `mcp_server.name` positively names that server (Google Drive) → silent. A missing field
+  (builds before 2.1.274) or an unrecognised label asks.
 - **Fails closed:** unreadable input, a missing or unknown `action`, unparseable arguments,
   or a tool with no rule → `ask`. It never emits `allow`, and always exits 0.
 - **`onFailure: "block"`** is defence in depth only (needs 2.1.295+). `engines` says

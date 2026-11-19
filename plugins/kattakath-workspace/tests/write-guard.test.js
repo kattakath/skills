@@ -4,7 +4,8 @@
 //
 // Every rule C1..C10 gets a positive and a negative case. The fail-closed paths
 // (unparseable input, missing or unknown action, unknown tool, unreadable arguments)
-// must ASK; another server must stay SILENT; nothing may ever print "allow" or "deny".
+// must ASK; only a provably different server (a shared Drive tool name AND a recognised
+// other server's label) may stay SILENT; nothing may ever print "allow" or "deny".
 // A handful of cases run the script as Claude Code does (stdin → stdout, exit 0); the
 // rest call decide() directly, which is the same code path minus the process.
 
@@ -266,9 +267,28 @@ test("tool_input sent as JSON text is decoded", () => {
 
 const DELETE_TASK = { action: "delete", task_list_id: "L", task_id: "T" };
 
-test("mcp_server = another server → silent", () => {
-  silent(call("tasks_manage_task", DELETE_TASK, { mcp_server: { name: "Other Tasks", source: "plugin" } }));
-  silent(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name: "google-drive", source: "user" } }));
+test("an unrecognised server label on a non-shared tool → ask (never too little)", () => {
+  asks(call("tasks_manage_task", DELETE_TASK, { mcp_server: { name: "Other Tasks", source: "plugin" } }), "C1");
+  asks(call("tasks_manage_task", DELETE_TASK, { mcp_server: { name: "some label nobody has seen", source: "claudeai" } }), "C1");
+  asks(call("gmail_untrash_thread", { threadId: "T" }, { mcp_server: { name: "Gmail", source: "claudeai" } }), "C7");
+});
+
+test("a clearly different Drive server on a shared Drive tool → silent", () => {
+  for (const name of ["google-drive", "Google Drive", "claude.ai Google Drive"]) {
+    silent(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name, source: "user" } }));
+    silent(call("drive_copy_file", { fileId: "F" }, { mcp_server: { name, source: "claudeai" } }));
+  }
+});
+
+test("a shared Drive tool under an unrecognised or our own label → ask", () => {
+  asks(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name: "Some Files Server", source: "user" } }), "C10");
+  asks(call("drive_create_file", { title: "a", parentId: "P" }, { mcp_server: { name: "claude.ai Kattakath Workspace", source: "claudeai" } }), "C10");
+  asks(call("drive_copy_file", { fileId: "F" }, { mcp_server: undefined }), "C10");
+  asks(call("drive_copy_file", { fileId: "F" }, { mcp_server: { name: "Kattakath Drive", source: "claudeai" } }), "C10");
+});
+
+test("mcp_server = \"claude.ai Kattakath Workspace\" (the account connector) → ask", () => {
+  asks(call("tasks_manage_task", DELETE_TASK, { mcp_server: { name: "claude.ai Kattakath Workspace", source: "claudeai" } }), "C1");
 });
 
 test("mcp_server = this connector under every label → ask", () => {

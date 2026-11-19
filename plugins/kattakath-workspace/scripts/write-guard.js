@@ -13,8 +13,14 @@
 //
 // FAILS CLOSED: unreadable stdin, a missing or unknown `action`, an argument it cannot
 // parse, a tool that reached it but has no rule, or any thrown error → ask. Silence needs
-// positive evidence: a rule that looked at the arguments and found them safe, or an
-// `mcp_server` whose name is readable and is not this connector.
+// positive evidence: a rule that looked at the arguments and found them safe, or a call
+// that is provably ANOTHER server's (see isOurs).
+//
+// Server identity never asks too little. `mcp_server` is treated as this connector's
+// unless BOTH hold: the bare tool name is one another known server also exposes
+// (SHARED_TOOLS, today only Drive's create/copy), AND `mcp_server.name` positively matches
+// that other server (OTHER_SERVERS). A missing field, an empty or unreadable one, or a label
+// nobody recognises (the account connector's label can differ from the plugin's) → ours.
 //
 // RULES is the one copy of the confirm policy. The skill's confirm table quotes each
 // `summary` verbatim and tests/consistency.test.js fails when they drift.
@@ -23,6 +29,10 @@
 const fs = require('fs');
 
 const CONNECTOR_RE = /kattakathworkspace/;
+// Bare names another known server can also expose → the pattern that server's normalized
+// name (lowercase, letters and digits only) must match before the call counts as its own.
+const OTHER_SERVERS = [{ tools: ['drive_create_file', 'drive_copy_file'], name: /googledrive/ }];
+const SHARED_TOOLS = new Set(OTHER_SERVERS.flatMap((o) => o.tools));
 const SYSTEM_LABELS = new Set(['INBOX', 'STARRED', 'UNREAD', 'IMPORTANT', 'SPAM', 'TRASH', 'SENT', 'DRAFT', 'CHAT']);
 
 const ACTIONS = {
@@ -237,13 +247,18 @@ function bareName(toolName) {
   return i >= 0 ? s.slice(i + 2) : s;
 }
 
-// true: this connector (or unknown, which counts as this connector); false: another server.
+// false ONLY for a shared bare name whose mcp_server positively names another known server.
+// Everything else (missing, unreadable, our label, an unrecognised label) → true.
 function isOurs(input) {
-  if (!('mcp_server' in input) || input.mcp_server === undefined || input.mcp_server === null) return true;
+  const tool = bareName(input.tool_name);
+  if (!SHARED_TOOLS.has(tool)) return true;
   const m = input.mcp_server;
-  const names = typeof m === 'string' ? [m] : typeof m === 'object' ? [m.name, m.label, m.server_name, m.serverName].filter((x) => typeof x === 'string' && x.trim()) : [];
-  if (!names.length) return true;
-  return names.some((n) => CONNECTOR_RE.test(n.toLowerCase().replace(/[^a-z0-9]/g, '')));
+  if (m === undefined || m === null) return true;
+  const raw = typeof m === 'string' ? [m] : typeof m === 'object' ? [m.name, m.label, m.server_name, m.serverName] : [];
+  const names = raw.filter((x) => typeof x === 'string' && x.trim()).map((n) => n.toLowerCase().replace(/[^a-z0-9]/g, ''));
+  if (!names.length || names.some((n) => CONNECTOR_RE.test(n))) return true;
+  const other = OTHER_SERVERS.filter((o) => o.tools.includes(tool));
+  return !names.every((n) => other.some((o) => o.name.test(n)));
 }
 
 const ask = (reason) => ({
@@ -295,4 +310,4 @@ if (require.main === module) {
   else process.exit(0);
 }
 
-module.exports = { RULES, EXEMPT_WRITES, GUARDED, ACTIONS, SYSTEM_LABELS, decide, bareName, isOurs, clean };
+module.exports = { RULES, EXEMPT_WRITES, GUARDED, ACTIONS, SYSTEM_LABELS, OTHER_SERVERS, SHARED_TOOLS, decide, bareName, isOurs, clean };

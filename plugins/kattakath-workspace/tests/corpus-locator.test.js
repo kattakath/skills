@@ -6,7 +6,8 @@
 // What each half guards:
 //   gate     must ASK by default (the tool is off until clicked) and for any locator_mode
 //            it does not know, stay silent on "auto", DENY on "off", and stay silent for
-//            every other tool and for another server's search_corpus.
+//            every other tool. search_corpus under ANY server label counts as this
+//            connector's (no other known server exposes it), so the gate still asks.
 //   reduce   must drop every body and snippet (where injected text lives), keep the
 //            locator fields, read the overflow file ONLY from Claude Code's tool-results
 //            dir, stay under 10,000 characters, and fail OPEN on anything it cannot parse
@@ -103,10 +104,10 @@ test("gate and reducer ignore every other tool", () => {
   assert.equal(run("reduce", post(JSON.stringify(corpus), "mcp__x__drive_search_files")), null);
 });
 
-test("gate and reducer ignore another server's search_corpus (mcp_server filter)", () => {
+test("an unrecognised mcp_server label still gets the gate and the reducer (never too little)", () => {
   const other = { name: "Someone Else", source: "plugin" };
-  assert.equal(run("gate", { tool_name: TOOL, mcp_server: other }), null);
-  assert.equal(runRaw(["reduce"], { ...post(JSON.stringify(corpus)), mcp_server: other }), null);
+  assert.equal(run("gate", { tool_name: TOOL, mcp_server: other }).permissionDecision, "ask");
+  assert.ok(run("reduce", { ...post(JSON.stringify(corpus)), mcp_server: other }).updatedToolOutput);
   assert.equal(run("gate", { tool_name: TOOL, mcp_server: { name: "claude.ai Kattakath Workspace", source: "claudeai" } }).permissionDecision, "ask");
 });
 
