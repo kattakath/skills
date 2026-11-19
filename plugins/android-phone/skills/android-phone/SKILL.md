@@ -131,12 +131,14 @@ accept the loss. Passkeys usually do not survive an export.
   emulator. `take_snapshot` returns an accessibility tree with uids; `click`/`fill` take a
   uid; every page tool in 1.12.0 needs `pageId` from `list_pages`. Setup is one forward,
   which the launcher tries at session start:
-  `adb forward tcp:9223 localabstract:chrome_devtools_remote` (add `-s <serial>` when
-  several devices are attached). Chrome must be **running** on the device — its socket
+  `adb forward tcp:9223 localabstract:chrome_devtools_remote` (with several devices attached
+  the launcher picks the sole emulator; `ANDROID_SERIAL` or `-s <serial>` picks another). Chrome must be **running** on the device — its socket
   exists only then (`am start -a android.intent.action.VIEW -d <url> -p com.android.chrome`).
   The server connects lazily, so a forward made after session start works without a restart.
   "Could not connect to Chrome … ECONNREFUSED 127.0.0.1:9223" = the forward is missing or
-  Chrome is closed. Firefox does not work here: its "Remote debugging via USB" speaks
+  Chrome is closed. A **timeout** instead (the port accepts, nothing answers) = Chrome is
+  frozen in the background: bring it to the front with the `am start` above (measured
+  2026-11-19, emulator on the home screen). Firefox does not work here: its "Remote debugging via USB" speaks
   Mozilla RDP, not CDP — use Firefox only when the job needs its extensions or userscripts.
 - **Virtual emulator**: `android-emu` / the "Android Emulator" Spotlight app —
   don't point `android-phone` at it. Unlocking and fingerprint enrollment there are the

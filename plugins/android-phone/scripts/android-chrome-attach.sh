@@ -33,7 +33,10 @@
 # sibling session's endpoint. Tests: tests/attach-cases.sh.
 #
 # Configuration (environment):
-#   ANDROID_SERIAL      which device, when more than one is attached (adb's own variable)
+#   ANDROID_SERIAL      which device, when more than one is attached (adb's own variable).
+#                       Unset with several attached: the sole EMULATOR wins, because the
+#                       emulator is the automation target and a USB phone is usually
+#                       attached for something else. Two emulators, or none: no forward.
 #   ANDROID_CDP_PORT    Mac-side port (default 9223)
 #   ANDROID_CDP_SOCKET  device socket (default chrome_devtools_remote; another Chromium
 #                       browser names its own `*_devtools_remote` — list them with
@@ -77,15 +80,31 @@ if [ -z "$adb" ]; then
   echo "android-chrome: adb not found; tools will fail until 'adb forward tcp:$port localabstract:$socket' runs" >&2
 elif ! "$adb" forward "tcp:$port" "localabstract:$socket" >/dev/null 2>&1; then
   # No device, several devices without ANDROID_SERIAL, or an unauthorized one.
-  echo "android-chrome: no forward yet (no single authorized device); run 'adb forward tcp:$port localabstract:$socket' later — the server connects lazily" >&2
+  # With several, fall back to the sole authorized emulator (see ANDROID_SERIAL above).
+  emu=
+  if [ -z "${ANDROID_SERIAL:-}" ]; then
+    emu=$("$adb" devices 2>/dev/null | awk '$2 == "device" && $1 ~ /^emulator-/ { print $1 }')
+  fi
+  case "$emu" in
+    "" | *"
+"*) emu= ;;
+  esac
+  if [ -n "$emu" ] && "$adb" -s "$emu" forward "tcp:$port" "localabstract:$socket" >/dev/null 2>&1; then
+    echo "android-chrome: several devices attached; forwarded to the sole emulator $emu (set ANDROID_SERIAL to pick another)" >&2
+  else
+    echo "android-chrome: no forward yet (no single authorized device or sole emulator); run 'adb -s <serial> forward tcp:$port localabstract:$socket' later — the server connects lazily" >&2
+  fi
 fi
 
 # --no-performance-crux keeps traced URLs from being sent to Google; keep both flags.
-# `<&0` is load-bearing: POSIX gives an asynchronous command in a non-interactive shell
-# /dev/null as stdin, so without it the server reads EOF at once and exits, and Claude
-# Code reports CONNECTION_CLOSED (measured 2026-11-19 with /bin/sh = bash 3.2).
+# The saved fd 3 is load-bearing: POSIX gives an asynchronous command in a non-interactive
+# shell /dev/null as stdin, so the server read EOF at once and exited, and Claude Code
+# reported CONNECTION_CLOSED (measured 2026-11-19, /bin/sh = bash 3.2). A bare `<&0` fixes
+# bash but not dash, which applies /dev/null first and then dups it; `<&3` survives both.
+exec 3<&0
 npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$port" \
-  --no-usage-statistics --no-performance-crux "$@" <&0 &
+  --no-usage-statistics --no-performance-crux "$@" <&3 3<&- &
+exec 3<&-
 child=$!
 status=0
 wait "$child" || status=$?

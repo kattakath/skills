@@ -36,6 +36,11 @@ pick() {
   serial="$1"
 }
 listening() { python3 -c 'import socket,sys; s=socket.socket(); sys.exit(s.connect_ex(("127.0.0.1",int(sys.argv[1]))) != 0)' "$1"; }
+if [ "${1:-}" = devices ]; then
+  echo "List of devices attached"
+  for d in $FAKE_ADB_DEVICES; do printf '%s\tdevice\n' "$d"; done
+  exit 0
+fi
 [ "${1:-}" = forward ] || { echo "fake adb: unsupported: $*" >&2; exit 2; }
 shift
 case "${1:-}" in
@@ -134,5 +139,22 @@ reset; set +e; out=$(printf 'mcp-hello\n' | run FAKE_NPX_ECHO=1 2>/dev/null); rc
 [ "$out" = mcp-hello ] || fail "server did not get the launcher's stdin (got '$out'): MCP would see EOF"
 ok "server reads the launcher's stdin (an async child would get /dev/null)"
 
-[ "$pass" -ge 11 ] || { echo "expected >= 11 cases, ran $pass" >&2; exit 1; }
+reset; devices="fake-serial-a emulator-5554" start; up
+grep -q "^emulator-5554 tcp:$port " "$scratch/state/forwards" || fail "phone + emulator: forward not on the emulator: $(cat "$scratch/state/forwards")"
+stop TERM "$last"; gone "phone + emulator"
+[ "$(cat "$scratch/state/removes")" = "emulator-5554 tcp:$port" ] || fail "emulator remove not scoped: $(cat "$scratch/state/removes")"
+ok "phone + one emulator, no ANDROID_SERIAL: forwards to the emulator, removes it with -s"
+
+reset; devices="fake-serial-a emulator-5554" start ANDROID_SERIAL=fake-serial-a; up
+grep -q "^fake-serial-a tcp:$port " "$scratch/state/forwards" || fail "ANDROID_SERIAL lost to the emulator: $(cat "$scratch/state/forwards")"
+stop TERM "$last"; gone "serial beats emulator"
+ok "ANDROID_SERIAL still wins over the emulator fallback"
+
+reset; set +e; err=$(devices="emulator-5554 emulator-5556"; run FAKE_NPX_EXIT=0 2>&1 </dev/null); rc=$?; set -e
+[ "$rc" -eq 0 ] || fail "two-emulator exit status $rc"
+case "$err" in *"no forward yet"*) ;; *) fail "two-emulator message: $err" ;; esac
+[ ! -e "$scratch/state/removes" ] || fail "two emulators: removed a forward it never made"; gone "two emulators"
+ok "two emulators: no guess, no forward"
+
+[ "$pass" -ge 14 ] || { echo "expected >= 14 cases, ran $pass" >&2; exit 1; }
 echo "android-chrome launcher: $pass cases passed"
