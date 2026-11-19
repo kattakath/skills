@@ -5,6 +5,9 @@
     },
     "chrome-devtools": {
       "command": "chrome-devtools-cft-mcp"
+    },
+    "cft-profile": {
+      "command": "chrome-devtools-cft-profile-mcp"
     }
   }
 }
