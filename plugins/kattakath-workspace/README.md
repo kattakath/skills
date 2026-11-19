@@ -71,12 +71,20 @@ are documented once, in this repo's `CLAUDE.md`.
 | Org per-tool ask (if S9 passes) | applies everywhere except Desktop local/SSH sessions | | | |
 
 - **Only the portal allowlist holds on every surface.** Every rule is also in the skill text.
-- **Bypass mode (spike S1).** 3.0.0 ships the branch where a hook `ask` prompts under
-  bypassPermissions. If S1 shows it does not, nix-config adds name-only `permissions.ask`
-  entries **only for the high-risk tools** (C3, C5, C7, C9): operator decision D6, which
-  supersedes the design's "all 16 guarded tools". The others (C1, C2, C4, C6, C8, C10)
-  then rest on the skill's own rule: name the change and get an explicit yes, unless a
-  permission prompt for that exact call was just shown.
+- **Bypass mode (spike S1, measured 2026-11-19 on CLI 2.1.323): a hook `ask` does NOT
+  prompt under bypassPermissions.**
+  - **Interactive bypass approves it silently.** A `tasks_manage_task` delete ran with no
+    dialog, although `write-guard.js` emits the C1 ask for it (checked by piping the same
+    call into the script).
+  - **Headless `-p` refuses it.** The same call under `-p --permission-mode
+    bypassPermissions` came back as a tool error carrying the C1 reason, and the task
+    survived. The search gate's ask behaves the same way.
+  - So nix-config adds name-only `permissions.ask` entries **only for the high-risk
+    tools** (C3, C5, C7, C9): operator decision D6, which supersedes the design's "all 16
+    guarded tools". They take effect once nix-config is pushed and activated.
+  - The others (C1, C2, C4, C6, C8, C10) get **no prompt under bypass**. They rest on the
+    skill's own rule: name the change and get an explicit yes, unless a permission prompt
+    for that exact call was just shown.
 - **Later step (D4):** set claude.ai per-tool "ask" on the C1–C10 tools for chat and phone,
   once S9 shows the account can.
 
