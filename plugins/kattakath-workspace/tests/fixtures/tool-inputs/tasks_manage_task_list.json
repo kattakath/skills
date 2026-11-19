@@ -1,0 +1,8 @@
+{
+  "$comment": "SYNTHETIC tool_input for tasks_manage_task_list, schema-derived from taylorwilsdon/google_workspace_mcp v2.5.0 source (the pinned image). Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "tasks_manage_task_list",
+  "tool_input": {
+    "action": "create",
+    "title": "Groceries"
+  }
+}

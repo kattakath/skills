@@ -1,0 +1,21 @@
+{
+  "$comment": "SYNTHETIC tool_input for contacts_manage_contacts_batch, schema-derived from taylorwilsdon/google_workspace_mcp v2.5.0 source (the pinned image). Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "contacts_manage_contacts_batch",
+  "tool_input": {
+    "action": "create",
+    "contacts": [
+      {
+        "given_name": "Ann",
+        "email": "ann@example.com"
+      },
+      {
+        "given_name": "Bo",
+        "phones": [
+          {
+            "number": "+1 555 0100"
+          }
+        ]
+      }
+    ]
+  }
+}

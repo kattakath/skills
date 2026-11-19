@@ -1,0 +1,37 @@
+{
+  "$comment": "ToolAnnotations for the self-hosted 'contacts' app, READ FROM SOURCE: taylorwilsdon/google_workspace_mcp v2.5.0 gcontacts/contacts_tools.py (the image nix-config infra/gcp/self-hosted-mcp.nix pins), 2026-11-18. Not a live tools/list capture: re-record from the portal's tools/list when the image is bumped.",
+  "tools": {
+    "search_contacts": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "get_contact": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "list_contacts": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "manage_contact": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    },
+    "manage_contacts_batch": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    },
+    "list_contact_groups": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "get_contact_group": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "manage_contact_group": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    }
+  }
+}

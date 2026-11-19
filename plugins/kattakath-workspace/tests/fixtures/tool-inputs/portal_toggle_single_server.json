@@ -1,0 +1,8 @@
+{
+  "$comment": "SYNTHETIC tool_input for portal_toggle_single_server, schema-derived from the live portal tool schema read 2026-11-18. Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "portal_toggle_single_server",
+  "tool_input": {
+    "server_id": "tasks",
+    "action": "untoggle"
+  }
+}

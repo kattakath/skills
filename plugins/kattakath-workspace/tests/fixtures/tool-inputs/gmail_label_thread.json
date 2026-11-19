@@ -1,0 +1,10 @@
+{
+  "$comment": "SYNTHETIC tool_input for gmail_label_thread, schema-derived from the live portal tool schema read 2026-11-18. Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "gmail_label_thread",
+  "tool_input": {
+    "threadId": "T1",
+    "labelIds": [
+      "Label_42"
+    ]
+  }
+}

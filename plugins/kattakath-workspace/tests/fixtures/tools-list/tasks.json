@@ -1,0 +1,29 @@
+{
+  "$comment": "ToolAnnotations for the self-hosted 'tasks' app, READ FROM SOURCE: taylorwilsdon/google_workspace_mcp v2.5.0 gtasks/tasks_tools.py (the image nix-config infra/gcp/self-hosted-mcp.nix pins), 2026-11-18. Not a live tools/list capture: re-record from the portal's tools/list when the image is bumped.",
+  "tools": {
+    "list_task_lists": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "get_task_list": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "manage_task_list": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    },
+    "list_tasks": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "get_task": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "manage_task": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    }
+  }
+}

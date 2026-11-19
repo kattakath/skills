@@ -1,0 +1,15 @@
+{
+  "$comment": "SYNTHETIC tool_input for contacts_manage_contact, schema-derived from taylorwilsdon/google_workspace_mcp v2.5.0 source (the pinned image). Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "contacts_manage_contact",
+  "tool_input": {
+    "action": "update",
+    "contact_id": "c123",
+    "emails": [
+      {
+        "value": "john@example.com",
+        "type": "work"
+      }
+    ],
+    "emails_mode": "merge"
+  }
+}

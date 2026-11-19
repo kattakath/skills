@@ -1,0 +1,25 @@
+{
+  "$comment": "ToolAnnotations for the self-hosted 'docsread' app, READ FROM SOURCE: taylorwilsdon/google_workspace_mcp v2.5.0 gdocs/docs_tools.py + core/comments.py (the image nix-config infra/gcp/self-hosted-mcp.nix pins), 2026-11-18. Not a live tools/list capture: re-record from the portal's tools/list when the image is bumped.",
+  "tools": {
+    "get_doc_as_markdown": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "get_doc_content": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "inspect_doc_structure": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "list_document_comments": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "search_docs": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "$comment": "ToolAnnotations for the self-hosted 'forms' app, READ FROM SOURCE: taylorwilsdon/google_workspace_mcp v2.5.0 gforms/forms_tools.py (the image nix-config infra/gcp/self-hosted-mcp.nix pins), 2026-11-18. Not a live tools/list capture: re-record from the portal's tools/list when the image is bumped.",
+  "tools": {
+    "create_form": {
+      "readOnlyHint": false,
+      "destructiveHint": false
+    },
+    "get_form": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "batch_update_form": {
+      "readOnlyHint": false,
+      "destructiveHint": true
+    },
+    "set_publish_settings": {
+      "readOnlyHint": false,
+      "destructiveHint": false
+    },
+    "get_form_response": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    },
+    "list_form_responses": {
+      "readOnlyHint": true,
+      "destructiveHint": false
+    }
+  }
+}

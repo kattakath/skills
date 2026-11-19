@@ -1,0 +1,9 @@
+{
+  "$comment": "SYNTHETIC tool_input for forms_set_publish_settings, schema-derived from taylorwilsdon/google_workspace_mcp v2.5.0 source (the pinned image). Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "forms_set_publish_settings",
+  "tool_input": {
+    "form_id": "F1",
+    "is_published": true,
+    "is_accepting_responses": true
+  }
+}

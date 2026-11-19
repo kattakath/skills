@@ -1,0 +1,7 @@
+{
+  "$comment": "SYNTHETIC tool_input for gmail_untrash_message, schema-derived from the live portal tool schema read 2026-11-18 (by analogy with untrash_thread). Not a captured call: re-capture a real one when the Cloud Run image or a Google schema changes.",
+  "tool": "gmail_untrash_message",
+  "tool_input": {
+    "messageId": "M1"
+  }
+}
