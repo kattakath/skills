@@ -33,7 +33,7 @@ Each measurement carries its value, the surface it was taken on, and the date.
 | `workspace_search_corpus` "invoice", raw | 136,585 chars, 30 hits | surface not recorded (nix-config `workspace-mcp-apps.nix` comment, read against claude.ai's cap); the same query as the row above, so the two counts conflict | 2026-11-14 |
 | `workspace_search_corpus`, a rare phrase, raw | 100,798 chars | Claude Code CLI | 2026-11-14 |
 | Locator reducer, "invoice" | 96,169 → 12,632 chars (2.x table, before the 10k cap) | Claude Code CLI | 2026-11-14 |
-| Tools visible with all 14 servers reporting enabled | 46 of the allowlisted set | Claude Code, account connector | 2026-11-18 |
+| Tools visible with all 14 servers reporting enabled | 46 of the allowlisted set | surface not recorded (3.0.0 design review) | 2026-11-18 |
 
 ## Tools the router does not name
 

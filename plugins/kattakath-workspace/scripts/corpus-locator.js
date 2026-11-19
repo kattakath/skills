@@ -27,7 +27,14 @@
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { isOurs } = require('./write-guard.js');
+// Shared with the write guard so both hooks read `mcp_server` the same way. If it cannot
+// load, every call counts as this connector's: the gate still asks.
+let isOurs = () => true;
+try {
+  ({ isOurs } = require('./write-guard.js'));
+} catch {
+  // keep the fallback
+}
 
 const TOOL_RE = /(^|__)workspace_search_corpus$/;
 const MAX_FIELD = 80;

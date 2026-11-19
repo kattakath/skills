@@ -216,6 +216,7 @@ test("C8 fails closed: missing or non-string labelIds ask", () => {
 test("C9: single-server toggle always asks", () => {
   assert.match(asks(call("portal_toggle_single_server", { server_id: "gmail", action: "toggle" }), "C9"), /"gmail" server ON/);
   assert.match(asks(call("portal_toggle_single_server", { server_id: "gmail", action: "untoggle" }), "C9"), /OFF/);
+  assert.match(asks(call("portal_toggle_single_server", { server_id: "gmail" }), "C9"), /with action=""/);
 });
 
 test("C9 negative: portal_toggle_servers is exempt and never matched", () => {

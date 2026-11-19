@@ -203,7 +203,8 @@ const RULES = [
     tools: ['portal_toggle_single_server'],
     summary: 'Always (acts with no page for the user)',
     when(tool, args) {
-      return `turns the portal's "${clean(args.server_id, 40)}" server ${args.action === 'untoggle' ? 'OFF' : 'ON'} (action=${clean(args.action, 20)}) with no page for you to review`;
+      const dir = args.action === 'toggle' ? 'ON' : args.action === 'untoggle' ? 'OFF' : `with action="${clean(args.action, 20)}"`;
+      return `turns the portal's "${clean(args.server_id, 40)}" server ${dir}, with no page for you to review`;
     },
   },
   {

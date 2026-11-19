@@ -86,6 +86,10 @@ node --test plugins/kattakath-workspace/tests/*.test.js
 - `write-guard.test.js`: a positive and a negative case per rule, plus every fail-closed path.
 - `corpus-locator.test.js`: gate modes, prefixes, the mimeType open map, the 10k cap.
 - `consistency.test.js`: allowlist ↔ skills ↔ RULES ↔ hooks.json ↔ descriptions.
+- **Evals** (`evals/`, 10 cases, mocks in `evals/mocks/Kattakath_Workspace/`) run locally
+  before a release, not in CI: `claude plugin eval plugins/kattakath-workspace`. A machine
+  whose managed `deniedMcpServers` lists `plugin:kattakath-workspace:Kattakath Workspace`
+  blocks the mock stand-in, so the run needs that entry lifted for the eval.
 - **Fixtures are not live captures.** `tests/fixtures/tools-list/` holds annotations read from
   the pinned workspace-mcp 2.5.0 source (self-hosted apps only). `tests/fixtures/tool-inputs/`
   is schema-derived. Re-capture both when the Cloud Run image is bumped.
