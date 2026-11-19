@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "page-tools",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Two browser rails for any MCP client: Playwright MCP drives the operator's real, logged-in Chrome tab by tab; chrome-devtools-mcp debugs in a throwaway, pinned Chrome for Testing.",
   "author": {
     "name": "Ismail Kattakath"

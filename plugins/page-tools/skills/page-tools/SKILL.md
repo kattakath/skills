@@ -35,8 +35,9 @@ in a client config.
 
 - Start with `browser_tabs` (`action: "list"`) or `browser_navigate`. The client
   gets **its own tab group**; it does not see or touch the operator's other tabs.
-- The first connection may show a Playwright **Allow / connect** page in Chrome.
-  The operator clicks it; do not try to.
+- Measured 2026-11-18: a connection completes in ~2 s with no prompt waiting (any
+  earlier approval may be remembered). If Chrome ever shows a Playwright **Allow /
+  connect** page, the operator clicks it; do not try to.
 - Act from a fresh `browser_snapshot`. `browser_click` takes `element` (a human
   description) and `target` (the `ref` from the snapshot, e.g. `e13`). Refs go
   stale after a navigation: snapshot again.
