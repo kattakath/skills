@@ -2,8 +2,8 @@
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "displayName": "Kattakath Workspace",
   "name": "kattakath-workspace",
-  "version": "3.1.0",
-  "description": "Google Workspace in Claude through ONE connector, 'Kattakath Workspace' (a Cloudflare MCP portal at mcp.kattakath.com holding Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, Maps, Tasks, Forms, Contacts and a cross-app Workspace search; the same tools on web, phone and Claude Code): a routing skill, a fail-closed write guard that asks before every risky write (trash, spam, labels, invites, Chat posts, Doc/Sheet/Slides edits, deletes, publishing a form), and a gated cross-app locator. All tools, guarded: Gmail drafts only (the user sends), no sharing; Docs edits default to suggestions. Ships the connector itself.",
+  "version": "3.2.0",
+  "description": "Google Workspace in Claude through ONE connector, 'Kattakath Workspace' (a Cloudflare MCP portal at mcp.kattakath.com holding Gmail, Calendar, Drive, Docs, Sheets, Slides, Chat, People, Maps, Tasks, Forms, Contacts, NixOS (public package and option lookups) and a cross-app Workspace search; the same tools on web, phone and Claude Code): a routing skill, a fail-closed write guard that asks before every risky write (trash, spam, labels, invites, Chat posts, Doc/Sheet/Slides edits, deletes, publishing a form), and a gated cross-app locator. All tools, guarded: Gmail drafts only (the user sends), no sharing; Docs edits default to suggestions. Ships the connector itself.",
   "author": {
     "name": "Ismail Kattakath"
   },

@@ -449,6 +449,10 @@ const EXEMPT_WRITES = [
   { tool: 'drive_create_file', reason: 'With no parent-like argument it lands in the user\'s own My Drive root' },
   { tool: 'forms_create_form', reason: 'Assumed to start unpublished (spike S8). Publishing is C5' },
   { tool: 'portal_toggle_servers', reason: 'The user finishes it on a portal page' },
+  // mcp-nixos declares no ToolAnnotations (tools/list, measured 2026-11-19), so the verb
+  // heuristic would call these writes. Both only search public nixpkgs/NixOS data.
+  { tool: 'nixos_nix', reason: 'Read-only lookup of public nixpkgs and option data' },
+  { tool: 'nixos_nix_versions', reason: 'Read-only lookup of public nixpkgs version history' },
 ];
 
 // Sorted, so references/guarded.json (scripts/gen-guarded.js) is stable.

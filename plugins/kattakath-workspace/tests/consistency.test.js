@@ -129,7 +129,7 @@ test("(e) the router's confirm table is RULES (IDs, tools, summary text)", () =>
 const APP_WORDS = {
   gmail: /Gmail/, calendar: /Calendar/, drive: /Drive/, docs: /Docs/, docsread: /Docs/,
   sheets: /Sheets/, slides: /Slides/, chat: /Chat/, tasks: /Tasks/, forms: /Forms/,
-  contacts: /Contacts/, people: /People|Contacts/, maps: /Maps/, workspace: /Workspace/,
+  contacts: /Contacts/, people: /People|Contacts/, maps: /Maps/, workspace: /Workspace/, nixos: /NixOS/,
 };
 
 function frontmatter(md) {

@@ -95,6 +95,10 @@
       "resolve_names",
       "resolve_maps_urls"
     ],
+    "nixos": [
+      "nix",
+      "nix_versions"
+    ],
     "people": [
       "search_contacts",
       "search_directory_people",

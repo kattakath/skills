@@ -15,6 +15,14 @@ Each measurement carries its value, the surface it was taken on, and the date.
   (measured 2026-11-14). Point the user to the Google Home app.
 - **One Google account per user.** Each app's grant is the signed-in user's own account.
 
+## NixOS lookups
+
+- `nixos_nix` searches or shows nixpkgs packages and NixOS / home-manager / nix-darwin
+  options; `nixos_nix_versions` says which nixpkgs commit shipped a package version.
+- Public data with no sign-in: the portal's `nixos` app is upstream mcp-nixos 3.1.1 on
+  Cloud Run (nix-config `infra/cloudflare/workspace-mcp-apps.nix`, 2026-11-19). It is a
+  crawled index, not a flake's pinned inputs: cite the pinned source for a real decision.
+
 ## Cost and speed
 
 - **Maps** is free while Grounding Lite is Experimental and billed per call at GA. Do not
