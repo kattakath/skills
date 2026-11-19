@@ -71,4 +71,5 @@ Two more facts behind those results:
 
 ## No connector exists
 
-Google Tasks, Keep, and Google Messages (SMS).
+Google Keep, and Google Messages (SMS). (Tasks joined on 2026-11-18 through a self-hosted
+portal upstream; see the skill's § 5.)
