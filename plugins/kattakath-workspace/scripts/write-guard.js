@@ -231,7 +231,11 @@ const RULES = [
     when(tool, args) {
       const parent = flat(collectBy(args, (k) => k.includes('parent'))).filter(present);
       const title = args.title ? ` ${quote(args.title, 50)}` : '';
-      if (parent.length) return `saves${title} into folder(s) ${parent.map((p) => quote(typeof p === 'string' ? p : JSON.stringify(p), 60)).join(', ')}, which may be shared or owned by someone else`;
+      const shown = (p) => {
+        const q = quote(typeof p === 'string' ? p : JSON.stringify(p), 60);
+        return q === '""' ? '(a blank value)' : q;
+      };
+      if (parent.length) return `saves${title} into folder(s) ${parent.map(shown).join(', ')}, which may be shared or owned by someone else`;
       if (tool === 'drive_copy_file') return `copies file ${quote(args.fileId)}${title} into the ORIGINAL's folder (no parentId), which may be shared or owned by someone else`;
       return null;
     },

@@ -348,7 +348,7 @@ test("guard-11: label and parent edge spellings ask", () => {
   for (const labelIds of [[" INBOX"], ["TRASH" + ZWSP], "Label_1,TRASH", ["Label_1 "], ["label_1"], [1]]) {
     asks(call("gmail_label_thread", { threadId: "T", labelIds }), "C8");
   }
-  asks(call("drive_create_file", { title: "x", parentId: "   " }), "C10");
+  assert.match(asks(call("drive_create_file", { title: "x", parentId: "   " }), "C10"), /\(a blank value\)/);
   asks(call("drive_create_file", { title: "x", ParentFolder: "F" }), "C10");
   asks(call("drive_create_file", { title: "x", parents: [{ id: "F" }] }), "C10");
 });
