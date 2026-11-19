@@ -1,25 +1,41 @@
 {
-  "description": "search_corpus locator: ask before each cross-app search, then reduce its ~100k-char result to a locator table (no bodies)",
+  "description": "Kattakath Workspace: confirm argument-dependent writes (write-guard); search_corpus gated by locator_mode and reduced to a locator table",
   "hooks": {
     "PreToolUse": [
       {
-        "matcher": "mcp__.*workspace_search_corpus",
+        "matcher": "^mcp__.+__workspace_search_corpus$",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js\" gate",
-            "timeout": 10
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js", "gate", "${user_config.locator_mode}"],
+            "timeout": 10,
+            "statusMessage": "Kattakath: cross-app search gate"
+          }
+        ]
+      },
+      {
+        "matcher": "^mcp__.+__(tasks_manage_task|tasks_manage_task_list|contacts_manage_contact|contacts_manage_contacts_batch|contacts_manage_contact_group|forms_set_publish_settings|forms_batch_update_form|gmail_untrash_thread|gmail_untrash_message|gmail_unmark_thread_spam|gmail_unmark_message_spam|gmail_label_thread|gmail_label_message|portal_toggle_single_server|drive_create_file|drive_copy_file)$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/write-guard.js"],
+            "timeout": 5,
+            "onFailure": "block",
+            "statusMessage": "Kattakath: checking write"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "matcher": "mcp__.*workspace_search_corpus",
+        "matcher": "^mcp__.+__workspace_search_corpus$",
         "hooks": [
           {
             "type": "command",
-            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js\" reduce",
+            "command": "node",
+            "args": ["${CLAUDE_PLUGIN_ROOT}/scripts/corpus-locator.js", "reduce"],
             "timeout": 15
           }
         ]

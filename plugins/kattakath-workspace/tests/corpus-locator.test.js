@@ -4,11 +4,13 @@
 // Run:  node --test plugins/kattakath-workspace/tests/corpus-locator.test.js
 //
 // What each half guards:
-//   gate     must ASK by default (the tool is off until clicked), must stay silent with
-//            KATTAKATH_WORKSPACE_LOCATOR=auto and for every other tool.
+//   gate     must ASK by default (the tool is off until clicked) and for any locator_mode
+//            it does not know, stay silent on "auto", DENY on "off", and stay silent for
+//            every other tool and for another server's search_corpus.
 //   reduce   must drop every body and snippet (where injected text lives), keep the
 //            locator fields, read the overflow file ONLY from Claude Code's tool-results
-//            dir, and fail OPEN (print nothing, exit 0) on anything it cannot parse.
+//            dir, stay under 10,000 characters, and fail OPEN on anything it cannot parse
+//            (leave the result alone, print only a systemMessage breadcrumb, exit 0).
 // The fixture is synthetic: the real tool's field names (measured 2026-11-14), no real data.
 
 const test = require("node:test");
@@ -56,30 +58,56 @@ fs.writeFileSync(saved, JSON.stringify(corpus));
 const outside = path.join(base, "elsewhere-search_corpus.txt");
 fs.writeFileSync(outside, JSON.stringify(corpus));
 
-function run(mode, input, env = {}) {
-  const r = spawnSync("node", [HOOK, mode], {
+function runRaw(args, input) {
+  const r = spawnSync("node", [HOOK, ...args], {
     input: typeof input === "string" ? input : JSON.stringify(input),
     encoding: "utf8",
-    env: { ...process.env, CLAUDE_CONFIG_DIR: cfg, KATTAKATH_WORKSPACE_LOCATOR: "", ...env },
+    env: { ...process.env, CLAUDE_CONFIG_DIR: cfg },
   });
   assert.equal(r.status, 0, `hook must exit 0, stderr: ${r.stderr}`);
-  return r.stdout ? JSON.parse(r.stdout).hookSpecificOutput : null;
+  return r.stdout ? JSON.parse(r.stdout) : null;
+}
+function run(mode, input, modeArg) {
+  const out = runRaw(modeArg === undefined ? [mode] : [mode, modeArg], input);
+  return out ? out.hookSpecificOutput : null;
 }
 const pointer = (p) => `Error: result (96,169 characters) exceeds maximum allowed tokens. Output has been saved to ${p}\nFormat: JSON`;
 const post = (resp, tool = TOOL) => ({ hook_event_name: "PostToolUse", tool_name: tool, tool_input: { query: "invoice" }, tool_response: resp });
 
-test("gate asks by default", () => {
-  const out = run("gate", { tool_name: TOOL, tool_input: { query: "x" } });
-  assert.equal(out.permissionDecision, "ask");
+const PREFIXES = ["mcp__claude_ai_Kattakath_Workspace__", "mcp__Kattakath_Workspace__", "mcp__plugin_kattakath-workspace_Kattakath_Workspace__"];
+
+test("gate asks by default, under all 3 known prefixes", () => {
+  for (const p of PREFIXES) {
+    assert.equal(run("gate", { tool_name: p + "workspace_search_corpus", tool_input: { query: "x" } }).permissionDecision, "ask", p);
+  }
 });
 
-test("gate is silent with KATTAKATH_WORKSPACE_LOCATOR=auto", () => {
-  assert.equal(run("gate", { tool_name: TOOL }, { KATTAKATH_WORKSPACE_LOCATOR: "auto" }), null);
+test("gate: locator_mode via argv (ask, auto, off) and unknown values ask", () => {
+  assert.equal(run("gate", { tool_name: TOOL }, "ask").permissionDecision, "ask");
+  assert.equal(run("gate", { tool_name: TOOL }, "auto"), null);
+  const off = run("gate", { tool_name: TOOL }, "off");
+  assert.equal(off.permissionDecision, "deny");
+  assert.match(off.permissionDecisionReason, /locator_mode is "off" in \/config/);
+  for (const v of ["", "AUTOMATIC", "${user_config.locator_mode}"]) {
+    assert.equal(run("gate", { tool_name: TOOL }, v).permissionDecision, "ask", `mode ${JSON.stringify(v)}`);
+  }
+});
+
+test("gate ignores the retired KATTAKATH_WORKSPACE_LOCATOR env var", () => {
+  const r = spawnSync("node", [HOOK, "gate"], { input: JSON.stringify({ tool_name: TOOL }), encoding: "utf8", env: { ...process.env, KATTAKATH_WORKSPACE_LOCATOR: "auto" } });
+  assert.equal(JSON.parse(r.stdout).hookSpecificOutput.permissionDecision, "ask");
 });
 
 test("gate and reducer ignore every other tool", () => {
   assert.equal(run("gate", { tool_name: "mcp__claude_ai_Kattakath_Workspace__gmail_search_threads" }), null);
   assert.equal(run("reduce", post(JSON.stringify(corpus), "mcp__x__drive_search_files")), null);
+});
+
+test("gate and reducer ignore another server's search_corpus (mcp_server filter)", () => {
+  const other = { name: "Someone Else", source: "plugin" };
+  assert.equal(run("gate", { tool_name: TOOL, mcp_server: other }), null);
+  assert.equal(runRaw(["reduce"], { ...post(JSON.stringify(corpus)), mcp_server: other }), null);
+  assert.equal(run("gate", { tool_name: TOOL, mcp_server: { name: "claude.ai Kattakath Workspace", source: "claudeai" } }).permissionDecision, "ask");
 });
 
 for (const [name, resp] of [
@@ -89,15 +117,16 @@ for (const [name, resp] of [
   ["inline MCP content array", [{ type: "text", text: JSON.stringify(corpus) }]],
   ["inline object", corpus],
 ]) {
-  test(`reduce: ${name} becomes a body-free locator table`, () => {
+  test(`reduce: ${name} becomes a body-free locator table in updatedToolOutput`, () => {
     const out = run("reduce", post(resp));
     assert.equal(out.hookEventName, "PostToolUse");
-    const t = out.updatedMCPToolOutput;
+    assert.equal(out.updatedMCPToolOutput, undefined, "the deprecated field must not be used");
+    const t = out.updatedToolOutput;
     assert.match(t, /^Locator for "invoice": 4 hits \(Drive 1 · Gmail 1 · Chat 1 · Calendar 1\)\./);
     for (const gone of ["secret snippet", "second snippet", "chat body", "desc ", INJECT]) {
       assert.ok(!t.includes(gone), `must drop: ${gone}`);
     }
-    for (const kept of ["Invoice 1001.pdf", "drive_read_file_content d1", "gmail_get_thread t1", "(2 msgs)", "chat_list_messages spaces/S1", "inv.pdf", "calendar_get_event e1", "https://cal.example/e1"]) {
+    for (const kept of ["Invoice 1001.pdf", "### Drive: open with `drive_read_file_content`", "`d1`", "### Gmail: open with `gmail_get_thread`", "`t1`", "(2 msgs)", "### Chat: open with `chat_list_messages`", "`spaces/S1`", "inv.pdf", "### Calendar: open with `calendar_get_event`", "`e1`", "https://cal.example/e1"]) {
       assert.ok(t.includes(kept), `must keep: ${kept}`);
     }
     assert.ok(t.includes("Your invoice / March"), "a | in a title must not break the table");
@@ -105,14 +134,52 @@ for (const [name, resp] of [
   });
 }
 
-test("reduce never reads a file outside Claude Code's tool-results dir", () => {
-  assert.equal(run("reduce", post(pointer(outside))), null);
-  assert.equal(run("reduce", post(pointer(path.join(base, "missing.txt")))), null);
+test("reduce: Drive hits open by mimeType, with a fallback for Docs", () => {
+  const mk = (id, mimeType) => ({ driveResult: { itemId: id, title: id, mimeType, viewUrl: "https://d/" + id } });
+  const t = run("reduce", post({ items: [mk("doc", "application/vnd.google-apps.document"), mk("sheet", "application/vnd.google-apps.spreadsheet"), mk("deck", "application/vnd.google-apps.presentation"), mk("pdf", "application/pdf"), mk("nomime")] })).updatedToolOutput;
+  assert.ok(t.includes("### Drive: open with `docsread_get_doc_as_markdown` (if missing: `drive_read_file_content`)"));
+  assert.ok(t.includes("### Drive: open with `sheets_get_spreadsheet`"));
+  assert.ok(t.includes("### Drive: open with `slides_read_presentation`"));
+  const fallback = t.split("### ").find((g) => g.startsWith("Drive: open with `drive_read_file_content`"));
+  assert.ok(fallback && fallback.includes("`pdf`") && fallback.includes("`nomime`"), "unknown mimeTypes open with drive_read_file_content");
 });
 
-test("reduce fails open on what it cannot parse", () => {
-  assert.equal(run("reduce", post("Error: upstream 500")), null);
-  assert.equal(run("reduce", post("{not json")), null);
-  assert.equal(run("reduce", post({ unexpected: true })), null);
-  assert.equal(run("reduce", "not json at all"), null);
+test("reduce: a ~100k-character result shrinks to at most 10,000 characters", () => {
+  const long = "x".repeat(3000);
+  const items = [];
+  for (let i = 0; i < 30; i++) {
+    items.push(i % 2
+      ? { gmailResult: { thread: { threadId: "thr" + i, messages: [{ subject: "S" + i + long, snippet: long, sender: "s@example.com", viewUrl: "https://mail.example/" + "p".repeat(150) }] } } }
+      : { driveResult: { itemId: "id" + i, title: "T" + i + long, mimeType: "application/pdf", viewUrl: "https://drive.example/" + "q".repeat(150), body: long } });
+  }
+  const raw = JSON.stringify({ items });
+  assert.ok(raw.length > 100000, `fixture is ${raw.length} chars`);
+  const t = run("reduce", post(raw)).updatedToolOutput;
+  assert.ok(t.length <= 10000, `reduced to ${t.length}`);
+  assert.match(t, /30 hits/);
+});
+
+test("reduce: when rows must be cut, it says how many were omitted", () => {
+  const items = Array.from({ length: 200 }, (_, i) => ({ driveResult: { itemId: "id" + i + "z".repeat(150), title: "T".repeat(200), mimeType: "application/pdf", viewUrl: "https://d/" + "q".repeat(200) } }));
+  const t = run("reduce", post({ items })).updatedToolOutput;
+  assert.ok(t.length <= 10000, `reduced to ${t.length}`);
+  assert.match(t, /… \d+ more hits omitted to stay under 10000 characters/);
+});
+
+test("reduce never reads a file outside Claude Code's tool-results dir (breadcrumb, no rewrite)", () => {
+  for (const p of [outside, path.join(base, "missing.txt")]) {
+    const out = runRaw(["reduce"], post(pointer(p)));
+    assert.equal(out.hookSpecificOutput, undefined);
+    assert.match(out.systemMessage, /^locator reducer skipped: saved file is outside/);
+  }
+});
+
+test("reduce fails open on what it cannot parse, with a breadcrumb under 10k", () => {
+  for (const [resp, why] of [["Error: upstream 500", /neither JSON nor a saved-file pointer/], ["{not json", /not valid JSON/], [{ unexpected: true }, /unknown shape/], ['{"no":"items"}', /no items list/]]) {
+    const out = runRaw(["reduce"], post(resp));
+    assert.equal(out.hookSpecificOutput, undefined, "the result must pass through untouched");
+    assert.match(out.systemMessage, why);
+    assert.ok(out.systemMessage.length < 10000);
+  }
+  assert.equal(runRaw(["reduce"], "not json at all"), null);
 });
