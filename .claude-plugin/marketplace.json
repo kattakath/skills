@@ -623,7 +623,7 @@
     },
     {
       "name": "rag",
-      "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
+      "description": "Retrieval-augmented generation over a private Cloudflare AI Search instance, from every Claude surface: add documents, then answer questions from that corpus through the Cloudflare connector. A read-only local pgvector fallback remains.",
       "author": {
         "name": "Ismail Kattakath"
       },

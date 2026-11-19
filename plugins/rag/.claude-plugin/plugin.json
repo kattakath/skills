@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "rag",
-  "version": "1.0.2",
-  "description": "Retrieval-augmented generation over a local pgvector store: ingest documents, then answer questions from that corpus. Runs locally with in-database embeddings.",
+  "version": "2.0.0",
+  "description": "Retrieval-augmented generation over a private Cloudflare AI Search instance, from every Claude surface: add documents, then answer questions from that corpus through the Cloudflare connector. A read-only local pgvector fallback remains.",
   "author": {
     "name": "Ismail Kattakath"
   },
@@ -15,8 +15,8 @@
     "pgvector",
     "postgres",
     "embeddings",
-    "ollama",
-    "local"
+    "cloudflare",
+    "ai-search"
   ],
   "userConfig": {
     "launcher": {

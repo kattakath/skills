@@ -1,80 +1,87 @@
 ---
 name: rag
 description: >-
-  Do retrieval-augmented generation over the local pgvector store. Use when the
-  user wants to ingest documents/text into a searchable knowledge base, or ask
-  questions answered from that stored corpus ("index this", "add to my notes DB",
-  "what do my docs say about X", "search my knowledge base", "RAG over these
-  files"). Runs entirely local via the `postgres` MCP server + in-DB embeddings
-  (Ollama); no API keys, nothing leaves the machine.
+  Retrieval-augmented generation over the operator's RAG corpus in Cloudflare AI Search,
+  on every Claude surface. Use when the user wants to add documents/text to the searchable
+  knowledge base or ask questions answered from it ("index this", "add to my notes DB",
+  "what do my docs say about X", "search my knowledge base", "RAG over these files").
+  Search and ingest go through the Cloudflare connector's `execute` tool; AI Search
+  embeds the query itself, so no vectors are ever handled here.
 ---
 
-# Local RAG over pgvector
+# RAG over Cloudflare AI Search
 
-Everything runs through the **`postgres` MCP server** as plain SQL against database
-`ragdb`. Embeddings are generated **inside Postgres** by `embed(text)`, which calls a
-local Ollama model — so you never compute or handle vectors yourself. Nothing leaves
-the machine.
+The corpus is ONE private AI Search instance, **`rag`** (namespace `default`), in the
+operator's Cloudflare account. Every call goes through the **Cloudflare connector's
+`execute` tool** (`cloudflare.request(...)`), which exists on web, phone, Desktop, cloud
+routines and Claude Code alike. Its tool prefix differs per surface: match the connector
+name ("Cloudflare"), not a fixed prefix.
 
-## The store (already provisioned)
+**Find the account once per session:** `GET /accounts`, then the account whose
+`GET /accounts/{id}/ai-search/instances` lists `rag`. Pass that id as `account_id`.
 
-- Table **`docs`**: `id bigserial`, `content text`, `metadata jsonb`, `embedding vector(768)`.
-- Function **`embed(text) -> vector`**: returns the embedding of the text via local Ollama
-  (`nomic-embed-text`, 768-dim). Call it inline in SQL; it's the only interface you need.
-- An **HNSW cosine index** on `embedding` — always order by the cosine operator `<=>` so the
-  index is used.
+Base path below: `B = /accounts/{account_id}/ai-search/namespaces/default/instances/rag`.
 
-You do **not** create the table or the function — they exist. Just use them.
+## What is in it
 
-## Ingesting content
+Each item is ONE document (chunks are made by AI Search), with five filterable
+metadata fields: `corpus`, `source`, `url`, `repo`, `title`.
 
-1. **Get the text.** For files/URLs, extract text first with the right tool — the `fetch`
-   MCP server (web pages), the `pdf` / `docx` / `pptx` / `xlsx` skills (documents), or
-   the Read tool (local files).
-2. **Chunk it.** Split into ~500–1000 character passages on paragraph/sentence boundaries,
-   with a little overlap. One row per chunk. Embedding quality degrades on very long text,
-   so don't insert whole documents as a single row.
-3. **Insert**, embedding inline. Parameterize the text (never string-concatenate user text
-   into SQL):
+| `corpus` | Content |
+|---|---|
+| `ircc` | canada.ca immigration pages (IRCC crawl; `source` = `ircc-crawl-<topic>`) |
+| `ircc-live` | answers the IRCC bot fetched live and cached |
+| `repo` | a client's internal repo docs (`repo` names the repo). Never quote these outside a private answer to the operator |
+| `web` | public docs (nix-darwin manual, Google Workspace Studio) |
+| `misc` | anything else |
 
-   ```sql
-   INSERT INTO docs (content, metadata, embedding)
-   VALUES ($1, $2::jsonb, embed($1));
-   ```
+## Searching
 
-   Put source/title/section/chunk-index in `metadata` so you can cite and filter later, e.g.
-   `{"source":"handbook.pdf","section":"Leave policy","chunk":3}`.
+```js
+async () => cloudflare.request({ method: "POST", path: `${B}/search`, body: {
+  query: "<the user's question>",
+  ai_search_options: { retrieval: { max_num_results: 8, filters: { corpus: "ircc" } } },
+}})
+```
 
-## Querying (retrieval + answer)
+- `result.chunks[]` carries `text`, `score` and `item.key` / `item.metadata` (cite these).
+- Omit `filters` to search everything. Equality (`{ corpus: "web" }`) and list
+  (`{ source: { $in: ["ircc-crawl-pr", "ircc-crawl-work"] } }`) filters work on the five
+  fields (measured 2026-11-19); a bare array value is a 400.
+- Search is hybrid (meaning + keywords), so exact names and document titles hit too.
+- Answer **only** from the returned chunks and cite each claim. If nothing comes back, or
+  every score is low (< ~0.3), say the corpus does not cover it; never present general
+  knowledge as retrieved.
 
-1. **Retrieve** the top matches, embedding the question inline. Report similarity as
-   `1 - (embedding <=> embed($1))` (cosine similarity, 1.0 = identical):
+## Adding a document
 
-   ```sql
-   SELECT content,
-          metadata,
-          1 - (embedding <=> embed($1)) AS similarity
-   FROM docs
-   ORDER BY embedding <=> embed($1)
-   LIMIT 8;
-   ```
+Upload ONE file per document (do not pre-chunk). The item KEY makes a re-ingest replace
+the old copy (re-uploading a key keeps the same item, measured 2026-11-19), so build it
+exactly like the corpus export did:
 
-   To scope a query, add a `metadata` filter (e.g. `WHERE metadata->>'source' = $2`) BEFORE
-   the `ORDER BY`.
-2. **Synthesize** the answer from the retrieved `content` only, and **cite** each claim from
-   `metadata`. If the top similarities are all low (say < ~0.3), say the corpus doesn't cover
-   it rather than guessing — don't fall back to general knowledge and present it as retrieved.
+`<corpus>/<slug>-<first 10 hex of sha1(ident)>.md`, at most 128 characters, where `ident`
+is the page URL (`ircc`, `web`), `<repo>/<path>` (`repo`) or the source name, and `slug`
+is `ident` without `https://`, non `[A-Za-z0-9._/-]` runs turned into `-`, `/` into `_`,
+cut to fit.
 
-## Notes & gotchas
+```js
+async () => {
+  const fd = new FormData();
+  fd.append("file", new Blob(["# <title>\n\nSource: <url or path>\n\n<text>"], { type: "text/markdown" }), "<key>");
+  fd.append("metadata", JSON.stringify({ corpus: "web", source: "<source>", url: "<url>", title: "<title>" }));
+  return cloudflare.request({ method: "POST", path: `${B}/items`, body: fd });
+}
+```
 
-- **Same model both sides.** `embed()` uses one fixed model, so ingest and query embeddings
-  are always comparable. Don't introduce a second embedding path.
-- **Dimension is fixed at 768.** If `embed()` errors, Ollama or its model may still be
-  starting/pulling on first boot — the `nomic-embed-text` model is fetched once in the
-  background; retry shortly. A dimension-mismatch error means the model changed; re-embed.
-- **Keep it read-mostly.** Inserts/updates are fine; avoid schema changes — the table and
-  index are managed declaratively by `services.pgvectorLocal`, in nix-config's in-tree
-  `modules/features/local-rag/` capsule — formerly the `github:kattakath/nix-local-rag`
-  flake, absorbed by ADR-002 wave 6 and archived.
-- **Reset a corpus** with `TRUNCATE docs;` (or delete by `metadata->>'source'`) before
-  re-ingesting a changed document, so you don't accumulate stale chunks.
+- Keyword search finds a new item at once; meaning-based search only after indexing
+  finishes (minutes). `GET ${B}/stats` shows `queued` / `running` / `completed` / `error`.
+- Get the text first with the right tool (a fetch tool for web pages, the pdf/docx/pptx/
+  xlsx skills for documents, Read for local files).
+- Delete a document: `DELETE ${B}/items/{item_id}` (ask first; it is permanent).
+
+## The local postgres server
+
+The plugin's `postgres` MCP server still reaches the Mac's `ragdb`, frozen as the
+pre-migration copy (2026-11-19). Read it only as a fallback when the Cloudflare
+connector is unavailable, say so, and **never write to it**: AI Search is the one
+write path, so the two cannot drift.
