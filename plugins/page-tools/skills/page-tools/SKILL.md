@@ -5,20 +5,18 @@ description: >-
   inspected: in the operator's real, logged-in Chrome through Playwright MCP
   (`playwright` server, Playwright Extension), or in a throwaway headless Chrome
   for Testing through chrome-devtools-mcp (`chrome-devtools` server) for
-  debugging, performance traces and Lighthouse, or in a persistent, logged-in
-  Chrome for Testing (`cft-profile` server). Covers which rail to use, in what
-  order, and what none of them can do. Do not use this to author a userscript.
+  debugging, performance traces and Lighthouse. Covers which rail to use, in
+  what order, and what neither can do. Do not use this to author a userscript.
 ---
 
-# Page tools — three browser rails
+# Page tools — two browser rails
 
 | Server | Browser | Sessions | Use it for |
 |---|---|---|---|
 | `playwright` → `playwright-chrome-mcp` | The operator's **real Chrome**, via the Playwright Extension | **The operator's own logins** | Acting as the operator: reading, forms, uploads |
 | `chrome-devtools` → `chrome-devtools-cft-mcp` | A **throwaway, headless Chrome for Testing**, pinned | **None** | Debugging, repro, performance traces, Lighthouse |
-| `cft-profile` → `chrome-devtools-cft-profile-mcp` | The same pinned CfT, **headed, persistent profile** | **Whatever the operator logged into there** | Repeated logged-in automation that should stay out of the real Chrome |
 
-All three commands are launchers on `PATH` that carry every argument (in
+Both commands are launchers on `PATH` that carry every argument (in
 `kattakath/nix-config`, `modules/home/pinned-chrome.nix`). Never add arguments
 in a client config.
 
@@ -30,10 +28,8 @@ in a client config.
    a Claude session whose Claude in Chrome is signed into another account →
    **`playwright`**.
 3. **No logins needed, or a debugging job** → **`chrome-devtools`**.
-4. **The operator names `cft-profile`, or the task is logged-in automation he
-   has set up there** → **`cft-profile`**.
-5. On a permission wall, a site that refuses, or a tool error: **stop and ask
-   the operator.** Do not fall back to another rail on your own.
+4. On a permission wall, a site that refuses, or a tool error: **stop and ask
+   the operator.** Do not fall back to the other rail on your own.
 
 ## `playwright` (real Chrome)
 
@@ -64,22 +60,7 @@ in a client config.
 - The CfT version trails stable Chrome. A rendering difference may be the version,
   not the site.
 
-## `cft-profile` (persistent CfT)
-
-- The same tools as `chrome-devtools` (`pageId`, `uid`), on a **headed** CfT whose
-  profile lives in `$XDG_STATE_HOME/cft-profile` and survives between sessions.
-- **The operator logs in, never the agent.** He runs `cft-profile` (a command on
-  `PATH`, not a tool), which opens that profile with no automation flags, signs in,
-  and closes the window. Google sign-in can refuse a browser started by the agent.
-- **One process per profile.** If the launch fails because the profile is in use,
-  the `cft-profile` window is still open: ask the operator to close it.
-- Cookies are encrypted with the login Keychain, not puppeteer's mock key, so the
-  first launch may show a Keychain prompt. The operator answers it.
-- Chrome's enrollment and policy do not reach CfT (measured 2026-11-19: it answered
-  on a debugging port with `RemoteDebuggingAllowed = false` set). This rail still
-  uses a pipe, so it opens no port.
-
-## No rail opens `chrome://` pages
+## Neither rail opens `chrome://` pages
 
 - Extensions are not allowed to debug `chrome://` pages, and `chrome-devtools-mcp`
   refuses them itself (`Navigating to chrome: URLs is not allowed`, measured).
