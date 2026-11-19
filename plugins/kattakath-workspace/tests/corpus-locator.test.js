@@ -246,3 +246,17 @@ test("guard-07: markdown-link filenames and invite titles land inside code spans
   }
   assert.ok(!/\]\(https:\/\/evil/.test(t.replace(/`[^`]*`/g, "")), "a link formed outside a code span");
 });
+
+test("links: Chat's http://chat.google.com is upgraded to https; Gmail and Drive links are built from IDs", () => {
+  const out = run("reduce", post({ items: [
+    { chatResult: { messages: [{ id: { threadId: "spaces/S1/threads/T1" }, viewUrl: "http://chat.google.com/dm/S1", sender: { email: "a@example.com" } }] } },
+    { gmailResult: { thread: { threadId: "18c0ffee", messages: [{ subject: "Invoice", sender: "b@example.com" }] } } },
+    { driveResult: { itemId: "d-id_1", title: "Budget", mimeType: "application/vnd.google-apps.document", viewUrl: "https://www.google.com/url?q=x" } },
+    { chatResult: { messages: [{ id: { threadId: "spaces/S2/threads/T2" }, viewUrl: "http://evil.example/x" }] } },
+  ] })).updatedToolOutput;
+  assert.ok(out.includes("https://chat.google.com/dm/S1"), "chat link upgraded");
+  assert.ok(!out.includes("http://chat.google.com"), "no plain-http link left");
+  assert.ok(out.includes("https://mail.google.com/mail/u/0/#all/18c0ffee"), "gmail link from threadId");
+  assert.ok(out.includes("https://drive.google.com/open?id=d-id_1"), "drive link from itemId");
+  assert.ok(!out.includes("evil.example"), "a non-Google http link is still dropped");
+});

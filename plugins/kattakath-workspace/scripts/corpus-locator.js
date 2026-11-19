@@ -66,13 +66,18 @@ const cell = (s, max = MAX_FIELD) => {
   const c = clean(s, max);
   return c ? '`' + c + '`' : '';
 };
-// Only Google's own https hosts become links; anything else (javascript:, http:, a
-// look-alike host) is dropped.
+// Only Google's own hosts become links; anything else (javascript:, a look-alike host)
+// is dropped. Chat hits carry http://chat.google.com (measured 2026-11-19 on a live
+// search_corpus result), so plain http on these SAME hosts is upgraded, never followed.
 const LINK_RE = /^https:\/\/(mail|docs|drive|calendar|chat)\.google\.com\//;
 function link(u) {
-  const c = clean(u, MAX_LINK);
+  const c = clean(u, MAX_LINK).replace(/^http:\/\/(?=(mail|docs|drive|calendar|chat)\.google\.com\/)/, 'https://');
   return LINK_RE.test(c) && !/\s/.test(c) ? c : '';
 }
+// Gmail and Drive hits carry only a www.google.com/url redirect as viewUrl (same
+// measurement), which the filter drops, so `alt` builds their link from the ID in Google's
+// own URL form. Calendar's eventId is not a URL key: it stays ID-only.
+const byId = (base, id) => (id ? base + encodeURIComponent(String(id)) : '');
 
 // Only Claude Code's own tool-results directory is read, never a path a result could steer.
 function allowedSavedPath(p) {
@@ -133,14 +138,14 @@ function row(item) {
     const d = item.driveResult;
     const kind = clean(String(d.mimeType || '').split(/[/.]/).pop(), 20);
     const o = openFor(d.mimeType);
-    return { app: 'Drive', open: o.tool, fallback: o.fallback, title: clean(d.title), when: '', who: kind, link: d.viewUrl, id: d.itemId };
+    return { app: 'Drive', open: o.tool, fallback: o.fallback, title: clean(d.title), when: '', who: kind, link: d.viewUrl, alt: byId('https://drive.google.com/open?id=', d.itemId), id: d.itemId };
   }
   if (item.gmailResult) {
     const th = item.gmailResult.thread || {};
     const msgs = th.messages || [];
     const first = msgs[0] || {};
     const n = msgs.length > 1 ? ` (${msgs.length} msgs)` : '';
-    return { app: 'Gmail', open: 'gmail_get_thread', title: clean(first.subject) + n, when: '', who: clean(first.sender, 60), link: first.viewUrl, id: th.threadId };
+    return { app: 'Gmail', open: 'gmail_get_thread', title: clean(first.subject) + n, when: '', who: clean(first.sender, 60), link: first.viewUrl, alt: byId('https://mail.google.com/mail/u/0/#all/', th.threadId), id: th.threadId };
   }
   if (item.chatResult) {
     const msgs = item.chatResult.messages || [];
@@ -181,7 +186,7 @@ function render(corpus, query) {
     const how = open ? `open with \`${open}\`${fallback ? ` (if missing: \`${fallback}\`)` : ''}` : 'no open tool';
     body.push({ header: true, text: ['', `### ${app}: ${how}`, '| # | Title | When | From / type | Link | ID |', '|---|---|---|---|---|---|'].join('\n') });
     for (const r of g) {
-      body.push({ text: `| ${r.n} | ${cell(r.title)} | ${cell(r.when, 25)} | ${cell(r.who, 60)} | ${link(r.link)} | ${cell(r.id, MAX_LINK)} |` });
+      body.push({ text: `| ${r.n} | ${cell(r.title)} | ${cell(r.when, 25)} | ${cell(r.who, 60)} | ${link(r.link) || link(r.alt)} | ${cell(r.id, MAX_LINK)} |` });
     }
   }
   let out = head.join('\n');
