@@ -61,6 +61,7 @@ ADB
 cat >"$scratch/bin/npx" <<'NPX'
 #!/bin/sh
 [ -z "${FAKE_NPX_EXIT:-}" ] || exit "$FAKE_NPX_EXIT"
+[ -z "${FAKE_NPX_ECHO:-}" ] || exec cat
 exec sleep 300
 NPX
 chmod +x "$scratch/bin/adb" "$scratch/bin/npx"
@@ -128,5 +129,10 @@ case "$err" in *"no forward yet"*) ;; *) fail "no-forward message: $err" ;; esac
 [ ! -e "$scratch/state/removes" ] || fail "removed a forward it never made"; gone "no device"
 ok "no single device: starts anyway, says so, removes nothing"
 
-[ "$pass" -ge 10 ] || { echo "expected >= 10 cases, ran $pass" >&2; exit 1; }
+reset; set +e; out=$(printf 'mcp-hello\n' | run FAKE_NPX_ECHO=1 2>/dev/null); rc=$?; set -e
+[ "$rc" -eq 0 ] || fail "stdin case exit status $rc"
+[ "$out" = mcp-hello ] || fail "server did not get the launcher's stdin (got '$out'): MCP would see EOF"
+ok "server reads the launcher's stdin (an async child would get /dev/null)"
+
+[ "$pass" -ge 11 ] || { echo "expected >= 11 cases, ran $pass" >&2; exit 1; }
 echo "android-chrome launcher: $pass cases passed"

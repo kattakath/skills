@@ -81,9 +81,11 @@ elif ! "$adb" forward "tcp:$port" "localabstract:$socket" >/dev/null 2>&1; then
 fi
 
 # --no-performance-crux keeps traced URLs from being sent to Google; keep both flags.
-# The server inherits stdin/stdout, so MCP traffic is unchanged by not exec-ing it.
+# `<&0` is load-bearing: POSIX gives an asynchronous command in a non-interactive shell
+# /dev/null as stdin, so without it the server reads EOF at once and exits, and Claude
+# Code reports CONNECTION_CLOSED (measured 2026-11-19 with /bin/sh = bash 3.2).
 npx -y chrome-devtools-mcp@1.12.0 --browser-url="http://127.0.0.1:$port" \
-  --no-usage-statistics --no-performance-crux "$@" &
+  --no-usage-statistics --no-performance-crux "$@" <&0 &
 child=$!
 status=0
 wait "$child" || status=$?
