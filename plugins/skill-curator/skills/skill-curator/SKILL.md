@@ -64,10 +64,18 @@ Two limits of the signal, stated in the PR every time:
 ## 3. Decide — per state
 
 - **deprecated** → propose retiring it the same way, naming its `replaced_by`.
-- **archive-candidate** → propose retiring it from the **harness**, not the repo: remove its
-  enable entry (for the kattakath fleet, its `local.claudePlugins.declared` key in nix-config
-  `modules/home/default.nix` — not the marketplace's `plugins` list, which enables nothing).
-  The skill stays published and one line restores it: the git revert is the rollback Hermes needed snapshots for.
+- **archive-candidate** → propose retiring it from the **harness**, not the repo: disable its
+  plugin, never its marketplace entry (the marketplace's `plugins` list enables nothing). Where
+  that switch lives depends on who owns the plugin's `enabledPlugins` key in
+  `~/.claude/settings.json`. On the kattakath fleet (nix-config `modules/home/claude-plugins.nix`,
+  since 2026-11-07; the older `local.claudePlugins.declared` map is retired):
+  - an **always-on** id (that module's `alwaysOnIds` or `operatorIds`) is written by Nix on
+    every activation, so retiring it is a nix-config change, landed as that repo lands changes;
+  - **every other** plugin is the operator's runtime choice (`/plugin`, or
+    `claude plugin disable <name>@<marketplace>`), which persists because Nix writes no key
+    for it. That is a toggle, not a PR: the curation PR records the proposal and its evidence,
+    and the operator flips the switch.
+  The skill stays published and one switch restores it: re-enabling is the rollback Hermes needed snapshots for.
 - **stale** → list it in the PR description as next to go; change nothing.
 - **Never delete** a skill directory as part of curation. Deleting is a separate, explicit
   decision (Hermes' `purge` is also explicit-only).
@@ -94,7 +102,7 @@ Human gate: a person merges it. The PR carries:
 
 ```
 Window:     <N days from YYYY-MM-DD, host(s)>
-Retire:     <archive-candidates, idle days, last use> -> harness PR
+Retire:     <archive-candidates, idle days, last use> -> harness change (always-on id) or operator toggle
 Watch:      <stale>
 Exempt:     <pinned / depended-on, and by what>
 Merges:     <proposals, or "not run">
