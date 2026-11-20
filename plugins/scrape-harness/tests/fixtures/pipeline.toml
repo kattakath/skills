@@ -1,0 +1,26 @@
+# A synthetic pipeline.v1 for the hook cases: the smallest declaration every gate reads.
+schema = "pipeline.v1"
+name = "stub"
+offline_flags = ["--dry-run", "--plan"]
+utilities = []
+
+[consumer]
+cli = "stubcli"
+env_prefix = "STUB"
+data_env = "STUB_DATA"
+state_env = "STUB_STATE"
+state_dirname = "stub"
+secret_envs = ["STUB_KEY"]
+site_hosts = ["example.invalid"]
+
+[[stages]]
+name = "crawl-lists"
+network = "site"
+inputs = []
+outputs = ["DATA:observations.jsonl"]
+
+[[stages]]
+name = "reparse"
+network = "none"
+inputs = ["DATA:raw/"]
+outputs = ["DATA:listings.jsonl"]

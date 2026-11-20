@@ -17,8 +17,9 @@ A project normally enables it from its generated `.claude/settings.json` instead
 |---|---|
 | `PreToolUse(Bash)` hook | Blocks a networked pipeline command unless it is planned (`--plan`), offline (`--dry-run`, a fixture driver) or carries the operator's approval flag (then it asks); blocks direct HTTP to the crawled site and any command expanding a declared secret. |
 | `PreToolUse(Write\|Edit\|NotebookEdit)` hook | No data files, no real HTML, no forbidden literals (a colon-separated list of files) in the repo; never writes the DATA or STATE roots. |
-| `SessionStart` hook | Seeds one task per declared stage (`Stage i/N: name`), plus one per open incident that blocks its stage. |
-| `SubagentStop` / `TeammateIdle` hooks | Keep the `run-steward` working while any incident is unacknowledged. |
+| `SessionStart` hook | Seeds one task per declared stage (`Stage i/N: name`), plus one per open incident that blocks its stage, and adds one status line read from `STATE/status.json` and the incident record: the latest run (id, stage, status), the open incident ids with their exit codes, and which are cooldowns or breaker latches. At most 1500 characters; no path, no env value. |
+| `SubagentStop` hooks | Each contracted agent must end with ONE schema-checked object (`<cli> validate <contract> -`): `analyst` a `finding.v1`, `run-steward` a `run_report.v1`, `pipeline-engineer` a `diagnosis.v1`. An invalid answer comes back once with the errors. |
+| `SubagentStop` / `TeammateIdle` hooks | Keep the `run-steward` working while any incident is unacknowledged, whatever it answers. |
 | `PreCompact` hook | Asks the compaction summary to keep the open incident ids. |
 | `run-status` monitor | One line per run transition and per new incident, naming the files that hold the truth. |
 | Agents | `pipeline-engineer` (fixes forward, with tests), `analyst` (one schema-checked finding, read-only), `run-steward` (read-only watcher). |
@@ -45,5 +46,13 @@ at its root (or names it in `SCRAPE_HARNESS_PIPELINE`). The project's generated
 This plugin auto-updates from the marketplace; a project pins its core. When they disagree, the
 hooks refuse with **"plugin/harness version mismatch"** and name the update to run: a key the plugin
 does not know means the plugin is older; a key it needs and cannot find means the core is older.
+
+The agent contracts skew the other way. A core pinned before `run_report.v1` or `diagnosis.v1` answers
+`unknown contract '<name>'` (exit 1). The SubagentStop gate then lets the agent stop, with one line
+naming the update (`nix flake update scrape-harness`). It never traps the agent. An invalid object
+(exit 2) and anything else still block.
+
+Tests: `bash plugins/scrape-harness/tests/run.sh` (stdlib, a synthetic consumer and a stub CLI). The
+core's own suite drives the same hooks against the real CLI.
 
 Python 3.11+ (`tomllib`) on `PATH` as `python3`; the hook entry point fails closed without it.

@@ -1,0 +1,48 @@
+#!/usr/bin/env python3
+"""A stand-in for a consumer's `<cli> validate <contract> -`, reproducing the real CLI's three outcomes
+(measured on scrape_harness at d9a7bd2+, `python -m scrape_harness.cli validate NAME -`):
+
+  valid object        exit 0, nothing on stderr
+  invalid object      exit 2 (EXIT_CONTRACT), one `record N: <path>: <message>` line per violation
+  unknown contract    exit 1, an uncaught KeyError traceback ending
+                      KeyError: "unknown contract 'NAME'; known: a.v1, b.v1"   (contracts._validator)
+  not JSON at all     exit 1, an uncaught json.decoder.JSONDecodeError traceback
+
+The contracts it knows come from STUB_KNOWN (comma-separated). An object is valid when its `schema` is
+the contract's name and it has no `"invalid": true`; that is all the hook cases need.
+"""
+
+import json
+import os
+import sys
+
+KNOWN = [n for n in os.environ.get("STUB_KNOWN", "finding.v1,run_report.v1,diagnosis.v1").split(",") if n]
+
+
+def main() -> int:
+    if sys.argv[1:2] != ["validate"] or len(sys.argv) < 3:
+        print(f"stubcli: only `validate <contract> -` is stubbed, got {sys.argv[1:]}", file=sys.stderr)
+        return 64
+    name, text = sys.argv[2], sys.stdin.read()
+    if name not in KNOWN:
+        print("Traceback (most recent call last):", file=sys.stderr)
+        print(f"KeyError: \"unknown contract '{name}'; known: {', '.join(sorted(KNOWN))}\"", file=sys.stderr)
+        return 1
+    try:
+        obj = json.loads(text.strip().removeprefix("```json").removesuffix("```"))
+    except json.JSONDecodeError as e:
+        print("Traceback (most recent call last):", file=sys.stderr)
+        print(f"json.decoder.JSONDecodeError: {e}", file=sys.stderr)
+        return 1
+    bad = []
+    if not isinstance(obj, dict) or obj.get("schema") != name:
+        bad.append(f"record 1: schema: {name!r} was expected")
+    elif obj.get("invalid") is True:
+        bad.append("record 1: <root>: Additional properties are not allowed ('invalid' was unexpected)")
+    for line in bad:
+        print(line, file=sys.stderr)
+    return 2 if bad else 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

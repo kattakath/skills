@@ -1,6 +1,6 @@
 ---
 name: site-recon
-description: Study a NEW site before writing its Source — robots, page kinds, expected selectors, pagination, gates — from a handful of operator-approved pages, ending in a Source stub, synthetic fixtures and a pipeline.toml. Use when the operator asks to add a site or start a new consumer.
+description: Study a NEW site before writing its Source — robots, page kinds, expected selectors, pagination, gates — from a handful of operator-approved pages, ending in a Source stub, synthetic fixtures and a pipeline.toml. Use when the operator asks to add a site, says "look at this site first" or "start a new consumer", or a new source is proposed before anything about its pages is known.
 ---
 
 # Site recon: phases with gates (adapted from yfe404/web-scraper's recon flow, MIT)

@@ -1,6 +1,6 @@
 ---
 name: runbook-reparse
-description: A selector broke or a new field is needed — re-extract OFFLINE from the saved snapshots with `<cli> reparse` instead of re-fetching. Use when parsed listings miss a field, a parser changed, or someone proposes re-crawling to pick up new data.
+description: A selector broke or a new field is needed — re-extract OFFLINE from the saved snapshots with `<cli> reparse` instead of re-fetching. Use when the operator says "re-parse without new views" or "re-extract it", when parsed listings miss a field, a parser changed, or someone proposes re-crawling to pick up new data.
 ---
 
 # Selector broke → fix the parser → reparse offline (zero requests)

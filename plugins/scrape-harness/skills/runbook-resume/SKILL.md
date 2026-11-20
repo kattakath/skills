@@ -1,6 +1,6 @@
 ---
 name: runbook-resume
-description: Continue a stopped scrape-harness run from its persisted queue with `<cli> crawl resume` — after a challenge was cleared, a cooldown ended or the network was fixed — without re-sending a single finished request. Use when a run's status is "stopped" and the cause is gone.
+description: Continue a stopped scrape-harness run from its persisted queue with `<cli> crawl resume` — after a challenge was cleared, a cooldown ended or the network was fixed — without re-sending a single finished request. Use when the operator says "resume", "pick it up again" or "continue the run" and the run's status is "stopped" with its cause gone.
 ---
 
 # Resume a stopped run (no duplicate GETs)

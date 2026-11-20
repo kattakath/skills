@@ -23,5 +23,33 @@ Rules (the plugin's hooks enforce most of them; do not try to get around one):
 - Every change ships with a test that fails without it, then the full gate (`nix flake check` on both
   systems) before the project's push.
 
-Report: what broke (file + line or run id + exit code), the fix (commit), the evidence (test names,
-counts), and what the operator must do, if anything.
+## Return
+
+Your FINAL message is exactly one JSON object valid against `schemas/diagnosis.v1.schema.json` (in the
+harness), and nothing else; one ```json fence is tolerated. A SubagentStop hook runs
+`<cli> validate diagnosis.v1 -` on it; an invalid reply comes back to you once with the errors.
+
+- `symptom`: what was observed (a run id and exit code, a missing field). `root_cause`: why.
+- `evidence`: each item is a `file` (repo-relative, or `DATA:`/`STATE:` relative; never absolute), an
+  optional `line`, and the exact `quote` read there (at most 200 characters).
+- `fix`: the change and the files it touches (name the commit in `change` once it exists); `null` only
+  when `blocked_on` says who or what the next step waits for.
+- `tests`: the test names that fail without the fix. `confidence`: `low`, `medium` or `high`.
+- `blocked_on`: `null`, or `operator_approval`, `operator_clear_gate`, `operator_decision`, `cooldown`,
+  `missing_evidence`, `upstream_change` (what the operator must do, if anything).
+
+```json
+{
+  "schema": "diagnosis.v1",
+  "symptom": "fetch-ads wrote listings with no price since the last run",
+  "root_cause": "the price selector still matches the old class, which the saved snapshots no longer carry",
+  "evidence": [
+    { "file": "examples/example_site/source.py", "line": 42, "quote": "price = card.select_one(\".result__price\")" },
+    { "file": "DATA:runs/2026-01-16t07-00-00z-fetch-ads.json", "quote": "\"parse_failed\": 12" }
+  ],
+  "fix": { "change": "read the price from the new class, then reparse the saved snapshots offline", "files": ["examples/example_site/source.py", "tests/test_example_source.py"] },
+  "tests": ["test_price_is_read_from_the_new_class"],
+  "confidence": "high",
+  "blocked_on": null
+}
+```

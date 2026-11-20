@@ -1,6 +1,6 @@
 ---
 name: runbook-stop
-description: What to do when a scrape-harness CLI run stops or refuses (exit 3-10) — challenge, cooldown, egress, politeness, missing approval. Use whenever a crawl-lists / fetch-ads / ab / crawl resume run exits non-zero, or the run card / live log shows STOPPED.
+description: What to do when a scrape-harness CLI run stops or refuses (exit 3-10) — challenge, cooldown, egress, politeness, missing approval. Use when the operator says "the refresh failed", "it stopped" or "why did it stop", whenever a crawl-lists / fetch-ads / ab / refresh / crawl resume run exits non-zero, or the run card / live log shows STOPPED.
 ---
 
 # A run stopped: read the code, then the file, then act

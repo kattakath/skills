@@ -4,9 +4,11 @@ only; every rule's names come from the project's pipeline.toml. One file, one en
   guard.py bash      PreToolUse(Bash)                     network politeness + secret egress
   guard.py write     PreToolUse(Write|Edit|NotebookEdit)  no data in the repo, no forbidden literals
   guard.py subagent  SubagentStop(scrape-harness:analyst)  the answer must validate as finding.v1
-  guard.py session   SessionStart                         task seed from [[stages]] (context only)
+  guard.py engineer  SubagentStop(scrape-harness:pipeline-engineer)  the answer must validate as diagnosis.v1
+  guard.py session   SessionStart                         task seed from [[stages]] + a status line (context only)
   guard.py watch     plugin monitor (monitors.json)       one line per run transition / new incident (by id)
-  guard.py steward   SubagentStop(scrape-harness:run-steward)  keep working while an incident is unacked
+  guard.py steward   SubagentStop(scrape-harness:run-steward)  keep working while an incident is unacked,
+                                                          and the answer must validate as run_report.v1
   guard.py teammate  TeammateIdle (run-steward only)      the same, for an Agent Teams teammate
   guard.py precompact PreCompact                          keep open incident ids in the summary
 
@@ -401,32 +403,81 @@ def _li() -> list[str]:
         return [cli]
     if shutil.which("nix"):
         return ["nix", "run", f"{project_dir()}#default", "--"]
-    block(f"blocked: cannot validate the agent's output: neither `{cli}` nor `nix` is on PATH.")
     return []
 
 
-def subagent(event: dict) -> None:
+EXIT_CONTRACT = 2  # the CLI's exit for an object that fails its contract (`<cli> validate`)
+
+
+def contract_check(event: dict, contract: str) -> tuple[str, str]:
+    """("ok" | "invalid" | "skew", why): the agent's final message against `<cli> validate <contract> -`.
+
+    "skew" is ONLY the CLI saying it does not know this contract: an older pinned harness raises
+    KeyError("unknown contract '<name>'; known: ...") (contracts._validator), uncaught, so exit 1 with that
+    text on stderr. An invalid object exits EXIT_CONTRACT; anything else (prose: a JSON decode error, also
+    exit 1) is invalid too, so only the exact skew is let through."""
     msg = event.get("last_assistant_message")
     if not isinstance(msg, str) or not msg.strip():
-        block(
-            "Your final message must be exactly one JSON object valid against schemas/finding.v1.schema.json."
+        return "invalid", (
+            f"Your final message must be exactly one JSON object valid against schemas/{contract}.schema.json."
         )
-    r = subprocess.run(
-        [*_li(), "validate", "finding.v1", "-"], input=msg, capture_output=True, text=True, timeout=120
+    cli = _li()
+    if not cli:  # invalid, not skew: the one retry still applies, so it cannot trap the agent
+        return "invalid", (
+            f"blocked: cannot validate the agent's output against {contract}: neither "
+            f"`{consumer()['cli']}` nor `nix` is on PATH."
+        )
+    r = subprocess.run([*cli, "validate", contract, "-"], input=msg, capture_output=True, text=True, timeout=120)
+    if r.returncode == 0:
+        return "ok", ""
+    if r.returncode != EXIT_CONTRACT and f"unknown contract '{contract}'" in r.stderr:
+        return "skew", (
+            f"scrape-harness: this project's harness does not know {contract} yet, so the agent's answer was not "
+            f"checked; update the harness: `nix flake update scrape-harness`."
+        )
+    return "invalid", (
+        f"Your output is not a valid {contract} (schemas/{contract}.schema.json). Reply again with ONLY the "
+        "corrected JSON object.\n" + (r.stderr or r.stdout)[-1500:]
     )
-    if r.returncode != 0:
+
+
+def allow_with(message: str) -> None:
+    """Exit 0 with one line for the operator (never traps the agent)."""
+    print(json.dumps({"systemMessage": " ".join(message.split())}))
+    raise SystemExit(0)
+
+
+def contract_gate(event: dict, contract: str, still_invalid: str, hold: str | None = None) -> None:
+    """SubagentStop: block (exit 2, stderr = the next instruction) until the answer validates. One retry
+    only on a contract failure (stop_hook_active), so a stuck agent cannot loop; `hold` (an unacked
+    incident) blocks whatever the retry state. An older harness that lacks the contract: allow, say so."""
+    verdict, why = contract_check(event, contract)
+    if hold:
+        block(hold + (f"\nAlso: {why}" if verdict == "invalid" else ""))
+    if verdict == "skew":
+        allow_with(why)
+    if verdict == "invalid":
         if event.get("stop_hook_active"):
-            # One retry only: `<cli> findings append` re-validates anyway, so stopping here cannot let
-            # an invalid record into the register, and it prevents an endless block loop.
-            print(
-                "analyst output still invalid; the caller's `findings append` will reject it.",
-                file=sys.stderr,
-            )
+            print(still_invalid, file=sys.stderr)
             raise SystemExit(0)
-        block(
-            "Your output is not a valid finding.v1. Reply again with ONLY the corrected JSON object.\n"
-            + (r.stderr or r.stdout)[-1500:]
-        )
+        block(why)
+    raise SystemExit(0)
+
+
+def subagent(event: dict) -> None:
+    """SubagentStop(scrape-harness:analyst): one finding.v1."""
+    # After the one retry, `<cli> findings append` re-validates anyway, so stopping cannot let an invalid
+    # record into the register.
+    contract_gate(event, "finding.v1", "analyst output still invalid; the caller's `findings append` will reject it.")
+
+
+def engineer(event: dict) -> None:
+    """SubagentStop(scrape-harness:pipeline-engineer): one diagnosis.v1."""
+    contract_gate(
+        event,
+        "diagnosis.v1",
+        "pipeline-engineer output still not a valid diagnosis.v1; do not act on it as a diagnosis.",
+    )
 
 
 # ── Incidents: keep the steward on them, and through compaction ─────────────────────────────────
@@ -452,20 +503,24 @@ def _unacked_reason() -> str | None:
 
 def steward(event: dict) -> None:
     """SubagentStop(scrape-harness:run-steward): exit 2 keeps it working (its stderr is the next
-    instruction) while any incident is unacked."""
-    reason = _unacked_reason()
-    if reason:
-        print(reason, file=sys.stderr)
-        raise SystemExit(2)
-    raise SystemExit(0)
+    instruction) while any incident is unacked, retry or not; and its answer must be one run_report.v1."""
+    contract_gate(
+        event,
+        "run_report.v1",
+        "run-steward output still not a valid run_report.v1; read the run record yourself before reporting.",
+        hold=_unacked_reason(),
+    )
 
 
 def teammate(event: dict) -> None:
     """TeammateIdle (no matcher: fires for every teammate): only a teammate named run-steward is kept
-    working, by exit 2, while an incident is unacked."""
+    working, by exit 2, while an incident is unacked. An idle teammate has no final answer to check."""
     if event.get("teammate_name") != "run-steward":
         raise SystemExit(0)
-    steward(event)
+    reason = _unacked_reason()
+    if reason:
+        block(reason)
+    raise SystemExit(0)
 
 
 def precompact(event: dict) -> None:
@@ -544,11 +599,17 @@ def session(event: dict) -> None:
             "is fixed. Fix pipeline.toml first."
         )
     else:
+        try:  # context only: a status that cannot be read is left out, never an error
+            status = f" Status now: {status_line()}"
+        except (Exception, SystemExit):  # noqa: BLE001
+            status = ""
+        # Line 1 is prose (instructions, then the status line); everything after the first newline is the
+        # seed JSON, which readers parse as such.
         text = (
             "scrape-harness task seed (from pipeline.toml [[stages]]). If the task list is empty, create one "
             "task per entry with TaskCreate (subject, description, activeForm), then set blockedBy as listed. "
             "You may split, merge, fan out or mark tasks done/skipped as the work requires; keep the "
-            "'Stage i/N: name' prefix so the run card and the task list agree.\n"
+            f"'Stage i/N: name' prefix so the run card and the task list agree.{status}\n"
             + json.dumps(seed, ensure_ascii=False)
         )
     print(json.dumps({"hookSpecificOutput": {"hookEventName": "SessionStart", "additionalContext": text}}))
@@ -568,6 +629,58 @@ def status_file() -> Path:
         Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / c["state_dirname"]
     )
     return Path(root).expanduser() / "status.json"
+
+
+def read_status() -> dict | None:
+    """STATE/status.json (status.v1: the latest run), or None when absent or unreadable. The ONE reader:
+    the monitor (watch) and the SessionStart status line both use it."""
+    try:
+        st = json.loads(status_file().read_text())
+    except (OSError, ValueError):
+        return None
+    return st if isinstance(st, dict) else None
+
+
+STATUS_MAX = 1500  # chars of the SessionStart status line
+
+
+def _fact(v: object, n: int = 64) -> str:
+    """One value for the status line: one line, capped, with any path-shaped token redacted (status.json's
+    `log` is an absolute DATA path; a hook never prints one)."""
+    s = re.sub(r"(?<![\w.-])[/~]\S*", "<path>", " ".join(str(v).split()))
+    return s if len(s) <= n else s[: n - 1] + "…"
+
+
+def status_line() -> str:
+    """Bounded facts for a session's start, from STATE only: the latest run (status.v1), the open incidents
+    (id, kind, exit code), and which of them are cooldowns or breaker latches. Names no path and no env value."""
+    cli, out = consumer()["cli"], []
+    st = read_status()
+    if st:
+        req = st.get("requests") if isinstance(st.get("requests"), dict) else {}
+        sent = sum(v for v in req.values() if isinstance(v, int))
+        out.append(
+            f"last run {_fact(st.get('run_id'), 96)}: {_fact(st.get('command'))} stage {_fact(st.get('stage'), 16)}, "
+            f"{_fact(st.get('status'), 16)} (updated {_fact(st.get('updated_at'), 32)}); {sent} of "
+            f"{_fact(st.get('planned'), 12)} planned requests, {_fact(st.get('challenges'), 12)} challenge(s)."
+        )
+    else:
+        out.append("no run recorded yet (STATE/status.json absent or unreadable).")
+    open_ = open_incidents()
+    if open_:
+        out.append(
+            f"{len(open_)} open incident(s): "
+            + "; ".join(f"{_fact(r.get('id'), 32)} ({_fact(r.get('kind'), 16)}, exit {_fact(r.get('code'), 4)})" for r in open_)
+            + "."
+        )
+        held = [_fact(r.get("id"), 32) for r in open_ if r.get("kind") in ("cooldown", "gone_storm")]
+        if held:
+            out.append(f"Cooldown/breaker latch among them: {', '.join(held)}.")
+    else:
+        out.append("no open incidents.")
+    out.append(f"Full state: `{cli} cooldown status`, `{cli} breaker status`, `{cli} incidents list --open`.")
+    text = " ".join(out)
+    return text if len(text) <= STATUS_MAX else text[: STATUS_MAX - 1] + "…"
 
 
 def incidents_file() -> Path:
@@ -678,12 +791,7 @@ def watch(_event: dict | None = None) -> None:
     def current() -> dict | None:
         global _DOC
         _DOC = None  # re-read pipeline.toml each tick: a fix takes effect without a restart
-        try:
-            return json.loads(status_file().read_text())
-        except SystemExit:  # consumer()/doc() refused a broken pipeline.toml
-            raise
-        except (OSError, ValueError):
-            return None
+        return read_status()  # SystemExit: consumer()/doc() refused a broken pipeline.toml
 
     prev, said_broken = None, False
     try:
@@ -722,6 +830,7 @@ def main() -> None:
         "bash": bash,
         "write": write,
         "subagent": subagent,
+        "engineer": engineer,
         "session": session,
         "steward": steward,
         "teammate": teammate,
