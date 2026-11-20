@@ -451,7 +451,11 @@ def contract_gate(event: dict, contract: str, still_invalid: str, hold: str | No
     """SubagentStop: block (exit 2, stderr = the next instruction) until the answer validates. One retry
     only on a contract failure (stop_hook_active), so a stuck agent cannot loop; `hold` (an unacked
     incident) blocks whatever the retry state. An older harness that lacks the contract: allow, say so."""
-    verdict, why = contract_check(event, contract)
+    try:
+        verdict, why = contract_check(event, contract)
+    except (Exception, SystemExit) as e:  # noqa: BLE001 - a timeout, an unrunnable CLI, a broken pipeline:
+        # invalid, so the hold below still blocks and anything else gets its one retry (never a trap)
+        verdict, why = "invalid", f"could not validate the answer against {contract} ({type(e).__name__}: {e})."
     if hold:
         block(hold + (f"\nAlso: {why}" if verdict == "invalid" else ""))
     if verdict == "skew":

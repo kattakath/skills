@@ -123,8 +123,8 @@ class Contracts(Hook):
             self.assertIn(contract, msg)
             self.assertIn("nix flake update scrape-harness", msg)
 
-    def test_an_unknown_name_that_is_another_contract_still_blocks(self):
-        """Only `unknown contract '<this contract>'` counts as skew; any other exit-1 failure blocks."""
+    def test_prose_still_blocks_when_the_contract_is_known(self):
+        """Only `unknown contract '<this contract>'` counts as skew; a JSON decode error (also exit 1) blocks."""
         r = self.run_gate(
             "engineer", self.stop("pipeline-engineer", "not json"), STUB_KNOWN="finding.v1,diagnosis.v1"
         )
@@ -135,9 +135,29 @@ class Contracts(Hook):
         self.assertEqual(bad.returncode, 2)
         self.assertIn("finding.v1", bad.stderr)
 
+    def test_a_broken_pipeline_never_traps_an_agent(self):
+        """The validator cannot even be found: block once, then the retry lets it stop."""
+        broken = {"SCRAPE_HARNESS_PIPELINE": str(self.tmp / "absent.toml")}
+        for gate, agent, obj, _ in self.CASES:
+            self.assertEqual(self.run_gate(gate, self.stop(agent, json.dumps(obj)), **broken).returncode, 2, gate)
+            r = self.run_gate(gate, self.stop(agent, json.dumps(obj), active=True), **broken)
+            self.assertEqual(r.returncode, 0, (gate, r.stderr))
+
 
 class Steward(Hook):
     """Both apply: an unacked incident keeps it working, and its answer must be a run_report.v1."""
+
+    def test_an_unrunnable_cli_still_holds_on_an_open_incident(self):
+        dead = self.tmp / "dead-bin"
+        dead.mkdir()
+        (dead / "stubcli").write_text("#!/nonexistent/interpreter\n")
+        (dead / "stubcli").chmod(0o755)
+        self.open_incident()
+        r = self.run_gate("steward", self.stop("run-steward", json.dumps(REPORT), active=True),
+                          PATH=f"{dead}:{os.environ.get('PATH', '')}")  # fmt: skip
+        self.assertEqual(r.returncode, 2)
+        self.assertIn(INC, r.stderr)
+        self.assertIn("could not validate", r.stderr)
 
     def test_an_open_incident_blocks_even_a_valid_report_and_even_on_retry(self):
         self.open_incident()
