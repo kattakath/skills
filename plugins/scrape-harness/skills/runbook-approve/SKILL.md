@@ -1,6 +1,6 @@
 ---
 name: runbook-approve
-description: Get one networked scrape-harness run approved — plan it (tunnel included), warn the operator that a Touch ID prompt is coming, run `<cli> approve <hash>`, and verify the ledger. Use when the operator says "approve it" or "I'll do the Touch ID", asks "which tunnel" or says "use the Vancouver/Toronto tunnel", before any crawl-lists / fetch-ads / ab / refresh / crawl resume that is not offline, and when a run refused with exit 10.
+description: Get one networked scrape-harness run approved — plan it (tunnel included), warn the operator that a Touch ID prompt is coming, run `<cli> approve <hash>`, and verify the ledger. Use when the operator says "approve it" or "I'll do the Touch ID", asks "which tunnel" or says "use the <city> tunnel" or "use another tunnel", before any crawl-lists / fetch-ads / ab / refresh / crawl resume that is not offline, and when a run refused with exit 10.
 ---
 
 # Approve one exact run (Touch ID is the approval)
@@ -11,7 +11,7 @@ Secretive's agent, so macOS asks for Touch ID; no touch, no approval.
 
 1. **Plan**: `<cli> <command> <args> --plan` → `plan_hash`. Re-plan after ANY argument change: a
    different plan has a different hash, and its approval does not carry over.
-   **Tunnel**: when the operator names one ("use the Vancouver tunnel") or asks which one, pick it in the
+   **Tunnel**: when the operator names one ("use the <city> tunnel") or asks which one, pick it in the
    plan: `--proxy-only <text>` (the ONE configured `[crawl.proxy]` url containing it; `refresh`,
    `probe robots`) or `--proxy-exclude <text>` (repeatable; every networked command). The plan signs the
    pick, so another tunnel is another hash. Never edit the proxy list in the site file to steer it.
