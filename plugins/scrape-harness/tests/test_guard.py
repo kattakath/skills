@@ -17,6 +17,9 @@ PLUGIN = HERE.parent
 GUARD = PLUGIN / "hooks" / "guard.py"
 FIXTURES = HERE / "fixtures"
 INC = "INC-20260116T060500Z-a1b2c3"
+# The route clause, cut EXACTLY as the harness's `<cli> claude-md` cuts it (scrape_harness/claude_md.py TRIGGER);
+# the harness's own suite asserts this pattern equals its own, so the two cannot drift.
+TRIGGER = re.compile(r"\bUse (when(?:ever)?|before)\b(.*?)(?:\.(?=\s|$)|$)", re.S)
 
 REPORT = {
     "schema": "run_report.v1",
@@ -218,6 +221,11 @@ class Wiring(unittest.TestCase):
             (example,) = re.findall(r"```json\n(.*?)\n```", tail[1], re.S)
             self.assertEqual(json.loads(example)["schema"], contract)
 
+    def test_the_engineer_answers_a_requested_change_without_inventing_a_cause(self):
+        tail = (PLUGIN / "agents" / "pipeline-engineer.md").read_text().split("\n## Return\n", 1)[1]
+        self.assertIn('`kind`: `"change"`', tail)
+        self.assertRegex(tail, r"(?i)never invent a cause")
+
 
 class SessionStatus(Hook):
     def context(self, **env):
@@ -267,6 +275,59 @@ class SessionStatus(Hook):
         self.state.mkdir(parents=True)
         (self.state / "status.json").write_text("{not json")
         self.assertIn("no run recorded", self.context())
+
+
+def description(path: Path) -> str:
+    """The frontmatter `description:` value (one line, a quoted value unquoted), as claude_md.frontmatter reads it."""
+    m = re.match(r"^---\n(.*?)\n---\n", path.read_text(), re.S)
+    assert m, f"{path}: no frontmatter"
+    for line in m.group(1).splitlines():
+        k, sep, v = line.partition(":")
+        if sep and k == "description":
+            v = v.strip()
+            return v[1:-1] if len(v) >= 2 and v[0] == v[-1] and v[0] in "\"'" else v
+    raise AssertionError(f"{path}: no description")
+
+
+def clause(path: Path) -> str:
+    m = TRIGGER.search(" ".join(description(path).split()))
+    return m.group(2).strip() if m else ""
+
+
+class Routing(unittest.TestCase):
+    """`<cli> claude-md` routes by each description's "Use when/whenever/before ..." clause and refuses (exit 4)
+    without one, which turns every consumer's checks.claude-md-drift red at the next pin. Caught here first."""
+
+    PAGES = sorted([*(PLUGIN / "skills").glob("*/SKILL.md"), *(PLUGIN / "agents").glob("*.md")])
+    PHRASES = {  # the operator's words each runbook must be routed by (they reach the route rows verbatim)
+        "skills/runbook-stop/SKILL.md": ['"the refresh failed"', '"it stopped"', '"why did it stop"'],
+        "skills/runbook-approve/SKILL.md": ['"approve it"', '"which tunnel"', "exit 10"],
+        "skills/runbook-resume/SKILL.md": ['"resume"', '"continue the run"'],
+        "skills/runbook-reparse/SKILL.md": ['"re-parse without new views"', "re-crawling"],
+        "skills/site-recon/SKILL.md": ['"look at this site first"'],
+        "agents/pipeline-engineer.md": ["a run stops", "a pipeline change"],
+    }
+
+    def test_every_skill_and_agent_has_a_route_clause(self):
+        self.assertGreaterEqual(len(self.PAGES), 8)
+        for page in self.PAGES:
+            self.assertTrue(clause(page), f"{page.relative_to(PLUGIN)}: no 'Use when/whenever/before ...' clause")
+
+    def test_the_operator_phrases_are_inside_the_clause(self):
+        for rel, phrases in self.PHRASES.items():
+            cut = clause(PLUGIN / rel)
+            for phrase in phrases:
+                self.assertIn(phrase, cut, f"{rel}: {phrase} is not in the routed clause")
+
+    def test_a_description_without_the_clause_is_caught(self):
+        page = self.tmp_page("description: Watches a run and reports. It never approves.")
+        self.assertEqual(clause(page), "")
+        self.assertEqual(clause(self.tmp_page('description: "Do X. Use whenever Y happens. Then Z."')), "Y happens")
+
+    def tmp_page(self, front: str) -> Path:
+        p = Path(tempfile.mkdtemp(prefix="sh-route-")) / "SKILL.md"
+        p.write_text(f"---\nname: x\n{front}\n---\n\n# x\n")
+        return p
 
 
 if __name__ == "__main__":

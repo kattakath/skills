@@ -18,7 +18,7 @@ A project normally enables it from its generated `.claude/settings.json` instead
 | `PreToolUse(Bash)` hook | Blocks a networked pipeline command unless it is planned (`--plan`), offline (`--dry-run`, a fixture driver) or carries the operator's approval flag (then it asks); blocks direct HTTP to the crawled site and any command expanding a declared secret. |
 | `PreToolUse(Write\|Edit\|NotebookEdit)` hook | No data files, no real HTML, no forbidden literals (a colon-separated list of files) in the repo; never writes the DATA or STATE roots. |
 | `SessionStart` hook | Seeds one task per declared stage (`Stage i/N: name`), plus one per open incident that blocks its stage, and adds one status line read from `STATE/status.json` and the incident record: the latest run (id, stage, status), the open incident ids with their exit codes, and which are cooldowns or breaker latches. At most 1500 characters; no path, no env value. |
-| `SubagentStop` hooks | Each contracted agent must end with ONE schema-checked object (`<cli> validate <contract> -`): `analyst` a `finding.v1`, `run-steward` a `run_report.v1`, `pipeline-engineer` a `diagnosis.v1`. An invalid answer comes back once with the errors. |
+| `SubagentStop` hooks | Each contracted agent must end with ONE schema-checked object (`<cli> validate <contract> -`): `analyst` a `finding.v1`, `run-steward` a `run_report.v1`, `pipeline-engineer` a `diagnosis.v1`. A requested change, where nothing broke, is `diagnosis.v1` with `kind: "change"`: no root cause or evidence is forced. An invalid answer comes back once with the errors. |
 | `SubagentStop` / `TeammateIdle` hooks | Keep the `run-steward` working while any incident is unacknowledged, whatever it answers. |
 | `PreCompact` hook | Asks the compaction summary to keep the open incident ids. |
 | `run-status` monitor | One line per run transition and per new incident, naming the files that hold the truth. |
@@ -54,5 +54,10 @@ naming the update (`nix flake update scrape-harness`). It never traps the agent.
 
 Tests: `bash plugins/scrape-harness/tests/run.sh` (stdlib, a synthetic consumer and a stub CLI). The
 core's own suite drives the same hooks against the real CLI.
+
+The core's `<cli> claude-md` routes by the "Use when / whenever / before ..." clause of every skill and
+agent description, and refuses when one has none. The tests check each description has that clause and
+that the operator's phrases sit inside it. They cut the clause with the core's own regex; the core's suite
+checks the two are equal.
 
 Python 3.11+ (`tomllib`) on `PATH` as `python3`; the hook entry point fails closed without it.

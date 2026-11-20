@@ -29,6 +29,9 @@ Your FINAL message is exactly one JSON object valid against `schemas/diagnosis.v
 harness), and nothing else; one ```json fence is tolerated. A SubagentStop hook runs
 `<cli> validate diagnosis.v1 -` on it; an invalid reply comes back to you once with the errors.
 
+- `kind`: `"diagnosis"` (the default, may be left out) when something broke. `kind`: `"change"` when the
+  operator asked for a change and nothing broke: `symptom` is the request, and `root_cause` and `evidence`
+  may be left out. Never invent a cause or a quote to fill them.
 - `symptom`: what was observed (a run id and exit code, a missing field). `root_cause`: why.
 - `evidence`: each item is a `file` (repo-relative, or `DATA:`/`STATE:` relative; never absolute), an
   optional `line`, and the exact `quote` read there (at most 200 characters).
