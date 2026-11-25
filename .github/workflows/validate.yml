@@ -440,3 +440,35 @@ jobs:
       # route reaches, or a hand edit all fail here.
       - name: Index up to date
         run: python3 scripts/build-index.py --check
+
+  # The `stable` release channel (operator 2026-11-25: own marketplaces auto-update on
+  # `stable`; nix-config registers this marketplace with `ref = "stable"`). `stable` is the
+  # LAST GREEN MAIN: a direct push that fails `gate` never reaches a consumer, a green one
+  # ships on the next background refresh. Same shape as the docs' release-channel example
+  # (code.claude.com/docs/en/plugins/host-marketplace, "Run release channels").
+  #
+  # Fast-forward only: `force=false` makes GitHub refuse a non-fast-forward, so an older
+  # run finishing after a newer one can never move `stable` backwards. That refusal is
+  # expected under concurrency and is not an error.
+  promote-stable:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: [gate]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 2
+    permissions:
+      contents: write
+    steps:
+      - name: Fast-forward stable to this green main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          if ! gh api "repos/$REPO/git/ref/heads/stable" --silent 2>/dev/null; then
+            gh api -X POST "repos/$REPO/git/refs" -f ref=refs/heads/stable -f sha="$SHA" --silent
+            echo "created stable at $SHA"
+          elif gh api -X PATCH "repos/$REPO/git/refs/heads/stable" -f sha="$SHA" -F force=false --silent; then
+            echo "stable -> $SHA"
+          else
+            echo "::notice::stable not moved to $SHA (not a fast-forward: a newer run already promoted)"
+          fi
