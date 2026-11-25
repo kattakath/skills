@@ -451,7 +451,10 @@ jobs:
   # run finishing after a newer one can never move `stable` backwards. That refusal is
   # expected under concurrency and is not an error.
   promote-stable:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # `!cancelled()` + an explicit result, not the implicit success(): `quick` is skipped
+    # on every push, and a skip anywhere in the needs chain skips a job whose `if:` has no
+    # status function (measured: ab7f614's run skipped this job with `gate` green).
+    if: ${{ !cancelled() && needs.gate.result == 'success' && github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     needs: [gate]
     runs-on: ubuntu-24.04
     timeout-minutes: 2
