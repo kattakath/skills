@@ -443,25 +443,11 @@ jobs:
 
   # repo-kit's drift checks (kattakath/nix-config ADR-016): treefmt over flake.nix, the
   # devShell's toolchain, and one files:<path> check per generated file (LICENSE, .envrc,
-  # .editorconfig, devcontainer.json), on both Linux arches. Copied from repo-kit's ci.yml,
-  # same pinned SHAs. Every event runs it, so gate always expects success.
+  # .editorconfig, devcontainer.json), on both Linux arches, through the fleet's ONE reusable
+  # nix-flake-check workflow (kattakath/.github). Every event runs it, so gate always expects
+  # success.
   flake-check:
-    strategy:
-      fail-fast: false
-      matrix:
-        runner: [ubuntu-24.04-arm, ubuntu-24.04]
-    runs-on: ${{ matrix.runner }}
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: cachix/install-nix-action@3dc140bfc76c49fbd4dd958429132e3746bcb086 # v31
-        with:
-          extra_nix_config: |
-            experimental-features = nix-command flakes
-      - name: nix flake check
-        run: nix flake check --print-build-logs
+    uses: kattakath/.github/.github/workflows/nix-flake-check.yml@cad98392a903fd89ec732ea116f38ec871e38ac0 # main
 
   # The `stable` release channel (operator 2026-11-25: own marketplaces auto-update on
   # `stable`; nix-config registers this marketplace with `ref = "stable"`). `stable` is the
