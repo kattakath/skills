@@ -1,0 +1,35 @@
+// The fleet's shared devcontainer (kattakath/nix-config, docs/fleet-devcontainer-adr.md).
+// The image carries its own settings (user, the Nix daemon entrypoint, init) in its
+// devcontainer.metadata label; this file holds only what a label cannot. `:1` is the
+// major tag; a breaking image change ships as `:2`. claude-code is not in the public
+// image: the `claude` terminal fetches it from Anthropic through nix-config's fleet shell.
+{
+  "name": "skills",
+  "image": "ghcr.io/kattakath/devcontainer:1",
+  "workspaceFolder": "/workspaces/skills",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/skills,type=bind",
+  "postStartCommand": "git -C / config --global --add safe.directory ${containerWorkspaceFolder}",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "anthropic.claude-code"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "terminal.integrated.profiles.linux": {
+          "bash": {
+            "path": "bash"
+          },
+          "claude": {
+            "path": "bash",
+            "args": [
+              "-lc",
+              "exec nix develop github:kattakath/nix-config#fleet -c claude"
+            ],
+            "icon": "claude"
+          }
+        }
+      }
+    }
+  }
+}
