@@ -1,31 +1,33 @@
 <p align="center">
-  <a href="https://kattakath.github.io">
+  <a href="#install">
     <img src="assets/banner.jpg" alt="Agent 1 and Agent 2 sharing one bicycle">
   </a>
 </p>
 
-<h1 align="center">Agent Skills &amp; Plugin Marketplace</h1>
+<h1 align="center">Agent Skills &amp; Plugin Marketplace <i>(skills)</i></h1>
 
 <p align="center">
-  <a href="https://github.com/kattakath/skills/actions/workflows/validate.yml"><img src="https://github.com/kattakath/skills/actions/workflows/validate.yml/badge.svg" alt="validate"></a>
-  <a href="https://github.com/kattakath/skills/commits/main"><img src="https://img.shields.io/github/last-commit/kattakath/skills/main?label=version%20%28HEAD%29&color=blue&logo=git&logoColor=white" alt="version: the HEAD commit on main"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="https://github.com/kattakath/skills/actions/workflows/validate.yml"><img src="https://github.com/kattakath/skills/actions/workflows/validate.yml/badge.svg" alt="validate workflow status"></a>
+  <a href="https://github.com/kattakath/skills/commits/stable"><img src="https://img.shields.io/github/last-commit/kattakath/skills/stable?label=stable&color=blue&logo=git&logoColor=white" alt="stable: when the release channel last moved"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/kattakath/skills" alt="License: MIT"></a>
 </p>
 
-Agent resources by Ismail Kattakath — Claude Code skills and plugins, plus portable data catalogs (like MCP server configs) that external harnesses read and consume.
+> A Claude Code plugin marketplace: Agent Skills, hooks, output styles, MCP and LSP servers, one plugin per folder.
 
 - `plugins/` holds every plugin: one folder each, carrying its own `.claude-plugin/plugin.json` and bundling [Agent Skills](https://agentskills.io) (`skills/<name>/SKILL.md`) with commands, agents, hooks or output styles. A lone skill ships as a one-skill plugin, so there is no separate `skills/` tree.
 - `.claude-plugin/marketplace.json` publishes them all as the `kattakath` marketplace.
-- `mcp/` holds portable MCP data — (eventually) registry declarations — not installed as a plugin. The MCP servers themselves are declared in each owning plugin's `plugins/<name>/.mcp.json`.
+- `mcp/` is reserved for portable MCP registry declarations, read by other harnesses rather than installed as a plugin. The MCP servers themselves are declared in each owning plugin's `plugins/<name>/.mcp.json`.
 
 ## Install
 
 ```bash
-/plugin marketplace add kattakath/skills
+/plugin marketplace add kattakath/skills#stable
 /plugin install <name>@kattakath
 ```
 
-To pick up new commits on your next session, open `/plugin` → Marketplaces → `kattakath` → **Enable auto-update**. Each plugin carries a semver `version`, raised on every change to it, so a new version means that plugin changed.
+`stable` is the release channel: CI fast-forwards it to each commit on `main` whose checks pass, so a red commit never reaches you. Drop `#stable` to track `main` directly.
+
+To pick up new releases on your next session, open `/plugin` → Marketplaces → `kattakath` → **Enable auto-update**. Each plugin carries a semver `version`, raised on every change to it, so a new version means that plugin changed.
 
 Auto-update is **off by default** for every marketplace but Anthropic's own, and a marketplace cannot turn it on for you — so until you enable it, nothing here updates on its own. To pull changes once without enabling it:
 
@@ -92,6 +94,10 @@ Where a plugin has its own `README.md`, it covers that plugin's commands, skills
 ## Scripts are the source of truth for rules
 
 `plugins/userscript-lab/scripts/userscript-meta-lint.sh` is the single Greasy Fork rulebook. It is what the plugin tells you to run, and it is what userscript repositories run in their own CI.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to add or change a plugin.
 
 ## License
 
