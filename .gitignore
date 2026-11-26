@@ -9,3 +9,8 @@ __pycache__/
 
 # CI-only dev tooling (package.json); never shipped in a plugin
 node_modules/
+
+# direnv / repo-kit: the devShell cache and per-operator overrides
+.direnv/
+.envrc.local
+.env
