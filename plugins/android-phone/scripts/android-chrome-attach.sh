@@ -33,7 +33,9 @@
 # sibling session's endpoint. Tests: tests/attach-cases.sh.
 #
 # Configuration (environment):
-#   ANDROID_SERIAL      which device, when more than one is attached (adb's own variable).
+#   ADB                 the adb binary (the fleet sets it to the SDK's platform-tools copy);
+#                       else $ANDROID_HOME/platform-tools/adb, else `adb` on PATH
+#   ANDROID_SERIAL     which device, when more than one is attached (adb's own variable).
 #                       Unset with several attached: the sole EMULATOR wins, because the
 #                       emulator is the automation target and a USB phone is usually
 #                       attached for something else. Two emulators, or none: no forward.
@@ -47,8 +49,16 @@ port="${ANDROID_CDP_PORT:-9223}"
 socket="${ANDROID_CDP_SOCKET:-chrome_devtools_remote}"
 
 child=
-adb="$(command -v adb 2>/dev/null || true)"
-[ -n "$adb" ] || [ ! -x /opt/homebrew/bin/adb ] || adb=/opt/homebrew/bin/adb
+# adb: $ADB, then the SDK's platform-tools under $ANDROID_HOME, then PATH. No Homebrew
+# fallback: the android-platform-tools cask is not installed on the fleet any more.
+adb=
+if [ -n "${ADB:-}" ] && [ -x "$ADB" ]; then
+  adb=$ADB
+elif [ -n "${ANDROID_HOME:-}" ] && [ -x "$ANDROID_HOME/platform-tools/adb" ]; then
+  adb=$ANDROID_HOME/platform-tools/adb
+else
+  adb="$(command -v adb 2>/dev/null || true)"
+fi
 
 reg="${TMPDIR:-/tmp}/android-chrome-attach-$(id -u)"
 if ! { { mkdir -m 700 "$reg" 2>/dev/null || [ -d "$reg" ]; } && mkdir -p "$reg/$port" && : >"$reg/$port/$$"; }; then

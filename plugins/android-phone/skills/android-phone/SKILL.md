@@ -22,8 +22,11 @@ description: >-
 Always reach for the **`android-phone`** wrapper (on PATH via Home Manager) instead of
 raw `adb`/`scrcpy` invocations. It encodes several live-diagnosed adb footguns
 (documented in `packages/android-phone.nix` in kattakath/nix-config) that raw adb
-makes you re-learn every time. `adb` and `scrcpy` themselves come from Homebrew
-(`android-platform-tools`, `scrcpy`) — the wrapper resolves them dynamically.
+makes you re-learn every time. The wrapper resolves `adb` and `scrcpy` at run time:
+- `adb` is the Android SDK's platform-tools copy, through `$ADB`, else `adb` on PATH.
+- `scrcpy` comes from PATH.
+- There is no Homebrew adb, because the `android-platform-tools` cask is gone. So don't
+  `brew install` one.
 
 ## Command surface
 

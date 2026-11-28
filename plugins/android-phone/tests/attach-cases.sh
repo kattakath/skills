@@ -156,5 +156,24 @@ case "$err" in *"no forward yet"*) ;; *) fail "two-emulator message: $err" ;; es
 [ ! -e "$scratch/state/removes" ] || fail "two emulators: removed a forward it never made"; gone "two emulators"
 ok "two emulators: no guess, no forward"
 
-[ "$pass" -ge 14 ] || { echo "expected >= 14 cases, ran $pass" >&2; exit 1; }
+# adb lookup: $ADB, then $ANDROID_HOME/platform-tools/adb, then PATH (no Homebrew path).
+# Two tagged wrappers around the fake adb record which copy the launcher ran.
+mkdir -p "$scratch/sdk/platform-tools" "$scratch/alt"
+for w in sdk/platform-tools alt; do
+  # shellcheck disable=SC2016 # $FAKE_ADB_STATE and "$@" belong to the generated wrapper
+  printf '#!/bin/sh\necho %s >>"$FAKE_ADB_STATE/who"\nexec "%s" "$@"\n' "${w%%/*}" "$scratch/bin/adb" >"$scratch/$w/adb"
+  chmod +x "$scratch/$w/adb"
+done
+who() { sort -u "$scratch/state/who" 2>/dev/null | tr '\n' ' '; }
+reset; (run FAKE_NPX_EXIT=0 ADB="$scratch/alt/adb" ANDROID_HOME="$scratch/sdk") </dev/null 2>/dev/null || true
+[ "$(who)" = "alt " ] || fail "\$ADB set: ran '$(who)', want alt"; gone "ADB wins"
+ok "adb: \$ADB wins over ANDROID_HOME and PATH"
+reset; (run FAKE_NPX_EXIT=0 ANDROID_HOME="$scratch/sdk") </dev/null 2>/dev/null || true
+[ "$(who)" = "sdk " ] || fail "ANDROID_HOME only: ran '$(who)', want sdk"; gone "ANDROID_HOME"
+ok "adb: \$ANDROID_HOME/platform-tools/adb wins over PATH"
+reset; (run FAKE_NPX_EXIT=0 ADB="$scratch/missing/adb" ANDROID_HOME="$scratch/sdk") </dev/null 2>/dev/null || true
+[ "$(who)" = "sdk " ] || fail "\$ADB not executable: ran '$(who)', want sdk"; gone "ADB missing"
+ok "adb: a non-executable \$ADB falls through to the SDK copy"
+
+[ "$pass" -ge 17 ] || { echo "expected >= 17 cases, ran $pass" >&2; exit 1; }
 echo "android-chrome launcher: $pass cases passed"

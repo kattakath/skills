@@ -52,4 +52,8 @@ send different finger IDs, so enroll by the route you will unlock with).
 
 The `android-phone` CLI on `PATH` (packaged in
 [`kattakath/nix-config`](https://github.com/kattakath/nix-config) as `packages/android-phone.nix`),
-plus Homebrew's `android-platform-tools` and `scrcpy`, which the wrapper resolves dynamically.
+plus `adb` and `scrcpy`, which the wrapper resolves at run time:
+- **adb:** the Android SDK's platform-tools copy, through `$ADB` (set fleet-wide), else
+  `adb` on `PATH`. There is no Homebrew adb: nix-config removed the `android-platform-tools`
+  cask.
+- **scrcpy:** from `PATH` (nixpkgs on the fleet).
