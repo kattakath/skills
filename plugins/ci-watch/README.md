@@ -6,13 +6,16 @@ commit triggered:
 
 | Outcome | What reaches the session |
 |---|---|
-| all runs pass | **nothing** |
+| all runs pass | a one-line `ci-watch GREEN` FYI — nothing to do |
 | a run fails, is cancelled or times out | a `ci-watch RED` wake-up |
 | no run appears | `NO_RUNS` |
 | a run is still going at the ceiling | `STILL_RUNNING` |
+| the push landed but GitHub/GitLab lookups failed | `WATCH_FAILED` |
 
-Each wake-up carries a summary and the path to a JSON report (`schema: ci-watch/report@1`).
-The report holds the full sha, changed files, run/job/step ids and URLs, the numbered log
+**Green wakes too, on purpose** (since 1.2.0). A silent green looked exactly like a watch
+that was lost, so no push could be told apart from an unwatched one. Every watched push now
+writes a JSON report (`schema: ci-watch/report@1`). Every wake-up names its outcome, and all
+but GREEN print the report's path. For a failure, the report holds the full sha, changed files, run/job/step ids and URLs, the numbered log
 lines around `##[error]` cut to the failing step, and the rerun commands.
 
 It's deterministic: only `gh` or `glab`, with no model in the loop. Usage, the landing procedure and

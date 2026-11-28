@@ -295,11 +295,11 @@
       "note": "Vendored unmodified from vercel/workflow (Apache-2.0, LICENSE shipped in the plugin, no upstream NOTICE), pinned by commit in the plugin README."
     },
     {
-      "goal": "Push straight to main and hear about CI only when it breaks",
+      "goal": "Push straight to main and hear how CI ended without waiting on it",
       "steps": [
         "ci-watch"
       ],
-      "note": "asyncRewake hook: silent on green, wakes the session with a resolved report on red, no runs or still running."
+      "note": "asyncRewake hook: wakes the session on every outcome — a one-line FYI on green, a resolved report on red, no runs or still running."
     },
     {
       "goal": "Give each git repo its own named background session and hand work to it",

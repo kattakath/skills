@@ -2,15 +2,18 @@
 // @ts-check
 /**
  * ci-watch: wait on every GitHub Actions run (or GitLab pipeline) that a commit pushed to
- * the default branch triggered. SILENT when they pass. In every other case (red, nothing checked it, still
- * running at the ceiling, or the watch itself failing) it writes a JSON report and prints
- * a short summary.
+ * the default branch triggered. EVERY outcome writes a JSON report and prints a summary: a
+ * one-line FYI when they pass (GREEN), the resolved detail when red, nothing checked it,
+ * still running at the ceiling, or the watch itself failing. A green push and a lost
+ * watch must never look the same, so green is never silent.
  *
  *   node ci-watch.js [--sha <sha>] [--repo <owner/name> | gitlab.com/<path>] [--cwd <dir>]
- *       CLI. The forge comes from --repo, else from the checkout's `origin` URL. Exit 0 green, 1 red, 3 no runs, 4 still running, 64 usage/lookup error.
+ *       CLI. The forge comes from --repo, else from the checkout's `origin` URL. Exit 0 green
+ *       (the GREEN line on stdout), 1 red, 3 no runs, 4 still running, 64 usage/lookup error.
  *   node ci-watch.js --hook
- *       PostToolUse(Bash) asyncRewake hook. Exit 0 on green or not-a-push-to-default.
- *       Anything else exits 2, which wakes the session with the summary (stderr).
+ *       PostToolUse(Bash) asyncRewake hook. Exit 0 only for not-a-push-to-default (or a
+ *       sha already watched). A watched push always exits 2, which wakes the session with
+ *       the summary (stderr) — including GREEN, as a one-line FYI.
  *
  * Everything comes from `gh` (GitHub), `glab` (GitLab, gitlab.com remotes) and `git`; there
  * is no model in this loop. Each forge is one adapter that returns runs and jobs in the
@@ -63,7 +66,7 @@ const path = require("node:path");
  */
 /**
  * @typedef {{
- *   schema: "ci-watch/report@1", status: "RED" | "NO_RUNS" | "STILL_RUNNING" | "WATCH_FAILED",
+ *   schema: "ci-watch/report@1", status: "GREEN" | "RED" | "NO_RUNS" | "STILL_RUNNING" | "WATCH_FAILED",
  *   repo: string, branch: string, sha: string, subject: string, commit_url: string,
  *   changed_files: string[], started_at: string, finished_at: string, note: string,
  *   runs: { id: number, workflow: string, event: string, status: string, conclusion: string, url: string }[],
@@ -410,18 +413,26 @@ function summary(r, file, forge) {
   return out.join("\n");
 }
 
+/** The one-line GREEN summary: FYI, not a call to act. @param {Report} r */
+function greenLine(r) {
+  const ok = r.runs.filter((x) => x.conclusion === "success");
+  const names = [...new Set(ok.map((x) => x.workflow))].join(", ");
+  return `ci-watch GREEN: ${r.repo}@${r.sha.slice(0, 12)} ${JSON.stringify(r.subject)} — ${ok.length} run${ok.length === 1 ? "" : "s"} passed (${names})`;
+}
+
 /** @param {Report} r @returns {string} */
 function save(r) {
   const dir = reportDir();
   fs.mkdirSync(dir, { recursive: true });
   // Every slash: a GitLab subgroup path (g/sub/r) would otherwise name a missing directory.
-  const file = path.join(dir, `${r.repo.replace(/\//g, "--")}-${r.sha}.json`);
+  // A WATCH_FAILED before the repo resolved has no repo name yet.
+  const file = path.join(dir, `${(r.repo || "unresolved").replace(/\//g, "--")}-${r.sha}.json`);
   fs.writeFileSync(file, JSON.stringify(r, null, 2) + "\n");
   return file;
 }
 
 /**
- * Watch one target to the end. Returns the exit code and, unless green, the summary.
+ * Watch one target to the end. Returns the exit code and the summary (one line on green).
  * @param {Target} t
  * @returns {{ code: number, text: string }}
  */
@@ -430,7 +441,15 @@ function watch(t) {
   const w = waitForRuns(t);
   const red = w.runs.some((r) => r.status === "completed" && !PASS.has(r.conclusion));
   const checked = w.runs.some((r) => r.conclusion === "success");
-  if (w.status === "DONE" && !red && checked) return { code: EXIT.GREEN, text: "" };
+  if (w.status === "DONE" && !red && checked) {
+    const g = buildReport(t, "GREEN", w.runs, startedAt);
+    try {
+      save(g);
+    } catch {
+      // An unwritable report dir costs the receipt, never the verdict: green stays green.
+    }
+    return { code: EXIT.GREEN, text: greenLine(g) };
+  }
   /** @type {"RED" | "NO_RUNS" | "STILL_RUNNING"} */
   const status = red ? "RED" : w.status === "STILL_RUNNING" ? "STILL_RUNNING" : "NO_RUNS";
   const note =
@@ -502,9 +521,35 @@ function refspecOf(args, dir) {
 }
 
 /**
+ * A WATCH_FAILED report from whatever was known when the watch broke. No forge call: the
+ * forge is what just failed.
+ * @param {RepoRef | null} rb @param {string} sha @param {string} startedAt @param {string} note
+ * @returns {Report}
+ */
+function failedReport(rb, sha, startedAt, note) {
+  return {
+    schema: "ci-watch/report@1",
+    status: "WATCH_FAILED",
+    repo: rb ? rb.repo : "",
+    branch: rb ? rb.branch : "",
+    sha,
+    subject: "",
+    commit_url: "",
+    changed_files: [],
+    started_at: startedAt,
+    finished_at: now(),
+    note,
+    runs: [],
+    failures: [],
+    pending: [],
+  };
+}
+
+/**
  * PostToolUse(Bash) entry. Before a push is identified, anything unexpected exits 0
- * (this hook sees every Bash call). After it, every failure wakes the session: a push
- * that landed and is not watched must never look like a pass.
+ * (this hook sees every Bash call). After it, every outcome wakes the session, green
+ * included: a push that landed and is not watched must never look like a pass, and a
+ * pass must never look like a lost watch.
  */
 function hook() {
   const hookStart = Date.now();
@@ -544,26 +589,39 @@ function hook() {
   } catch {
     return 0;
   }
-  // From here a GitHub or GitLab push happened, so every failure must wake the session.
+  // From here a GitHub or GitLab push happened, so every outcome wakes the session.
   const label = `${push.dir}@${String(pushed).slice(0, 12)}`;
+  const startedAt = now();
+  /** @type {RepoRef | null} */
+  let rb = null;
   try {
-    const rb = fg.forge === "gitlab" ? FORGES.gitlab.repoOf(fg) : FORGES.github.repoOf({ cwd: push.dir });
+    rb = fg.forge === "gitlab" ? FORGES.gitlab.repoOf(fg) : FORGES.github.repoOf({ cwd: push.dir });
     if (spec.dst !== rb.branch) return 0; // a feature-branch push
     const t = { ...rb, sha: fullSha(rb, pushed), since: hookStart - 120_000 };
     if (!FORGES[t.forge].onBranch(t)) return 0; // the push did not land (rejected, or rewritten)
     // One watcher per sha: exclusive create, so a second hook for the same push exits here.
+    // Only the MARKER's EEXIST means "already watched": mkdir on a path that is a plain file
+    // also throws EEXIST, and reading that as a dedupe would drop the watch silently.
     try {
       fs.mkdirSync(reportDir(), { recursive: true });
+    } catch {
+      // An unwritable dir only costs the dedupe; the watch still runs.
+    }
+    try {
       fs.closeSync(fs.openSync(path.join(reportDir(), `watched-${t.repo.replace(/\//g, "--")}-${t.sha}`), "wx"));
     } catch (e) {
       if (/** @type {{ code?: string }} */ (e).code === "EEXIST") return 0;
-      // An unwritable dir only costs the dedupe; the watch still runs.
     }
-    const r = watch(t);
-    if (r.code === EXIT.GREEN) return 0;
-    process.stderr.write(r.text + "\n");
+    process.stderr.write(watch(t).text + "\n");
   } catch (e) {
-    process.stderr.write(`ci-watch WATCH_FAILED: ${label} — the push landed but could not be watched: ${errMsg(e)}\n`);
+    const note = `the push landed but could not be watched: ${errMsg(e)}`;
+    let where = "";
+    try {
+      where = `\nReport: ${save(failedReport(rb, String(pushed), startedAt, note))}`;
+    } catch (e2) {
+      where = `\n(report not written: ${errMsg(e2)})`;
+    }
+    process.stderr.write(`ci-watch WATCH_FAILED: ${label} — ${note}${where}\n`);
   }
   return 2;
 }
@@ -603,7 +661,8 @@ function cli(argv) {
     return EXIT.USAGE;
   }
   const r = watch(t);
-  if (r.text) process.stderr.write(r.text + "\n");
+  // Green is not an error: its one line goes to stdout, everything else to stderr.
+  (r.code === EXIT.GREEN ? process.stdout : process.stderr).write(r.text + "\n");
   return r.code;
 }
 

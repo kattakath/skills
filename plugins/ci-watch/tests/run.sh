@@ -2,7 +2,8 @@
 # Case suite for scripts/ci-watch.js. No network: `gh`, `glab` and `git` are tests/fixtures/gh-stub.js.
 #
 # The halves that matter:
-#   silent-GREEN  all runs pass -> exit 0, NOTHING on stdout or stderr, no report written
+#   GREEN-wakes   all runs pass -> a GREEN report and one FYI line; the hook exits 2 (wakes),
+#                 the CLI exits 0 with the line on stdout
 #   never-GREEN   zero runs, all-skipped runs, a run that registers late (even after a long
 #                 one completes), a still-running or a cancelled run is not green
 #   resolved-RED  the report names run/job/step ids, numbered log lines and rerun commands
@@ -74,12 +75,20 @@ print($1)"; }
 calls() { grep -c "^$1" "$F/calls.log" 2>/dev/null || true; }
 none() { test -f "$F/calls.log" && grep -q '^run list' "$F/calls.log" && echo listed || echo none; }
 
-# ---- silent-GREEN -------------------------------------------------------------------
+# ---- GREEN (CLI) ----------------------------------------------------------------------
 fx green; runs 1 "11:nix-ci:completed:success" "12:publish:completed:skipped" "13:lint:completed:neutral"; cw
 check "green: exit 0" "$RC" 0
-check "green: stdout empty" "$OUT" ""
+check "green: stdout is the one GREEN line" "$OUT" "ci-watch GREEN: o/r@${S:0:12} \"fix: thing\" — 1 run passed (nix-ci)"
 check "green: stderr empty" "$ERR" ""
-check "green: no report written" "$(find "$F/out" -type f | wc -l | tr -d ' ')" 0
+check "green: report written" "$(j 'd["status"]')" GREEN
+check "green: report schema" "$(j 'd["schema"]')" ci-watch/report@1
+check "green: report lists every run" "$(j 'len(d["runs"])')" 3
+check "green: report has no failures" "$(j 'd["failures"]')" "[]"
+fx greenro; runs 1 "11:nix-ci:completed:success"; rmdir "$F/out"; : >"$F/out"; cw
+check "green, unwritable report dir: CLI still exits 0" "$RC" 0
+check "green, unwritable report dir: CLI still prints the GREEN line" "$(grep -c '^ci-watch GREEN: o/r@' <<<"$OUT")" 1
+hk "git push origin HEAD:main" "$S"
+check "green, unwritable report dir: hook still wakes (exit 2), not WATCH_FAILED" "$RC:$(grep -c '^ci-watch GREEN: o/r@' <<<"$ERR")" "2:1"
 
 # ---- never-GREEN --------------------------------------------------------------------
 fx none; runs 1; cw
@@ -221,9 +230,11 @@ hk "git push" "$S"
 check "hook: same sha again is deduped" "$RC" 0
 check "hook: dedupe lists runs only once" "$(calls 'run list')" 1
 
-fx hgreen; runs 1 "11:nix-ci:completed:success"; hk "git -C $F/sub push" "$S"
-check "hook: green exits 0" "$RC" 0
-check "hook: green is silent" "$ERR$OUT" ""
+fx hgreen; runs 1 "11:nix-ci:completed:success" "12:publish:completed:success"; hk "git -C $F/sub push" "$S"
+check "hook: green wakes (exit 2)" "$RC" 2
+check "hook: green is ONE line on stderr" "$ERR" "ci-watch GREEN: o/r@${S:0:12} \"fix: thing\" — 2 runs passed (nix-ci, publish)"
+check "hook: green stdout stays empty" "$OUT" ""
+check "hook: green writes a GREEN report" "$(j 'd["status"]')" GREEN
 check "hook: git -C <dir> resolves the repo in <dir>" "$(grep -c "^repo view .*@$F/sub\$" "$F/calls.log")" 1
 
 fx hcd; runs 1 "11:nix-ci:completed:success"; hk "cd $F/sub && git push origin main" "$S"
@@ -245,9 +256,14 @@ fx hlookup; rm -f "$F/commit.json"; hk "git push" "$S"
 check "hook: a lookup error after a landed push wakes (exit 2)" "$RC" 2
 check "hook: ... and says WATCH_FAILED" "$(grep -c '^ci-watch WATCH_FAILED' <<<"$ERR")" 1
 
+check "hook: ... writes a WATCH_FAILED report" "$(j 'd["status"]')" WATCH_FAILED
+check "hook: ... the report keeps the repo and the error" "$(j 'd["repo"]+" "+str("HTTP 404" in d["note"])')" "o/r True"
+check "hook: ... the summary points at the report" "$(grep -c "^Report: .*o--r-$S.json" <<<"$ERR")" 1
+
 fx hgh; rm -f "$F/repo.json"; hk "git push" "$S"
 check "hook: gh failing after a landed push wakes (exit 2)" "$RC" 2
 check "hook: ... WATCH_FAILED" "$(grep -c '^ci-watch WATCH_FAILED' <<<"$ERR")" 1
+check "hook: ... an unresolved repo still gets a report" "$(python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["status"], d["repo"]=="")' "$F/out/unresolved-$S.json" 2>/dev/null)" "WATCH_FAILED True"
 fx hvar; hk 'cd "$WT" && git push origin HEAD:main' "$S"
 check "hook: push in an unresolvable (variable) dir wakes" "$RC" 2
 check "hook: ... and says to watch by hand" "$(grep -c 'Watch it by hand' <<<"$ERR")" 1
@@ -282,9 +298,9 @@ GLR=git@gitlab.com:o/r.git
 glcalls() { grep -c "^api --hostname gitlab.com projects/42/pipelines?sha=$S" "$F/calls.log" 2>/dev/null || true; }
 
 glfx glgreen; glruns 1 "501:success" "502:skipped"; CI_WATCH_FAKE_REMOTE=$GLR hk "git push origin HEAD:main" "$S"
-check "gitlab: green exits 0" "$RC" 0
-check "gitlab: green is silent" "$ERR$OUT" ""
-check "gitlab: green writes no report" "$(find "$F/out" -type f -name '*.json' | wc -l | tr -d ' ')" 0
+check "gitlab: green wakes (exit 2)" "$RC" 2
+check "gitlab: green is the one GREEN line" "$ERR" "ci-watch GREEN: o/r@${S:0:12} \"fix: thing\" — 1 run passed (pipeline 501)"
+check "gitlab: green writes a GREEN report" "$(j 'd["status"]')" GREEN
 check "gitlab: pipelines listed by the full sha" "$(glcalls)" 1
 check "gitlab: asks GitHub nothing" "$(calls 'repo view')" 0
 check "gitlab: the project is resolved by its encoded path" "$(calls 'api --hostname gitlab.com projects/o%2Fr ')" 1
@@ -358,6 +374,7 @@ check "gitlab: subgroup report lands in the report dir" "$(test -f "$F/out/g--su
 
 glfx glcli; glruns 1 "581:success"; cw --repo gitlab.com/o/r --sha 0123456
 check "gitlab cli: --repo gitlab.com/<path> watches through glab" "$RC" 0
+check "gitlab cli: green prints its line on stdout" "$(grep -c '^ci-watch GREEN: o/r@' <<<"$OUT")" 1
 check "gitlab cli: short sha expands to the full one" "$(glcalls)" 1
 glfx glcli2; glruns 1 "582:failed"; printf '[]' >"$F/gl-jobs-582.json"; CI_WATCH_FAKE_REMOTE=$GLR cw
 check "gitlab cli: origin's gitlab.com URL picks glab" "$RC" 1

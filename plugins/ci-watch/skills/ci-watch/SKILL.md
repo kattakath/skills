@@ -2,21 +2,22 @@
 name: ci-watch
 description: >-
   Land a change by pushing straight to the default branch and keep working, while a
-  background hook waits on the CI it triggered and wakes the session ONLY if something
-  is wrong. Use when the user says "push to main", "don't wait for the checks", "watch CI
+  background hook waits on the CI it triggered and wakes the session when it ends —
+  a one-line FYI on green, a resolved report when something is wrong. Use when the user says "push to main", "don't wait for the checks", "watch CI
   in the background", "interrupt me only if it fails", "no PR, just push", or when a
-  `ci-watch RED` / `NO_RUNS` / `STILL_RUNNING` reminder arrives and has to be acted on.
+  `ci-watch GREEN` / `RED` / `NO_RUNS` / `STILL_RUNNING` / `WATCH_FAILED` reminder arrives and has to be acted on.
   Also use to watch a commit by hand: "is CI green for <sha>", "watch the checks on main".
   Covers the pre-push leak gates, what each wake-up means, and how to fix forward.
 ---
 
-# ci-watch — push, keep working, hear about it only when it breaks
+# ci-watch — push, keep working, hear how it ended
 
 The plugin's `PostToolUse` hook runs after every Bash command that pushes. It waits on
 **every** GitHub Actions run the pushed commit triggered — or, for a `gitlab.com` remote,
-every GitLab pipeline, through `glab`. Other GitLab hosts stay quiet (unwatched). All green → it exits silently and
-nothing reaches the conversation. Anything else → it wakes the session with a summary and a
-path to the full JSON report.
+every GitLab pipeline, through `glab`. Other GitLab hosts stay quiet (unwatched). All green → it wakes the
+session with ONE `ci-watch GREEN` line, an FYI with nothing to act on. Anything else → it
+wakes the session with a summary and a path to the full JSON report. Every outcome writes
+a report, so a green push and a lost watch never look the same.
 
 ## Landing a change
 
@@ -28,7 +29,8 @@ path to the full JSON report.
 3. **Push from a Bash tool call:** `git push origin HEAD:<branch>`. Do not wait on CI;
    go on with the next task. **Never force-push the default branch.** A red build gets a
    fix-forward commit.
-4. **Green means silence.** Don't announce it, poll it or check on it.
+4. **Green is a one-line FYI.** A `ci-watch GREEN` wake-up needs no action: don't poll,
+   don't re-check, just carry on. Mention it only where a landing is being reported anyway.
 
 The hook fires only for pushes **the agent** runs. A push the user types (`! git push`)
 or makes outside the session is unwatched. Watch it by hand (below).
@@ -41,6 +43,7 @@ broken hook. The text starts `ci-watch <STATUS>: <owner/repo>@<sha12> "<subject>
 
 | Status | Meaning | Do |
 |---|---|---|
+| `GREEN` | Every run passed, and at least one succeeded | Nothing. Carry on |
 | `RED` | A run ended `failure`, `cancelled`, `timed_out` or similar; on GitLab `failed`, `canceled`, or `manual` (blocked on a manual job that may not fail) | Read the report; fix forward; push again. `manual` needs a human to play the job |
 | `NO_RUNS` | Nothing ran on the commit within the appear window, or every run was skipped | The repo has no `push` trigger for this branch, or every workflow was path-filtered or `if:`-gated out. Tell the user. This is not a pass |
 | `STILL_RUNNING` | A run was still going at the 45-min ceiling | Watch it by hand with the same sha; don't assume either outcome |
@@ -88,7 +91,7 @@ it is gated on `pull_requests[0]`, and a direct push has no PR.
 node "<plugin>/scripts/ci-watch.js" --sha <sha> [--repo owner/name | gitlab.com/<path>] [--cwd <checkout>]
 ```
 
-Without `--repo`, the checkout's `origin` URL picks the forge. Run it with `run_in_background`. Exit codes: 0 green (prints nothing), 1 red, 3 no runs,
+Without `--repo`, the checkout's `origin` URL picks the forge. Run it with `run_in_background`. Exit codes: 0 green (prints the one GREEN line on stdout), 1 red, 3 no runs,
 4 still running, 64 usage or lookup error. The report lands in `$CLAUDE_PLUGIN_DATA`, or
 `<tmp>/ci-watch` outside a hook.
 
