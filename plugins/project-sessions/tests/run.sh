@@ -107,6 +107,7 @@ check "name: outside git exits 2" "$RC" "2"
 
 # --- decide (--dry-run) ---------------------------------------------------------
 N=github.com:o/r
+SET="{\"env\":{\"CLAUDE_CODE_TASK_LIST_ID\":\"$N\"}}" # the --settings value every create carries
 ID1=11111111-1111-4111-8111-111111111111
 ID2=22222222-2222-4222-8222-222222222222
 row() { # cwd state startedAt sessionId [kind] [name]
@@ -189,12 +190,27 @@ agents
 : >"$STUB_LOG"
 run "$PS" ensure "$T/wt" --prompt "hello there"
 check "create: output" "$RC:$OUT" "0:created $N"
-check "create: argv, task list and cwd" "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=$N|--bg --name $N hello there"
+check "create: argv, task list and cwd" "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=<unset>|--bg --name $N --settings $SET hello there"
 uuid_free "create ids" "$OUT"
 : >"$STUB_LOG"
 run "$PS" ensure "$R" --permission-mode bypassPermissions --prompt "hi"
 check "create with --permission-mode: passed on create" \
-  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions hi"
+  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET hi"
+
+# The task list must reach the SESSION, which runs under the daemon, not this client. The stub
+# models that: only --settings sets it; the client env is invisible (see fixtures/claude).
+SL="$T/session.log"
+: >"$SL"
+STUB_SESSION_LOG=$SL STUB_DAEMON_TASK=github.com:x/stale run "$PS" ensure "$R" --prompt hi
+check "task list: reaches the session past a daemon holding another repo's list" "$RC:$(cat "$SL")" "0:SESSION_TASK=$N"
+: >"$STUB_LOG"
+CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R" --prompt hi
+check "task list: the caller's own list never leaks into the client env" "$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "TASK=<unset>"
+check "task list: no env-prefix channel is left in the script" "$(grep -c 'env CLAUDE_CODE_TASK_LIST_ID=' "$PS")" "0"
+mkrepo "$T/odd dir"
+: >"$SL"
+(cd "$T/odd dir" && STUB_SESSION_LOG=$SL run "$PS" ensure . --prompt hi && printf '%s' "$RC" >"$T/odd.rc")
+check "task list: a local: name with a space is valid JSON in --settings" "$(cat "$T/odd.rc"):$(cat "$SL")" "0:SESSION_TASK=local:$T/odd dir"
 run "$PS" ensure "$R" --permission-mode
 check "--permission-mode without a value fails" "$RC" "1"
 
@@ -294,7 +310,7 @@ for c in 'unset||manual' '0||manual' '1||auto' '1|0|manual' '0|1|auto' '|1|auto'
   if [ "$want" = auto ]; then
     check "auto gate ATTENDED=$att AUTO=$auto: starts the session" "$(ctx)" "$SS_AUTO \`$N\` (created). $HAND"
     check "auto gate ATTENDED=$att AUTO=$auto: create argv in the mirrored mode" "$(bgs)" \
-      "$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
+      "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
   else
     check "auto gate ATTENDED=$att AUTO=$auto: names only" "$(ctx)" \
       "project-sessions: this repo has no project session yet (name \`$N\`). Before multi-step work here, load the \`project-sessions\` skill."
@@ -328,7 +344,7 @@ check "auto: returns within its bound while --bg is still running" "$([ "$took" 
 check "auto: ensure not finished when the hook returned" "$([ -f "$RES.rc" ] && echo finished || echo running)" "running"
 check "auto: says starting" "$(ctx)" "$SS_AUTO \`$N\` (starting). $HAND"
 settle
-check "auto: the detached ensure created it in the mirrored mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=$N|--bg --name $N --permission-mode acceptEdits"
+check "auto: the detached ensure created it in the mirrored mode" "$(bgs | cut -d' ' -f1-7)" "$R|TASK=<unset>|--bg --name $N --permission-mode acceptEdits --settings $SET"
 check "auto: ensure finished cleanly" "$(cat "$RES.rc"):$(cat "$RES.out")" "0:created $N"
 
 agents
@@ -404,7 +420,7 @@ fresh
 STUB_BG_SLEEP=2 run upsrun $ID1 "$R" bypassPermissions
 settle
 check "prompt: no session: starting" "$(ctx)" "Project session for this repo: \`$N\` (starting). For multi-step work, SendMessage it the task instead of doing it here."
-check "prompt: creates it in the caller's mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions"
+check "prompt: creates it in the caller's mode" "$(bgs | cut -d' ' -f1-7)" "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET"
 fresh
 run upsrun $ID1 "$R" plan
 check "prompt: plan mode creates nothing and says why" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" \
