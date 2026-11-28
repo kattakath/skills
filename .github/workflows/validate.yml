@@ -255,13 +255,10 @@ jobs:
             echo "::warning file=plugins/kattakath-workspace/skills/kattakath-workspace/references/allowlist.json::allowlist.json differs from nix-config main; push the matching nix-config commit (apps edit + pin bump)"
           fi
 
-      # markup-lsp's flake.lock is bumped by hand to follow nix-config's nixpkgs pin (its
-      # README says why no bot). This is the watcher for that hand step: a WARNING, exit 0,
-      # because a lag behind nix-config's weekly update-flake-lock run is expected.
-      - name: markup-lsp nixpkgs pin vs nix-config main
-        run: |
-          python3 -I plugins/markup-lsp/tests/lock-parity.py .nix-config/flake.lock \
-            || echo "::warning file=plugins/markup-lsp/flake.lock::lock-parity.py could not compare the nixpkgs pins; see the step log"
+      # The markup-lsp pin watcher itself is markup-lsp-pin.yml (scheduled; keeps one issue).
+      # Here only its checker's exit codes are tested: 0 match, 3 lag, anything else broken.
+      - name: markup-lsp lock-parity cases
+        run: bash plugins/markup-lsp/tests/lock-parity-cases.sh
 
       # CDP is gone from the userscript toolchain; this fails if any of it creeps back in.
       - name: userscript-lab no-CDP gate

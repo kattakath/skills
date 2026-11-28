@@ -1,0 +1,57 @@
+name: markup-lsp-pin
+
+# markup-lsp's flake.lock is bumped by hand to follow nix-config's nixpkgs pin (the plugin
+# README says why no bot). This is the watcher for that hand step, and it must reach a human:
+#   - pins differ   -> open ONE issue, assigned (or comment on the open one with new revs)
+#   - pins match    -> close that issue
+#   - check broken  -> this run FAILS (GitHub notifies per the schedule owner's Actions
+#                      notification settings)
+#
+# Why a schedule and not a step in validate: the lag is created by nix-config's weekly
+# update-flake-lock PR (Mondays 04:23 UTC, merged whenever its CI passes), not by a push
+# here, so a check that runs only on skills pushes would wait for an unrelated push. Why
+# DAILY rather than weekly: that PR's merge time varies, and a Monday-only run that fires
+# before the merge would miss the lag by a week. A run that finds nothing to do costs one
+# API read and posts nothing.
+#
+# Why an issue and not ci-watch: ci-watch only wakes a session on pushes it watched, so
+# carrying warnings in its GREEN line would still miss a lag that no push here creates.
+
+on:
+  schedule:
+    - cron: "37 9 * * *" # off the hour: GitHub delays and may drop runs queued at :00
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: markup-lsp-pin
+  cancel-in-progress: false
+
+jobs:
+  parity:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: kattakath/nix-config
+          ref: main
+          path: .nix-config
+          persist-credentials: false
+
+      # ASSIGNEE: a bot-opened issue notifies only repo watchers, so the issue is assigned.
+      # On a scheduled run triggering_actor is whoever last edited the cron; nothing is
+      # hardcoded. Logic and its stubbed-gh cases: plugins/markup-lsp/tests/.
+      - name: Compare pins and keep one issue in step
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          ASSIGNEE: ${{ github.triggering_actor }}
+        run: bash plugins/markup-lsp/tests/pin-watch.sh .nix-config/flake.lock

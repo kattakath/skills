@@ -69,9 +69,18 @@ after a pin bump.
 ## Bumping the nixpkgs pin (by hand)
 
 `flake.lock` has **no updater**, and the cache verdict above holds only for the rev it pins.
-Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves. **CI tells you when:**
-the `markup-lsp nixpkgs pin vs nix-config main` step in `validate` runs
-`tests/lock-parity.py` and prints a **warning** (never a failure) when the two revs differ.
+Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves. **A GitHub issue
+tells you when.** The daily `markup-lsp-pin` workflow runs `tests/lock-parity.py` against
+nix-config's `main` (logic in `tests/pin-watch.sh`, cases in `tests/lock-parity-cases.sh`):
+- the pins differ: it opens **one** issue, *markup-lsp: nixpkgs pin lags nix-config*,
+  **assigned** to whoever last edited the workflow's schedule. Assignment is what notifies
+  someone; a bot-opened issue alone reaches only repo watchers. It comments on that issue
+  only when the revs change again;
+- the pins match: it closes that issue;
+- the check itself breaks: the run **fails**. Whether that sends mail depends on the
+  schedule owner's GitHub Actions notification settings.
+
+The lag can sit for up to a day after nix-config's Monday bump merges before the issue opens.
 
 ```bash
 cd plugins/markup-lsp
@@ -93,8 +102,8 @@ Why not a bot:
   itself runs weekly (`.github/workflows/update-flake-lock.yml`). It runs `nix flake update`,
   which moves the pin to whatever the FlakeHub URL serves now, not to nix-config's rev. The
   goal here is parity with nix-config, so that is the wrong target. Its PR would also be
-  lock-only, failing the version gate above, and still need the darwin rerun. The warn-only
-  parity step is the watcher instead.
+  lock-only, failing the version gate above, and still need the darwin rerun. The
+  `markup-lsp-pin` workflow above is the watcher instead.
 
 ## Tests
 
