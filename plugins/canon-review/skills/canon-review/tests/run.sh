@@ -115,13 +115,16 @@ check "scan: gitleaks exit 1 (an error) is failed, not found" "$(scan /none 1)" 
 check "scan: a planted literal is found" "$(scan "$SO/lits" 0)" "clean found"
 check "scan: a broken pattern is failed, not 'not reachable'" "$(scan "$SO/badre" 0)" "clean failed"
 seq 1 30 | sed 's/^/line /' >"$SO/repo/b.txt"
+printf 'after the cut\n' >"$SO/repo/c.txt"
 git -C "$SO/repo" add -A && git -C "$SO/repo" -c user.email=t@t -c user.name=t commit -q -m "add b"
 sha2=$(git -C "$SO/repo" rev-parse HEAD)
 printf '[{"repo": "o/r", "branch": "main", "dir": "%s", "commits": [{"sha": "%s", "subject": "add b"}, {"sha": "%s", "subject": "add a"}]}]' "$SO/repo" "$sha2" "$sha" >"$SO/commits.json"
 bash "$H/scripts/dump.sh" "$SO" --cap 10 2>/dev/null; rc=$?
 check "dump: one file per repo, a section per commit" "$rc:$(grep -c '^=== o/r@' "$SO/rev/o_r.txt")" "0:2"
 check "dump: --stat is there" "$(grep -c 'b.txt | 30 +' "$SO/rev/o_r.txt")" 1
-check "dump: a long diff is capped and says so" "$(grep -c '^\[truncated: 10 of [0-9]* lines\]$' "$SO/rev/o_r.txt")" 1
+check "dump: a long diff is capped and says so" "$(grep -c '^\[truncated: 10 of [0-9]* lines; ' "$SO/rev/o_r.txt")" 1
+check "dump: the marker names the file cut mid-diff and the files never shown" "$(grep -c '; cut mid-file: b.txt; not shown: c.txt\]$' "$SO/rev/o_r.txt")" 1
+check "dump: a short -> full sha table comes first" "$(head -3 "$SO/rev/o_r.txt" | grep -c "^${sha2:0:12}  $sha2  add b$")" 1
 check "dump: the capped section holds at most the cap" "$(awk '/^=== o\/r@'"$sha2"'/{on=1;next} /^=== /{on=0} on&&/^--- diff/{d=1;next} on&&d&&/^\[truncated/{exit} on&&d{n++} END{print n}' "$SO/rev/o_r.txt")" 10
 bash "$H/scripts/dump.sh" "$SO" --cap 0 2>/dev/null; check "dump: --cap 0 is a usage error" "$?" 2
 # The shared resolver's pinned download, offline: a stub curl serves the "release".

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # canon-review step 2's reading, as ONE file per repo instead of a git call per commit:
-# for each listed commit, its header, `--stat`, then the diff capped at 400 lines (with a
-# "[truncated: N of M lines]" marker when cut). Binary files show only their stat line, as git
-# prints them.
+# a short -> full sha table, then for each listed commit its header, `--stat`, and the diff capped
+# at 400 lines; a cut one ends in "[truncated: N of M lines; cut mid-file: F; not shown: G, H]".
+# Binary files show only their stat line, as git prints them.
 #
 #   dump.sh OUTDIR [--cap N]    reads OUTDIR/commits.json, writes OUTDIR/rev/<owner>_<repo>.txt
 # Exit: 0 written; 1 unreadable inputs or a commit git can't show; 2 usage.
@@ -15,7 +15,9 @@ mkdir -p "$out/rev" || exit 1
 total=0
 while IFS=$'\t' read -r repo dir; do
   f=$out/rev/$(printf '%s' "$repo" | tr '/' '_').txt
-  : >"$f"
+  # A short -> full sha table first: findings must name the FULL sha (render checks it against
+  # commits.json), and a hand-copied prefix is easy to get wrong.
+  { echo "## $repo: short -> full sha"; jq -r --arg r "$repo" '.[] | select(.repo == $r) | .commits[] | "\(.sha[0:12])  \(.sha)  \(.subject)"' "$out/commits.json"; echo; } >"$f"
   while IFS= read -r sha; do
     {
       echo "=== $repo@$sha"
@@ -24,7 +26,12 @@ while IFS=$'\t' read -r repo dir; do
       git -C "$dir" show --format= "$sha" >"$f.diff" || exit 1
       n=$(grep -c '' "$f.diff")
       head -n "$cap" "$f.diff"
-      [ "$n" -le "$cap" ] || echo "[truncated: $cap of $n lines]"
+      if [ "$n" -gt "$cap" ]; then
+        # Name what the cut hid: the file cut mid-diff, and every file whose diff starts after it.
+        cut=$(head -n "$cap" "$f.diff" | grep '^diff --git ' | tail -1 | sed 's|^diff --git a/\(.*\) b/.*|\1|')
+        unseen=$(tail -n +"$((cap + 1))" "$f.diff" | grep '^diff --git ' | sed 's|^diff --git a/\(.*\) b/.*|\1|' | paste -sd, - | sed 's/,/, /g')
+        echo "[truncated: $cap of $n lines; cut mid-file: ${cut:-?}; not shown: ${unseen:-none}]"
+      fi
       echo
     } >>"$f" || { echo "dump.sh: cannot show $repo@$sha" >&2; rm -f "$f.diff"; exit 1; }
     total=$((total + 1))

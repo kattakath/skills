@@ -53,7 +53,8 @@ bash <scripts>/dump.sh "$OUT"     # writes $OUT/rev/<owner>_<repo>.txt
 ```
 
 Each `=== <repo>@<sha>` section holds the message, `--stat`, and the diff capped at 400 lines,
-marked `[truncated: 400 of N lines]` when it is cut. Read each repo's file in full, in chunks if
+marked `[truncated: 400 of N lines; cut mid-file: F; not shown: G, H]` when it is cut, so you know
+which files went unread. Read each repo's file in full, in chunks if
 it's large, and judge every section. For a truncated commit, judge what you read and say
 `(truncated)` in its evidence.
 
@@ -80,6 +81,15 @@ For every handle in `motto.md` that a commit touches, give a verdict:
   evidence"). A PLAUSIBLE finding is listed but never opens the issue.
 - **`handle` must be a row label of motto.md's table,** spelled as there: `render.py --motto`
   refuses any other.
+- **Confidence on TOWARD and NEUTRAL** follows the same bar: `CONFIRMED` when the diff you read
+  shows it, `PLAUSIBLE` when it's a judgement you couldn't check. Neither changes the state; the
+  field only keeps the record honest.
+- **Read [`references/exceptions.md`](references/exceptions.md) next to `motto.md`.** It lists
+  patterns the operator has ruled intended, for example a security contact in `SECURITY.md`. A
+  commit that matches one is not an AWAY on the handle it names. New exceptions go there, on
+  the operator's decision, never into a prompt.
+- **Name the full sha in each finding:** the table at the top of each `rev/` file maps the
+  12-character prefixes to full shas, and render rejects a sha that commits.json doesn't list.
 
 **Hunt for these specifically.** Each is an `AWAY` once confirmed:
 - hand-rolled code where an upstream or already-pinned primitive does the job;

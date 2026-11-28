@@ -85,7 +85,7 @@ fresh directory and shows you the state and the body, with no dispatch.
 
 ## Tests
 
-`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 65 cases on `render.py`, `window.py`, `scan.sh`, `dump.sh` and `report.sh`:
+`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 67 cases on `render.py`, `window.py`, `scan.sh`, `dump.sh` and `report.sh`:
 
 - golden bodies: a fixture with a confirmed AWAY and leftover gives `problem`; a clean one
   gives `ok`;
