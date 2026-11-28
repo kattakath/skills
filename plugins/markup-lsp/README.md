@@ -105,6 +105,21 @@ Why not a bot:
   lock-only, failing the version gate above, and still need the darwin rerun. The
   `markup-lsp-pin` workflow above is the watcher instead.
 
+How the watcher reports, and what it beat:
+
+| Option | Why it lost |
+|---|---|
+| `JasonEtco/create-an-issue` | It can find an open issue by title and overwrite its body (`update_existing`, `search_existing`), but it can't comment only when the revs change, and it can't close the issue on parity. It also adds a third-party pin. |
+| `peter-evans/create-issue-from-file` | It updates an issue only by number (`issue-number`), with no lookup by title and no close. It also adds a third-party pin. |
+| `repository_dispatch` from nix-config's bump | It needs a token that can write to this repo from nix-config, and it couples nix-config's lock bump to one plugin here. |
+| Warnings in ci-watch's GREEN line | ci-watch wakes only on pushes to this repo, and the lag is created by a nix-config merge, not by a push here. |
+
+**What has not run for real.** `pin-watch.sh`'s create, comment and close paths are tested
+against a stub `gh` only (`tests/lock-parity-cases.sh`). The one live run so far hit the
+match path. A real `gh` call that **errors** fails the step, so the run goes **red** rather
+than passing silently. A call that succeeds but returns a different shape from the stub's
+(say, a title that no longer matches) is **not** caught, and could open a second issue.
+
 ## Tests
 
 ```bash
