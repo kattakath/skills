@@ -4,7 +4,8 @@
 #                           § Validating before you push)
 #   nix fmt               → treefmt (nixfmt) over this flake only — never plugins/**
 #   nix flake check       → treefmt + toolchain-complete + the generated-file drift checks
-#   nix run .#write-files → regenerate LICENSE, .envrc, .editorconfig, devcontainer.json
+#   nix run .#write-files → regenerate LICENSE, .envrc, .editorconfig, devcontainer.json,
+#                           .github/dependabot.yml
 #
 # A lean flake on purpose: its only job is the generated files. The plugins' `.nix` assets are
 # TEMPLATES (validate.yml parses them, it cannot evaluate them), so the formatter must not
@@ -30,6 +31,14 @@
           year = "2026";
           holder = "Ismail Kattakath";
         };
+        # .github/dependabot.yml, generated: GitHub Actions only, weekly, one group, 7-day
+        # cooldown. Every action here is SHA-pinned (a `# vX` comment for readability, the
+        # `uses:` line takes the SHA), including anthropics/claude-plugins-community's
+        # validate-plugins action, whose own RELEASING.md requires a commit pin: a mutable ref
+        # would let anyone who can push to that repo run code in this repo's CI. Left alone,
+        # pins rot silently; Dependabot bumps them and its PR goes through `validate` and the
+        # ruleset before it merges.
+        dependabot.enable = true;
       };
 
       perSystem =
