@@ -40,7 +40,8 @@ Do **not** run `ensure` yourself then.
 | The line says | Do |
 |---|---|
 | `(idle)`, `(working)`, `(starting)`, `(created)`, `(resumed)` … | SendMessage the task |
-| `could not start: Workspace not trusted …` | Tell the user to run `claude` in that folder once and accept the prompt. Never edit `~/.claude.json` |
+| `could not start: Workspace not trusted: the trust prompt is open in a Ghostty split below …` | Tell the user the prompt is waiting in that split; after they accept, retry once. Never edit `~/.claude.json` |
+| `could not start: Workspace not trusted …` (no split) | Tell the user to run `claude` in that folder once and accept the prompt. Never edit `~/.claude.json` |
 | `could not start: …` (anything else) | Report the reason; do not retry by hand |
 | `not started: permission mode … is not mirrored` | Plan mode is not mirrored; the first prompt in another mode starts it |
 
@@ -65,6 +66,7 @@ form, pass it yourself. The mode applies only on create.
 | `duplicates <n>` (stderr) | Tell the user. Never stop or delete one |
 | exit 3 | Unknown session state; it did nothing. Report the state |
 | exit 75 | Another `ensure` holds the lock. Retry once |
+| exit 77 | Untrusted folder: the trust prompt opened in a Ghostty split below. Tell the user; retry once after they accept |
 | other non-zero | `claude` refused; its message is on stderr, verbatim |
 
 `--dry-run` starts nothing. `status` prints `<name> <state>` or `<name> none`.

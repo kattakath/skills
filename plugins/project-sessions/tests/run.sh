@@ -30,6 +30,8 @@ fail=0
 T="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$T"' EXIT
 export PATH="$HERE/fixtures:$PATH" STUB_LOG="$T/log" STUB_AGENTS="$T/agents.json" XDG_STATE_HOME="$T/state"
+# No real Ghostty split from a test run, even on a Mac with nix-config's ghostty-split on PATH.
+export PROJECT_SESSION_GHOSTTY_SPLIT=ghostty-split-absent-in-tests
 unset CLAUDE_CODE_TASK_LIST_ID PROJECT_SESSION_CLAUDE STUB_UNTRUSTED STUB_SLEEP STUB_BG_SLEEP STUB_ENV_LOG \
   CLAUDE_CODE_SESSION_ATTENDED PROJECT_SESSIONS_AUTO PROJECT_SESSION_HOOK_TICKS PROJECT_SESSION_ENSURE_TICKS
 
@@ -223,6 +225,34 @@ contains "debug shows the id" "$OUT" "99999999"
 STUB_UNTRUSTED=1 run "$PS" ensure "$R"
 check "untrusted: non-zero, nothing on stdout" "$RC:$OUT" "1:"
 contains "untrusted: claude's message verbatim" "$ERR" "Workspace not trusted. Run \`claude\` in $R once and accept the trust prompt"
+
+# --- trust split: a stub ghostty-split logs its argv and exits $STUB_SPLIT_RC ----------------
+SPL="$T/ghostty-split-stub"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$*" >>"%s/split.log"\nexit "${STUB_SPLIT_RC:-0}"\n' "$T" >"$SPL"
+chmod +x "$SPL"
+split() { # [env...] -> runs an untrusted ensure in a Ghostty-looking, non-CI context with the stub
+  env -u CI TERM_PROGRAM=ghostty PROJECT_SESSION_GHOSTTY_SPLIT="$SPL" STUB_UNTRUSTED=1 "$@" "$PS" ensure "$R" </dev/null
+}
+splits() { [ -f "$T/split.log" ] && grep -c . "$T/split.log" || echo 0; }
+rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
+run split
+check "split: opens claude in a split at the repo, exits 77" "$RC:$(cat "$T/split.log" 2>/dev/null)" "77:--cwd $R -- claude"
+contains "split: says the prompt is waiting there" "$ERR" "the trust prompt is open in a Ghostty split below; accept it there, then retry"
+run split
+check "split: untrusted again within the window: no second split, today's message" "$RC:$(splits)" "1:1"
+contains "split: second time falls back to claude's message" "$ERR" "Workspace not trusted. Run \`claude\` in $R once"
+rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
+run split STUB_SPLIT_RC=69
+check "split: ghostty-split exits 69 (no Ghostty): today's message, claude's exit" "$RC:$(splits)" "1:1"
+contains "split: 69 falls back to claude's message" "$ERR" "Workspace not trusted. Run \`claude\` in $R once"
+rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
+run split PROJECT_SESSION_GHOSTTY_SPLIT=ghostty-split-absent-in-tests
+check "split: not on PATH: today's message unchanged, nothing called" "$RC:$(splits)" "1:0"
+run split CI=true
+check "split: CI set: never a split" "$RC:$(splits)" "1:0"
+run split TERM_PROGRAM=Apple_Terminal
+check "split: no TTY and not Ghostty: never a split" "$RC:$(splits)" "1:0"
+rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
 
 printf 'not json' >"$STUB_AGENTS"
 : >"$STUB_LOG"

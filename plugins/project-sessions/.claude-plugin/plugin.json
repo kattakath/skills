@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "project-sessions",
-  "version": "1.4.7",
+  "version": "1.5.0",
   "description": "One named background Claude Code session per git repo, named `<host>:<owner>/<repo>`. In attended sessions (or with PROJECT_SESSIONS_AUTO=1) the hooks create or resume it themselves, detached: SessionStart resumes a stopped one and names it, UserPromptSubmit adds one line per prompt and creates a missing one in the caller's permission mode. `project-session ensure` finds it in `claude agents --json --all` by name AND repo root and resumes only by bare full session id (the only form that does not start a copy). The main session hands work over with SendMessage. A second skill, project-shape, checks the repo is a valid Claude Code project.",
   "author": {
     "name": "Ismail Kattakath"

@@ -24,6 +24,8 @@
 set -u -o pipefail
 
 CLAUDE=${PROJECT_SESSION_CLAUDE:-claude}
+SPLIT=${PROJECT_SESSION_GHOSTTY_SPLIT:-ghostty-split} # nix-config's; tests point this at a stub
+SPLIT_QUIET_S=${PROJECT_SESSION_SPLIT_QUIET_S:-600} # one trust split per repo per window
 LOCK_STALE_S=${PROJECT_SESSION_LOCK_STALE_S:-120}
 LOCK_WAIT_S=${PROJECT_SESSION_LOCK_WAIT_S:-30}
 DEFAULT_PROMPT="You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
@@ -146,12 +148,42 @@ run_claude() { # root args...
   out=$(cd "$root" && "$@" 2>&1)
   rc=$?
   if [ $rc -ne 0 ]; then
+    case $out in *"Workspace not trusted"*) trust_split "$root" ;; esac
     printf '%s\n' "$out" >&2
     RC=$rc die "claude exited $rc"
   fi
   [ "$DEBUG" = 1 ] && printf 'debug: %s\n' "$out"
   CLAUDE_OUT=$out
   return 0
+}
+
+# "Workspace not trusted": open the trust prompt for the operator instead of only printing it.
+# Runs `ghostty-split --cwd <root> -- claude`, a split below his focused Ghostty pane, and
+# exits 77 so the caller retries once he has accepted. Returns (falls back to today's message)
+# when any condition fails:
+#   - ghostty-split is not on PATH, or it exits non-zero (69: Ghostty not running / no window)
+#   - CI is set, or there is no sign of an operator at a terminal: neither a TTY on stdin nor
+#     TERM_PROGRAM=ghostty. Claude Code's Bash tool and the hooks run without a TTY even when he
+#     is at the keyboard, so the inherited TERM_PROGRAM is the signal that counts there.
+#   - a split for this repo opened less than SPLIT_QUIET_S ago (no split per retry: no loop)
+# A PLAIN run is right only because the line is always `claude`, which no deny or ask rule
+# guards and which he would type himself. Any guarded command must go through
+# `ghostty-split --type-only` instead (he presses Enter), so a split is never a way around a guard.
+# Never --wait: `claude` is an interactive session that stays open, so --wait would block on it.
+trust_split() { # root
+  local root=$1 base mark now at
+  [ -z "${CI:-}" ] || return 0
+  [ -t 0 ] || [ "${TERM_PROGRAM:-}" = ghostty ] || return 0
+  command -v "$SPLIT" >/dev/null 2>&1 || return 0
+  base=${XDG_STATE_HOME:-$HOME/.local/state}/project-sessions
+  mkdir -p "$base" || return 0
+  mark=$base/$(printf '%s' "$root" | tr -c 'A-Za-z0-9_-' '-').trust-split
+  now=$(date +%s)
+  at=$(cat "$mark" 2>/dev/null || echo 0)
+  [ $((now - at)) -ge "$SPLIT_QUIET_S" ] || return 0
+  "$SPLIT" --cwd "$root" -- claude >/dev/null 2>&1 || return 0
+  printf '%s\n' "$now" >"$mark"
+  RC=77 die "Workspace not trusted: the trust prompt is open in a Ghostty split below; accept it there, then retry"
 }
 
 resolve() { # dir -> sets ROOT NAME

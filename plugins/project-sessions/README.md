@@ -35,8 +35,23 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   the copy also loses the name. `ensure` uses only the bare form.
 - **No id is stored.** `claude agents --json --all` already holds the state; a second copy
   would drift. Ids never reach stdout unless `--debug`.
-- **`--bg` refuses an untrusted folder.** `ensure` passes Claude Code's message through
-  verbatim; the operator trusts the folder once by running `claude` there.
+- **`--bg` refuses an untrusted folder.** The operator trusts the folder once by running
+  `claude` there.
+  - **With nix-config's `ghostty-split` on PATH,** `ensure` opens that `claude` itself, in a
+    Ghostty split below his focused pane (`ghostty-split --cwd <repo> -- claude`). It exits
+    **77** with "the trust prompt is open in a Ghostty split below; accept it there, then
+    retry". It never waits: `claude` stays open, so `--wait` would block on it.
+  - **Only with an operator present:** never when `CI` is set, and only with a TTY on stdin
+    or `TERM_PROGRAM=ghostty`. The Bash tool and the hooks have no TTY, so the inherited
+    `TERM_PROGRAM` is the signal there.
+  - **At most one split per repo per 10 min** (`PROJECT_SESSION_SPLIT_QUIET_S`), so a retry
+    can't loop.
+  - **Otherwise** (not on PATH, CI, no operator, a recent split, or `ghostty-split` failing,
+    e.g. exit 69 with Ghostty not running), Claude Code's message passes through verbatim, as
+    before.
+  - A plain run is right only because the line is always `claude`, which no deny or ask rule
+    guards. A guarded command would have to go through `ghostty-split --type-only`, so the
+    split is never a way around a guard.
 - **Task lists are Claude Code's default per session; they survive stop/resume and reset
   when a session is removed and recreated.** `ensure` sets no task list (since 1.4.0).
 - **While the daemon runs, the client env does not reach a `--bg` session, but it can reach
