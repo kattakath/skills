@@ -1,0 +1,18 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "tool-habits",
+  "version": "1.0.0",
+  "description": "A PreToolUse advisory for agent tool habits: when a Bash command edits an existing file in place (sed -i, perl -pi, inline Python read-then-write), it adds a note suggesting the Edit tool, which is diff-reviewed and permission-scoped. Advice only, never a block; new files and temp/scratch paths are left alone.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/tool-habits",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "hooks",
+    "pretooluse",
+    "edit-tool",
+    "agent-habits"
+  ]
+}

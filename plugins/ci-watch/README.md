@@ -11,6 +11,25 @@ writes a JSON report (`schema: ci-watch/report@1`). Every wake-up names its outc
 but GREEN print the report's path. For a failure, the report holds the full sha, changed files, run/job/step ids and URLs, the numbered log
 lines around `##[error]` cut to the failing step, and the rerun commands.
 
+### `scripts/poll-guard.js`: no foreground CI polling (since 1.4.0)
+
+A `PreToolUse` (Bash) hook that **denies** waiting on CI inside a turn, with the fix in the
+reason. It catches a loop that sleeps around `gh pr checks`, `gh run` or the runs API, and a
+blocking `gh run watch` or `gh pr checks --watch`. ci-watch already is the wait for a push to
+the default branch; anything else gets ONE `run_in_background` watch.
+- **Left alone:** a `run_in_background` call, a one-shot `gh` read, a script being written in
+  a heredoc, and words inside quoted text.
+- **Measured before it shipped** (2026-11-28, 55,639 Bash calls in 1,155 local transcripts,
+  counts only): **63 hits (0.11%)**. Hand-checking all 63 found about **60 real foreground
+  waits** (≈95% precision). The doubtful 3 are a markdown note and two multi-part commands
+  whose loop, `sleep` and `gh` call may be unrelated.
+- **The contract:** a deny is one stdout JSON; otherwise nothing; always exit 0; never
+  `updatedInput`.
+- **Tests:** 25 cases through the real hook entry (`tests/poll-guard-cases.js`). Mutants that
+  ignore `run_in_background`, skip heredoc stripping or skip quote stripping each fail it.
+- **The sibling habit** (in-place edits from Bash) is advice, not a deny. It lives in the
+  `tool-habits` plugin, with its own measurement.
+
 ### `scripts/ci-land`: the landing procedure as one command (since 1.3.0)
 
 The most repeated multi-step Bash across 467 sessions in 31 repos was this procedure, run by

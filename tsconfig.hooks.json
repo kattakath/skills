@@ -20,6 +20,8 @@
     "plugins/brain-signals/scripts/stop-limbo.js",
     "plugins/brain-signals/scripts/mermaid-hint.js",
     "plugins/ci-watch/scripts/ci-watch.js",
+    "plugins/ci-watch/scripts/poll-guard.js",
+    "plugins/tool-habits/scripts/edit-habit.js",
     "plugins/ci-watch/tests/fixtures/gh-stub.js"
   ]
 }

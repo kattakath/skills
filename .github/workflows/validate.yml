@@ -432,6 +432,11 @@ jobs:
       - name: ci-watch cases
         run: bash plugins/ci-watch/tests/run.sh
 
+      # tool-habits: the in-place-edit advisory never decides, only adds context; quiet on new
+      # files, scratch paths, scripts run by path and garbage input.
+      - name: tool-habits cases
+        run: bash plugins/tool-habits/tests/run.sh
+
       # slack-etiquette's send guard: a normal send gets the checklist and no decision, a
       # URL-labelled link or a hand-typed footer is denied, every connector prefix matches,
       # and garbage input fails open. Pure node, no network. The suite has a case floor.

@@ -428,6 +428,15 @@ cl_fail=$(printf '%s' "$cl_line" | sed -n 's/.* \([0-9]*\) failed$/\1/p')
 pass=$((pass + ${cl_pass:-0}))
 fail=$((fail + ${cl_fail:-1}))
 
+# scripts/poll-guard.js's case table (through its real hook entry), counted in too.
+pg_out=$(node "$(dirname "$0")/poll-guard-cases.js" 2>&1)
+printf '%s\n' "$pg_out" | grep '^FAIL' || true
+pg_line=$(printf '%s\n' "$pg_out" | tail -1)
+pg_pass=$(printf '%s' "$pg_line" | sed -n 's/^poll-guard: \([0-9]*\) passed.*/\1/p')
+pg_fail=$(printf '%s' "$pg_line" | sed -n 's/.* \([0-9]*\) failed$/\1/p')
+pass=$((pass + ${pg_pass:-0}))
+fail=$((fail + ${pg_fail:-1}))
+
 printf '%d passed, %d failed\n' "$pass" "$fail"
 FLOOR=150
 [ "$fail" -eq 0 ] && [ "$pass" -ge "$FLOOR" ] || { [ "$pass" -lt "$FLOOR" ] && echo "case floor: $pass < $FLOOR"; exit 1; }

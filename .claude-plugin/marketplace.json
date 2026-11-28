@@ -573,27 +573,6 @@
       "source": "./plugins/page-tools"
     },
     {
-      "name": "userscript-lab",
-      "description": "Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter.",
-      "author": {
-        "name": "Ismail Kattakath"
-      },
-      "category": "browser",
-      "keywords": [
-        "userscript",
-        "violentmonkey",
-        "greasyfork",
-        "claude-in-chrome",
-        "browser",
-        "dark-mode",
-        "redesign",
-        "accessibility"
-      ],
-      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/userscript-lab",
-      "license": "MIT",
-      "source": "./plugins/userscript-lab"
-    },
-    {
       "name": "pgp-ops",
       "description": "Run GnuPG from an agent that has no TTY: decrypt to the clipboard without the plaintext ever entering the transcript, encrypt to a recipient's key without importing it, prove who can decrypt a message and whether two keys are the same from the packets, and back up a key with a restore test that writes nothing.",
       "author": {
@@ -821,6 +800,44 @@
       "homepage": "https://github.com/kattakath/skills",
       "license": "MIT",
       "source": "./plugins/superhook"
+    },
+    {
+      "name": "tool-habits",
+      "description": "A PreToolUse advisory for agent tool habits: when a Bash command edits an existing file in place (sed -i, perl -pi, inline Python read-then-write), it adds a note suggesting the Edit tool, which is diff-reviewed and permission-scoped. Advice only, never a block; new files and temp/scratch paths are left alone.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "hooks",
+        "pretooluse",
+        "edit-tool",
+        "agent-habits"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/tool-habits",
+      "license": "MIT",
+      "source": "./plugins/tool-habits"
+    },
+    {
+      "name": "userscript-lab",
+      "description": "Author Violentmonkey userscripts and redesign whole sites with a measure-first method, verified through Claude in Chrome. Includes the Greasy Fork readiness linter.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "browser",
+      "keywords": [
+        "userscript",
+        "violentmonkey",
+        "greasyfork",
+        "claude-in-chrome",
+        "browser",
+        "dark-mode",
+        "redesign",
+        "accessibility"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/userscript-lab",
+      "license": "MIT",
+      "source": "./plugins/userscript-lab"
     },
     {
       "name": "vercel-workflow",

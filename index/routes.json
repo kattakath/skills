@@ -342,6 +342,14 @@
         "kattakath-workspace"
       ],
       "note": "One connector for every app; the tool list is generated from nix-config and the confirm-before-write rules are a hook. See the plugin README."
+    },
+    {
+      "goal": "Nudge agents off habits that bypass reviewed tools (in-place edits from Bash, foreground CI polling)",
+      "steps": [
+        "tool-habits",
+        "ci-watch"
+      ],
+      "gap": true
     }
   ]
 }
