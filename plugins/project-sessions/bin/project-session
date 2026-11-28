@@ -234,8 +234,8 @@ cmd_ensure() {
   # the caller's mode, and SendMessage from a session in another mode is held (measured 2.1.330).
   # No task list is set: the session keeps Claude Code's default per-session list. The scrub
   # (`env -u`, on resume too) stays: a daemon this call happens to start inherits the client's
-  # env, so a caller that carries CLAUDE_CODE_TASK_LIST_ID would freeze one list into the daemon
-  # and hand it to every later session (seen 2026-11-28, 00:31).
+  # env, so a caller that carries CLAUDE_CODE_TASK_LIST_ID puts it in the daemon's env (measured:
+  # `ps eww` on the daemon, 2026-11-28, 00:31) and, inferred not measured, in every later session.
   if [ -n "$mode" ]; then
     run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --name "$NAME" --permission-mode "$mode" "$prompt"
   else

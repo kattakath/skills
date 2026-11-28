@@ -45,10 +45,11 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   pre-started).
   - History: 1.3.0 passed an env prefix, and the session read back the daemon's value instead
     (measured 2.1.330). 1.3.1 then used `--settings`, and 1.4.0 dropped the custom list.
-  - Measured: the daemon keeps the env of whichever client started it. On 2026-11-28,
-    `ps eww` on the running daemon showed `CLAUDE_CODE_TASK_LIST_ID=github.com:kattakath/nix-config`.
-    It had been inherited from the 00:31 `claude --bg` that started the daemon, which froze
-    one list into every later session.
+  - **Measured, the daemon's env only:** on 2026-11-28, `ps eww` on the running daemon showed
+    `CLAUDE_CODE_TASK_LIST_ID=github.com:kattakath/nix-config`, inherited from the 00:31
+    `claude --bg` that started it.
+  - **Inferred, not measured:** every later session the daemon starts would then get that
+    one list. No later session's env or task list was read to confirm it.
   - That is why `ensure` still scrubs the variable (`env -u`) on create and resume.
 - **A session created without `--permission-mode` runs in default mode**, even when user
   settings set `permissions.defaultMode`. A `SendMessage` to it from a bypass-mode session is
