@@ -124,6 +124,16 @@ check "dump: --stat is there" "$(grep -c 'b.txt | 30 +' "$SO/rev/o_r.txt")" 1
 check "dump: a long diff is capped and says so" "$(grep -c '^\[truncated: 10 of [0-9]* lines\]$' "$SO/rev/o_r.txt")" 1
 check "dump: the capped section holds at most the cap" "$(awk '/^=== o\/r@'"$sha2"'/{on=1;next} /^=== /{on=0} on&&/^--- diff/{d=1;next} on&&d&&/^\[truncated/{exit} on&&d{n++} END{print n}' "$SO/rev/o_r.txt")" 10
 bash "$H/scripts/dump.sh" "$SO" --cap 0 2>/dev/null; check "dump: --cap 0 is a usage error" "$?" 2
+# The shared resolver's pinned download, offline: a stub curl serves the "release".
+GR="$H/scripts/gitleaks-resolve.sh"
+mkdir -p "$SO/curlbin" "$SO/glbin"
+printf '#!/usr/bin/env bash\nwhile [ $# -gt 1 ]; do [ "$1" = -o ] && out=$2; shift; done\nprintf "not the real tarball" >"$out"\n' >"$SO/curlbin/curl"; chmod +x "$SO/curlbin/curl"
+out=$(PATH="$SO/curlbin:$PATH" bash -c '. "$1"; gl_fetch "$2"' _ "$GR" "$SO/glbin" 2>"$SO/gr.err"); rc=$?
+check "resolver: a tampered download fails its sha256 check, nothing installed" "$rc:$out:$(ls "$SO/glbin")" "1::"
+check "resolver: it says why" "$(grep -c 'failed its sha256 check' "$SO/gr.err")" 1
+printf '#!/bin/sh\n' >"$SO/glbin/gitleaks"; chmod +x "$SO/glbin/gitleaks"
+check "resolver: a verified binary already in BINDIR is reused, no download" "$(PATH="$SO/curlbin:$PATH" bash -c '. "$1"; gl_fetch "$2"' _ "$GR" "$SO/glbin")" "$SO/glbin/gitleaks"
+check "resolver: the copy matches ci-watch's source (one GL_VERSION)" "$(grep -c '^GL_VERSION=' "$GR"):$(tail -n +2 "$GR" | cmp -s - "$H/../../../ci-watch/scripts/gitleaks-resolve.sh" && echo same)" "1:same"
 check "scan: no pattern text reaches its output" "$(scan "$SO/lits" 0 >/dev/null; grep -ci 'acme-secret' "$SO/err" "$SO/gates.json" | awk -F: '{s+=$2} END {print s}')" 0
 
 # report.sh (step 4) against a stub gh that records its argv, one word per line.

@@ -16,7 +16,7 @@ A **read-only** review of the fleet's recent commits against the operator's cano
 |---|---|---|
 | fleet list, rubric, window, clones | `scripts/inputs.sh`: `curl` + `git`, read **live** from nix-config `main` | one source: no copy of the list or the rubric lives here. No `gh`, no local path, so a cloud session can run it |
 | window start | `scripts/window.py` | last successful report run minus 2 h (no gap, no double review); else 26 h; never past 7 days |
-| gitleaks, client literals | `scripts/scan.sh` | mechanical. gitleaks comes from `PATH`, else nix, else a **pinned release checked by sha256** (8.30.1). The literal list is ci-land's config, unreachable in a cloud session, so it's `skipped` and the body says so |
+| gitleaks, client literals | `scripts/scan.sh` | mechanical. gitleaks comes from `PATH`, else a **pinned release checked by sha256** (8.30.1), through the ONE resolver it shares with ci-land (ci-watch's `gitleaks-resolve.sh`, copied here by `build-index.py`, drift-checked). The literal list is ci-land's config, unreachable in a cloud session, so it's `skipped` and the body says so |
 | TOWARD / NEUTRAL / AWAY per handle | the model, following SKILL.md | judgement, with evidence. Unsure means PLAUSIBLE, which never opens the issue |
 | `ok` / `problem` and the body | `scripts/render.py`, stdlib only | deterministic and tested. No timestamps, ids or counts; sorted by repo@sha plus handle; capped at 60,000 characters by dropping the lowest-ranked findings |
 
@@ -85,7 +85,7 @@ fresh directory and shows you the state and the body, with no dispatch.
 
 ## Tests
 
-`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 61 cases on `render.py`, `window.py`, `scan.sh`, `dump.sh` and `report.sh`:
+`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 65 cases on `render.py`, `window.py`, `scan.sh`, `dump.sh` and `report.sh`:
 
 - golden bodies: a fixture with a confirmed AWAY and leftover gives `problem`; a clean one
   gives `ok`;

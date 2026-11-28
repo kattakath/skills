@@ -1,7 +1,7 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "canon-review",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "description": "A read-only daily review of the fleet's recent commits against the operator's canon (the § Motto handles in kattakath/nix-config's CLAUDE.md, read live): TOWARD / NEUTRAL / AWAY per handle with file:line evidence, the leak gates, and a deterministic ok/problem state plus a stable issue body for issue-keeper. Runs as a daily cloud task or by hand.",
   "author": {
     "name": "Ismail Kattakath"

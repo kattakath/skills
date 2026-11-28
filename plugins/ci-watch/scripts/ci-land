@@ -17,7 +17,7 @@ Land this checkout on the default branch of origin, in order:
   2. git fetch origin; git rebase origin/<default>
   3. the repo'"'"'s own check, if it ships one: <root>/.ci-land/check <changed files...>
   4. leak gates over origin/<default>..HEAD (mandatory, no flag skips them):
-     gitleaks (on PATH, else `nix run nixpkgs#gitleaks`), then the client-literal patterns
+     gitleaks (on PATH, else a sha256-pinned release download), then the client-literal patterns
      over the added lines and the commit messages (counts only; a pattern is never printed)
   5. git push <remote> <sha>:<default>, the exact sha the gates scanned; never a force push.
      <remote> is origin, or its SSH form when .github/workflows changed (a gh token usually
@@ -74,15 +74,12 @@ fi
 [ -z "$(git status --porcelain)" ] || die 4 "the tree is dirty; commit or stash first (ci-land lands commits, not edits)"
 
 # --- the gates' prerequisites: resolved before anything changes -------------------------------
-if command -v gitleaks >/dev/null 2>&1; then
-  leaks() { gitleaks "$@"; }
-  leaks_src=gitleaks
-elif command -v nix >/dev/null 2>&1; then
-  leaks() { nix run nixpkgs#gitleaks -- "$@"; }
-  leaks_src="nix run nixpkgs#gitleaks"
-else
-  die 3 "gitleaks is not on PATH and nix is not available to run it; install gitleaks"
-fi
+# shellcheck source=gitleaks-resolve.sh
+. "$(cd "$(dirname "$0")" && pwd)/gitleaks-resolve.sh" || die 1 "cannot load gitleaks-resolve.sh"
+gl_resolve "${XDG_CACHE_HOME:-$HOME/.cache}/ci-land/bin" ||
+  die 3 "gitleaks is not on PATH and the pinned release could not be downloaded or verified"
+leaks() { gl "$@"; }
+leaks_src=$GL_SRC
 
 lit=${CI_LAND_LITERALS:-${XDG_CONFIG_HOME:-$HOME/.config}/ci-land/literals}
 [ -r "$lit" ] || die 3 "no readable literal-pattern list at $lit; set CI_LAND_LITERALS or create that file (see --help)"

@@ -39,7 +39,7 @@ bash <scripts>/scan.sh "$OUT"      # leak gates over the same window
   - with no readable run, 26 h back;
   - never more than 7 days back.
 - **`$OUT/gates.json`** holds the mechanical leak gates:
-  - **gitleaks** comes from `PATH`, else `nix run`, else a pinned release verified by sha256.
+  - **gitleaks** comes from `PATH`, else a pinned release verified by sha256 (the resolver ci-land shares).
   - **The client literals** run only if the list is reachable. In a cloud session it isn't, so
     they record `skipped`, and the body says so.
 

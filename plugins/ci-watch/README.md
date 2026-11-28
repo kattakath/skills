@@ -43,7 +43,7 @@ hand. The census counted 520+ `git add` → `nix fmt` → `git add` calls, 430 `
 | tree | a dirty tree is never landed | exit 4 |
 | sync | `git fetch origin`, `git rebase origin/<default>` | exit 1 |
 | repo check | `<root>/.ci-land/check <changed files…>` if the repo ships one (a nix repo runs `nix fmt` and builds the changed output there). It must not change the tree | exit 1 |
-| leak gates | gitleaks over `origin/<default>..HEAD`, then the client-literal patterns over the added lines and the messages. Counts only; a pattern is never printed | exit 3 |
+| leak gates | gitleaks (on PATH, else the sha256-pinned release via `scripts/gitleaks-resolve.sh`, the one resolver canon-review shares) over `origin/<default>..HEAD`, then the client-literal patterns over the added lines and the messages. Counts only; a pattern is never printed | exit 3 |
 | push | `git push <remote> <sha>:<default>`, the sha the gates scanned, over SSH when `.github/workflows` changed. Never a force push | exit 1 |
 
 **Why one command, and why here.**

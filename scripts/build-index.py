@@ -25,6 +25,16 @@ OUT = ROOT / "INDEX.md"
 README = ROOT / "README.md"
 MARKET = ROOT / ".claude-plugin" / "marketplace.json"
 SHARED = ("description", "keywords", "homepage", "author", "license")
+# A file two plugins both need: plugins install as separate subtrees, so one can't source the
+# other's copy. The source lives in one plugin; the other ships a GENERATED copy (a header line
+# plus the source, byte for byte), written here and checked by --check. Edit the source only.
+DERIVED = {
+    "plugins/canon-review/skills/canon-review/scripts/gitleaks-resolve.sh": "plugins/ci-watch/scripts/gitleaks-resolve.sh",
+}
+
+
+def derived_text(src):
+    return f"# GENERATED from {src} by scripts/build-index.py; edit that file, not this one.\n" + (ROOT / src).read_text()
 
 
 def load(rel):
@@ -124,12 +134,22 @@ def main():
         if drift:
             sys.exit("index: marketplace.json drifted from plugin.json (run python3 scripts/build-index.py):\n       "
                      + "\n       ".join(drift))
+        stale = [dst for dst, src in DERIVED.items()
+                 if not (ROOT / dst).exists() or (ROOT / dst).read_text() != derived_text(src)]
+        if stale:
+            sys.exit("index: generated copies drifted from their source (run python3 scripts/build-index.py): "
+                     + ", ".join(stale))
         if not OUT.exists() or OUT.read_text() != text:
             sys.exit("index: INDEX.md is stale; run python3 scripts/build-index.py")
         if readme_new != readme_old:
             sys.exit("index: README.md plugin table is stale; run python3 scripts/build-index.py")
         print("index: up to date")
     else:
+        for dst, src in DERIVED.items():
+            copy = derived_text(src)
+            if not (ROOT / dst).exists() or (ROOT / dst).read_text() != copy:
+                (ROOT / dst).write_text(copy)
+                print(f"index: wrote the generated copy {dst}")
         if dump(market) != market_old:
             MARKET.write_text(dump(market))
             print(f"index: synced {len(drift)} marketplace field(s) from plugin.json")
