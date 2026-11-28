@@ -16,7 +16,9 @@ The user typed `/ps`, so the handover is decided. Do **not** start the task in t
    prints. If it fails, report its reason and stop.
 2. **Send it** with **SendMessage**, `to: "<name>"` (the bare name). Write it so it stands
    alone: the task above verbatim, then the repo root, what done means, and "reply to me
-   with SendMessage when done".
+   with SendMessage when done". For a multi-step task, add what the `project-sessions`
+   skill's handover step 2 asks for: TaskCreate per step, plus a one-line progress message
+   per completed step.
 3. **Tell the user** in one line that it was handed to `<name>`, then wait. Relay the reply
    when it arrives. If a delivery notice says the message was held or refused, say so; do
    not resend.

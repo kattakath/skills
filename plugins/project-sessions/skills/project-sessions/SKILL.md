@@ -24,8 +24,15 @@ Do **not** run `ensure` yourself then.
 
 1. Send the task with **SendMessage**, `to: "<name>"`, the bare name the line shows.
 2. Write it so it stands alone: the goal, the files, what done means, what to report.
-   If the task has more than one step, ask the session to track each step with
-   **TaskCreate**, so the operator can watch progress in that session's task panel.
+   If the task has more than one step, also ask the session to:
+   - track each step with **TaskCreate**, for its own task panel;
+   - **SendMessage** you ONE line each time a step completes (`✓ 3/8 <subject>`);
+   - still send the full report at the end.
+
+   Ask for those lines because nothing else shows you progress: `claude agents --json` has
+   no task or progress field, and the `~/.claude/tasks` files have no documented format.
+   A successful send is not a read receipt, so never wait on a progress line. Relay lines as
+   they arrive, and wait only for the final report.
 3. Keep only coordination here: the user's decisions, cross-repo order, relaying results.
 4. Relay its reply to the user. If none comes, say so: a session in another permission
    mode holds the message for approval, and nothing here can see a session's mode.
