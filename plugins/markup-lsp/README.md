@@ -69,7 +69,9 @@ after a pin bump.
 ## Bumping the nixpkgs pin (by hand)
 
 `flake.lock` has **no updater**, and the cache verdict above holds only for the rev it pins.
-Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves:
+Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves. **CI tells you when:**
+the `markup-lsp nixpkgs pin vs nix-config main` step in `validate` runs
+`tests/lock-parity.py` and prints a **warning** (never a failure) when the two revs differ.
 
 ```bash
 cd plugins/markup-lsp
@@ -87,6 +89,12 @@ Why not a bot:
 - A lock-only PR would also fail this repo's `Plugin version bumped` gate, which has no
   exemptions.
 - The darwin half of the gate runs only on a Mac, so an automatic bump would land unchecked.
+- **Considered and rejected: `DeterminateSystems/update-flake-lock`**, the action nix-config
+  itself runs weekly (`.github/workflows/update-flake-lock.yml`). It runs `nix flake update`,
+  which moves the pin to whatever the FlakeHub URL serves now, not to nix-config's rev. The
+  goal here is parity with nix-config, so that is the wrong target. Its PR would also be
+  lock-only, failing the version gate above, and still need the darwin rerun. The warn-only
+  parity step is the watcher instead.
 
 ## Tests
 
