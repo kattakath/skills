@@ -100,7 +100,10 @@ any error. The background check is `status --session`: the hook's `session_id` m
   redirected so Claude Code does not wait. Measured with a real `claude -p` and an 8 s stubbed
   `--bg`: the run ended in 7 s, and `ensure` finished afterwards (rc 0, lock released).
 - Not stacked: no spawn while the repo's `ensure` lock is held.
-- The session it creates gets `PROJECT_SESSIONS_AUTO=0`, so its own hooks stay out.
+- The session it creates keeps its own hooks out through `status --session` alone. 1.4.0
+  also passed `PROJECT_SESSIONS_AUTO=0` as an env prefix, but it never arrived: the session's
+  `printenv PROJECT_SESSIONS_AUTO` printed nothing (exit 1). That was measured live on 2.1.330,
+  with the daemon up. 1.4.1 dropped the prefix.
 - **Result files** per repo in `${XDG_STATE_HOME:-~/.local/state}/project-sessions/`:
   `<name>.ensure.{out,err,rc}`. A failure shows as one line, `could not start: <reason>`
   (ensure's own last stderr line, or claude's message when ensure only says "claude
