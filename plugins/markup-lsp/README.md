@@ -15,8 +15,8 @@ find-references through its built-in LSP tool.
 | Markdown | `.md` `.markdown` | [marksman](https://github.com/artempyanykh/marksman) | `marksman server` |
 
 The plugin ships **no hooks, no scripts and no MCP servers**, and it installs nothing.
-Nix and shell files have their own plugins here: [`nixd`](../nixd) and
-[`bash-language-server`](../bash-language-server). No extension is claimed twice; the tests
+Nix and shell files have their own plugins here: [nixd](../nixd) and
+[bash-language-server](../bash-language-server). No extension is claimed twice; the tests
 check that across the whole marketplace.
 
 ## Requirements
@@ -55,6 +55,9 @@ nothing**. An empty store fetches 68 paths (148.7 MiB) in about **42 s**, and on
 - Overriding `dotnetCorePackages.runtime_9_0` to `runtime_9_0-bin` **makes things worse**.
   It changes marksman's hash, so marksman rebuilds from source (dotnet-sdk, NuGet restore,
   xunit).
+- That verdict holds for this pin only. If a later pin's darwin `dotnet-runtime` stops being
+  cached, the override becomes the better trade: a short marksman build beats a long .NET
+  source compile. The gate below is how you find out.
 - `tests/run.sh --cache` is the gate. It fails when a dry-run on the current system would
   build anything except the `buildEnv`. A negative run with that override in place lists the
   marksman build, so the gate is not vacuous.
@@ -79,11 +82,15 @@ bash plugins/markup-lsp/tests/run.sh --cache  # also the cache gate
 
 ## Why no auto-install hook, and why not adopt a community plugin
 
-Same stance as [`nixd`](../nixd): installing binaries is your Nix config's job, not a
-`SessionStart` hook's. These are the community options checked on 2026-11-28:
+Same stance as [nixd](../nixd): installing binaries is your Nix config's job, not a
+`SessionStart` hook's.
+
+On 2026-11-28 a GitHub code search on `filename:.lsp.json` found 11–33 hits per server. The
+top hits were inspected, alongside the known marketplaces:
 
 | Candidate | Covers | Binaries | Licence | Why not |
 |---|---|---|---|---|
+| rldyourmnd/rldyour-claudecode (one plugin) | 6 of 7, no XML | PATH | AGPL-3.0 | Copyleft can't sit in this MIT tree. One bundle of 15 servers. |
 | zircote/{yaml,json,html-css,markdown}-lsp | 5 of 7, one repo each | PATH, empty hooks | MIT | No TOML or XML. Four repos to pin. 1–3 stars. |
 | boostvolt/claude-code-lsps | YAML only, of these | `SessionStart` installs via brew/npm | MIT | The install hook is rejected here. |
 | Piebald-AI/claude-code-lsps | HTML, CSS | PATH | none found | No licence, so it cannot be vendored. No JSON, YAML, TOML or XML. |
