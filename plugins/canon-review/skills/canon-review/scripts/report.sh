@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# canon-review step 4, the cloud task's ONE write: render the findings, then dispatch
-# kattakath/.github's canon-review-report.yml through the REST dispatches endpoint, with
-# source=cloud so the report workflow pings its scheduler heartbeat. Nothing is dispatched
-# unless render.py finished and the state is exactly ok or problem.
+# canon-review step 4, the review's ONE write: render the findings, then dispatch
+# kattakath/.github's canon-review-report.yml through the REST dispatches endpoint, which runs
+# issue-keeper. Nothing is dispatched unless render.py finished and the state is exactly ok or
+# problem. Only state and body are sent: the review is on demand, the scheduled cloud task and
+# its heartbeat are retired, and an input the workflow doesn't declare would be refused (422).
 #
 #   report.sh OUTDIR [--dry-run]    reads OUTDIR/{findings,gates,commits}.json; writes OUTDIR/body.md
 #
@@ -23,9 +24,9 @@ state=${line#state=}
 case $state in ok | problem) ;; *) echo "report.sh: render gave no state ('$line'); nothing dispatched" >&2; exit 1 ;; esac
 
 set -- api -X POST repos/kattakath/.github/actions/workflows/canon-review-report.yml/dispatches \
-  -f ref=main -f "inputs[state]=$state" -f "inputs[body]=$(cat "$out/body.md")" -f "inputs[source]=cloud"
+  -f ref=main -f "inputs[state]=$state" -f "inputs[body]=$(cat "$out/body.md")"
 if [ "$dry" = 1 ]; then
-  echo "plan: gh api -X POST …/canon-review-report.yml/dispatches ref=main state=$state source=cloud body=$out/body.md"
+  echo "plan: gh api -X POST …/canon-review-report.yml/dispatches ref=main state=$state body=$out/body.md"
   exit 0
 fi
 gh "$@" || { echo "report.sh: the dispatch failed" >&2; exit 1; }

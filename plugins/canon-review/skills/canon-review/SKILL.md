@@ -165,7 +165,7 @@ kattakath/.github's `canon-review-report.yml` only when render finished with a s
 - **Through the REST `dispatches` endpoint, not `gh workflow run`.** In a claude.ai cloud
   session `gh workflow run` fails with "HTTP 403: GitHub GraphQL is not available from Claude
   Code sessions" (measured 2026-11-28).
-- **With `source=cloud`,** so the report workflow pings its scheduler heartbeat. A hand
-  dispatch defaults to `manual`, so it can't mask a dead schedule.
+- **With exactly two inputs, `state` and `body`.** The scheduler heartbeat is retired, and the
+  workflow refuses an input it doesn't declare (422).
 - **Exit 1 means nothing was dispatched.** Say why instead: a review that didn't finish must not
   close an open issue.

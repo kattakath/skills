@@ -149,7 +149,8 @@ rep() { rm -f "$RO/gh.argv"; PATH="$RO/bin:$PATH" bash "$H/scripts/report.sh" "$
 rep "$RO"; rc=$?
 check "report: dispatches, exit 0" "$rc" 0
 check "report: REST dispatches endpoint, never gh workflow run" "$(head -4 "$RO/gh.argv" | tr '\n' ' ')" "api -X POST repos/kattakath/.github/actions/workflows/canon-review-report.yml/dispatches "
-check "report: sends source=cloud (the scheduler heartbeat)" "$(grep -cx 'inputs\[source\]=cloud' "$RO/gh.argv")" 1
+check "report: sends NO source input (the heartbeat is retired; an undeclared input is a 422)" "$(grep -c '^inputs\[source\]' "$RO/gh.argv")" 0
+check "report: sends exactly the two inputs, state and body" "$(grep -c '^inputs\[' "$RO/gh.argv")" 2
 check "report: sends render's state" "$(grep -cx 'inputs\[state\]=ok' "$RO/gh.argv")" 1
 check "report: sends the body file unchanged" "$(grep -c '^inputs\[body\]=Canon review: no confirmed AWAY' "$RO/gh.argv")" 1
 check "report: on ref main" "$(grep -cx 'ref=main' "$RO/gh.argv")" 1
