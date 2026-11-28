@@ -12,9 +12,11 @@ reviewed. Findings are sorted (CONFIRMED before PLAUSIBLE, then severity, then
 repo@sha+handle), and TOWARD/NEUTRAL verdicts stay out of it. So issue-keeper's "already says
 this" check holds while nothing changed.
 
-    render.py FINDINGS.json [--gates gates.json] [--commits commits.json] [--out BODY.md] [--max-chars N]
+    render.py FINDINGS.json [--gates gates.json] [--commits commits.json] [--motto motto.md]
+              [--out BODY.md] [--max-chars N]
         prints "state=<ok|problem>", then the body. --gates replaces the gates block with
-        scan.sh's own file; --commits refuses a finding on a repo@sha inputs.sh did not list.
+        scan.sh's own file; --commits refuses a finding on a repo@sha inputs.sh did not list, and
+        a listed commit with no verdict; --motto refuses a handle not in the rubric's table.
 
 The body is capped at --max-chars (default 60000) by dropping the LOWEST-ranked findings and
 saying how many, so a long day still fits a workflow_dispatch input and stays stable.
@@ -22,6 +24,7 @@ Exit: 0 rendered; 1 the findings file is invalid (nothing is rendered, so no iss
       2 usage.
 """
 import json
+import re
 from typing import NoReturn
 import sys
 
@@ -146,17 +149,19 @@ def main(argv):
     if argv[:1] in (["-h"], ["--help"]):
         print(__doc__)
         sys.exit(0)
-    out, max_chars, args, gates_file, commits_file = None, MAX_CHARS, [], None, None
+    out, max_chars, args, gates_file, commits_file, motto_file = None, MAX_CHARS, [], None, None, None
     i = 0
     while i < len(argv):
         a = argv[i]
-        if a in ("--out", "--max-chars", "--gates", "--commits"):
+        if a in ("--out", "--max-chars", "--gates", "--commits", "--motto"):
             if i + 1 >= len(argv):
                 usage()
             if a == "--out":
                 out = argv[i + 1]
             elif a == "--gates":
                 gates_file = argv[i + 1]
+            elif a == "--motto":
+                motto_file = argv[i + 1]
             elif a == "--commits":
                 commits_file = argv[i + 1]
             else:
@@ -179,6 +184,19 @@ def main(argv):
         if not isinstance(d, dict):
             fail("findings must be an object")
         d["gates"] = load(gates_file)
+    if motto_file:
+        # The handle names, read from the live rubric's table rows (`| **look first** | ...`),
+        # never typed here: a misspelt handle would otherwise pass as a finding nobody can map.
+        try:
+            with open(motto_file, encoding="utf-8") as fh:
+                handles = set(re.findall(r"^\|\s*\*\*([^*|]+?)\*\*\s*\|", fh.read(), re.M))
+        except OSError as e:
+            fail(f"{motto_file}: {e}")
+        if not handles:
+            fail(f"{motto_file} has no handle table rows")
+        for i, f in enumerate(d.get("findings", []) if isinstance(d, dict) else []):
+            if isinstance(f, dict) and f.get("handle") not in handles:
+                fail(f"findings[{i}].handle {f.get('handle')!r} is not a handle in {motto_file} ({', '.join(sorted(handles))})")
     if commits_file:
         listed = {(c.get("repo"), s.get("sha")) for c in load(commits_file) for s in c.get("commits", [])}
         judged = set()

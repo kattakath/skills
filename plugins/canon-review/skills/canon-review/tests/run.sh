@@ -83,6 +83,18 @@ check "coverage: one of two commits judged -> refused" "$rc:$out" "1:"
 printf '[]' >"$T/nocommits.json"
 check "coverage: no commits in the window, no findings -> ok" "$(render "$T/empty.json" --commits "$T/nocommits.json" | head -1)" "state=ok"
 
+# --motto: a handle must be a row label in the rubric's table. The test builds a table of the
+# SHAPE (not a copy of the rubric) with the fixtures' handles.
+printf '| Handle | Rule |\n|---|---|\n| **one source** | x |\n| **look first** | x |\n| **receipts** | x |\n| **plain shape** | x |\n| **as-code** | x |\n' >"$T/motto.md"
+check "--motto: fixture handles all in the table render" "$(render "$F/away.json" --motto "$T/motto.md" | head -1)" "state=problem"
+python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); d["findings"][0]["handle"]="one-source"; json.dump(d, open(sys.argv[2], "w"))' "$F/clean.json" "$T/typo.json"
+out=$(render "$T/typo.json" --motto "$T/motto.md" 2>"$T/err"); rc=$?
+check "--motto: a misspelt handle is refused, nothing rendered" "$rc:$out" "1:"
+check "--motto: the refusal names the bad handle" "$(grep -c "handle 'one-source' is not a handle" "$T/err")" 1
+printf '# no table here\n' >"$T/notable.md"
+out=$(render "$F/clean.json" --motto "$T/notable.md" 2>/dev/null); rc=$?
+check "--motto: a rubric with no table is refused (the format moved)" "$rc:$out" "1:"
+
 # scan.sh offline: a fixture repo, a hand-written commits.json, a stub gitleaks (exit $STUB_GL).
 SO="$T/scan"; mkdir -p "$SO/bin" "$SO/repo"
 git -C "$SO/repo" init -q
@@ -102,6 +114,16 @@ check "scan: gitleaks exit 42 (a leak) is found" "$(scan /none 42)" "found skipp
 check "scan: gitleaks exit 1 (an error) is failed, not found" "$(scan /none 1)" "failed skipped"
 check "scan: a planted literal is found" "$(scan "$SO/lits" 0)" "clean found"
 check "scan: a broken pattern is failed, not 'not reachable'" "$(scan "$SO/badre" 0)" "clean failed"
+seq 1 30 | sed 's/^/line /' >"$SO/repo/b.txt"
+git -C "$SO/repo" add -A && git -C "$SO/repo" -c user.email=t@t -c user.name=t commit -q -m "add b"
+sha2=$(git -C "$SO/repo" rev-parse HEAD)
+printf '[{"repo": "o/r", "branch": "main", "dir": "%s", "commits": [{"sha": "%s", "subject": "add b"}, {"sha": "%s", "subject": "add a"}]}]' "$SO/repo" "$sha2" "$sha" >"$SO/commits.json"
+bash "$H/scripts/dump.sh" "$SO" --cap 10 2>/dev/null; rc=$?
+check "dump: one file per repo, a section per commit" "$rc:$(grep -c '^=== o/r@' "$SO/rev/o_r.txt")" "0:2"
+check "dump: --stat is there" "$(grep -c 'b.txt | 30 +' "$SO/rev/o_r.txt")" 1
+check "dump: a long diff is capped and says so" "$(grep -c '^\[truncated: 10 of [0-9]* lines\]$' "$SO/rev/o_r.txt")" 1
+check "dump: the capped section holds at most the cap" "$(awk '/^=== o\/r@'"$sha2"'/{on=1;next} /^=== /{on=0} on&&/^--- diff/{d=1;next} on&&d&&/^\[truncated/{exit} on&&d{n++} END{print n}' "$SO/rev/o_r.txt")" 10
+bash "$H/scripts/dump.sh" "$SO" --cap 0 2>/dev/null; check "dump: --cap 0 is a usage error" "$?" 2
 check "scan: no pattern text reaches its output" "$(scan "$SO/lits" 0 >/dev/null; grep -ci 'acme-secret' "$SO/err" "$SO/gates.json" | awk -F: '{s+=$2} END {print s}')" 0
 
 # report.sh (step 4) against a stub gh that records its argv, one word per line.
@@ -109,7 +131,7 @@ RO="$T/report"; mkdir -p "$RO/bin"
 printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$@" >"%s/gh.argv"\nexit "${STUB_GH:-0}"\n' "$RO" >"$RO/bin/gh"; chmod +x "$RO/bin/gh"
 cp "$F/clean.json" "$RO/findings.json"
 printf '{"gitleaks": "clean", "literals": "skipped"}' >"$RO/gates.json"
-cp "$T/commits.json" "$RO/commits.json"
+cp "$T/commits.json" "$RO/commits.json"; cp "$T/motto.md" "$RO/motto.md"
 rep() { rm -f "$RO/gh.argv"; PATH="$RO/bin:$PATH" bash "$H/scripts/report.sh" "$@" >/dev/null 2>&1; }
 rep "$RO"; rc=$?
 check "report: dispatches, exit 0" "$rc" 0

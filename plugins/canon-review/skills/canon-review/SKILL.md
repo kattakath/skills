@@ -45,16 +45,17 @@ bash <scripts>/scan.sh "$OUT"      # leak gates over the same window
 
 ## 2. Judge each commit
 
-**Read every commit. Judging from subjects is a failure, not a shortcut.** Work repo by repo,
-and for each listed commit:
+**Read every commit. Judging from subjects is a failure, not a shortcut.** Dump them first, one
+file per repo:
 
 ```bash
-git -C "$OUT/work/<owner>_<repo>" show --stat --format='%H %s' <sha>     # what it touched
-git -C "$OUT/work/<owner>_<repo>" show --format= <sha> | head -400         # the diff, capped
+bash <scripts>/dump.sh "$OUT"     # writes $OUT/rev/<owner>_<repo>.txt
 ```
 
-If the diff is longer than 400 lines, judge what you read and write `(truncated at 400 lines)`
-in that commit's evidence.
+Each `=== <repo>@<sha>` section holds the message, `--stat`, and the diff capped at 400 lines,
+marked `[truncated: 400 of N lines]` when it is cut. Read each repo's file in full, in chunks if
+it's large, and judge every section. For a truncated commit, judge what you read and say
+`(truncated)` in its evidence.
 
 **`render.py` enforces coverage.** Every repo@sha in `commits.json` needs at least one finding:
 a verdict whose evidence names a file or hunk you read. A NEUTRAL counts. A commit with no
@@ -69,10 +70,16 @@ For every handle in `motto.md` that a commit touches, give a verdict:
 | `NEUTRAL` | the handle doesn't bear on it |
 | `AWAY` | the commit breaks the rule. Needs a one-line **fix** |
 
-- **Every verdict carries evidence:** a `path:line` or a short quote from the diff. A verdict
-  you can't point at is not a finding.
-- **When unsure, write `PLAUSIBLE`, not `CONFIRMED`.** A PLAUSIBLE finding is listed but never
-  opens the issue.
+- **Every verdict carries evidence:** a file name plus a short quote from the diff, or a hunk
+  header (`@@ … @@ function_name`). The diff gives hunk offsets, not file lines, so don't invent
+  a `path:line`. A verdict you can't point at is not a finding.
+- **The bar for `CONFIRMED`:** someone can re-check it at HEAD in one step. Examples: a `grep`
+  that shows both copies of a drifted fact, an exact mismatch between two numbers, a file the
+  revert left behind.
+- **Everything else is `PLAUSIBLE`,** including judgement calls ("this claim is stronger than its
+  evidence"). A PLAUSIBLE finding is listed but never opens the issue.
+- **`handle` must be a row label of motto.md's table,** spelled as there: `render.py --motto`
+  refuses any other.
 
 **Hunt for these specifically.** Each is an `AWAY` once confirmed:
 - hand-rolled code where an upstream or already-pinned primitive does the job;
@@ -116,11 +123,14 @@ Then render. It's deterministic, and no model takes part:
 
 ```bash
 python3 -I <scripts>/render.py "$OUT/findings.json" --gates "$OUT/gates.json" \
-  --commits "$OUT/commits.json" --out "$OUT/body.md" | head -1          # state=ok|problem
+  --commits "$OUT/commits.json" --motto "$OUT/motto.md" --out "$OUT/body.md" | head -1
 ```
 
+Its first line is the state (`state=ok` or `state=problem`).
 - `--gates` makes scan.sh's own file the gates, whatever was copied into `findings.json`.
-- `--commits` refuses a finding on a repo@sha that inputs.sh didn't list.
+- `--commits` refuses a finding on a repo@sha that inputs.sh didn't list, and any listed commit
+  left without a verdict.
+- `--motto` refuses a handle that isn't a row of the rubric's table.
 
 - `problem` means a CONFIRMED `AWAY`, or a leak gate that found something or didn't run.
 - The body is **stable**: no timestamps, no run ids, no counts, sorted and keyed by repo@sha

@@ -17,7 +17,7 @@ out=$1 dry=0
 if [ $# -gt 2 ] || { [ $# -eq 2 ] && [ $dry = 0 ]; }; then echo "usage: report.sh OUTDIR [--dry-run]" >&2; exit 2; fi
 
 here=$(cd "$(dirname "$0")" && pwd)
-line=$(python3 -I "$here/render.py" "$out/findings.json" --gates "$out/gates.json" \
+line=$(python3 -I "$here/render.py" "$out/findings.json" --gates "$out/gates.json" --motto "$out/motto.md" \
   --commits "$out/commits.json" --out "$out/body.md" | head -1) || { echo "report.sh: render failed; nothing dispatched" >&2; exit 1; }
 state=${line#state=}
 case $state in ok | problem) ;; *) echo "report.sh: render gave no state ('$line'); nothing dispatched" >&2; exit 1 ;; esac
