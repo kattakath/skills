@@ -16,6 +16,8 @@ The main interactive session coordinates. The project session does the work.
 
 ## The hooks start it — your job is the handover
 
+The user can also type **`/ps <task>`**: that decides the handover, so send it without asking.
+
 In an attended session (or with `PROJECT_SESSIONS_AUTO=1`) the plugin's hooks create or
 resume the session themselves and name it in a context line, at start and on every prompt.
 Do **not** run `ensure` yourself then.

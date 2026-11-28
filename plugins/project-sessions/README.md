@@ -62,6 +62,12 @@ resume run under a per-repo lock in `${XDG_STATE_HOME:-~/.local/state}/project-s
 SessionStart line reach the agent **10/10**, the skill loaded **2/10**, and `ensure` run
 **0/10** — even agents that loaded the skill skipped it. So the hooks run it.
 
+**Why `/ps`:** with the hooks creating the session (1.2.0), the handover is still the model's
+choice, and the CLI cannot give a task to a running session (`--bg --resume <id> "<task>"`
+starts a copy). Measured: SendMessage handovers **0/10** under `-p`, **1/3** in real
+interactive sessions (that one worked end to end). `/ps <task>` makes the handover the user's
+decision instead.
+
 | Env | Effect |
 |---|---|
 | `CLAUDE_CODE_SESSION_ATTENDED=1` | Auto mode on. Measured 2.1.330: interactive `1`, `-p` `0` (`CLAUDE_CODE_ENTRYPOINT`: `cli` vs `sdk-cli`) |
