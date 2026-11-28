@@ -37,24 +37,16 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   would drift. Ids never reach stdout unless `--debug`.
 - **`--bg` refuses an untrusted folder.** `ensure` passes Claude Code's message through
   verbatim; the operator trusts the folder once by running `claude` there.
-- **The task list travels in `--settings`, never as an env prefix.** `ensure` creates with
-  `--settings '{"env":{"CLAUDE_CODE_TASK_LIST_ID":"<name>"}}'` and scrubs the variable from
-  the client env. `claude --bg` hands the session to the long-lived `claude daemon` (or a
-  spare it pre-started), so the client's env never reaches it. Measured 2.1.330, with the
-  daemon up and holding another repo's list:
-
-  | Channel | `printenv CLAUDE_CODE_TASK_LIST_ID` in the session |
-  |---|---|
-  | `env CLAUDE_CODE_TASK_LIST_ID=probe-envprefix-a1 claude --bg …` (1.3.0) | `github.com:kattakath/nix-config`, the daemon's value |
-  | `claude --bg … --settings '{"env":{…:"probe-settings-b1"}}'` | `probe-settings-b1`, and `~/.claude/tasks/probe-settings-b1` appears |
-  | the same session after `claude stop` then a bare `--bg --resume <id>` | `probe-settings-b1` |
-
-  A bare resume re-applies it: Claude Code prints `woke session <id> with its saved options
-  (--name, --permission-mode, --settings, --model)`. A session that 1.3.0 created has no
-  saved `--settings`, so resuming it does not heal it. Recreate it.
-  Inferred, not measured here: the daemon keeps the env of whichever client started it, so
-  1.3.0's prefix on the first create handed that repo's list to every later session. This is
-  why the client env is scrubbed and not just left alone.
+- **Task lists are Claude Code's default per session; they survive stop/resume and reset
+  when a session is removed and recreated.** `ensure` sets no task list (since 1.4.0).
+- **The client env never reaches a `--bg` session, but it can reach the daemon.**
+  `claude --bg` hands the session to the long-lived `claude daemon` (or a spare it
+  pre-started).
+  - History: 1.3.0 passed an env prefix, and the session read back the daemon's value instead
+    (measured 2.1.330). 1.3.1 then used `--settings`, and 1.4.0 dropped the custom list.
+  - Inferred, not measured: the daemon keeps the env of whichever client started it, so a
+    caller carrying `CLAUDE_CODE_TASK_LIST_ID` could freeze one list into every later session.
+  - That is why `ensure` still scrubs the variable (`env -u`) on create and resume.
 - **A session created without `--permission-mode` runs in default mode**, even when user
   settings set `permissions.defaultMode`. A `SendMessage` to it from a bypass-mode session is
   then held, not delivered. Created with `--permission-mode bypassPermissions`, it receives.
@@ -91,11 +83,12 @@ decision instead.
 | `PROJECT_SESSIONS_AUTO=1` | Force auto mode on (evals under `-p`) |
 | `PROJECT_SESSIONS_AUTO=0` | Force it off: SessionStart only names the session, UserPromptSubmit is silent |
 
-Both hooks stay silent outside git, inside any background session (the `status --session`
-check, or `CLAUDE_CODE_TASK_LIST_ID` equal to the name), past a 2 s bound, and on any error.
-The `status --session` check is the one that carries this: before 1.3.1 no session held its
-own name in `CLAUDE_CODE_TASK_LIST_ID` (see above), and the hooks stayed quiet through
-`status --session` alone (read from the code and the suite, not measured live).
+Both hooks stay silent outside git, inside any background session, past a 2 s bound, and on
+any error. The background check is `status --session`: the hook's `session_id` matches a
+`kind: background` row of `claude agents`.
+- The suite proves it with `PROJECT_SESSIONS_AUTO=1` and no task list, across every state
+  that row can hold.
+- Removing the check turns those 18 cases red.
 
 - **SessionStart has no `permission_mode` in its input** (measured 2.1.330, `-p`, `startup`;
   UserPromptSubmit has it). A create without the mode would run in default mode for good, so

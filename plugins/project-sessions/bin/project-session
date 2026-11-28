@@ -11,10 +11,13 @@
 #   - `claude --bg --resume <full sessionId>` with no other flag continues the same session;
 #     by name, short id or with any other flag it starts a copy, so nothing else is ever used
 #   - `claude agents --json --all` is the one source of session state; no id is stored here
-#   - the task list travels in `--settings '{"env":{"CLAUDE_CODE_TASK_LIST_ID":…}}'`, never as an
-#     env prefix: `--bg` hands the session to the long-lived `claude daemon`, so the client's env
-#     never reaches it (an env prefix read back the daemon's value), while the settings env does,
-#     and a bare resume re-applies it ("woke session … with its saved options (… --settings …)")
+#   - no task list is set: each session keeps Claude Code's default per-session list
+#     (~/.claude/tasks/session-<id>), which survives stop/resume (same id) and starts afresh when
+#     a session is removed and recreated
+#   - `--bg` hands the session to the long-lived `claude daemon`, so the client's env never
+#     reaches the session (an env prefix read back the daemon's value). The daemon's own env
+#     does, and a daemon this script starts inherits ours. That is why CLAUDE_CODE_TASK_LIST_ID
+#     is still scrubbed (`env -u`) on create and resume.
 #
 # Portable on purpose: bash 3.2 + git + jq. No realpath, readlink -f, stat or timeout.
 set -u -o pipefail
@@ -228,15 +231,14 @@ cmd_ensure() {
   fi
   # The mode is set only at creation. Without it the session runs in default mode whatever
   # the caller's mode, and SendMessage from a session in another mode is held (measured 2.1.330).
-  # The task list goes in --settings: the session runs under the daemon, not this client, so an
-  # env prefix never reaches it. The client env is scrubbed too, so a daemon this call happens
-  # to start does not inherit one repo's list and hand it to every later session.
-  local settings
-  settings=$(jq -nc --arg n "$NAME" '{env: {CLAUDE_CODE_TASK_LIST_ID: $n}}') || die "jq failed to build --settings"
+  # No task list is set: the session keeps Claude Code's default per-session list. The scrub
+  # (`env -u`, on resume too) stays: a daemon this call happens to start inherits the client's
+  # env, so a caller that carries CLAUDE_CODE_TASK_LIST_ID would freeze one list into the daemon
+  # and hand it to every later session (seen 2026-11-28, 00:31).
   if [ -n "$mode" ]; then
-    run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --name "$NAME" --permission-mode "$mode" --settings "$settings" "$prompt"
+    run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --name "$NAME" --permission-mode "$mode" "$prompt"
   else
-    run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --name "$NAME" --settings "$settings" "$prompt"
+    run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --name "$NAME" "$prompt"
   fi
   printf 'created %s\n' "$NAME"
 }

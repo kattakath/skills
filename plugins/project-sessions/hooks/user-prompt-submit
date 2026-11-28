@@ -23,7 +23,6 @@ bounded_status "$cwd" "$sid" || exit 0
 case $LINE in background\ *) exit 0 ;; esac
 name=${LINE% *}
 state=${LINE##* }
-[ -n "${CLAUDE_CODE_TASK_LIST_ID:-}" ] && [ "$CLAUDE_CODE_TASK_LIST_ID" = "$name" ] && exit 0
 
 mode=$(mirror_mode "$pmode")
 start_ensure "$cwd" "$name" "$state" "$mode"

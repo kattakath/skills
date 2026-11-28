@@ -107,7 +107,6 @@ check "name: outside git exits 2" "$RC" "2"
 
 # --- decide (--dry-run) ---------------------------------------------------------
 N=github.com:o/r
-SET="{\"env\":{\"CLAUDE_CODE_TASK_LIST_ID\":\"$N\"}}" # the --settings value every create carries
 ID1=11111111-1111-4111-8111-111111111111
 ID2=22222222-2222-4222-8222-222222222222
 row() { # cwd state startedAt sessionId [kind] [name]
@@ -190,27 +189,36 @@ agents
 : >"$STUB_LOG"
 run "$PS" ensure "$T/wt" --prompt "hello there"
 check "create: output" "$RC:$OUT" "0:created $N"
-check "create: argv, task list and cwd" "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=<unset>|--bg --name $N --settings $SET hello there"
+check "create: argv and cwd, no --settings" "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=<unset>|--bg --name $N hello there"
 uuid_free "create ids" "$OUT"
 : >"$STUB_LOG"
 run "$PS" ensure "$R" --permission-mode bypassPermissions --prompt "hi"
 check "create with --permission-mode: passed on create" \
-  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET hi"
+  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions hi"
 
-# The task list must reach the SESSION, which runs under the daemon, not this client. The stub
-# models that: only --settings sets it; the client env is invisible (see fixtures/claude).
+# No task list is set: the session keeps Claude Code's default per-session list (1.4.0). The stub
+# models the daemon (see fixtures/claude): a session's list comes only from --settings, else the
+# daemon's own env, so <unset> here means "the default list".
 SL="$T/session.log"
 : >"$SL"
-STUB_SESSION_LOG=$SL STUB_DAEMON_TASK=github.com:x/stale run "$PS" ensure "$R" --prompt hi
-check "task list: reaches the session past a daemon holding another repo's list" "$RC:$(cat "$SL")" "0:SESSION_TASK=$N"
+: >"$STUB_LOG"
+STUB_SESSION_LOG=$SL run "$PS" ensure "$R" --prompt hi
+check "task list: create sets none, the session keeps the default list" "$RC:$(cat "$SL")" "0:SESSION_TASK=<unset>"
+check "task list: create passes no --settings" "$(grep -- '--bg' "$STUB_LOG" | grep -c -- '--settings')" "0"
+check "task list: the script never names the variable in a setting" "$(grep -c '"CLAUDE_CODE_TASK_LIST_ID"\|CLAUDE_CODE_TASK_LIST_ID: ' "$PS")" "0"
+# The scrub stays: a daemon a create or resume starts inherits the client env.
 : >"$STUB_LOG"
 CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R" --prompt hi
-check "task list: the caller's own list never leaks into the client env" "$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "TASK=<unset>"
+check "scrub: the caller's list never reaches a create's client env" "$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "TASK=<unset>"
+agents "$(row "$R" "done" 100 $ID1)"
+: >"$STUB_LOG"
+CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R"
+check "scrub: the caller's list never reaches a resume's client env" "$RC:$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "0:TASK=<unset>"
+# shellcheck disable=SC2016 # literal patterns: the $ names are text in the script, not expansions
+check "scrub: every --bg call is behind env -u CLAUDE_CODE_TASK_LIST_ID" \
+  "$(grep -c 'run_claude .*"\$CLAUDE" --bg' "$PS"):$(grep -c 'run_claude "\$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "\$CLAUDE" --bg' "$PS")" "3:3"
 check "task list: no env-prefix channel is left in the script" "$(grep -c 'env CLAUDE_CODE_TASK_LIST_ID=' "$PS")" "0"
-mkrepo "$T/odd dir"
-: >"$SL"
-(cd "$T/odd dir" && STUB_SESSION_LOG=$SL run "$PS" ensure . --prompt hi && printf '%s' "$RC" >"$T/odd.rc")
-check "task list: a local: name with a space is valid JSON in --settings" "$(cat "$T/odd.rc"):$(cat "$SL")" "0:SESSION_TASK=local:$T/odd dir"
+agents
 run "$PS" ensure "$R" --permission-mode
 check "--permission-mode without a value fails" "$RC" "1"
 
@@ -310,7 +318,7 @@ for c in 'unset||manual' '0||manual' '1||auto' '1|0|manual' '0|1|auto' '|1|auto'
   if [ "$want" = auto ]; then
     check "auto gate ATTENDED=$att AUTO=$auto: starts the session" "$(ctx)" "$SS_AUTO \`$N\` (created). $HAND"
     check "auto gate ATTENDED=$att AUTO=$auto: create argv in the mirrored mode" "$(bgs)" \
-      "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
+      "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
   else
     check "auto gate ATTENDED=$att AUTO=$auto: names only" "$(ctx)" \
       "project-sessions: this repo has no project session yet (name \`$N\`). Before multi-step work here, load the \`project-sessions\` skill."
@@ -327,9 +335,35 @@ agents "$(row "$R" idle 100 $ID2)"
 fresh
 run ssrun $ID2 "$R" bypassPermissions
 check "auto: silent inside the project session itself" "$RC:$OUT:$ERR:$(grep -c -- '--bg' "$STUB_LOG")" "0:::0"
+# Inside a background session the ONLY guard is `status --session` (1.4.0 dropped the task-list
+# check). Model the worst case: AUTO=1 (the PROJECT_SESSIONS_AUTO=0 prefix the create passes may
+# not survive the daemon handover either) and no task list. Each state the session's own row can
+# hold, including the null-state row of a session that has just started.
+for st in idle working blocked "done" null; do
+  if [ "$st" = null ]; then
+    printf '[{"cwd":"%s","kind":"background","startedAt":1,"sessionId":"%s","name":"%s","state":null,"status":"busy"}]' "$R" $ID2 "$N" >"$STUB_AGENTS"
+  else
+    agents "$(row "$R" "$st" 100 $ID2)"
+  fi
+  fresh
+  # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+  run env -u CLAUDE_CODE_TASK_LIST_ID PROJECT_SESSIONS_AUTO=1 sh -c 'printf "%s" "$1" | "$2"' _ "$(ss_in $ID2 "$R" bypassPermissions)" "$HOOK"
+  check "background session ($st): SessionStart silent through status --session alone" "$RC:$OUT:$ERR:$(grep -c -- '--bg' "$STUB_LOG")" "0:::0"
+  fresh
+  # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+  run env -u CLAUDE_CODE_TASK_LIST_ID PROJECT_SESSIONS_AUTO=1 sh -c 'printf "%s" "$1" | "$2"' _ "$(ups_in $ID2 "$R" bypassPermissions)" "$UPS"
+  check "background session ($st): UserPromptSubmit silent through status --session alone" "$RC:$OUT:$ERR:$(grep -c -- '--bg' "$STUB_LOG")" "0:::0"
+  check "background session ($st): the hooks asked status with the caller's id" "$(grep -c 'agents --json --all' "$STUB_LOG")" "1"
+done
+# The hooks no longer read the variable: a caller whose list happens to equal the name is a
+# normal interactive session, and is told about the project session.
+agents "$(row "$R" idle 100 $ID2)"
 fresh
 CLAUDE_CODE_TASK_LIST_ID=$N run ssrun $ID1 "$R" bypassPermissions
-check "auto: silent in a session ensure created (task list = name)" "$RC:$OUT:$(grep -c -- '--bg' "$STUB_LOG")" "0::0"
+check "hooks ignore CLAUDE_CODE_TASK_LIST_ID: SessionStart still names the session" "$(ctx)" "$SS_AUTO \`$N\` (idle). $HAND"
+fresh
+CLAUDE_CODE_TASK_LIST_ID=$N run upsrun $ID1 "$R" bypassPermissions
+contains "hooks ignore CLAUDE_CODE_TASK_LIST_ID: UserPromptSubmit still names the session" "$(ctx)" "Project session for this repo: \`$N\` (idle)."
 fresh
 run ssrun $ID1 "$R" bypassPermissions
 check "auto: live session is named, nothing run" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" "$SS_AUTO \`$N\` (idle). $HAND:0"
@@ -344,7 +378,7 @@ check "auto: returns within its bound while --bg is still running" "$([ "$took" 
 check "auto: ensure not finished when the hook returned" "$([ -f "$RES.rc" ] && echo finished || echo running)" "running"
 check "auto: says starting" "$(ctx)" "$SS_AUTO \`$N\` (starting). $HAND"
 settle
-check "auto: the detached ensure created it in the mirrored mode" "$(bgs | cut -d' ' -f1-7)" "$R|TASK=<unset>|--bg --name $N --permission-mode acceptEdits --settings $SET"
+check "auto: the detached ensure created it in the mirrored mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=<unset>|--bg --name $N --permission-mode acceptEdits"
 check "auto: ensure finished cleanly" "$(cat "$RES.rc"):$(cat "$RES.out")" "0:created $N"
 
 agents
@@ -420,7 +454,7 @@ fresh
 STUB_BG_SLEEP=2 run upsrun $ID1 "$R" bypassPermissions
 settle
 check "prompt: no session: starting" "$(ctx)" "Project session for this repo: \`$N\` (starting). For multi-step work, SendMessage it the task instead of doing it here."
-check "prompt: creates it in the caller's mode" "$(bgs | cut -d' ' -f1-7)" "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions --settings $SET"
+check "prompt: creates it in the caller's mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions"
 fresh
 run upsrun $ID1 "$R" plan
 check "prompt: plan mode creates nothing and says why" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" \

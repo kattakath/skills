@@ -26,7 +26,6 @@ bounded_status "$cwd" "$sid" || exit 0
 case $LINE in background\ *) exit 0 ;; esac
 name=${LINE% *}
 state=${LINE##* }
-[ -n "${CLAUDE_CODE_TASK_LIST_ID:-}" ] && [ "$CLAUDE_CODE_TASK_LIST_ID" = "$name" ] && exit 0 # a session ensure created
 
 if ! auto_on; then
   if [ "$state" = none ]; then
