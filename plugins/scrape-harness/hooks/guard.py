@@ -612,6 +612,9 @@ def session(event: dict) -> None:
         text = (
             "scrape-harness task seed (from pipeline.toml [[stages]]). If the task list is empty, create one "
             "task per entry with TaskCreate (subject, description, activeForm), then set blockedBy as listed. "
+            "If TaskCreate is not available (Claude Code leaves the task tools out on newer models unless "
+            "CLAUDE_CODE_ENABLE_TODO_TOOLS=1), list the entries as a numbered checklist in your reply instead "
+            "and track them there. "
             "You may split, merge, fan out or mark tasks done/skipped as the work requires; keep the "
             f"'Stage i/N: name' prefix so the run card and the task list agree.{status}\n"
             + json.dumps(seed, ensure_ascii=False)

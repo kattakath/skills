@@ -43,6 +43,18 @@ The project runs a pipeline built on the `scrape_harness` Python core and holds 
 at its root (or names it in `SCRAPE_HARNESS_PIPELINE`). The project's generated
 `.claude/settings.json` enables this plugin and carries the deny rules a plugin cannot ship.
 
+**The task seed needs the task tools, and they are often off.** The `SessionStart` seed asks for one
+`TaskCreate` per stage. Claude Code's
+[tools reference](https://code.claude.com/docs/en/tools-reference.md#task-tool-availability) says the task
+tools "are available by default only on Opus 4.7, Sonnet 4.6, Haiku 4.5, and earlier models. … On every
+other model, Claude Code leaves the tools out unless you opt in."
+- **To get the task list:** export `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` before starting Claude Code. That
+  matters on any machine without it set globally: CI, a devcontainer, a teammate's laptop. A plugin
+  cannot set it.
+- **Without it the seed still works:** it tells the session to list the stages as a numbered checklist in
+  its reply instead (`test_the_seed_degrades_when_task_tools_are_off`).
+- Background and cloud sessions get the tools on every model, per the same page.
+
 This plugin auto-updates from the marketplace; a project pins its core. When they disagree, the
 hooks refuse with **"plugin/harness version mismatch"** and name the update to run: a key the plugin
 does not know means the plugin is older; a key it needs and cannot find means the core is older.

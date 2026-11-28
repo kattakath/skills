@@ -259,6 +259,15 @@ class SessionStatus(Hook):
     def test_no_run_yet_is_said(self):
         self.assertIn("no run recorded", self.context())
 
+    def test_the_seed_degrades_when_task_tools_are_off(self):
+        # TaskCreate is off by default on newer models (tools-reference § Task tool availability),
+        # so the seed must name a fallback and the opt-in, not only TaskCreate.
+        head = self.context()
+        self.assertIn("TaskCreate", head)
+        self.assertIn("If TaskCreate is not available", head)
+        self.assertIn("CLAUDE_CODE_ENABLE_TODO_TOOLS=1", head)
+        self.assertIn("numbered checklist in your reply", head)
+
     def test_bounded_and_value_free(self):
         data = str(self.tmp / "drive" / "DATA")
         self.write_status(run_id="r" * 5000, command="crawl-lists /etc/passwd", status="x\ny" * 400)
