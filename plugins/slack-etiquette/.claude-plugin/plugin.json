@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "slack-etiquette",
-  "version": "1.0.0",
-  "description": "Slack etiquette for agents that message people: when not to post, re-reading history before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Layers on Slack's own slack:slack-messaging skill; holds no workspace data.",
+  "version": "1.1.0",
+  "description": "Slack etiquette for agents that message people: when not to post, re-reading history before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Works with whichever Slack connector is signed in (tools matched by suffix), confirms the signed-in workspace and looks people and channels up live; a PreToolUse hook refuses URL-labelled links and doubled footers. Layers on Slack's own slack:slack-messaging skill; holds no workspace data.",
   "author": {
     "name": "Ismail Kattakath"
   },

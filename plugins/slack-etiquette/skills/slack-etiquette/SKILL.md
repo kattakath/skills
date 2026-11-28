@@ -11,6 +11,21 @@ keep it short, use threads, write standard markdown. Read it first if it is load
 skill adds what that one leaves out: **which conversation to use, when not to post at all,
 and how to avoid colliding with other agents.**
 
+**Tools are named by suffix.** Whichever Slack connector is signed in, its tools end in
+`slack_send_message`, `slack_read_thread` and so on; the prefix (`mcp__claude_ai_Slack__`,
+`mcp__plugin_slack_slack__`, `mcp__<id>__`) varies. Use whichever one is authenticated.
+
+## 0. Know who you are, and look everything up live
+
+1. **Before the first post in a session**, call `slack_read_user_profile` with no user (it
+   returns you). Tell the operator which workspace and user you are signed in as. If that
+   is not the workspace they meant, stop.
+2. **Resolve people and channels live**: `slack_search_users` for a person's ID, then the
+   `<@USERID>` mention; `slack_search_channels` for a channel. Never guess or reuse an ID
+   from another workspace.
+3. **Read a channel's topic and description** before posting to one the operator did not
+   name. If they say that kind of message belongs elsewhere, tell the operator instead.
+
 ## 1. Should this be a Slack message at all?
 
 Send only when one of these holds:
@@ -64,7 +79,7 @@ the group message ("see the group update") instead of repeating it.
   - `>` to quote the line you are answering.
   - A list for 3 or more parallel items.
 - **For an ask, tag the person and name the exact decision**, with options when it's a choice.
-  Use the `<@USERID>` mention syntax and look up the ID; never guess it. In a group, tag only
+  Use the `<@USERID>` mention syntax with the ID from `slack_search_users` (step 0). In a group, tag only
   the person the ask is for.
 - **No signature.** Hosted Slack MCP connectors append their own "Sent using …" footer; adding
   one yourself doubles it.
@@ -89,9 +104,9 @@ If the operator asked to review messages first, or the message speaks for them o
 new (a commitment, a date, a decision), send a draft (`slack_send_message_draft`) and let
 them post it. Routine replies inside an agreed flow can go out directly.
 
-## Where the directory lives
+## The hook
 
-This skill holds no workspace data. Who is who, user IDs, conversation IDs and which session
-owns which conversation belong to the workspace's own context: a project or folder
-`CLAUDE.md`, or the operator's memory. Look them up there before tagging or choosing a
-conversation.
+The plugin's PreToolUse hook runs on every `slack_send_message`, `slack_send_message_draft`
+and `slack_schedule_message`, under any prefix. It reminds you of this list, and it
+**refuses** a send whose text has a link labelled with a URL (§ 5) or a hand-typed
+"Sent using" footer (§ 4). Fix the text and send again.

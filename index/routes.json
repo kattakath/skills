@@ -313,7 +313,7 @@
       "steps": [
         "slack-etiquette"
       ],
-      "note": "Layers on Slack's own slack:slack-messaging skill; workspace IDs stay in the workspace's CLAUDE.md or memory."
+      "note": "Layers on Slack's own slack:slack-messaging skill; any connector, IDs looked up live; a PreToolUse hook refuses unfurling link labels and doubled footers."
     },
     {
       "goal": "Create a Google Doc or a PDF in one fixed house style, with page numbers and aligned diagrams",

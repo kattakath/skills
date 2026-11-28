@@ -420,6 +420,12 @@ jobs:
       - name: ci-watch cases
         run: bash plugins/ci-watch/tests/run.sh
 
+      # slack-etiquette's send guard: a normal send gets the checklist and no decision, a
+      # URL-labelled link or a hand-typed footer is denied, every connector prefix matches,
+      # and garbage input fails open. Pure node, no network. The suite has a case floor.
+      - name: slack-etiquette hook cases
+        run: bash plugins/slack-etiquette/tests/run.sh
+
       # scrape-harness's agent-contract gates: a valid answer stops, an invalid one blocks
       # naming its schema, an older pinned core that lacks the contract lets the agent stop
       # with one line, and the SessionStart status line stays bounded and value-free. The
