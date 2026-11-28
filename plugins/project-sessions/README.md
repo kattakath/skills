@@ -12,7 +12,7 @@ work to it with `SendMessage` and keeps only coordination.
 | Part | What it does |
 |---|---|
 | `bin/project-session` | `name`, `ensure`, `status`. bash 3.2 + `git` + `jq`; macOS and Linux; no Nix |
-| `bin/ghostty-split` | Runs (or types, `--type-only`) a command in a Ghostty split below the focused pane; macOS (`osascript`). `ensure` uses it for the trust prompt. Ported from kattakath/nix-config `packages/ghostty-split.nix` (b4c732a5), with the exit codes moved to nix-dev-toolkit's CLI contract: **2** usage (was 64), **3** Ghostty unavailable (was 69), and `--help` on stdout with exit 0 (it was a usage error). |
+| `bin/ghostty-split` | Runs (or types, `--type-only`) a command in a Ghostty split below the focused pane; macOS (`osascript`). `ensure` uses it for the trust prompt. Ported from kattakath/nix-config `packages/ghostty-split.nix` (b4c732a5), with the exit codes moved to nix-dev-toolkit's CLI contract: **2** usage (was 64), **3** Ghostty unavailable (was 69), **4** `--wait` timed out (`--timeout SECS`, default 3600; new here), and `--help` on stdout with exit 0 (it was a usage error). |
 | `hooks/session-start` | SessionStart: in auto mode, resumes a stopped session (detached) and names it; otherwise names it and the skill |
 | `hooks/user-prompt-submit` | UserPromptSubmit, auto mode only: one line per prompt; creates a missing session in the caller's mode (detached) |
 | `hooks/lib.sh` | Shared by the two: the gate, the 2 s bound, the detached `ensure` |
