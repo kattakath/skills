@@ -64,6 +64,9 @@ mechanism, some (`mcp/`) is portable data external harnesses consume directly.
    sibling `exempt` from curation.
 5. Add the entry to `.claude-plugin/marketplace.json`, `source: "./plugins/<name>"`, keeping
    the list alpha-sorted by `name` — the validate action's I1 invariant checks the order.
+   The entry's `description`, `keywords`, `homepage`, `author` and `license` are **derived
+   from `plugin.json`**: edit them there, then run `python3 scripts/build-index.py` to sync
+   the entry (its `--check` fails on drift).
 6. If it fills a goal, add a route to `index/routes.json` (and a `sources.json` entry if it
    points outward), then run `python3 scripts/build-index.py` to regenerate `INDEX.md`.
 
