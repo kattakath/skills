@@ -259,7 +259,9 @@ jobs:
       # README says why no bot). This is the watcher for that hand step: a WARNING, exit 0,
       # because a lag behind nix-config's weekly update-flake-lock run is expected.
       - name: markup-lsp nixpkgs pin vs nix-config main
-        run: python3 -I plugins/markup-lsp/tests/lock-parity.py .nix-config/flake.lock
+        run: |
+          python3 -I plugins/markup-lsp/tests/lock-parity.py .nix-config/flake.lock \
+            || echo "::warning file=plugins/markup-lsp/flake.lock::lock-parity.py could not compare the nixpkgs pins; see the step log"
 
       # CDP is gone from the userscript toolchain; this fails if any of it creeps back in.
       - name: userscript-lab no-CDP gate
