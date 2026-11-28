@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Stub `claude`. Logs "<pwd>|TASK=<CLAUDE_CODE_TASK_LIST_ID>|<argv>" to $STUB_LOG.
+printf '%s|TASK=%s|%s\n' "$(pwd -P)" "${CLAUDE_CODE_TASK_LIST_ID-<unset>}" "$*" >>"$STUB_LOG"
+case $1 in
+  agents)
+    [ -n "${STUB_SLEEP:-}" ] && sleep "$STUB_SLEEP"
+    cat "$STUB_AGENTS"
+    ;;
+  --bg)
+    if [ -n "${STUB_UNTRUSTED:-}" ]; then
+      echo "Workspace not trusted. Run \`claude\` in $(pwd -P) once and accept the trust prompt, then retry." >&2  # measured wording, 2.1.330
+      exit 1
+    fi
+    # Wording measured on 2.1.330. A copy's note names the ORIGINAL id too.
+    if [ "$2" = --resume ] && [ -z "${STUB_COPY:-}" ]; then
+      echo "backgrounded · ${3:0:8} · stub (idle — send a prompt to start)"
+    elif [ "$2" = --resume ]; then
+      echo "note: background session ${3:0:8} keeps its own saved options, so the flags you passed started a copy as 99999999. Without flags, the same command continues ${3:0:8} itself."
+      echo "backgrounded · 99999999 · stub"
+    else
+      echo "backgrounded · 99999999 · stub"
+    fi
+    ;;
+  *) exit 64 ;;
+esac

@@ -622,6 +622,26 @@
       "source": "./plugins/prior-art-recon"
     },
     {
+      "name": "project-sessions",
+      "description": "One named background Claude Code session per git repo, named `<host>:<owner>/<repo>`. `project-session ensure` finds it in `claude agents --json --all` by name AND repo root, resumes a stopped one by its bare full session id (the only form that does not start a copy), or creates it with its own task list; the main session then hands work to it with SendMessage. A SessionStart hook names the repo's session. The skill also checks the repo is a valid Claude Code project.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "sessions",
+        "background",
+        "agents",
+        "sendmessage",
+        "remote-control",
+        "task-list",
+        "hooks"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/project-sessions",
+      "license": "MIT",
+      "source": "./plugins/project-sessions"
+    },
+    {
       "name": "rag",
       "description": "Retrieval-augmented generation over a private Cloudflare AI Search instance, from every Claude surface: add documents, then answer questions from that corpus through the Cloudflare connector. A read-only local pgvector fallback remains.",
       "author": {

@@ -1,0 +1,265 @@
+#!/usr/bin/env bash
+# project-session — one named background Claude Code session per git repo.
+#
+#   project-session name   [dir]                    print <host>:<owner>/<repo> (or local:<root>)
+#   project-session ensure [dir] [--prompt TEXT] [--dry-run] [--debug]
+#                                                   live | resumed | created <name>
+#   project-session status [dir] [--session ID]     "<name> <state>" | "<name> none"
+#
+# Facts this relies on (measured on Claude Code 2.1.330):
+#   - session names are NOT unique; this script matches name AND repo root, and reports duplicates
+#   - `claude --bg --resume <full sessionId>` with no other flag continues the same session;
+#     by name, short id or with any other flag it starts a copy, so nothing else is ever used
+#   - `claude agents --json --all` is the one source of session state; no id is stored here
+#
+# Portable on purpose: bash 3.2 + git + jq. No realpath, readlink -f, stat or timeout.
+set -u -o pipefail
+
+CLAUDE=${PROJECT_SESSION_CLAUDE:-claude}
+LOCK_STALE_S=${PROJECT_SESSION_LOCK_STALE_S:-120}
+LOCK_WAIT_S=${PROJECT_SESSION_LOCK_WAIT_S:-30}
+DEFAULT_PROMPT="You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
+
+die() { printf 'project-session: %s\n' "$*" >&2; exit "${RC:-1}"; }
+
+# The physical path of a directory, or nothing.
+phys() { (cd "$1" 2>/dev/null && pwd -P); }
+
+# The repo root a directory belongs to. A worktree maps to its main repo through the
+# common git dir; a submodule (common dir not named .git) keeps its own toplevel.
+repo_root() {
+  local d=$1 common top
+  common=$(git -C "$d" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 1
+  case $common in
+    */.git) phys "${common%/.git}" ;;
+    *)
+      top=$(git -C "$d" rev-parse --show-toplevel 2>/dev/null) || return 1
+      phys "$top"
+      ;;
+  esac
+}
+
+# <host>:<path> from a remote URL; nothing when the URL names no host (a local path).
+url_name() {
+  local u=$1 rest host path
+  case $u in
+    *://*)
+      rest=${u#*://}
+      case $u in file://*) return 1 ;; esac
+      host=${rest%%/*}
+      path=${rest#*/}
+      [ "$path" = "$rest" ] && return 1
+      host=${host##*@}
+      host=${host%%:*}
+      ;;
+    *:*)
+      case ${u%%:*} in */*) return 1 ;; esac # ./a:b is a path, not scp syntax
+      host=${u%%:*}
+      host=${host##*@}
+      path=${u#*:}
+      ;;
+    *) return 1 ;;
+  esac
+  path=${path%/}
+  path=${path%.git}
+  path=${path#/}
+  [ -n "$host" ] && [ -n "$path" ] || return 1
+  printf '%s:%s\n' "$(printf '%s' "$host" | tr '[:upper:]' '[:lower:]')" "$path"
+}
+
+session_name() { # root
+  local url n
+  url=$(git -C "$1" remote get-url origin 2>/dev/null) && n=$(url_name "$url") && {
+    printf '%s\n' "$n"
+    return
+  }
+  printf 'local:%s\n' "$1"
+}
+
+# Rows for this repo: "state<TAB>startedAt<TAB>sessionId<TAB>kind", newest first.
+# A row matches when its name is exact AND its cwd resolves to the same repo root.
+# A row whose cwd no longer exists is skipped.
+matches() { # name root json
+  local name=$2 root=$3 cwd r
+  printf '%s' "$1" | jq -r --arg n "$name" '
+      .[] | select(.kind == "background" and .name == $n)
+      | [(if .pid != null then "running" else (.state // (if .status != null then "running" else "null" end)) end),
+         (.startedAt // 0 | tostring), ((.sessionId // "") | if . == "" then "-" else . end), .kind, .cwd]
+      | @tsv' |
+    while IFS=$'\t' read -r state at sid kind cwd; do
+      [ -d "$cwd" ] || continue
+      r=$(repo_root "$cwd") || continue
+      [ "$r" = "$root" ] && printf '%s\t%s\t%s\t%s\n' "$state" "$at" "$sid" "$kind"
+    done | sort -t$'\t' -k2,2nr
+}
+
+klass() { # state -> live | stopped | unknown
+  case $1 in
+    working | blocked | idle | running) echo live ;; # running: a null state with a status or pid
+    done | failed) echo stopped ;;
+    *) echo unknown ;;
+  esac
+}
+
+agents_json() {
+  local j
+  j=$("$CLAUDE" agents --json --all 2>/dev/null) || RC=4 die "claude agents --json --all failed"
+  printf '%s' "$j" | jq -e 'type == "array"' >/dev/null 2>&1 || RC=4 die "claude agents --json --all did not return a JSON array"
+  printf '%s' "$j"
+}
+
+LOCK=
+lock() { # name
+  local base now at waited=0
+  base=${XDG_STATE_HOME:-$HOME/.local/state}/project-sessions
+  mkdir -p "$base" || die "cannot create $base"
+  LOCK=$base/$(printf '%s' "$1" | tr -c 'A-Za-z0-9_-' '-').lock
+  while ! mkdir "$LOCK" 2>/dev/null; do
+    now=$(date +%s)
+    at=$(cat "$LOCK/at" 2>/dev/null || echo "$now") # no stamp yet: the holder just took it
+    if [ $((now - at)) -gt "$LOCK_STALE_S" ]; then
+      rm -rf "$LOCK"
+      continue
+    fi
+    [ "$waited" -ge "$LOCK_WAIT_S" ] && { LOCK=; RC=75 die "another ensure holds the lock for $1"; }
+    sleep 1
+    waited=$((waited + 1))
+  done
+  date +%s >"$LOCK/at"
+  trap 'rm -rf "$LOCK"' EXIT
+}
+
+# Run claude from the repo root. Success: its stdout (it carries the id) is dropped unless
+# --debug. Failure: everything it printed goes to stderr verbatim — the "Workspace not
+# trusted" line is an action for the operator, not something to work around.
+run_claude() { # root args...
+  local root=$1 out rc
+  shift
+  out=$(cd "$root" && "$@" 2>&1)
+  rc=$?
+  if [ $rc -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    RC=$rc die "claude exited $rc"
+  fi
+  [ "$DEBUG" = 1 ] && printf 'debug: %s\n' "$out"
+  CLAUDE_OUT=$out
+  return 0
+}
+
+resolve() { # dir -> sets ROOT NAME
+  local d=${1:-.}
+  [ -d "$d" ] || die "no such directory: $d"
+  ROOT=$(repo_root "$d") || RC=2 die "not inside a git repository: $d"
+  NAME=$(session_name "$ROOT")
+}
+
+cmd_ensure() {
+  local dir=. prompt=$DEFAULT_PROMPT dry=0 rows n live_rows stopped_rows unknown_rows sid state got
+  DEBUG=0
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --prompt) [ $# -ge 2 ] || die "--prompt needs text"; prompt=$2; shift 2 ;;
+      --dry-run) dry=1; shift ;;
+      --debug) DEBUG=1; shift ;;
+      -*) die "unknown option: $1" ;;
+      *) dir=$1; shift ;;
+    esac
+  done
+  resolve "$dir"
+  [ "$dry" = 1 ] || lock "$NAME"
+  local json
+  json=$(agents_json) || exit $? # die in $(…) only leaves the subshell
+  rows=$(matches "$json" "$NAME" "$ROOT")
+  n=$(printf '%s' "$rows" | grep -c . || true)
+  [ "$n" -gt 1 ] && printf 'duplicates %s\n' "$n" >&2
+  live_rows='' stopped_rows='' unknown_rows=''
+  if [ -n "$rows" ]; then
+    while IFS=$'\t' read -r state _ sid _; do
+      case $(klass "$state") in
+        live) live_rows=$live_rows$state$'\t'$sid$'\n' ;;
+        stopped) stopped_rows=$stopped_rows$state$'\t'$sid$'\n' ;;
+        *) unknown_rows=$unknown_rows$state$'\n' ;;
+      esac
+    done <<<"$rows"
+  fi
+  if [ -n "$live_rows" ]; then
+    [ "$DEBUG" = 1 ] && printf 'debug: sessionId=%s\n' "$(printf '%s' "$live_rows" | head -1 | cut -f2)"
+    printf 'live %s\n' "$NAME"
+    return 0
+  fi
+  if [ -n "$unknown_rows" ]; then
+    # An unknown state may be a running session; creating or resuming could make a copy.
+    RC=3 die "session $NAME is in an unknown state ($(printf '%s' "$unknown_rows" | head -1)); not acting"
+  fi
+  if [ -n "$stopped_rows" ]; then
+    sid=$(printf '%s' "$stopped_rows" | head -1 | cut -f2)
+    [ -n "$sid" ] && [ "$sid" != - ] || RC=3 die "the newest stopped session for $NAME has no sessionId"
+    [ "$DEBUG" = 1 ] && printf 'debug: sessionId=%s\n' "$sid"
+    if [ "$dry" = 1 ]; then
+      printf 'would-resume %s\n' "$NAME"
+      return 0
+    fi
+    # Bare full id and NO other flag: anything else starts a copy (measured 2.1.330).
+    run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --resume "$sid"
+    # claude prints the id it continued. A different id means it started a copy (it does
+    # that when the session turned out to be running after all).
+    # Read the id from the "backgrounded · <id> · …" line only: a copy's note also names
+    # the original id, so a substring match would pass a copy (measured 2.1.330).
+    got=$(printf '%s\n' "$CLAUDE_OUT" | sed -n 's/^backgrounded · \([0-9a-f]*\).*/\1/p' | head -1)
+    case $got in
+      "${sid:0:8}") ;;
+      *)
+        printf '%s\n' "$CLAUDE_OUT" >&2
+        RC=5 die "resume of $NAME did not continue the same session (claude started a copy); report it, do not retry"
+        ;;
+    esac
+    printf 'resumed %s\n' "$NAME"
+    return 0
+  fi
+  if [ "$dry" = 1 ]; then
+    printf 'would-create %s\n' "$NAME"
+    return 0
+  fi
+  run_claude "$ROOT" env CLAUDE_CODE_TASK_LIST_ID="$NAME" "$CLAUDE" --bg --name "$NAME" "$prompt"
+  printf 'created %s\n' "$NAME"
+}
+
+cmd_status() {
+  local dir=. self='' rows state
+  while [ $# -gt 0 ]; do
+    case $1 in
+      --session) [ $# -ge 2 ] || die "--session needs an id"; self=$2; shift 2 ;;
+      -*) die "unknown option: $1" ;;
+      *) dir=$1; shift ;;
+    esac
+  done
+  resolve "$dir"
+  local json
+  json=$(agents_json) || exit $?
+  # The caller is itself a background session: say so, so a hook can stay quiet there.
+  if [ -n "$self" ] && printf '%s' "$json" | jq -e --arg s "$self" \
+    'any(.[]; .sessionId == $s and .kind == "background")' >/dev/null; then
+    printf 'background %s\n' "$NAME"
+    return 0
+  fi
+  rows=$(matches "$json" "$NAME" "$ROOT")
+  if [ -z "$rows" ]; then
+    printf '%s none\n' "$NAME"
+    return 0
+  fi
+  # Prefer a live row; otherwise the newest.
+  state=$(printf '%s\n' "$rows" | while IFS=$'\t' read -r s _; do
+    [ "$(klass "$s")" = live ] && { echo "$s"; break; }
+  done)
+  [ -n "$state" ] || state=$(printf '%s\n' "$rows" | head -1 | cut -f1)
+  printf '%s %s\n' "$NAME" "$state"
+}
+
+case ${1:-} in
+  name) shift; resolve "${1:-.}"; printf '%s\n' "$NAME" ;;
+  ensure) shift; cmd_ensure "$@" ;;
+  status) shift; cmd_status "$@" ;;
+  url-name) shift; url_name "${1:?url}" ;; # test seam
+  -h | --help | help | '') sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' ;;
+  *) die "unknown subcommand: $1 (name | ensure | status)" ;;
+esac

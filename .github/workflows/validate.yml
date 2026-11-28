@@ -426,6 +426,12 @@ jobs:
       - name: slack-etiquette hook cases
         run: bash plugins/slack-etiquette/tests/run.sh
 
+      # project-sessions: `claude` is a fixture stub that logs every call, so no session starts.
+      # Exact create/resume argv, no session id on stdout, fail-closed on an unknown state or
+      # a broken agents list, the lock, and a hook silent outside git and in background sessions.
+      - name: project-sessions cases
+        run: bash plugins/project-sessions/tests/run.sh
+
       # scrape-harness's agent-contract gates: a valid answer stops, an invalid one blocks
       # naming its schema, an older pinned core that lacks the contract lets the agent stop
       # with one line, and the SessionStart status line stays bounded and value-free. The

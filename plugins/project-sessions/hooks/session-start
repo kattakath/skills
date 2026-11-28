@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# SessionStart: one line of context naming this repo's project session and the skill to load.
+# Fails open and stays silent: outside git, without jq, in a background session (the project
+# session itself must not be told to delegate to itself), on any error, or after 2 s.
+set -u
+exec 2>/dev/null # quiet means empty stderr too (bash 3.2 reports a killed job there)
+command -v jq >/dev/null 2>&1 || exit 0
+input=$(cat 2>/dev/null) || exit 0
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null)
+sid=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
+[ -n "$cwd" ] || cwd=$PWD
+git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1 || exit 0
+
+here=$(cd "$(dirname "$0")" && pwd -P)
+out=$(mktemp 2>/dev/null) || exit 0
+trap 'rm -f "$out"' EXIT
+# Bound the call without `timeout(1)`, which stock macOS lacks.
+"$here/../bin/project-session" status "$cwd" ${sid:+--session "$sid"} >"$out" 2>/dev/null &
+pid=$!
+i=0
+while kill -0 "$pid" 2>/dev/null; do
+  [ "$i" -ge "${PROJECT_SESSION_HOOK_TICKS:-20}" ] && { kill "$pid"; wait "$pid"; exit 0; }
+  sleep 0.1
+  i=$((i + 1))
+done
+wait "$pid" || exit 0
+line=$(head -1 "$out")
+[ -n "$line" ] || exit 0
+case $line in background\ *) exit 0 ;; esac
+name=${line% *}
+state=${line##* }
+if [ "$state" = none ]; then
+  msg="project-sessions: this repo has no project session yet (name \`$name\`). Before multi-step work here, load the \`project-sessions\` skill."
+else
+  msg="project-sessions: this repo's project session is \`$name\` ($state). Before multi-step work here, load the \`project-sessions\` skill."
+fi
+jq -cn --arg m "$msg" '{hookSpecificOutput: {hookEventName: "SessionStart", additionalContext: $m}}'

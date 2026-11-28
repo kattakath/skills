@@ -1,0 +1,17 @@
+{
+  "description": "project-sessions: one SessionStart line naming this repo's project session. Fails open, silent outside git and inside background sessions.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}
