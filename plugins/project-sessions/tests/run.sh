@@ -6,16 +6,20 @@
 #   name      https / ssh scp / ssh:// with port / nested groups / no remote / worktree
 #   decide    ensure --dry-run: none, done, failed, live, worktree cwd, other repo, interactive
 #             row, duplicates, unknown state, vanished cwd
-#   act       create and resume argv exactly; trust refusal passed through verbatim
+#   act       create and resume argv exactly (with and without --permission-mode); trust
+#             refusal passed through verbatim
 #   ids       no session id on stdout unless --debug
 #   lock      a fresh lock refuses, a stale one is taken over
 #   hook      silent outside git, in a background session and past its time bound
+#   mode hook amends `project-session ensure` with the caller's mode; leaves other commands,
+#             a command that names a mode, plan mode and garbage alone
 # Run:  bash plugins/project-sessions/tests/run.sh
 set -uo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PS="$HERE/../bin/project-session"
 HOOK="$HERE/../hooks/session-start"
+PTU="$HERE/../hooks/pre-tool-use"
 pass=0
 fail=0
 T="$(cd "$(mktemp -d)" && pwd -P)"
@@ -118,6 +122,8 @@ agents "$(row "$R" "done" 100 $ID1)"
 dry "done" "would-resume $N"
 agents "$(row "$R" failed 100 $ID1)"
 dry "failed is resumable" "would-resume $N"
+agents "$(row "$R" stopped 100 $ID1)"
+dry "stopped (reboot, service off) is resumable" "would-resume $N"
 agents "$(row "$R" idle 100 $ID1)"
 dry "idle is live" "live $N"
 agents "$(row "$R" working 100 $ID1)"
@@ -159,6 +165,14 @@ check "resume: output" "$RC:$OUT" "0:resumed $N"
 check "resume: argv is bare --bg --resume <newest full id>, from the repo root" \
   "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=<unset>|--bg --resume $ID2"
 uuid_free "resume ids" "$OUT"
+: >"$STUB_LOG"
+run "$PS" ensure "$R" --permission-mode bypassPermissions
+check "resume with --permission-mode: argv stays bare" \
+  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=<unset>|--bg --resume $ID2"
+agents "$(row "$R" failed 100 $ID1)"
+: >"$STUB_LOG"
+run "$PS" ensure "$R"
+check "failed: resumed by bare full id" "$RC:$OUT:$(grep -- '--bg' "$STUB_LOG")" "0:resumed $N:$R|TASK=<unset>|--bg --resume $ID1"
 
 agents "$(row "$R" "done" 100 $ID1)"
 STUB_COPY=1 run "$PS" ensure "$R"
@@ -171,6 +185,12 @@ run "$PS" ensure "$T/wt" --prompt "hello there"
 check "create: output" "$RC:$OUT" "0:created $N"
 check "create: argv, task list and cwd" "$(grep -- '--bg' "$STUB_LOG")" "$R|TASK=$N|--bg --name $N hello there"
 uuid_free "create ids" "$OUT"
+: >"$STUB_LOG"
+run "$PS" ensure "$R" --permission-mode bypassPermissions --prompt "hi"
+check "create with --permission-mode: passed on create" \
+  "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions hi"
+run "$PS" ensure "$R" --permission-mode
+check "--permission-mode without a value fails" "$RC" "1"
 
 : >"$STUB_LOG"
 run "$PS" ensure "$R" --debug
@@ -228,13 +248,52 @@ printf 'not json' >"$STUB_AGENTS"
 run hook $ID1 "$R"
 check "hook: silent when claude agents is broken" "$RC:$OUT:$ERR" "0::"
 
+# --- mode hook ---------------------------------------------------------------------
+ptu() { # command mode -> OUT ERR RC
+  run sh -c 'jq -cn --arg c "$1" --arg m "$2" "{session_id:\"s\",cwd:\"/\",permission_mode:\$m,hook_event_name:\"PreToolUse\",tool_name:\"Bash\",tool_input:{command:\$c,description:\"d\",timeout:9,run_in_background:false}}" | "$3"' _ "$1" "$2" "$PTU"
+}
+amended() { printf '%s' "$OUT" | jq -r .hookSpecificOutput.updatedInput.command; }
+# shellcheck disable=SC2016 # literal ${CLAUDE_PLUGIN_ROOT}, as the skill writes it
+P='"${CLAUDE_PLUGIN_ROOT}/bin/project-session"'
+ptu "$P ensure" bypassPermissions
+check "mode hook: adds the caller's mode" "$RC:$(amended)" "0:$P ensure --permission-mode bypassPermissions"
+check "mode hook: no permissionDecision, so the normal flow decides" \
+  "$(printf '%s' "$OUT" | jq -r '.hookSpecificOutput | has("permissionDecision")')" "false"
+check "mode hook: other tool_input fields survive" \
+  "$(printf '%s' "$OUT" | jq -c '.hookSpecificOutput.updatedInput | [.description, .timeout, .run_in_background]')" '["d",9,false]'
+check "mode hook: event name" "$(printf '%s' "$OUT" | jq -r .hookSpecificOutput.hookEventName)" "PreToolUse"
+ptu "cd /x && $P ensure /x --prompt 'a b' && echo ok" acceptEdits
+check "mode hook: flag goes right after ensure, the rest kept" "$(amended)" "cd /x && $P ensure --permission-mode acceptEdits /x --prompt 'a b' && echo ok"
+ptu "/p/bin/project-session ensure" default
+check "mode hook: Manual arrives as default, passed verbatim" "$(amended)" "/p/bin/project-session ensure --permission-mode default"
+for c in "$P ensure --permission-mode auto" "$P status" "git commit -m 'make project-session ensure faster'" \
+  "grep -n 'project-session ensure' README.md" "echo hi" \
+  "cat >f <<'X'
+$P ensure
+X" "git commit -m 'subject
+$P ensure in the body'"; do
+  ptu "$c" bypassPermissions
+  check "mode hook: untouched: $c" "$RC:$OUT:$ERR" "0::"
+done
+ptu "$P ensure" plan
+check "mode hook: plan mode is not mirrored" "$RC:$OUT:$ERR" "0::"
+ptu "$P ensure" 'x; rm -rf /'
+check "mode hook: an unknown mode is not spliced in" "$RC:$OUT:$ERR" "0::"
+run sh -c 'printf "project-session ensure not json" | "$1"' _ "$PTU"
+check "mode hook: garbage fails open" "$RC:$OUT:$ERR" "0::"
+run sh -c 'printf "%s" "{\"tool_name\":\"Write\",\"permission_mode\":\"auto\",\"tool_input\":{\"command\":\"project-session ensure\"}}" | "$1"' _ "$PTU"
+check "mode hook: only Bash calls" "$RC:$OUT:$ERR" "0::"
+
 # --- wiring -------------------------------------------------------------------------
 # shellcheck disable=SC2016 # the literal ${CLAUDE_PLUGIN_ROOT} is what hooks.json holds
 check "hooks.json: SessionStart runs the hook script" \
   "$(jq -r '.hooks.SessionStart[0].hooks[0].command' "$HERE/../hooks/hooks.json")" '"${CLAUDE_PLUGIN_ROOT}"/hooks/session-start'
-check "scripts are executable" "$([ -x "$PS" ] && [ -x "$HOOK" ] && echo yes)" "yes"
+# shellcheck disable=SC2016
+check "hooks.json: PreToolUse on Bash runs the mode hook" \
+  "$(jq -r '.hooks.PreToolUse[0] | .matcher + " " + .hooks[0].command' "$HERE/../hooks/hooks.json")" 'Bash "${CLAUDE_PLUGIN_ROOT}"/hooks/pre-tool-use'
+check "scripts are executable" "$([ -x "$PS" ] && [ -x "$HOOK" ] && [ -x "$PTU" ] && echo yes)" "yes"
 
-FLOOR=70
+FLOOR=140
 total=$((pass + fail))
 [ "$total" -ge "$FLOOR" ] || {
   printf 'FAIL case floor: %s cases ran, floor is %s\n' "$total" "$FLOOR"

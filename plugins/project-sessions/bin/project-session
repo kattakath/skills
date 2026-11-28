@@ -2,7 +2,7 @@
 # project-session — one named background Claude Code session per git repo.
 #
 #   project-session name   [dir]                    print <host>:<owner>/<repo> (or local:<root>)
-#   project-session ensure [dir] [--prompt TEXT] [--dry-run] [--debug]
+#   project-session ensure [dir] [--prompt TEXT] [--permission-mode MODE] [--dry-run] [--debug]
 #                                                   live | resumed | created <name>
 #   project-session status [dir] [--session ID]     "<name> <state>" | "<name> none"
 #
@@ -96,7 +96,7 @@ matches() { # name root json
 klass() { # state -> live | stopped | unknown
   case $1 in
     working | blocked | idle | running) echo live ;; # running: a null state with a status or pid
-    done | failed) echo stopped ;;
+    done | failed | stopped) echo stopped ;; # failed/stopped: after a reboot (agent-view docs)
     *) echo unknown ;;
   esac
 }
@@ -154,11 +154,12 @@ resolve() { # dir -> sets ROOT NAME
 }
 
 cmd_ensure() {
-  local dir=. prompt=$DEFAULT_PROMPT dry=0 rows n live_rows stopped_rows unknown_rows sid state got
+  local dir=. prompt=$DEFAULT_PROMPT mode='' dry=0 rows n live_rows stopped_rows unknown_rows sid state got
   DEBUG=0
   while [ $# -gt 0 ]; do
     case $1 in
       --prompt) [ $# -ge 2 ] || die "--prompt needs text"; prompt=$2; shift 2 ;;
+      --permission-mode) [ $# -ge 2 ] || die "--permission-mode needs a mode"; mode=$2; shift 2 ;;
       --dry-run) dry=1; shift ;;
       --debug) DEBUG=1; shift ;;
       -*) die "unknown option: $1" ;;
@@ -199,7 +200,8 @@ cmd_ensure() {
       printf 'would-resume %s\n' "$NAME"
       return 0
     fi
-    # Bare full id and NO other flag: anything else starts a copy (measured 2.1.330).
+    # Bare full id and NO other flag: anything else starts a copy (measured 2.1.330). So
+    # --permission-mode is NOT passed here; the session keeps the mode it was created with.
     run_claude "$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "$CLAUDE" --bg --resume "$sid"
     # claude prints the id it continued. A different id means it started a copy (it does
     # that when the session turned out to be running after all).
@@ -220,7 +222,13 @@ cmd_ensure() {
     printf 'would-create %s\n' "$NAME"
     return 0
   fi
-  run_claude "$ROOT" env CLAUDE_CODE_TASK_LIST_ID="$NAME" "$CLAUDE" --bg --name "$NAME" "$prompt"
+  # The mode is set only at creation. Without it the session runs in default mode whatever
+  # the caller's mode, and SendMessage from a session in another mode is held (measured 2.1.330).
+  if [ -n "$mode" ]; then
+    run_claude "$ROOT" env CLAUDE_CODE_TASK_LIST_ID="$NAME" "$CLAUDE" --bg --name "$NAME" --permission-mode "$mode" "$prompt"
+  else
+    run_claude "$ROOT" env CLAUDE_CODE_TASK_LIST_ID="$NAME" "$CLAUDE" --bg --name "$NAME" "$prompt"
+  fi
   printf 'created %s\n' "$NAME"
 }
 

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# PreToolUse (Bash): a `project-session ensure` call that names no --permission-mode gets the
+# CALLER's mode added, so the session it creates runs in the same mode and SendMessage between
+# the two is delivered instead of held (measured 2.1.330). No env var exposes the mode; the
+# hook input's `permission_mode` does (docs: hooks § Common input fields).
+#
+# Output is `updatedInput` with NO permissionDecision, so the normal permission flow still
+# decides the amended call (docs: hooks § PreToolUse decision control). updatedInput replaces
+# the whole tool_input, so every other field is carried over.
+#
+# Fails open: any doubt (no jq, bad JSON, unknown mode, no match) prints nothing and exits 0.
+set -u
+exec 2>/dev/null
+input=$(cat 2>/dev/null) || exit 0
+case $input in *project-session*ensure*) ;; *) exit 0 ;; esac # cheap pre-filter: every Bash call
+command -v jq >/dev/null 2>&1 || exit 0
+cmd=$(printf '%s' "$input" | jq -r 'if .tool_name == "Bash" then .tool_input.command // empty else empty end') || exit 0
+mode=$(printf '%s' "$input" | jq -r '.permission_mode // empty') || exit 0
+[ -n "$cmd" ] || exit 0
+case $cmd in *--permission-mode*) exit 0 ;; esac
+# One line only: sed's ^ matches every line, so a heredoc or multi-line string that holds
+# the words would be rewritten. Missing a call is safe; rewriting content is not.
+nl='
+'
+case $cmd in *"$nl"*) exit 0 ;; esac
+# The documented hook values, passed verbatim (`default`, the hook's name for Manual, is
+# accepted by --permission-mode on 2.1.323 and 2.1.330). `plan` is not mirrored: a plan-mode
+# worker cannot execute, and a bare resume would keep it that way.
+case $mode in
+  default | acceptEdits | auto | dontAsk | bypassPermissions) ;;
+  *) exit 0 ;;
+esac
+# Only an invocation in command position: at the start, or after ; & | ( — so a commit
+# message or a grep that merely mentions `project-session ensure` is left alone. Known
+# limit: quoted text after one of those characters, e.g. -m "(project-session ensure)".
+new=$(printf '%s' "$cmd" | sed -E "s/(^|[;&|(][[:space:]]*)([\"']?[^[:space:];&|()\"']*project-session[\"']?[[:space:]]+ensure)([[:space:];&|)]|\$)/\\1\\2 --permission-mode $mode\\3/g") || exit 0
+[ -n "$new" ] && [ "$new" != "$cmd" ] || exit 0
+printf '%s' "$input" | jq -c --arg c "$new" \
+  '{hookSpecificOutput: {hookEventName: "PreToolUse", updatedInput: (.tool_input + {command: $c})}}' || exit 0

@@ -1,5 +1,5 @@
 {
-  "description": "project-sessions: one SessionStart line naming this repo's project session. Fails open, silent outside git and inside background sessions.",
+  "description": "project-sessions: one SessionStart line naming this repo's project session (silent outside git and inside background sessions), and a PreToolUse Bash hook that adds the caller's permission mode to a `project-session ensure` call that names none. Both fail open.",
   "hooks": {
     "SessionStart": [
       {
@@ -8,6 +8,18 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/session-start",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/pre-tool-use",
             "timeout": 5
           }
         ]
