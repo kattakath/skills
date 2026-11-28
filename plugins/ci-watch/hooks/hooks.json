@@ -10,6 +10,13 @@
             "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/ci-watch.js\" --hook",
             "asyncRewake": true,
             "timeout": 3600
+          },
+          {
+            "type": "command",
+            "if": "Bash(*ci-land*)",
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/scripts/ci-watch.js\" --hook",
+            "asyncRewake": true,
+            "timeout": 3600
           }
         ]
       }

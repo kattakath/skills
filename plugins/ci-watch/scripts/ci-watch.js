@@ -469,7 +469,7 @@ function watch(t) {
  * `git -C <dir>`, moves the directory. Wrappers (sudo, env, command, exec, nice, time,
  * `nix develop -c`, a subshell paren) are skipped.
  * @param {string} cmd @param {string} cwd
- * @returns {{ dir: string, args: string[] } | null}
+ * @returns {{ dir: string, args: string[], land?: boolean } | null}
  */
 function findPush(cmd, cwd) {
   let dir = cwd;
@@ -488,6 +488,21 @@ function findPush(cmd, cwd) {
     if (w[i] === "cd" && w[i + 1]) {
       dir = path.resolve(dir, w[i + 1].replace(/^~(?=\/|$)/, os.homedir()));
       continue;
+    }
+    // ci-land (this plugin's landing command) pushes HEAD to the default branch itself.
+    // --dry-run, --help and `worktree` push nothing. A refused run pushes nothing either; the
+    // onBranch check below then finds the sha not on the branch and stays quiet.
+    const bare = String(w[i] || "").replace(/^["']|["']$/g, "");
+    if (bare === "ci-land" || bare.endsWith("/ci-land")) {
+      let ldir = dir;
+      let k = i + 1;
+      if (w[k] === "-C" && w[k + 1]) {
+        ldir = path.resolve(ldir, w[k + 1].replace(/^~(?=\/|$)/, os.homedir()));
+        k += 2;
+      }
+      const rest = w.slice(k);
+      if (rest.some((a) => /^(--dry-run|--help|-h|worktree)$/.test(a))) continue;
+      return { dir: ldir, args: [], land: true };
     }
     if (!(w[i] === "git" || (w[i] || "").endsWith("/git"))) continue;
     let gdir = dir;
@@ -596,6 +611,7 @@ function hook() {
   let rb = null;
   try {
     rb = fg.forge === "gitlab" ? FORGES.gitlab.repoOf(fg) : FORGES.github.repoOf({ cwd: push.dir });
+    if (push.land) spec = { src: "HEAD", dst: rb.branch }; // ci-land always targets the default branch
     if (spec.dst !== rb.branch) return 0; // a feature-branch push
     const t = { ...rb, sha: fullSha(rb, pushed), since: hookStart - 120_000 };
     if (!FORGES[t.forge].onBranch(t)) return 0; // the push did not land (rejected, or rewritten)

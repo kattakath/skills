@@ -11,6 +11,42 @@ writes a JSON report (`schema: ci-watch/report@1`). Every wake-up names its outc
 but GREEN print the report's path. For a failure, the report holds the full sha, changed files, run/job/step ids and URLs, the numbered log
 lines around `##[error]` cut to the failing step, and the rerun commands.
 
+### `scripts/ci-land`: the landing procedure as one command (since 1.3.0)
+
+The most repeated multi-step Bash across 467 sessions in 31 repos was this procedure, run by
+hand. The census counted 520+ `git add` → `nix fmt` → `git add` calls, 430 `git commit` →
+`git push`, 317 `git fetch` → `git rebase`, and 261 `git fetch` → `git worktree add`.
+`ci-land` does steps 1–4 of it in one process, and the push is the last step:
+
+| Step | What it does | Refuses with |
+|---|---|---|
+| tree | a dirty tree is never landed | exit 4 |
+| sync | `git fetch origin`, `git rebase origin/<default>` | exit 1 |
+| repo check | `<root>/.ci-land/check <changed files…>` if the repo ships one (a nix repo runs `nix fmt` and builds the changed output there). It must not change the tree | exit 1 |
+| leak gates | gitleaks over `origin/<default>..HEAD`, then the client-literal patterns over the added lines and the messages. Counts only; a pattern is never printed | exit 3 |
+| push | `git push <remote> <sha>:<default>`, the sha the gates scanned, over SSH when `.github/workflows` changed. Never a force push | exit 1 |
+
+**Why one command, and why here.**
+- **The push stays inside the command.** A preflight that ends with "now run `git push`"
+  was rejected: anything between the check and the push could skip or reorder the gates.
+- **It lives in ci-watch, not a new plugin,** because this hook has to recognise it. Its
+  `if:` matches `Bash(*ci-land*)` and `findPush` reads a `ci-land` run as a push of HEAD to
+  the default branch, even from a feature branch. Both copies of that knowledge sit in one
+  plugin.
+- **Under `scripts/`, not `bin/`:** a plugin with `bin/` can't be installed on claude.ai or
+  Cowork, per the plugins reference.
+
+**The literal list fails closed.** Its path comes from `$CI_LAND_LITERALS`, else
+`${XDG_CONFIG_HOME:-~/.config}/ci-land/literals`. That's usually a symlink the operator
+creates to the real list, which never lives in a repo. If the file is missing, unreadable,
+has no patterns or holds a pattern grep can't run, the command **refuses**. A machine with
+truly no list says so with the line `# ci-land: no literal patterns`.
+
+**Tests:** `tests/ci-land-cases.sh` runs 22 cases against real git and a local bare remote,
+so "nothing was pushed" is checked on the remote itself. Only gitleaks is stubbed. Mutants
+that disable the gitleaks gate, the literal gate, the dirty check or the grep-error check
+each fail the suite. The hook side has 6 cases in `tests/run.sh`.
+
 ### Why green wakes the session instead of only writing a file
 
 **Rejected: write a `GREEN` report but stay quiet.** The report would sit on disk, and the

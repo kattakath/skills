@@ -21,6 +21,20 @@ a report, so a green push and a lost watch never look the same.
 
 ## Landing a change
 
+**Use the landing command:** `"${CLAUDE_PLUGIN_ROOT}/scripts/ci-land"`, run from the checkout
+(`-C <dir>` elsewhere, `--dry-run` for the plan, `--help` for the rest). In one process it
+refuses a dirty tree, fetches and rebases, runs the repo's own `.ci-land/check` if there is
+one, runs the leak gates, then pushes the sha those gates scanned to `<default>`. The gates
+are gitleaks plus the client-literal list, and nothing skips them. It uses SSH when workflow
+files changed. This hook watches a `ci-land` run like any push.
+- Exit **3**: a leak gate refused, and nothing was pushed. Fix the commit, never the gate.
+- Exit **4**: the tree is dirty.
+- Exit **1**: git or the repo check failed.
+- To start work, `ci-land worktree <name>` creates `.claude/worktrees/<name>` off
+  `origin/<default>` and prints the path for `EnterWorktree`.
+
+The same steps by hand, where the command can't run:
+
 1. **Run the leak gates first.** A push to a public repo publishes every pushed commit,
    and that cannot be undone. Use whatever the repo names, typically
    `gitleaks git --log-opts="origin/<branch>..HEAD" --redact --no-banner`, plus any

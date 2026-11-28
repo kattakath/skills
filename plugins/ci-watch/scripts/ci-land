@@ -1,0 +1,159 @@
+#!/usr/bin/env bash
+# ci-land — land the current checkout on the default branch: the fleet landing procedure as
+# ONE command (fetch, rebase, the repo's own check, the leak gates, push HEAD:<default>).
+# The push happens INSIDE this command, so the gates can never be skipped or reordered; a
+# preflight plus a separate `git push` was rejected for exactly that reason. ci-watch's hook
+# recognises `ci-land` as a push to the default branch and watches the CI it triggers.
+#
+# CLI contract: nix-dev-toolkit's references/cli-contract.md. Portable: bash 3.2 + git + grep.
+set -u -o pipefail
+
+# shellcheck disable=SC2016 # literal $ and backticks in the help text
+USAGE='usage: ci-land [-C DIR] [--dry-run]
+       ci-land [-C DIR] worktree NAME
+
+Land this checkout on the default branch of origin, in order:
+  1. refuse a dirty tree
+  2. git fetch origin; git rebase origin/<default>
+  3. the repo'"'"'s own check, if it ships one: <root>/.ci-land/check <changed files...>
+  4. leak gates over origin/<default>..HEAD (mandatory, no flag skips them):
+     gitleaks (on PATH, else `nix run nixpkgs#gitleaks`), then the client-literal patterns
+     over the added lines and the commit messages (counts only; a pattern is never printed)
+  5. git push <remote> <sha>:<default>, the exact sha the gates scanned; never a force push.
+     <remote> is origin, or its SSH form when .github/workflows changed (a gh token usually
+     lacks the workflow scope).
+
+  worktree NAME   fetch, then add .claude/worktrees/NAME on a new branch NAME off
+                  origin/<default>; prints its path (for EnterWorktree)
+  --dry-run       print the plan and check the gates can run; change nothing
+  -C DIR          run in DIR
+  -h, --help      this text
+
+Literal patterns (grep -E, case-insensitive, one per line, # comments): the file named by
+$CI_LAND_LITERALS, else ${XDG_CONFIG_HOME:-~/.config}/ci-land/literals (a symlink to the real
+list is the usual setup). Missing, unreadable or patternless: REFUSED. A machine with no list
+says so on purpose with a file holding the line `# ci-land: no literal patterns`.
+
+Exit: 0 landed (or nothing to land, or a clean --dry-run); 1 failed (git, the repo check,
+      no default branch); 2 usage; 3 a leak gate refused (found something, or could not run);
+      4 the tree is dirty.'
+
+die() { # code message
+  printf 'ci-land: %s\n' "$2" >&2
+  exit "$1"
+}
+usage() { printf '%s\n' "$USAGE" >&2; exit 2; }
+
+dir=. dry=0 sub=
+while [ $# -gt 0 ]; do
+  case $1 in
+    -h | --help) printf '%s\n' "$USAGE"; exit 0 ;;
+    -C) [ $# -ge 2 ] || usage; dir=$2; shift 2 ;;
+    --dry-run) dry=1; shift ;;
+    worktree) [ $# -eq 2 ] || usage; sub=$2; shift 2 ;;
+    *) usage ;;
+  esac
+done
+cd "$dir" 2>/dev/null || die 2 "no such directory: $dir"
+root=$(git rev-parse --show-toplevel 2>/dev/null) || die 1 "not inside a git repository"
+cd "$root" || die 1 "cannot enter $root"
+
+def=$(git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null) ||
+  die 1 "origin has no default branch here; run: git remote set-head origin --auto"
+def=${def#origin/}
+
+if [ -n "$sub" ]; then
+  case $sub in */* | .* | *' '*) die 2 "worktree NAME must be one plain word: $sub" ;; esac
+  [ "$dry" = 1 ] && { echo "plan: git fetch origin; git worktree add -b $sub .claude/worktrees/$sub origin/$def"; exit 0; }
+  git fetch -q origin || die 1 "git fetch origin failed"
+  git worktree add -q -b "$sub" ".claude/worktrees/$sub" "origin/$def" >&2 || die 1 "git worktree add failed"
+  printf '%s\n' "$root/.claude/worktrees/$sub"
+  exit 0
+fi
+
+[ -z "$(git status --porcelain)" ] || die 4 "the tree is dirty; commit or stash first (ci-land lands commits, not edits)"
+
+# --- the gates' prerequisites: resolved before anything changes -------------------------------
+if command -v gitleaks >/dev/null 2>&1; then
+  leaks() { gitleaks "$@"; }
+  leaks_src=gitleaks
+elif command -v nix >/dev/null 2>&1; then
+  leaks() { nix run nixpkgs#gitleaks -- "$@"; }
+  leaks_src="nix run nixpkgs#gitleaks"
+else
+  die 3 "gitleaks is not on PATH and nix is not available to run it; install gitleaks"
+fi
+
+lit=${CI_LAND_LITERALS:-${XDG_CONFIG_HOME:-$HOME/.config}/ci-land/literals}
+[ -r "$lit" ] || die 3 "no readable literal-pattern list at $lit; set CI_LAND_LITERALS or create that file (see --help)"
+pat=$(mktemp) || die 1 "mktemp failed"
+trap 'rm -f "$pat"' EXIT
+grep -v -E '^[[:space:]]*(#|$)' "$lit" >"$pat" 2>/dev/null
+npat=$(grep -c '' "$pat")
+nolist=0
+if [ "$npat" -eq 0 ]; then
+  grep -qx '# ci-land: no literal patterns' "$lit" 2>/dev/null ||
+    die 3 "the literal-pattern list has no patterns; add them, or mark it with the line '# ci-land: no literal patterns'"
+  nolist=1
+fi
+
+remote_for() { # changed-file list -> origin, or its SSH form when workflow files changed
+  local url
+  if printf '%s\n' "$1" | grep -q '^\.github/workflows/'; then
+    url=$(git config --get remote.origin.url)
+    case $url in
+      https://github.com/*) url=${url#https://github.com/}; printf 'git@github.com:%s\n' "${url%.git}.git" ;;
+      *) printf '%s\n' "$url" ;;
+    esac
+  else
+    echo origin
+  fi
+}
+
+if [ "$dry" = 1 ]; then
+  range="origin/$def..HEAD"
+  files=$(git diff --name-only "$range" 2>/dev/null)
+  echo "plan for $root (default branch: $def)"
+  echo "  1. tree clean"
+  echo "  2. git fetch origin; git rebase origin/$def   ($(git rev-list --count "$range" 2>/dev/null || echo '?') commit(s) ahead now)"
+  if [ -x .ci-land/check ]; then echo "  3. repo check: .ci-land/check"; else echo "  3. repo check: none (.ci-land/check absent)"; fi
+  echo "  4. leak gates: $leaks_src; literals: $( [ "$nolist" = 1 ] && echo 'marked as none' || echo "$npat pattern(s)")"
+  echo "  5. git push $(remote_for "$files") <sha>:$def"
+  exit 0
+fi
+
+# --- land -------------------------------------------------------------------------------------
+git fetch -q origin || die 1 "git fetch origin failed"
+git rebase -q "origin/$def" >&2 || die 1 "git rebase origin/$def failed; resolve it, or run: git rebase --abort"
+range="origin/$def..HEAD"
+n=$(git rev-list --count "$range")
+[ "$n" -gt 0 ] || { echo "ci-land: nothing to land; HEAD is already on origin/$def" >&2; exit 0; }
+sha=$(git rev-parse HEAD)
+files=$(git diff --name-only "$range")
+
+if [ -x .ci-land/check ]; then
+  # shellcheck disable=SC2086 # one path per line, word-split on purpose; paths with spaces are rare here
+  ./.ci-land/check $files >&2 || die 1 "the repo check (.ci-land/check) failed"
+  [ "$(git rev-parse HEAD)" = "$sha" ] && [ -z "$(git status --porcelain)" ] ||
+    die 1 "the repo check changed the tree or HEAD; commit its fixes and run ci-land again"
+fi
+
+leaks git --log-opts="$range" --redact --no-banner >&2 || die 3 "gitleaks found something (or failed) in $range; nothing was pushed"
+if [ "$nolist" = 0 ]; then
+  hits() { # counts matching lines on stdin; exit 2+ from grep (a bad pattern) refuses
+    local c rc
+    c=$(grep -c -i -E -f "$pat" 2>/dev/null)
+    rc=$?
+    [ "$rc" -le 1 ] || die 3 "the literal patterns did not run (grep exit $rc); nothing was pushed"
+    printf '%s\n' "${c:-0}"
+  }
+  d=$(git diff "$range" | grep '^+' | hits) || exit $?
+  m=$(git log --format=%B "$range" | hits) || exit $?
+  [ "$d" -eq 0 ] && [ "$m" -eq 0 ] ||
+    die 3 "client literals matched: $d added line(s), $m commit-message line(s); nothing was pushed"
+fi
+
+remote=$(remote_for "$files")
+echo "ci-land: gates clean on $n commit(s); pushing ${sha:0:12} to $def via $remote" >&2
+git push "$remote" "$sha:refs/heads/$def" || die 1 "git push failed; nothing landed (fetch and run ci-land again)"
+echo "ci-land: landed ${sha:0:12} on $def" >&2

@@ -247,6 +247,17 @@ check "hook: nix develop -c wrapper still counts as a push" "$(calls 'run list')
 fx hsub; runs 1 "11:nix-ci:completed:success"; hk "(cd $F/sub && git push origin main)" "$S"
 check "hook: a push in a subshell counts" "$(calls 'run list')" 1
 
+# ci-land pushes HEAD to the default branch inside its own process: the hook must watch it,
+# even from a feature branch (a worktree), and stay quiet on the runs that push nothing.
+fx hland; runs 1 "11:nix-ci:completed:success"; CI_WATCH_FAKE_BRANCH=feat hk "ci-land" "$S"
+check "hook: ci-land is a push to the default branch, even from a feature branch" "$RC:$(calls 'run list')" "2:1"
+fx hlandpath; runs 1 "11:nix-ci:completed:success"; hk "\"/x/plugins/ci-watch/scripts/ci-land\" -C $F/sub" "$S"
+check "hook: ci-land by full path with -C resolves the repo in that dir" "$(grep -c "^repo view .*@$F/sub\$" "$F/calls.log")" 1
+for q in "ci-land --dry-run" "ci-land --help" "ci-land worktree feat" "echo ci-land"; do
+  fx hlandq; runs 1 "11:nix-ci:completed:success"; hk "$q" "$S"
+  check "hook: '$q' pushes nothing, so the hook stays quiet" "$RC:$(none)" "0:none"
+done
+
 fx hnone; runs 1; hk "git push" "$S"
 check "hook: no runs wakes the session" "$RC" 2
 fx hold; OLD=2026-01-01T00:00:00Z runs 1 "92:nix-ci:completed:success"; hk "git push" "$S"
@@ -407,6 +418,15 @@ check "findPush: --delete" "$(fp 'git push origin --delete old')" null
 check "findPush: :branch delete" "$(fp 'git push origin :old')" null
 check "findPush: tags only" "$(fp 'git push --tags')" null
 check "findPush: git log mentioning push" "$(fp 'git log --grep push')" null
+
+# scripts/ci-land's own cases (real git, a local bare remote), counted into this suite.
+cl_out=$(bash "$(dirname "$0")/ci-land-cases.sh" 2>&1)
+printf '%s\n' "$cl_out" | grep '^FAIL' || true
+cl_line=$(printf '%s\n' "$cl_out" | tail -1)
+cl_pass=$(printf '%s' "$cl_line" | sed -n 's/^ci-land: \([0-9]*\) passed.*/\1/p')
+cl_fail=$(printf '%s' "$cl_line" | sed -n 's/.* \([0-9]*\) failed$/\1/p')
+pass=$((pass + ${cl_pass:-0}))
+fail=$((fail + ${cl_fail:-1}))
 
 printf '%d passed, %d failed\n' "$pass" "$fail"
 FLOOR=150
