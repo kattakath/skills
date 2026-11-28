@@ -25,7 +25,7 @@ import json
 from typing import NoReturn
 import sys
 
-# The body travels as a workflow_dispatch input (`gh workflow run -f body=…`), and GitHub caps a
+# The body travels as a workflow_dispatch input (the REST dispatches call), and GitHub caps a
 # dispatch's inputs at 65,535 characters in all; 60,000 leaves room for the other inputs.
 MAX_CHARS = 60000
 VERDICTS = ("TOWARD", "NEUTRAL", "AWAY")

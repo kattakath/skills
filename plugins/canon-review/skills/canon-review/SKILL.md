@@ -120,11 +120,16 @@ render's output on **unchanged**: never edit the body or overrule the state.
 state=$(python3 -I <scripts>/render.py "$OUT/findings.json" --gates "$OUT/gates.json" \
   --commits "$OUT/commits.json" --out "$OUT/body.md" | head -1 | cut -d= -f2)
 case $state in
-  ok | problem) gh workflow run canon-review-report.yml -R kattakath/.github \
-                  -f state="$state" -f body="$(cat "$OUT/body.md")" ;;
+  ok | problem) gh api -X POST repos/kattakath/.github/actions/workflows/canon-review-report.yml/dispatches \
+                  -f ref=main -f "inputs[state]=$state" -f "inputs[body]=$(cat "$OUT/body.md")" ;;
   *) echo "canon-review: render did not finish; nothing dispatched" >&2 ;;
 esac
 ```
+
+**Use the REST call, not `gh workflow run`.** Measured in a claude.ai cloud session on
+2026-11-28: `gh workflow run` fails with "HTTP 403: GitHub GraphQL is not available from Claude
+Code sessions; use the REST API", because it resolves the default branch through GraphQL. The
+REST endpoint works there.
 
 Dispatch nothing unless the state is exactly `ok` or `problem`, and report why instead. A
 review that didn't finish must not close an open issue.

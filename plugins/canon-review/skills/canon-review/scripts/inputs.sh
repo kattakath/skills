@@ -28,7 +28,17 @@ while [ $# -gt 0 ]; do
 done
 mkdir -p "$out/work" || exit 1
 die() { echo "inputs.sh: $*" >&2; exit 1; }
-api() { curl -fsSL -H "Accept: application/vnd.github+json" ${GH_TOKEN:+-H "Authorization: Bearer $GH_TOKEN"} "https://api.github.com/$1"; }
+# The ONE api.github.com read is the window lookup on kattakath/.github. Per-repo work goes
+# through git only: in a claude.ai cloud session the proxy answers 403 for a repo that is not a
+# session source (measured 2026-11-28), while anonymous clones of public repos work. A token
+# that is set but rejected (a cloud GH_TOKEN can be) is retried anonymously.
+api() {
+  local url="https://api.github.com/$1"
+  if [ -n "${GH_TOKEN:-}" ]; then
+    curl -fsSL -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $GH_TOKEN" "$url" 2>/dev/null && return 0
+  fi
+  curl -fsSL -H "Accept: application/vnd.github+json" "$url"
+}
 raw() { curl -fsSL "https://raw.githubusercontent.com/kattakath/nix-config/main/$1"; }
 
 list=$(raw .claude/skills/fleet-doctor/fleet-repos.txt) || die "cannot read the fleet list from kattakath/nix-config"

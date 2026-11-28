@@ -41,13 +41,29 @@ The prompt line:
 > Follow `plugins/canon-review/skills/canon-review/SKILL.md` in the kattakath/skills checkout
 > end to end, read-only, with its `scripts/` directory as `<scripts>`. Run inputs.sh and
 > scan.sh, judge every commit in the window, write findings.json, render it with `--gates` and
-> `--commits`, then do step 4: dispatch `canon-review-report.yml` with render's state and body
-> unchanged, and only if the state is exactly `ok` or `problem`.
+> `--commits`, then do step 4: dispatch `canon-review-report.yml` through the REST `dispatches`
+> endpoint (`gh api -X POST`, not `gh workflow run`) with render's state and body unchanged, and
+> only if the state is exactly `ok` or `problem`.
 
-**Unverified in a real cloud session:** network egress. The scripts reach
-`raw.githubusercontent.com`, `api.github.com` (the window; read anonymously, or with
-`$GH_TOKEN`), `github.com` (clones) and GitHub release downloads (gitleaks). The cloud-like
-test here was a stripped `PATH` on a Mac, which proves the tool fallbacks, not the network.
+- **Why REST:** in a cloud session (measured 2026-11-28), `gh workflow run` fails with "HTTP 403:
+  GitHub GraphQL is not available from Claude Code sessions", while REST calls succeed.
+- **The window lookup was REST already:** `inputs.sh` reads `api.github.com` with `curl`, not
+  `gh`.
+
+**Network, measured in a real cloud session** (2026-11-28, sources kattakath/.github and
+kattakath/skills):
+
+| Reach | Result |
+|---|---|
+| `raw.githubusercontent.com` (nix-config's CLAUDE.md) | 200 |
+| `git clone` of public fleet repos, user-owned ones included | works |
+| the gitleaks v8.30.1 release download | 200 |
+| REST `dispatches` on kattakath/.github | works; the report run succeeded |
+| `api.github.com` on a repo that is **not** a session source | **403** |
+
+So the scripts make exactly one `api.github.com` read: the window lookup on kattakath/.github,
+which must stay a session source. Everything per fleet repo goes through `git`. A rejected
+`$GH_TOKEN` is retried anonymously; that path was run live with a bogus token.
 
 - **The state is render's, never the model's.** The task passes `render.py`'s first line and
   body file on unchanged.
