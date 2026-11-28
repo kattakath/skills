@@ -54,6 +54,16 @@ mk = { name, deps ? [ ], text }:
 Expose commands as `apps.<system>.<name>` and keep the derivations in `packages` so
 `nix flake check` builds (and shellchecks) all of them.
 
+**Every command follows one CLI contract:** [`references/cli-contract.md`](references/cli-contract.md).
+Read it before writing or reviewing one. The rules people miss most:
+- `--help` goes to **stdout** and exits 0. Exit **2** means a usage error, and there are no
+  sysexits codes.
+- Set `inheritPath = false`: the default `true` lets an undeclared command fall through to
+  the host's `PATH`.
+- **Never wire a CLI straight in as a hook.** Exit 2 blocks a hook, so a thin adapter maps
+  the CLI's result to the hook contract.
+- Write a new CLI only for a real, recurring need.
+
 `checks = forAll (system: _: self.packages.${system})` is how that happens, and it is **not** a
 tautology: `nix flake check` *evaluates* `packages` but *builds* `checks`, so the alias promotes
 evaluate→build, and every `writeShellApplication` has `shellcheck` run on it for real.
