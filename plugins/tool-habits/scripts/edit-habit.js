@@ -7,7 +7,7 @@
  *
  * Advice, not a deny (operator decision, 2026-11-28), because it is common and partly endorsed:
  *   - measured: 4,866 hits in 55,639 Bash calls (8.7%) across 1,155 local transcripts, counts
- *     only; a hand-checked sample was about 13 in 15 real edits of existing files;
+ *     only; a hand-checked sample of an earlier draft was about 13 in 15 real edits (an estimate);
  *   - Claude Code's own bypass-mode system prompt tells agents to make "small, mechanical file
  *     changes with sed, heredocs, or short scripts". A deny would fight that on 1 call in 11.
  * Writing a NEW file is not flagged, nor is anything whose every path is a temp/scratch path.

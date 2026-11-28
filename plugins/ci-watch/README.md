@@ -20,9 +20,10 @@ the default branch; anything else gets ONE `run_in_background` watch.
 - **Left alone:** a `run_in_background` call, a one-shot `gh` read, a script being written in
   a heredoc, and words inside quoted text.
 - **Measured before it shipped** (2026-11-28, 55,639 Bash calls in 1,155 local transcripts,
-  counts only): **63 hits (0.11%)**. Hand-checking all 63 found about **60 real foreground
-  waits** (≈95% precision). The doubtful 3 are a markdown note and two multi-part commands
-  whose loop, `sleep` and `gh` call may be unrelated.
+  counts only): **63 hits (0.11%)**. A triage of all 63 (by branch and opening word, with
+  the doubtful ones read in full) put about **60 as real foreground waits**, an estimated ≈95%
+  precision, not a line-by-line count. The doubtful 3 are a markdown note and two multi-part
+  commands whose loop, `sleep` and `gh` call may be unrelated.
 - **The contract:** a deny is one stdout JSON; otherwise nothing; always exit 0; never
   `updatedInput`.
 - **Tests:** 25 cases through the real hook entry (`tests/poll-guard-cases.js`). Mutants that

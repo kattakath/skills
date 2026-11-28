@@ -7,9 +7,9 @@
  * (or ONE run_in_background watch) is the wait. A one-shot gh read is fine, and so is any command
  * run with run_in_background: true.
  *
- * Measured before it shipped (2026-11-28, 55,639 Bash calls in 1,155 local transcripts, counts
- * only): 74 hits (0.13%); a hand-checked sample was mostly real foreground waits. Heredoc bodies
- * are cut first, because a script being WRITTEN is data, not a wait.
+ * Measured before it shipped: the hit count and its precision live in ONE place, ci-watch's
+ * README § poll-guard.js (a copy here drifted once). Heredoc bodies are cut first, because a
+ * script being WRITTEN is data, not a wait.
  *
  * Contract (nix-dev-toolkit references/cli-contract.md, "never wire a CLI straight in as a
  * hook"): a finding prints ONE stdout JSON deny and exits 0; anything else, a parse failure

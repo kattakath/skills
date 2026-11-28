@@ -12,7 +12,7 @@ Measured on 2026-11-28 over 55,639 Bash calls in 1,155 local transcripts (counts
 | | Count |
 |---|---|
 | Bash calls flagged by this rule | 4,721 (**8.5%**) |
-| real edits of existing files, in a hand-checked sample | about 13 in 15 |
+| real edits of existing files, in a hand-checked sample of an EARLIER draft of the detector | about 13 in 15 (an estimate; the shipped rule wasn't re-sampled) |
 
 - **A deny would block about 1 Bash call in 12** while agents unlearn the habit.
 - **Claude Code's own bypass-mode system prompt endorses the habit:** it tells agents to make
