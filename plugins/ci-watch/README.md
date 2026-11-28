@@ -11,6 +11,28 @@ writes a JSON report (`schema: ci-watch/report@1`). Every wake-up names its outc
 but GREEN print the report's path. For a failure, the report holds the full sha, changed files, run/job/step ids and URLs, the numbered log
 lines around `##[error]` cut to the failing step, and the rerun commands.
 
+### Why green wakes the session instead of only writing a file
+
+**Rejected: write a `GREEN` report but stay quiet.** The report would sit on disk, and the
+session would still see nothing. A watch that died, timed out or never started would look
+the same as a pass, unless someone went looking for the file.
+
+**The evidence (audit, 2026-11-28).** Of 120 watched pushes, **111 left no report** under the
+quiet-green design. Checked against GitHub afterwards:
+
+| Of the 111 silent pushes | Count |
+|---|---|
+| green, so the silence was right | 98 |
+| Dependabot `dynamic` runs created 17–26 min after the push | 3 |
+| unverifiable, because GitHub returned 404 | 10 |
+
+- In 13 of 111 cases, the silence proved nothing. The 3 late runs started after any watch
+  of the push would have ended, and the other 10 couldn't be checked.
+- The only way to tell the cases apart was a manual check after the fact, and 10 couldn't be
+  checked at all.
+- Waking on green costs one line per push, and it makes a lost watch visible: no line means
+  no watch.
+
 It's deterministic: only `gh` or `glab`, with no model in the loop. Usage, the landing procedure and
 the pitfalls are in [`skills/ci-watch/SKILL.md`](skills/ci-watch/SKILL.md).
 
