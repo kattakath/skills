@@ -2,8 +2,8 @@
 name: project-sessions
 description: >-
   Hand a git repo's work to that repo's own named background Claude Code session. Use when
-  the main interactive session is about to do multi-step work in a repo, when the
-  SessionStart line says "load the project-sessions skill", or when the user says "send this
+  the main interactive session is about to do multi-step work in a repo, when a
+  project-sessions context line names this repo's session, or when the user says "send this
   to the project session", "work on <repo> in its own session", "resume the session for this
   repo", or "is there a session for this project".
 ---
@@ -14,57 +14,51 @@ One background session per git repo, named `<host>:<owner>/<repo>` (for example
 `github.com:kattakath/nix-config`). A repo with no `origin` is named `local:<repo root>`.
 The main interactive session coordinates. The project session does the work.
 
-`project-session` below means `"${CLAUDE_PLUGIN_ROOT}/bin/project-session"`.
+## The hooks start it — your job is the handover
 
-## 1. Ensure the session
+In an attended session (or with `PROJECT_SESSIONS_AUTO=1`) the plugin's hooks create or
+resume the session themselves and name it in a context line, at start and on every prompt.
+Do **not** run `ensure` yourself then.
 
-Run from anywhere inside the repo (a worktree counts as its main repo):
+1. Send the task with **SendMessage**, `to: "<name>"`, the bare name the line shows.
+2. Write it so it stands alone: the goal, the files, what done means, what to report.
+3. Keep only coordination here: the user's decisions, cross-repo order, relaying results.
+4. Relay its reply to the user. If none comes, say so: a session in another permission
+   mode holds the message for approval, and nothing here can see a session's mode.
+
+| The line says | Do |
+|---|---|
+| `(idle)`, `(working)`, `(starting)`, `(created)`, `(resumed)` … | SendMessage the task |
+| `could not start: Workspace not trusted …` | Tell the user to run `claude` in that folder once and accept the prompt. Never edit `~/.claude.json` |
+| `could not start: …` (anything else) | Report the reason; do not retry by hand |
+| `not started: permission mode … is not mirrored` | Plan mode is not mirrored; the first prompt in another mode starts it |
+
+- If **ListAgents** shows two rows with that name, report it. Do not pick one by `[ref]`.
+- Never resume these sessions by hand. `claude --bg --resume` with a name, a short id or any
+  extra flag starts a **copy**. Only `ensure` resumes, with the bare full id.
+
+## By hand (no context line: unattended, `PROJECT_SESSIONS_AUTO=0`)
+
+`project-session` means `"${CLAUDE_PLUGIN_ROOT}/bin/project-session"`.
 
 ```bash
 "${CLAUDE_PLUGIN_ROOT}/bin/project-session" ensure            # or: ensure <dir> --prompt "<first task>"
 ```
 
-- **Permission mode.** The plugin's PreToolUse hook adds `--permission-mode <your mode>` to
-  this call, so a new session runs in the caller's mode. It amends only the plain
-  one-line form above; for any other form (a variable, `env`, inside `if`), pass
-  `--permission-mode <mode>` yourself. The mode applies **only on create**: a resumed
-  session keeps the mode it was created with. Plan mode is not mirrored.
+The PreToolUse hook adds `--permission-mode <your mode>` to that one-line form; any other
+form, pass it yourself. The mode applies only on create.
 
-| Output (stdout) | Meaning |
+| Output | Meaning |
 |---|---|
-| `live <name>` | A session is running. Send it the task |
-| `resumed <name>` | A `done`, `failed` or `stopped` session (a reboot leaves the last two) was continued under the same id |
-| `created <name>` | A new session started with its own task list (`CLAUDE_CODE_TASK_LIST_ID=<name>`) |
-| `duplicates <n>` (stderr) | More than one session has this name for this repo. **Tell the user.** Never stop or delete one |
-| exit 3 | A matching session is in a state the script does not know. It does nothing; report the state |
-| exit 75 | Another `ensure` holds the lock for this repo. Retry once |
-| any other non-zero | `claude` refused. Its message is on stderr, verbatim |
+| `live <name>` / `resumed <name>` / `created <name>` | Ready: SendMessage it |
+| `duplicates <n>` (stderr) | Tell the user. Never stop or delete one |
+| exit 3 | Unknown session state; it did nothing. Report the state |
+| exit 75 | Another `ensure` holds the lock. Retry once |
+| other non-zero | `claude` refused; its message is on stderr, verbatim |
 
-- **`Workspace not trusted`** on stderr: `--bg` refuses a folder the operator has not trusted.
-  Tell the user to run `claude` in that folder once and accept the trust prompt. Never edit
-  `~/.claude.json` to get past it.
-- `--dry-run` prints `would-create` / `would-resume` / `live` and starts nothing.
-- No session id is ever printed or stored. Each call reads it again from
-  `claude agents --json --all`.
-- Never resume these sessions by hand. `claude --bg --resume` with a name, a short id or any
-  extra flag starts a **copy**. Only `ensure` resumes, with the bare full id.
+`--dry-run` starts nothing. `status` prints `<name> <state>` or `<name> none`.
 
-## 2. Hand over the task
-
-- Send the task with **SendMessage**, `to: "<name>"`, the bare name `ensure` printed.
-- If **ListAgents** shows two rows with that name, report it to the user. Do not pick one by
-  its `[ref]` on your own.
-- Write the task so it stands alone: the goal, the files, what done means, and what to report.
-- Keep only coordination in the main session: the user's decisions, cross-repo order, and
-  relaying results.
-- A session in a different permission mode holds the message for approval. A session
-  created without a mode, or by a caller in another mode, still is one: `ensure` cannot see a
-  session's mode, so it never recreates one. Say so if no
-  reply comes.
-
-`status` prints one line, `<name> <state>` or `<name> none`, for a quick check.
-
-## 3. Project shape
+## Project shape
 
 For the repo's own Claude Code files (`CLAUDE.md`, `.claude/settings.json`), load the
 `project-shape` skill.

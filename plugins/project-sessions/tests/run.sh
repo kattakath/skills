@@ -11,6 +11,10 @@
 #   ids       no session id on stdout unless --debug
 #   lock      a fresh lock refuses, a stale one is taken over
 #   hook      silent outside git, in a background session and past its time bound
+#   auto      gating matrix (attended / unattended / AUTO=0 / AUTO=1 / background / outside
+#             git); SessionStart runs ensure detached in the mirrored mode and returns within
+#             its bound; resume on start, create deferred without a mode; untrusted reported;
+#             UserPromptSubmit line, create in the caller's mode, plan not mirrored, fail-open
 #   mode hook amends `project-session ensure` with the caller's mode; leaves other commands,
 #             a command that names a mode, plan mode and garbage alone
 # Run:  bash plugins/project-sessions/tests/run.sh
@@ -20,12 +24,14 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PS="$HERE/../bin/project-session"
 HOOK="$HERE/../hooks/session-start"
 PTU="$HERE/../hooks/pre-tool-use"
+UPS="$HERE/../hooks/user-prompt-submit"
 pass=0
 fail=0
 T="$(cd "$(mktemp -d)" && pwd -P)"
 trap 'rm -rf "$T"' EXIT
 export PATH="$HERE/fixtures:$PATH" STUB_LOG="$T/log" STUB_AGENTS="$T/agents.json" XDG_STATE_HOME="$T/state"
-unset CLAUDE_CODE_TASK_LIST_ID PROJECT_SESSION_CLAUDE STUB_UNTRUSTED STUB_SLEEP
+unset CLAUDE_CODE_TASK_LIST_ID PROJECT_SESSION_CLAUDE STUB_UNTRUSTED STUB_SLEEP STUB_BG_SLEEP STUB_ENV_LOG \
+  CLAUDE_CODE_SESSION_ATTENDED PROJECT_SESSIONS_AUTO PROJECT_SESSION_HOOK_TICKS PROJECT_SESSION_ENSURE_TICKS
 
 check() { # label got want
   if [ "$2" = "$3" ]; then pass=$((pass + 1)); else
@@ -248,6 +254,189 @@ printf 'not json' >"$STUB_AGENTS"
 run hook $ID1 "$R"
 check "hook: silent when claude agents is broken" "$RC:$OUT:$ERR" "0::"
 
+# --- auto (SessionStart + UserPromptSubmit) ----------------------------------------
+RES="$XDG_STATE_HOME/project-sessions/github-com-o-r.ensure"
+ss_in() { # sid cwd [mode]
+  if [ -n "${3:-}" ]; then
+    printf '{"session_id":"%s","cwd":"%s","hook_event_name":"SessionStart","source":"startup","permission_mode":"%s"}' "$1" "$2" "$3"
+  else
+    printf '{"session_id":"%s","cwd":"%s","hook_event_name":"SessionStart","source":"startup"}' "$1" "$2"
+  fi
+}
+ups_in() { # sid cwd mode
+  printf '{"session_id":"%s","cwd":"%s","hook_event_name":"UserPromptSubmit","permission_mode":"%s","prompt":"hi"}' "$1" "$2" "$3"
+}
+ssrun() { ss_in "$@" | "$HOOK"; }
+upsrun() { ups_in "$@" | "$UPS"; }
+ctx() { printf '%s' "$OUT" | jq -r .hookSpecificOutput.additionalContext; }
+settle() { # wait for a detached ensure to finish (up to 8 s)
+  local i=0
+  while [ ! -f "$RES.rc" ] && [ "$i" -lt 80 ]; do sleep 0.1; i=$((i + 1)); done
+}
+fresh() { : >"$STUB_LOG"; rm -f "$RES.rc" "$RES.out" "$RES.err"; }
+bgs() { grep -- '--bg' "$STUB_LOG"; }
+SS_AUTO="project-sessions: this repo's project session is"
+HAND="Hand multi-step work to it with SendMessage to \`$N\`; keep only coordination here."
+
+# SessionStart gating matrix: no session yet, caller in bypassPermissions.
+for c in 'unset||manual' '0||manual' '1||auto' '1|0|manual' '0|1|auto' '|1|auto' '|0|manual'; do
+  att=${c%%|*} rest=${c#*|} auto=${rest%%|*} want=${rest#*|}
+  agents
+  fresh
+  if [ "$att" = unset ]; then
+    # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+    run env ${auto:+PROJECT_SESSIONS_AUTO=$auto} sh -c 'printf "%s" "$1" | "$2"' _ "$(ss_in $ID1 "$R" bypassPermissions)" "$HOOK"
+  else
+    # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+    run env CLAUDE_CODE_SESSION_ATTENDED="$att" ${auto:+PROJECT_SESSIONS_AUTO=$auto} sh -c 'printf "%s" "$1" | "$2"' _ "$(ss_in $ID1 "$R" bypassPermissions)" "$HOOK"
+  fi
+  settle
+  if [ "$want" = auto ]; then
+    check "auto gate ATTENDED=$att AUTO=$auto: starts the session" "$(ctx)" "$SS_AUTO \`$N\` (created). $HAND"
+    check "auto gate ATTENDED=$att AUTO=$auto: create argv in the mirrored mode" "$(bgs)" \
+      "$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions You are this repository's project session. Wait for tasks sent to you with SendMessage, do them here, and reply to the sender when each one is done."
+  else
+    check "auto gate ATTENDED=$att AUTO=$auto: names only" "$(ctx)" \
+      "project-sessions: this repo has no project session yet (name \`$N\`). Before multi-step work here, load the \`project-sessions\` skill."
+    check "auto gate ATTENDED=$att AUTO=$auto: starts nothing" "$(grep -c -- '--bg' "$STUB_LOG")" "0"
+  fi
+done
+export PROJECT_SESSIONS_AUTO=1
+
+agents
+fresh
+run ssrun $ID1 "$T" bypassPermissions
+check "auto: silent outside git" "$RC:$OUT:$ERR" "0::"
+agents "$(row "$R" idle 100 $ID2)"
+fresh
+run ssrun $ID2 "$R" bypassPermissions
+check "auto: silent inside the project session itself" "$RC:$OUT:$ERR:$(grep -c -- '--bg' "$STUB_LOG")" "0:::0"
+fresh
+CLAUDE_CODE_TASK_LIST_ID=$N run ssrun $ID1 "$R" bypassPermissions
+check "auto: silent in a session ensure created (task list = name)" "$RC:$OUT:$(grep -c -- '--bg' "$STUB_LOG")" "0::0"
+fresh
+run ssrun $ID1 "$R" bypassPermissions
+check "auto: live session is named, nothing run" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" "$SS_AUTO \`$N\` (idle). $HAND:0"
+
+# Detached: a slow --bg must not hold the hook (through a pipe, as Claude Code reads it).
+agents
+fresh
+start=$SECONDS
+OUT=$(STUB_BG_SLEEP=4 PROJECT_SESSION_ENSURE_TICKS=2 ssrun $ID1 "$R" acceptEdits)
+took=$((SECONDS - start))
+check "auto: returns within its bound while --bg is still running" "$([ "$took" -le 2 ] && echo fast || echo "slow ${took}s")" "fast"
+check "auto: ensure not finished when the hook returned" "$([ -f "$RES.rc" ] && echo finished || echo running)" "running"
+check "auto: says starting" "$(ctx)" "$SS_AUTO \`$N\` (starting). $HAND"
+settle
+check "auto: the detached ensure created it in the mirrored mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=$N|--bg --name $N --permission-mode acceptEdits"
+check "auto: ensure finished cleanly" "$(cat "$RES.rc"):$(cat "$RES.out")" "0:created $N"
+
+agents
+fresh
+STUB_ENV_LOG="$T/envlog" run ssrun $ID1 "$R" bypassPermissions
+settle
+check "auto: the created session gets PROJECT_SESSIONS_AUTO=0" "$(cat "$T/envlog")" "AUTO=0"
+
+agents
+fresh
+run ssrun $ID1 "$R"
+check "auto: no mode in the input (2.1.330): create deferred to the first prompt" \
+  "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" "$SS_AUTO \`$N\` (not started; your first prompt starts it). $HAND:0"
+fresh
+run ssrun $ID1 "$R" plan
+check "auto: plan mode is not mirrored, nothing created" "$(grep -c -- '--bg' "$STUB_LOG")" "0"
+
+agents "$(row "$R" "done" 100 $ID1)"
+fresh
+run ssrun $ID2 "$R"
+settle
+check "auto: a stopped session is resumed on start, bare, with no mode needed" "$(bgs)" "$R|TASK=<unset>|--bg --resume $ID1"
+check "auto: resumed is reported" "$(ctx)" "$SS_AUTO \`$N\` (resumed). $HAND"
+
+agents
+fresh
+STUB_UNTRUSTED=1 run ssrun $ID1 "$R" bypassPermissions
+check "auto: untrusted folder says so in one line" "$(ctx)" \
+  "project-sessions: this repo's project session \`$N\` could not start: Workspace not trusted. Run \`claude\` in $R once and accept the trust prompt, then retry."
+check "auto: one line only" "$(ctx | grep -c .)" "1"
+
+agents
+fresh
+mkdir -p "$LK"
+run ssrun $ID1 "$R" bypassPermissions
+check "auto: an ensure in flight is not stacked" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" "$SS_AUTO \`$N\` (starting). $HAND:0"
+rmdir "$LK"
+
+for g in 'not json' '' '{"cwd":42}'; do
+  run sh -c 'printf "%s" "$1" | "$2"' _ "$g" "$HOOK"
+  check "auto: SessionStart fails open on garbage: '$g'" "$RC:$ERR" "0:"
+done
+
+# UserPromptSubmit
+UPS_LIVE="Project session for this repo: \`$N\` (idle). For multi-step work, SendMessage it the task instead of doing it here."
+agents "$(row "$R" idle 100 $ID2)"
+for c in 'unset||off' '0||off' '1||on' '1|0|off' '0|1|on'; do
+  att=${c%%|*} rest=${c#*|} auto=${rest%%|*} want=${rest#*|}
+  if [ "$att" = unset ]; then
+    # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+    run env -u PROJECT_SESSIONS_AUTO ${auto:+PROJECT_SESSIONS_AUTO=$auto} sh -c 'printf "%s" "$1" | "$2"' _ "$(ups_in $ID1 "$R" default)" "$UPS"
+  else
+    # shellcheck disable=SC2016 # $1/$2 expand in the child sh
+    run env -u PROJECT_SESSIONS_AUTO CLAUDE_CODE_SESSION_ATTENDED="$att" ${auto:+PROJECT_SESSIONS_AUTO=$auto} sh -c 'printf "%s" "$1" | "$2"' _ "$(ups_in $ID1 "$R" default)" "$UPS"
+  fi
+  if [ "$want" = on ]; then
+    check "prompt gate ATTENDED=$att AUTO=$auto: one line" "$RC:$(ctx)" "0:$UPS_LIVE"
+    check "prompt gate: event name" "$(printf '%s' "$OUT" | jq -r .hookSpecificOutput.hookEventName)" "UserPromptSubmit"
+  else
+    check "prompt gate ATTENDED=$att AUTO=$auto: silent" "$RC:$OUT:$ERR" "0::"
+  fi
+done
+fresh
+run upsrun $ID1 "$R" bypassPermissions
+check "prompt: live session, nothing run" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" "$UPS_LIVE:0"
+run upsrun $ID2 "$R" bypassPermissions
+check "prompt: silent inside the project session itself" "$RC:$OUT:$ERR" "0::"
+run upsrun $ID1 "$T" bypassPermissions
+check "prompt: silent outside git" "$RC:$OUT:$ERR" "0::"
+
+agents
+fresh
+STUB_BG_SLEEP=2 run upsrun $ID1 "$R" bypassPermissions
+settle
+check "prompt: no session: starting" "$(ctx)" "Project session for this repo: \`$N\` (starting). For multi-step work, SendMessage it the task instead of doing it here."
+check "prompt: creates it in the caller's mode" "$(bgs | cut -d' ' -f1-5)" "$R|TASK=$N|--bg --name $N --permission-mode bypassPermissions"
+fresh
+run upsrun $ID1 "$R" plan
+check "prompt: plan mode creates nothing and says why" "$(ctx):$(grep -c -- '--bg' "$STUB_LOG")" \
+  "Project session for this repo: \`$N\` (not started: permission mode \`plan\` is not mirrored).:0"
+UNTRUSTED_LINE="Project session for this repo: \`$N\` could not start: Workspace not trusted. Run \`claude\` in $R once and accept the trust prompt, then retry."
+fresh
+STUB_UNTRUSTED=1 run upsrun $ID1 "$R" bypassPermissions
+check "prompt: an untrusted folder is reported on the same prompt" "$(ctx)" "$UNTRUSTED_LINE"
+settle
+run upsrun $ID1 "$R" plan
+check "prompt: the last failure is still reported" "$(ctx)" "$UNTRUSTED_LINE"
+agents "$(row "$R" "done" 100 $ID1)"
+fresh
+STUB_COPY=1 run upsrun $ID2 "$R" default
+settle
+contains "prompt: a resume that started a copy is reported" "$(ctx)" "could not start: resume of $N did not continue the same session"
+: >"$STUB_LOG"
+STUB_COPY=1 run upsrun $ID2 "$R" default
+check "prompt: ...and never retried (exit 5)" "$(grep -c -- '--bg' "$STUB_LOG"):$(ctx | grep -c 'could not start')" "0:1"
+fresh
+agents "$(row "$R" idle 100 $ID2)"
+STUB_SLEEP=3 PROJECT_SESSION_HOOK_TICKS=5 run upsrun $ID1 "$R" default
+check "prompt: silent past its time bound" "$RC:$OUT:$ERR" "0::"
+printf 'not json' >"$STUB_AGENTS"
+run upsrun $ID1 "$R" default
+check "prompt: silent when claude agents is broken" "$RC:$OUT:$ERR" "0::"
+for g in 'not json' '' '{"cwd":42}' '[]'; do
+  run sh -c 'printf "%s" "$1" | "$2"' _ "$g" "$UPS"
+  check "prompt: fails open on garbage: '$g'" "$RC:$ERR" "0:"
+done
+unset PROJECT_SESSIONS_AUTO
+
 # --- mode hook ---------------------------------------------------------------------
 ptu() { # command mode -> OUT ERR RC
   run sh -c 'jq -cn --arg c "$1" --arg m "$2" "{session_id:\"s\",cwd:\"/\",permission_mode:\$m,hook_event_name:\"PreToolUse\",tool_name:\"Bash\",tool_input:{command:\$c,description:\"d\",timeout:9,run_in_background:false}}" | "$3"' _ "$1" "$2" "$PTU"
@@ -291,9 +480,12 @@ check "hooks.json: SessionStart runs the hook script" \
 # shellcheck disable=SC2016
 check "hooks.json: PreToolUse on Bash runs the mode hook" \
   "$(jq -r '.hooks.PreToolUse[0] | .matcher + " " + .hooks[0].command' "$HERE/../hooks/hooks.json")" 'Bash "${CLAUDE_PLUGIN_ROOT}"/hooks/pre-tool-use'
-check "scripts are executable" "$([ -x "$PS" ] && [ -x "$HOOK" ] && [ -x "$PTU" ] && echo yes)" "yes"
+# shellcheck disable=SC2016
+check "hooks.json: UserPromptSubmit runs the prompt hook" \
+  "$(jq -r '.hooks.UserPromptSubmit[0].hooks[0].command' "$HERE/../hooks/hooks.json")" '"${CLAUDE_PLUGIN_ROOT}"/hooks/user-prompt-submit'
+check "scripts are executable" "$([ -x "$PS" ] && [ -x "$HOOK" ] && [ -x "$PTU" ] && [ -x "$UPS" ] && echo yes)" "yes"
 
-FLOOR=140
+FLOOR=195
 total=$((pass + fail))
 [ "$total" -ge "$FLOOR" ] || {
   printf 'FAIL case floor: %s cases ran, floor is %s\n' "$total" "$FLOOR"

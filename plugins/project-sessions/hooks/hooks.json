@@ -1,5 +1,5 @@
 {
-  "description": "project-sessions: one SessionStart line naming this repo's project session (silent outside git and inside background sessions), and a PreToolUse Bash hook that adds the caller's permission mode to a `project-session ensure` call that names none. Both fail open.",
+  "description": "project-sessions: SessionStart creates or resumes this repo's project session, detached, and names it in one line (auto mode: attended sessions or PROJECT_SESSIONS_AUTO=1); UserPromptSubmit adds one line per prompt and creates it in the caller's mode if missing; PreToolUse (Bash) adds the caller's permission mode to a `project-session ensure` call that names none. All silent outside git and inside background sessions, and fail open.",
   "hooks": {
     "SessionStart": [
       {
@@ -20,6 +20,17 @@
           {
             "type": "command",
             "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/pre-tool-use",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"${CLAUDE_PLUGIN_ROOT}\"/hooks/user-prompt-submit",
             "timeout": 5
           }
         ]

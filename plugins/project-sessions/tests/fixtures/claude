@@ -7,6 +7,8 @@ case $1 in
     cat "$STUB_AGENTS"
     ;;
   --bg)
+    [ -n "${STUB_BG_SLEEP:-}" ] && sleep "$STUB_BG_SLEEP"
+    [ -n "${STUB_ENV_LOG:-}" ] && printf 'AUTO=%s\n' "${PROJECT_SESSIONS_AUTO-<unset>}" >>"$STUB_ENV_LOG"
     if [ -n "${STUB_UNTRUSTED:-}" ]; then
       echo "Workspace not trusted. Run \`claude\` in $(pwd -P) once and accept the trust prompt, then retry." >&2  # measured wording, 2.1.330
       exit 1

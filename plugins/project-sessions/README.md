@@ -12,9 +12,11 @@ work to it with `SendMessage` and keeps only coordination.
 | Part | What it does |
 |---|---|
 | `bin/project-session` | `name`, `ensure`, `status`. bash 3.2 + `git` + `jq`; macOS and Linux; no Nix |
-| `hooks/session-start` | SessionStart: one line naming the repo's session and the skill to load |
+| `hooks/session-start` | SessionStart: in auto mode, resumes a stopped session (detached) and names it; otherwise names it and the skill |
+| `hooks/user-prompt-submit` | UserPromptSubmit, auto mode only: one line per prompt; creates a missing session in the caller's mode (detached) |
+| `hooks/lib.sh` | Shared by the two: the gate, the 2 s bound, the detached `ensure` |
 | `hooks/pre-tool-use` | PreToolUse (Bash): adds the caller's `--permission-mode` to a `project-session ensure` call that names none |
-| `skills/project-sessions` | Ensure the session, hand over the task |
+| `skills/project-sessions` | Hand the task over with SendMessage and relay the result; `ensure` by hand when not in auto mode |
 | `skills/project-shape` | Check the repo's `CLAUDE.md` and `.claude/settings.json`; scaffold them on a yes |
 
 ## The name
@@ -54,11 +56,39 @@ Interactive sessions never match. A row whose `cwd` no longer exists is skipped.
 resume run under a per-repo lock in `${XDG_STATE_HOME:-~/.local/state}/project-sessions/`
 (stale after 120 s).
 
-## The hook
+## Auto mode — the hooks start the session
 
-Silent outside git, inside any background session (so the project session is never told to
-delegate to itself), past a 2 s bound, and on any error. Otherwise it adds one
-`additionalContext` line.
+**Why hooks, not the skill:** a measured eval (10 fresh `claude -p` runs, 2.1.330) saw the
+SessionStart line reach the agent **10/10**, the skill loaded **2/10**, and `ensure` run
+**0/10** — even agents that loaded the skill skipped it. So the hooks run it.
+
+| Env | Effect |
+|---|---|
+| `CLAUDE_CODE_SESSION_ATTENDED=1` | Auto mode on. Measured 2.1.330: interactive `1`, `-p` `0` (`CLAUDE_CODE_ENTRYPOINT`: `cli` vs `sdk-cli`) |
+| `PROJECT_SESSIONS_AUTO=1` | Force auto mode on (evals under `-p`) |
+| `PROJECT_SESSIONS_AUTO=0` | Force it off: SessionStart only names the session, UserPromptSubmit is silent |
+
+Both hooks stay silent outside git, inside any background session (the `status --session`
+check, or `CLAUDE_CODE_TASK_LIST_ID` equal to the name), past a 2 s bound, and on any error.
+
+- **SessionStart has no `permission_mode` in its input** (measured 2.1.330, `-p`, `startup`;
+  UserPromptSubmit has it). A create without the mode would run in default mode for good, so
+  SessionStart **resumes** a stopped session (bare, it keeps its own mode) but leaves a
+  **missing** one to the first prompt. If a future input carries the mode, it creates then.
+- **UserPromptSubmit** creates a missing session with `--permission-mode <caller's mode>`.
+  `plan` and unknown modes are not mirrored: nothing is created, and the line says why.
+- **Detached:** `( ( ensure …; echo $? >rc ) </dev/null >/dev/null 2>&1 & )`, all three fds
+  redirected so Claude Code does not wait. Measured with a real `claude -p` and an 8 s stubbed
+  `--bg`: the run ended in 7 s, and `ensure` finished afterwards (rc 0, lock released).
+- Not stacked: no spawn while the repo's `ensure` lock is held.
+- The session it creates gets `PROJECT_SESSIONS_AUTO=0`, so its own hooks stay out.
+- **Result files** per repo in `${XDG_STATE_HOME:-~/.local/state}/project-sessions/`:
+  `<name>.ensure.{out,err,rc}`. A failure shows as one line, `could not start: <reason>`
+  (ensure's own last stderr line, or claude's message when ensure only says "claude
+  exited N"). After a spawn, either hook waits up to 1 s for a fast answer, so an untrusted
+  folder is reported on the same prompt; a standing failure keeps showing.
+- **Exit 5 is never retried:** a resume that started a copy would start more. Delete
+  `<name>.ensure.rc` once the duplicate is sorted out.
 
 ## The mode hook
 
@@ -77,7 +107,9 @@ Any doubt — no jq, bad JSON, an unknown mode — and it prints nothing. A wrap
 
 `bash plugins/project-sessions/tests/run.sh`: a stubbed `claude` on `PATH` logs every call;
 the suite asserts the exact create and resume argv, that no id reaches stdout, the lock, the
-SessionStart hook's silences, and what the mode hook amends and leaves alone.
+auto-mode gating matrix, that SessionStart returns while a slow `--bg` still runs, the
+UserPromptSubmit lines, fail-open on garbage input, and what the mode hook amends and leaves
+alone.
 
 ## Known gaps
 

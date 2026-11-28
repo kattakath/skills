@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# UserPromptSubmit: one line of context per prompt naming this repo's project session, and the
+# create (or resume) when there is none yet, detached, in the caller's mode. Auto mode only
+# (hooks/lib.sh auto_on). Short on purpose: it costs tokens every turn.
+#
+# Silent on any doubt: outside git, without jq, in a background session, on any error, or
+# past the 2 s bound.
+set -u
+exec 2>/dev/null
+command -v jq >/dev/null 2>&1 || exit 0
+input=$(cat 2>/dev/null) || exit 0
+HERE=$(cd "$(dirname "$0")" && pwd -P)
+# shellcheck source-path=SCRIPTDIR source=lib.sh
+. "$HERE/lib.sh" || exit 0
+auto_on || exit 0
+cwd=$(printf '%s' "$input" | jq -r '.cwd // empty' 2>/dev/null) || exit 0
+sid=$(printf '%s' "$input" | jq -r '.session_id // empty' 2>/dev/null)
+pmode=$(printf '%s' "$input" | jq -r '.permission_mode // empty' 2>/dev/null)
+[ -n "$cwd" ] || cwd=$PWD
+git -C "$cwd" rev-parse --git-dir >/dev/null 2>&1 || exit 0
+
+bounded_status "$cwd" "$sid" || exit 0
+case $LINE in background\ *) exit 0 ;; esac
+name=${LINE% *}
+state=${LINE##* }
+[ -n "${CLAUDE_CODE_TASK_LIST_ID:-}" ] && [ "$CLAUDE_CODE_TASK_LIST_ID" = "$name" ] && exit 0
+
+mode=$(mirror_mode "$pmode")
+start_ensure "$cwd" "$name" "$state" "$mode"
+if [ -n "$WHY" ]; then
+  msg="Project session for this repo: \`$name\` could not start: $WHY"
+elif [ "$SHOWN" = none ]; then
+  msg="Project session for this repo: \`$name\` (not started: permission mode \`${pmode:-unknown}\` is not mirrored)."
+else
+  msg="Project session for this repo: \`$name\` ($SHOWN). For multi-step work, SendMessage it the task instead of doing it here."
+fi
+emit UserPromptSubmit "$msg"
