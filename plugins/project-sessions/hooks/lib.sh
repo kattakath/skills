@@ -73,7 +73,8 @@ is_live() { case $1 in working | blocked | idle | running) return 0 ;; esac; ret
 #   - the last ensure exited 5: a resume started a copy, and retrying makes more
 # All three fds are redirected, so the hook's pipe closes and Claude Code does not wait.
 # No env is passed to the session it creates: `--bg` hands it to the daemon, so a client env
-# prefix never arrives (PROJECT_SESSIONS_AUTO=0 read back unset, measured 2.1.330, 1.4.1). Its
+# prefix does not arrive while the daemon is running (PROJECT_SESSIONS_AUTO=0 read back unset,
+# measured 2.1.330, 1.4.1). Its
 # own hooks stay out through `status --session` alone.
 # Returns 0 when it spawned, 2 when one is already running, 1 when it skipped.
 spawn_ensure() { # cwd name state mode

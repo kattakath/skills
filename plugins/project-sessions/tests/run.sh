@@ -329,7 +329,7 @@ fresh
 run ssrun $ID2 "$R" bypassPermissions
 check "auto: silent inside the project session itself" "$RC:$OUT:$ERR:$(grep -c -- '--bg' "$STUB_LOG")" "0:::0"
 # Inside a background session the ONLY guard is `status --session` (1.4.0 dropped the task-list
-# check, 1.4.1 the AUTO=0 prefix, which never reached the session). Model the worst case: AUTO=1
+# check, 1.4.1 the AUTO=0 prefix, which did not reach the session while the daemon ran). Model the worst case: AUTO=1
 # and no task list. Each state the session's own row can
 # hold, including the null-state row of a session that has just started.
 for st in idle working blocked "done" null; do
@@ -376,7 +376,7 @@ check "auto: ensure finished cleanly" "$(cat "$RES.rc"):$(cat "$RES.out")" "0:cr
 
 agents
 fresh
-# No AUTO prefix (1.4.1): it never reached the session (measured 2.1.330). Auto mode here comes
+# No AUTO prefix (1.4.1): it did not reach the session while the daemon ran (measured 2.1.330). Auto mode here comes
 # from ATTENDED, so the client env holds no PROJECT_SESSIONS_AUTO unless the hook adds one.
 # shellcheck disable=SC2016 # $1/$2 expand in the child sh
 STUB_ENV_LOG="$T/envlog" run env -u PROJECT_SESSIONS_AUTO CLAUDE_CODE_SESSION_ATTENDED=1 sh -c 'printf "%s" "$1" | "$2"' _ "$(ss_in $ID1 "$R" bypassPermissions)" "$HOOK"

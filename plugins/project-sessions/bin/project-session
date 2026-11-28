@@ -14,10 +14,11 @@
 #   - no task list is set: each session keeps Claude Code's default per-session list
 #     (~/.claude/tasks/session-<id>), which survives stop/resume (same id) and starts afresh when
 #     a session is removed and recreated
-#   - `--bg` hands the session to the long-lived `claude daemon`, so the client's env never
-#     reaches the session (an env prefix read back the daemon's value). The daemon's own env
-#     does, and a daemon this script starts inherits ours. That is why CLAUDE_CODE_TASK_LIST_ID
-#     is still scrubbed (`env -u`) on create and resume.
+#   - `--bg` hands the session to the long-lived `claude daemon`. While it runs, the client's
+#     env does not reach the session (an env prefix read back the daemon's value). The daemon's
+#     own env does, and a daemon this script starts inherits ours (measured: `ps eww` on the
+#     daemon, 2026-11-28). That is why CLAUDE_CODE_TASK_LIST_ID is still scrubbed (`env -u`)
+#     on create and resume.
 #
 # Portable on purpose: bash 3.2 + git + jq. No realpath, readlink -f, stat or timeout.
 set -u -o pipefail

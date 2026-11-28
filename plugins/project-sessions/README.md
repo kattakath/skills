@@ -39,13 +39,16 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   verbatim; the operator trusts the folder once by running `claude` there.
 - **Task lists are Claude Code's default per session; they survive stop/resume and reset
   when a session is removed and recreated.** `ensure` sets no task list (since 1.4.0).
-- **The client env never reaches a `--bg` session, but it can reach the daemon.**
+- **While the daemon runs, the client env does not reach a `--bg` session, but it can reach
+  the daemon.**
   `claude --bg` hands the session to the long-lived `claude daemon` (or a spare it
   pre-started).
   - History: 1.3.0 passed an env prefix, and the session read back the daemon's value instead
     (measured 2.1.330). 1.3.1 then used `--settings`, and 1.4.0 dropped the custom list.
-  - Inferred, not measured: the daemon keeps the env of whichever client started it, so a
-    caller carrying `CLAUDE_CODE_TASK_LIST_ID` could freeze one list into every later session.
+  - Measured: the daemon keeps the env of whichever client started it. On 2026-11-28,
+    `ps eww` on the running daemon showed `CLAUDE_CODE_TASK_LIST_ID=github.com:kattakath/nix-config`.
+    It had been inherited from the 00:31 `claude --bg` that started the daemon, which froze
+    one list into every later session.
   - That is why `ensure` still scrubs the variable (`env -u`) on create and resume.
 - **A session created without `--permission-mode` runs in default mode**, even when user
   settings set `permissions.defaultMode`. A `SendMessage` to it from a bypass-mode session is
@@ -101,9 +104,9 @@ any error. The background check is `status --session`: the hook's `session_id` m
   `--bg`: the run ended in 7 s, and `ensure` finished afterwards (rc 0, lock released).
 - Not stacked: no spawn while the repo's `ensure` lock is held.
 - The session it creates keeps its own hooks out through `status --session` alone. 1.4.0
-  also passed `PROJECT_SESSIONS_AUTO=0` as an env prefix, but it never arrived: the session's
-  `printenv PROJECT_SESSIONS_AUTO` printed nothing (exit 1). That was measured live on 2.1.330,
-  with the daemon up. 1.4.1 dropped the prefix.
+  also passed `PROJECT_SESSIONS_AUTO=0` as an env prefix, but it did not arrive while the
+  daemon was running. The session's `printenv PROJECT_SESSIONS_AUTO` printed nothing (exit 1),
+  measured live on 2.1.330 with the daemon up. 1.4.1 dropped the prefix.
 - **Result files** per repo in `${XDG_STATE_HOME:-~/.local/state}/project-sessions/`:
   `<name>.ensure.{out,err,rc}`. A failure shows as one line, `could not start: <reason>`
   (ensure's own last stderr line, or claude's message when ensure only says "claude
