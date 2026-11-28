@@ -73,9 +73,14 @@ Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves. **A GitHub i
 tells you when.** The daily `markup-lsp-pin` workflow runs `tests/lock-parity.py` against
 nix-config's `main` (logic in `tests/pin-watch.sh`, cases in `tests/lock-parity-cases.sh`):
 - the pins differ: it opens **one** issue, *markup-lsp: nixpkgs pin lags nix-config*,
-  **assigned** to whoever last edited the workflow's schedule. Assignment is what notifies
-  someone; a bot-opened issue alone reaches only repo watchers. It comments on that issue
-  only when the revs change again;
+  **assigned** to the operator. Assignment is what notifies someone; a bot-opened issue
+  alone reaches only repo watchers. The workflow carries the operator's **immutable numeric
+  account id**, the one kattakath/nix-config's `auto-merge.yml` and `bump-watch.yml` use,
+  and resolves it to a login at run time, so a renamed login still works. Only a `User`
+  account is assigned. If the lookup fails, or names a bot, the issue opens **unassigned**,
+  never on a bot. It doesn't use `github.triggering_actor`: on scheduled runs nix-config
+  measured that resolving to a bot. It comments on that issue only when the revs change
+  again;
 - the pins match: it closes that issue;
 - the check itself breaks: the run **fails**. Whether that sends mail depends on the
   schedule owner's GitHub Actions notification settings.

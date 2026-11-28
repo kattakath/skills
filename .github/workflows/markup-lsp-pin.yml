@@ -46,12 +46,15 @@ jobs:
           path: .nix-config
           persist-credentials: false
 
-      # ASSIGNEE: a bot-opened issue notifies only repo watchers, so the issue is assigned.
-      # On a scheduled run triggering_actor is whoever last edited the cron; nothing is
-      # hardcoded. Logic and its stubbed-gh cases: plugins/markup-lsp/tests/.
+      # ASSIGNEE_ID: a bot-opened issue notifies only repo watchers, so the issue is assigned.
+      # The operator's IMMUTABLE numeric id (the identity kattakath/nix-config's auto-merge.yml
+      # and bump-watch.yml use) is resolved to a login at run time; a renamed login still
+      # works. Not github.triggering_actor: on scheduled runs nix-config measured it resolving
+      # to a bot. If the lookup fails or names no User, the issue opens unassigned, never on a
+      # bot. Logic and its stubbed-gh cases: plugins/markup-lsp/tests/.
       - name: Compare pins and keep one issue in step
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          ASSIGNEE: ${{ github.triggering_actor }}
+          ASSIGNEE_ID: "8927166"
         run: bash plugins/markup-lsp/tests/pin-watch.sh .nix-config/flake.lock
