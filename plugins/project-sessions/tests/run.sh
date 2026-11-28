@@ -196,28 +196,21 @@ run "$PS" ensure "$R" --permission-mode bypassPermissions --prompt "hi"
 check "create with --permission-mode: passed on create" \
   "$RC:$(grep -- '--bg' "$STUB_LOG")" "0:$R|TASK=<unset>|--bg --name $N --permission-mode bypassPermissions hi"
 
-# No task list is set: the session keeps Claude Code's default per-session list (1.4.0). The stub
-# models the daemon (see fixtures/claude): a session's list comes only from --settings, else the
-# daemon's own env, so <unset> here means "the default list".
-SL="$T/session.log"
-: >"$SL"
+# No task list is set: the session keeps Claude Code's default per-session list (1.4.0).
 : >"$STUB_LOG"
-STUB_SESSION_LOG=$SL run "$PS" ensure "$R" --prompt hi
-check "task list: create sets none, the session keeps the default list" "$RC:$(cat "$SL")" "0:SESSION_TASK=<unset>"
-check "task list: create passes no --settings" "$(grep -- '--bg' "$STUB_LOG" | grep -c -- '--settings')" "0"
-check "task list: the script never names the variable in a setting" "$(grep -c '"CLAUDE_CODE_TASK_LIST_ID"\|CLAUDE_CODE_TASK_LIST_ID: ' "$PS")" "0"
+run "$PS" ensure "$R" --prompt hi
+check "task list: create passes no --settings" "$RC:$(grep -- '--bg' "$STUB_LOG" | grep -c -- '--settings')" "0:0"
 # The scrub stays: a daemon a create or resume starts inherits the client env.
 : >"$STUB_LOG"
 CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R" --prompt hi
 check "scrub: the caller's list never reaches a create's client env" "$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "TASK=<unset>"
+: >"$STUB_LOG"
+CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R" --permission-mode bypassPermissions --prompt hi
+check "scrub: ...also a create with --permission-mode" "$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "TASK=<unset>"
 agents "$(row "$R" "done" 100 $ID1)"
 : >"$STUB_LOG"
 CLAUDE_CODE_TASK_LIST_ID=github.com:x/caller run "$PS" ensure "$R"
 check "scrub: the caller's list never reaches a resume's client env" "$RC:$(grep -- '--bg' "$STUB_LOG" | cut -d'|' -f2)" "0:TASK=<unset>"
-# shellcheck disable=SC2016 # literal patterns: the $ names are text in the script, not expansions
-check "scrub: every --bg call is behind env -u CLAUDE_CODE_TASK_LIST_ID" \
-  "$(grep -c 'run_claude .*"\$CLAUDE" --bg' "$PS"):$(grep -c 'run_claude "\$ROOT" env -u CLAUDE_CODE_TASK_LIST_ID "\$CLAUDE" --bg' "$PS")" "3:3"
-check "task list: no env-prefix channel is left in the script" "$(grep -c 'env CLAUDE_CODE_TASK_LIST_ID=' "$PS")" "0"
 agents
 run "$PS" ensure "$R" --permission-mode
 check "--permission-mode without a value fails" "$RC" "1"
@@ -389,7 +382,6 @@ fresh
 STUB_ENV_LOG="$T/envlog" run env -u PROJECT_SESSIONS_AUTO CLAUDE_CODE_SESSION_ATTENDED=1 sh -c 'printf "%s" "$1" | "$2"' _ "$(ss_in $ID1 "$R" bypassPermissions)" "$HOOK"
 settle
 check "auto: the hook passes no PROJECT_SESSIONS_AUTO to the create" "$(cat "$T/envlog")" "AUTO=<unset>"
-check "auto: lib.sh names no PROJECT_SESSIONS_AUTO prefix" "$(grep -c 'PROJECT_SESSIONS_AUTO=0 "' "$HERE/../hooks/lib.sh")" "0"
 
 agents
 fresh

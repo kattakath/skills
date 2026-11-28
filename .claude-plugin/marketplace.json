@@ -656,7 +656,6 @@
         "agents",
         "sendmessage",
         "remote-control",
-        "task-list",
         "hooks"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/project-sessions",
