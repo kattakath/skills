@@ -4,15 +4,16 @@ A Claude Code **LSP plugin** for config and markup files. It registers seven lan
 servers, so Claude Code gets diagnostics after an edit plus hover, go-to-definition and
 find-references through its built-in LSP tool.
 
-| Language | Extensions | Server | Command |
-|---|---|---|---|
-| YAML | `.yaml` `.yml` | [yaml-language-server](https://github.com/redhat-developer/yaml-language-server) | `yaml-language-server --stdio` |
-| TOML | `.toml` | [taplo](https://github.com/tamasfe/taplo) | `taplo lsp stdio` |
-| JSON | `.json` `.jsonc` | [vscode-langservers-extracted](https://github.com/hrsh7th/vscode-langservers-extracted) | `vscode-json-language-server --stdio` |
-| HTML | `.html` `.htm` | vscode-langservers-extracted | `vscode-html-language-server --stdio` |
-| CSS | `.css` `.scss` `.less` | vscode-langservers-extracted | `vscode-css-language-server --stdio` |
-| XML | `.xml` `.xsd` `.xsl` `.xslt` | [lemminx](https://github.com/eclipse/lemminx) | `lemminx` |
-| Markdown | `.md` `.markdown` | [marksman](https://github.com/artempyanykh/marksman) | `marksman server` |
+| Language | Server |
+|---|---|
+| YAML | [yaml-language-server](https://github.com/redhat-developer/yaml-language-server) |
+| TOML | [taplo](https://github.com/tamasfe/taplo) |
+| JSON, HTML, CSS | [vscode-langservers-extracted](https://github.com/hrsh7th/vscode-langservers-extracted) |
+| XML | [lemminx](https://github.com/eclipse/lemminx) |
+| Markdown | [marksman](https://github.com/artempyanykh/marksman) |
+
+Which file extensions go to which server, and the exact command lines, live only in
+[`.lsp.json`](.lsp.json).
 
 The plugin ships **no hooks, no scripts and no MCP servers**, and it installs nothing.
 Nix and shell files have their own plugins here: [nixd](../nixd) and
@@ -26,8 +27,8 @@ loads, but those servers cannot start.
 
 | Files | Role |
 |---|---|
-| `.lsp.json` | Extension → server map Claude Code reads. |
-| `servers.nix` | **The one package list.** `{ pkgs }: [ … ]`, plain nixpkgs. |
+| `.lsp.json` | What Claude Code reads: extensions, commands and arguments. |
+| `servers.nix` | The nixpkgs packages that provide those commands, as `{ pkgs }: [ … ]`. |
 | `flake.nix` | Builds that list (`packages.default`) and checks it against `.lsp.json`. |
 
 Pick one way to get the binaries:

@@ -1,4 +1,4 @@
-# markup-lsp's flake: builds servers.nix (the one package list) and checks it against .lsp.json.
+# markup-lsp's flake: builds the packages in servers.nix and checks them against .lsp.json.
 #
 #   nix build ./plugins/markup-lsp            → result/bin/<every server .lsp.json names>
 #   nix profile install ./plugins/markup-lsp  → the same, on PATH, for a machine without its own Nix config
