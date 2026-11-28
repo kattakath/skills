@@ -66,6 +66,28 @@ nothing**. An empty store fetches 68 paths (148.7 MiB) in about **42 s**, and on
 CI runs on Linux only, so the darwin numbers come from a local run. Rerun the gate on a Mac
 after a pin bump.
 
+## Bumping the nixpkgs pin (by hand)
+
+`flake.lock` has **no updater**, and the cache verdict above holds only for the rev it pins.
+Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves:
+
+```bash
+cd plugins/markup-lsp
+nix flake lock --override-input nixpkgs "$(jq -r .nodes.nixpkgs.locked.url <nix-config>/flake.lock)"
+bash tests/run.sh --cache   # must print "nothing to compile" on aarch64-darwin
+```
+
+Then bump the PATCH version, update the rev and numbers in § Cache, and push. CI reruns
+`--cache` on Linux.
+
+Why not a bot:
+- Dependabot's `nix` ecosystem updates GitHub, GitLab, SourceHut and plain-git inputs. It
+  doesn't list tarball or FlakeHub URLs, and this pin is a FlakeHub tarball, matching
+  nix-config.
+- A lock-only PR would also fail this repo's `Plugin version bumped` gate, which has no
+  exemptions.
+- The darwin half of the gate runs only on a Mac, so an automatic bump would land unchecked.
+
 ## Tests
 
 ```bash
