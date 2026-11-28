@@ -21,7 +21,9 @@
         "scrcpy",
         "device",
         "mirroring",
-        "wireless-debugging"
+        "wireless-debugging",
+        "emulator",
+        "cdp"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/android-phone",
       "license": "MIT",
@@ -49,7 +51,7 @@
     },
     {
       "name": "bash-language-server",
-      "description": "Shell script intelligence through bash-language-server: ShellCheck diagnostics, hover, go-to-definition and references in .sh, .bash and .ksh files. Hook-free; expects bash-language-server and shellcheck on PATH.",
+      "description": "Shell script intelligence for Claude Code through bash-language-server: ShellCheck diagnostics, hover, go-to-definition and references in .sh, .bash and .ksh files. Hook-free: it installs nothing and expects bash-language-server and shellcheck on PATH.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -118,7 +120,8 @@
         "accessibility",
         "adhd",
         "diagrams",
-        "architecture"
+        "architecture",
+        "hooks"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/brain-signals",
       "license": "MIT",
@@ -153,10 +156,12 @@
       "keywords": [
         "ci",
         "github-actions",
+        "gitlab-ci",
         "hooks",
         "direct-push",
         "background",
-        "gh"
+        "gh",
+        "glab"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/ci-watch",
       "license": "MIT",
@@ -205,7 +210,7 @@
     },
     {
       "name": "gif-meme",
-      "description": "Make a looping GIF that fits a byte budget from a short video, then publish it to Tenor and GIPHY through Claude in Chrome, with the measured per-site footguns (hidden file inputs, a racing tag box, the 48-hour review, the five-upload gate on GIPHY search) pre-empted.",
+      "description": "Turn a short video into a looping GIF that fits a byte budget, then publish it where GIF search actually looks — Tenor (Gboard, WhatsApp, Discord, Google Messages) and GIPHY (Slack, Instagram, iMessage) — driven through Claude in Chrome with the measured per-site footguns pre-empted: hidden file inputs, a tag box that drops every other tag, a 48-hour review queue, and a search-placement gate that needs five uploads before you can even apply.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -266,7 +271,7 @@
     },
     {
       "name": "history-scrub",
-      "description": "Take a literal that must not be public out of a public git repo's history: census every copy, fix the tip forward, back up by SHA, rewrite the minimal range, prove the tip tree is unchanged, push with a SHA-pinned lease, then chase refs/pull, cached views and PR edit history.",
+      "description": "Remove a literal that must not be public (a client name, a real identity, an internal hostname, a leaked value) from a public git repo's history: census every copy, fix the tip forward, back up by SHA, rewrite the minimal range, prove the tip tree is byte-identical, push with a SHA-pinned lease — then chase what a rewrite cannot reach (refs/pull, cached views, PR edit history, GitLab hidden MR refs).",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -276,6 +281,7 @@
         "history",
         "rewrite",
         "filter-repo",
+        "filter-branch",
         "force-with-lease",
         "privacy",
         "sensitive-data",
@@ -310,7 +316,7 @@
     },
     {
       "name": "job-search",
-      "description": "Job-application skills vendored unmodified from Paramchoudhary/ResumeSkills (MIT): posting analysis and match scoring, ATS resume optimization, cover letters, interview STAR prep and salary negotiation.",
+      "description": "Job-application skills: analyze a posting and score the match, optimize a resume for ATS, write a cover letter, prepare interview STAR stories, and plan a salary negotiation. Vendored unmodified from Paramchoudhary/ResumeSkills@74ae19e (MIT).",
       "author": {
         "name": "Param Choudhary",
         "url": "https://github.com/Paramchoudhary"
@@ -415,7 +421,7 @@
     },
     {
       "name": "mac-app-send",
-      "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files. Ships the method skill, a preflight doctor that resolves bundle id and running state in one shot, a file manifest that gives the exact bytes/KB/page counts a send is verified against, and a PreToolUse guard blocking the three moves that cannot work: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service.",
+      "description": "Drive a native macOS app with the computer-use MCP to send a formatted message and attach files — the method skill, a preflight doctor that resolves the bundle id and running state in one shot, a deterministic file manifest for verifying a send against disk, and a PreToolUse guard that asks before the three known-wrong moves cost a turn: an osascript workaround at the Open/Save panel, a multi-line app_type without element_index, and request_access on the panel service that can never be granted.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -426,6 +432,7 @@
         "automation",
         "whatsapp",
         "accessibility",
+        "open-save-panel",
         "attachments"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/mac-app-send",
@@ -434,7 +441,7 @@
     },
     {
       "name": "mail-cloak",
-      "description": "Send plain-text email over authenticated SMTP through a local SOCKS5 proxy so the sending machine's IP never reaches the Received: headers. Ships an egress check that refuses unless the proxied exit is outside the direct IPv4 /24 and IPv6 /48, a send script that runs it first and logs every send without the body, a header check on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass, plus read-only IMAP through the same proxy via himalaya.",
+      "description": "Send plain-text email over authenticated SMTP (STARTTLS) through a local SOCKS5 proxy, so the sending machine's own IP never reaches the Received: headers — an egress check that refuses unless the proxied exit differs from the direct v4 /24 and v6 /48, a send script that runs it first and logs every send without the body, a header check that proves the result on a delivered probe, a doctor, and a PreToolUse guard that asks a human before every send and before any raw SMTP bypass, plus read-only IMAP through the same proxy via himalaya (never marks mail \\Seen). Renamed from smtp-egress in 1.2.0.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -456,7 +463,7 @@
     },
     {
       "name": "markup-lsp",
-      "description": "YAML, TOML, JSON, HTML, CSS, XML and Markdown language servers: diagnostics, hover, go-to-definition and references. Hook-free; expects the servers on PATH, with servers.nix as the package list a Nix config imports.",
+      "description": "Language intelligence for Claude Code in config and markup files: YAML, TOML, JSON, HTML, CSS, XML and Markdown, through yaml-language-server, taplo, vscode-langservers-extracted, lemminx and marksman. Hook-free: it installs nothing and expects the servers on PATH; its servers.nix is the package list a Nix config imports to put them there.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -470,7 +477,8 @@
         "html",
         "css",
         "xml",
-        "markdown"
+        "markdown",
+        "nix"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/markup-lsp",
       "license": "MIT",
@@ -514,7 +522,7 @@
     },
     {
       "name": "nix-flake-kit",
-      "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values.",
+      "description": "Hooks for working on Nix flakes with Claude Code: auto-stage .nix writes so flake evaluation sees them, and flag hardcoded per-user home paths in .nix values. Also ships the mcp-nixos server for nixpkgs and option lookup.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -531,7 +539,7 @@
     },
     {
       "name": "nixd",
-      "description": "Nix language intelligence through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free; expects nixd on PATH.",
+      "description": "Nix language intelligence for Claude Code through the nixd language server: diagnostics, hover, go-to-definition and references in .nix files. Hook-free: it installs nothing and expects nixd on PATH.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -581,13 +589,13 @@
         "redesign",
         "accessibility"
       ],
-      "homepage": "https://greasyfork.org/en/help/code-rules",
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/userscript-lab",
       "license": "MIT",
       "source": "./plugins/userscript-lab"
     },
     {
       "name": "pgp-ops",
-      "description": "Run GnuPG from an agent with no TTY: decrypt to the clipboard without plaintext in the transcript, encrypt to a recipient's key without importing it, prove who can decrypt and whether two keys match from the packets, and back up a key with a restore test.",
+      "description": "Run GnuPG from an agent that has no TTY: decrypt to the clipboard without the plaintext ever entering the transcript, encrypt to a recipient's key without importing it, prove who can decrypt a message and whether two keys are the same from the packets, and back up a key with a restore test that writes nothing.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -645,7 +653,7 @@
     },
     {
       "name": "project-sessions",
-      "description": "One named background Claude Code session per git repo, named `<host>:<owner>/<repo>`. `project-session ensure` finds it in `claude agents --json --all` by name AND repo root, resumes a stopped one by its bare full session id (the only form that does not start a copy), or creates it in the caller's permission mode (a PreToolUse hook adds it); the main session then hands work to it with SendMessage. A SessionStart hook names the repo's session. A second skill, project-shape, checks the repo is a valid Claude Code project.",
+      "description": "One named background Claude Code session per git repo, named `<host>:<owner>/<repo>`. In attended sessions (or with PROJECT_SESSIONS_AUTO=1) the hooks create or resume it themselves, detached: SessionStart resumes a stopped one and names it, UserPromptSubmit adds one line per prompt and creates a missing one in the caller's permission mode. `project-session ensure` finds it in `claude agents --json --all` by name AND repo root and resumes only by bare full session id (the only form that does not start a copy). The main session hands work over with SendMessage. A second skill, project-shape, checks the repo is a valid Claude Code project.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -674,8 +682,8 @@
         "pgvector",
         "postgres",
         "embeddings",
-        "ollama",
-        "local"
+        "cloudflare",
+        "ai-search"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/rag",
       "license": "MIT",
@@ -760,7 +768,7 @@
     },
     {
       "name": "slack-etiquette",
-      "description": "Slack etiquette for agents that message people: when not to post, re-read before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Layers on Slack's own slack:slack-messaging skill.",
+      "description": "Slack etiquette for agents that message people: when not to post, re-reading history before every send, group vs DM vs thread, one fact once across conversations and sibling sessions, phone-first formatting, and links that never expand into previews. Works with whichever Slack connector is signed in (tools matched by suffix), confirms the signed-in workspace and looks people and channels up live; a PreToolUse hook refuses URL-labelled links and doubled footers. Layers on Slack's own slack:slack-messaging skill; holds no workspace data.",
       "author": {
         "name": "Ismail Kattakath"
       },
@@ -769,7 +777,8 @@
         "slack",
         "messaging",
         "etiquette",
-        "agents"
+        "agents",
+        "communication"
       ],
       "homepage": "https://github.com/kattakath/skills/tree/main/plugins/slack-etiquette",
       "license": "MIT",
@@ -815,7 +824,7 @@
     },
     {
       "name": "vercel-workflow",
-      "description": "Vercel Workflow SDK skills vendored unmodified from vercel/workflow (Apache-2.0): durable, resumable workflows, SDK setup, and migration from Temporal, Inngest, Trigger.dev and AWS Step Functions.",
+      "description": "Vercel's Workflow SDK skills: write durable, resumable workflows, install and configure the SDK, and migrate from Temporal, Inngest, Trigger.dev or AWS Step Functions. Vendored unmodified from vercel/workflow@7153e09 (Apache-2.0).",
       "author": {
         "name": "Vercel Inc.",
         "url": "https://github.com/vercel"

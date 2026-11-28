@@ -5,8 +5,16 @@ The index is the map: goal -> route. Its hand-written parts are the two JSON fil
 local entries come from .claude-plugin/marketplace.json, so nothing here is edited twice.
 Every route step must resolve, to a local entry or to a source in sources.json.
 
-    python3 scripts/build-index.py          # write INDEX.md
-    python3 scripts/build-index.py --check  # fail if INDEX.md is stale or a step dangles
+It also owns the catalog copy of each plugin's own metadata. The fields in SHARED that an
+entry repeats from its plugin.json are DERIVED from that plugin.json: plugin.json ships
+inside the plugin's tree, every edit to it is forced through a version bump
+(check-version-bump.py), and the installed copy reads it. The entry's copy exists only so
+the marketplace can show a plugin before it is installed. Write mode re-syncs the copies;
+--check fails on any drift (13 of 43 descriptions had drifted by 2026-11-28, with only one
+plugin's own test watching).
+
+    python3 scripts/build-index.py          # sync marketplace copies, write INDEX.md + README table
+    python3 scripts/build-index.py --check  # fail if anything is stale, drifted or dangling
 """
 import json
 import sys
@@ -15,15 +23,38 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 OUT = ROOT / "INDEX.md"
 README = ROOT / "README.md"
+MARKET = ROOT / ".claude-plugin" / "marketplace.json"
+SHARED = ("description", "keywords", "homepage", "author", "license")
 
 
 def load(rel):
     return json.loads((ROOT / rel).read_text())
 
 
+def dump(obj):
+    return json.dumps(obj, indent=2, ensure_ascii=False) + "\n"
+
+
+def sync_shared(market):
+    """Copy each SHARED field the entry carries from its plugin.json; return the drifts."""
+    drift = []
+    for e in market["plugins"]:
+        pj = json.loads((ROOT / e["source"] / ".claude-plugin" / "plugin.json").read_text())
+        for k in SHARED:
+            if k in e and e[k] != pj.get(k):
+                if k not in pj:
+                    drift.append(f"{e['name']}: marketplace entry has '{k}' but plugin.json does not; add it there")
+                    continue
+                drift.append(f"{e['name']}: marketplace '{k}' differs from plugin.json")
+                e[k] = pj[k]
+    return drift
+
+
 def main():
     check = "--check" in sys.argv[1:]
-    market = load(".claude-plugin/marketplace.json")
+    market_old = MARKET.read_text()
+    market = json.loads(market_old)
+    drift = sync_shared(market)
     local = {p["name"]: p for p in market["plugins"]}
     sources = {s["id"]: s for s in load("index/sources.json")["sources"]}
     routes = load("index/routes.json")["routes"]
@@ -90,12 +121,18 @@ def main():
     if errors:
         sys.exit("index: " + "\n       ".join(errors))
     if check:
+        if drift:
+            sys.exit("index: marketplace.json drifted from plugin.json (run python3 scripts/build-index.py):\n       "
+                     + "\n       ".join(drift))
         if not OUT.exists() or OUT.read_text() != text:
             sys.exit("index: INDEX.md is stale; run python3 scripts/build-index.py")
         if readme_new != readme_old:
             sys.exit("index: README.md plugin table is stale; run python3 scripts/build-index.py")
         print("index: up to date")
     else:
+        if dump(market) != market_old:
+            MARKET.write_text(dump(market))
+            print(f"index: synced {len(drift)} marketplace field(s) from plugin.json")
         OUT.write_text(text)
         README.write_text(readme_new)
         print(f"index: wrote {OUT.relative_to(ROOT)} ({len(routes)} routes, {len(sources)} sources)"

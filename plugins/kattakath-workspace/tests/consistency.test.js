@@ -162,13 +162,6 @@ test("user-only skills stay user-only", () => {
   for (const s of USER_SKILLS) assert.match(s, /^disable-model-invocation: true$/m);
 });
 
-test("plugin.json and the marketplace entry agree on the description", () => {
-  const pj = JSON.parse(read(".claude-plugin", "plugin.json"));
-  const mk = JSON.parse(fs.readFileSync(path.join(ROOT, "..", "..", ".claude-plugin", "marketplace.json"), "utf8")).plugins.find((p) => p.name === pj.name);
-  assert.equal(mk.description, pj.description);
-  assert.equal(mk.version, undefined, "the marketplace entry never carries a version");
-});
-
 test("every PreToolUse hook blocks on failure (a crashed or missing node must not let a call through)", () => {
   const pre = JSON.parse(read("hooks", "hooks.json")).hooks.PreToolUse;
   for (const entry of pre) for (const h of entry.hooks) assert.equal(h.onFailure, "block", `${entry.matcher} lacks onFailure: block`);
