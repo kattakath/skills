@@ -48,8 +48,9 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   - **Measured, the daemon's env only:** on 2026-11-28, `ps eww` on the running daemon showed
     `CLAUDE_CODE_TASK_LIST_ID=github.com:kattakath/nix-config`, inherited from the 00:31
     `claude --bg` that started it.
-  - **Inferred, not measured:** every later session the daemon starts would then get that
-    one list. No later session's env or task list was read to confirm it.
+  - **Inferred, not measured for this variable:** every later session that daemon started
+    would then get that one list. The basis is the 1.3.0 read-back above: a session saw the
+    daemon's value, not the client's.
   - That is why `ensure` still scrubs the variable (`env -u`) on create and resume.
 - **A session created without `--permission-mode` runs in default mode**, even when user
   settings set `permissions.defaultMode`. A `SendMessage` to it from a bypass-mode session is
