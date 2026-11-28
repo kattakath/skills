@@ -38,11 +38,11 @@ Checked against GitHub afterwards:
   lost watch: a green push leaves a file, and a lost one leaves none. The audit doesn't
   separate the two newer designs, because it never ran either.
 - The choice rests on ergonomics. A wake-up is a **dead-man signal you see** without asking.
-  A file is a signal **you must go and look for**, and in the audit nobody looked until
-  after the fact.
+  A file is a signal **you must go and look for**. The audit can't say how often anyone
+  would have looked, because the old design left no file to look for.
 
 **What waking on green still misses: late runs.** The 3 Dependabot `dynamic` runs started
-17–26 min after the push, after the watch had already reported. A wake-up on green says the
+17–26 min after the push, after a watch of that push would already have ended. A wake-up on green says the
 runs it saw passed. It says nothing about a run that starts later. Watch such a run by sha
 by hand (`ci-watch.js --sha <sha>`).
 
