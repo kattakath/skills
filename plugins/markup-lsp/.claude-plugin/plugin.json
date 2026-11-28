@@ -1,0 +1,24 @@
+{
+  "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "markup-lsp",
+  "version": "1.0.0",
+  "description": "Language intelligence for Claude Code in config and markup files: YAML, TOML, JSON, HTML, CSS, XML and Markdown, through yaml-language-server, taplo, vscode-langservers-extracted, lemminx and marksman. Hook-free: it installs nothing and expects the servers on PATH; its servers.nix is the package list a Nix config imports to put them there.",
+  "author": {
+    "name": "Ismail Kattakath"
+  },
+  "homepage": "https://github.com/kattakath/skills/tree/main/plugins/markup-lsp",
+  "repository": "https://github.com/kattakath/skills",
+  "license": "MIT",
+  "keywords": [
+    "lsp",
+    "language-server",
+    "yaml",
+    "toml",
+    "json",
+    "html",
+    "css",
+    "xml",
+    "markdown",
+    "nix"
+  ]
+}

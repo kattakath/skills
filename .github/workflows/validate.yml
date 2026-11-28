@@ -341,6 +341,13 @@ jobs:
       - name: plaid-pfc cases
         run: bash plugins/plaid-pfc/tests/run.sh
 
+      # markup-lsp: servers.nix is the one package list behind .lsp.json. The suite runs the
+      # flake's `commands` check (every .lsp.json command is a built bin/) and starts each
+      # server for an LSP `initialize`. `--cache` fails if a first install here would compile
+      # anything; the darwin half of that gate runs locally (CI is Linux only).
+      - name: markup-lsp cases
+        run: bash plugins/markup-lsp/tests/run.sh --cache
+
       # beancount's builder is checked by Beancount itself: every golden must load with zero
       # errors, and a wrong balance must refuse. That needs beancount importable, so this step
       # makes a venv with the versions the plugin is tested at (cp312 manylinux wheels exist

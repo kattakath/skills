@@ -455,6 +455,28 @@
       "source": "./plugins/mail-cloak"
     },
     {
+      "name": "markup-lsp",
+      "description": "YAML, TOML, JSON, HTML, CSS, XML and Markdown language servers: diagnostics, hover, go-to-definition and references. Hook-free; expects the servers on PATH, with servers.nix as the package list a Nix config imports.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "lsp",
+        "language-server",
+        "yaml",
+        "toml",
+        "json",
+        "html",
+        "css",
+        "xml",
+        "markdown"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/markup-lsp",
+      "license": "MIT",
+      "source": "./plugins/markup-lsp"
+    },
+    {
       "name": "mcp-utilities",
       "description": "Two keyless, account-free MCP servers: a persistent knowledge graph (memory, stored under XDG data, not the npx cache) and a sequential-reasoning scaffold. Both pinned; nothing to configure.",
       "author": {

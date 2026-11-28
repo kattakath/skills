@@ -69,6 +69,13 @@
       "note": "Hook-free: needs bash-language-server and shellcheck on PATH. The community variants install the server over the network at session start."
     },
     {
+      "goal": "Get language-server diagnostics and navigation in YAML, TOML, JSON, HTML, CSS, XML and Markdown",
+      "steps": [
+        "markup-lsp"
+      ],
+      "note": "Hook-free: the servers come from servers.nix, imported into your Nix config or installed from the plugin's flake."
+    },
+    {
       "goal": "Audit a config monorepo's foundation",
       "steps": [
         "foundation-audit"

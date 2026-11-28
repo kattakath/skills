@@ -1,0 +1,59 @@
+{
+  "yaml": {
+    "command": "yaml-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".yaml": "yaml",
+      ".yml": "yaml"
+    }
+  },
+  "toml": {
+    "command": "taplo",
+    "args": ["lsp", "stdio"],
+    "extensionToLanguage": {
+      ".toml": "toml"
+    }
+  },
+  "json": {
+    "command": "vscode-json-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".json": "json",
+      ".jsonc": "jsonc"
+    }
+  },
+  "html": {
+    "command": "vscode-html-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".html": "html",
+      ".htm": "html"
+    }
+  },
+  "css": {
+    "command": "vscode-css-language-server",
+    "args": ["--stdio"],
+    "extensionToLanguage": {
+      ".css": "css",
+      ".scss": "scss",
+      ".less": "less"
+    }
+  },
+  "xml": {
+    "command": "lemminx",
+    "extensionToLanguage": {
+      ".xml": "xml",
+      ".xsd": "xml",
+      ".xsl": "xml",
+      ".xslt": "xml"
+    }
+  },
+  "markdown": {
+    "command": "marksman",
+    "args": ["server"],
+    "extensionToLanguage": {
+      ".md": "markdown",
+      ".markdown": "markdown"
+    }
+  }
+}
