@@ -1,31 +1,43 @@
 ---
 name: canon-review
 description: >-
-  Review the fleet's recent commits against the operator's canon (the § Motto handles in
-  kattakath/nix-config's claude/CLAUDE.md), read-only. It judges each commit TOWARD / NEUTRAL /
-  AWAY per handle with file:line evidence, runs the leak gates, and renders a deterministic
-  ok/problem state plus a stable issue body for issue-keeper. Use when the daily canon-review
-  cloud task runs it, or when asked to "review the fleet's commits against the canon", "run a
-  canon review", "did anything drift from the motto", or to check a window of fleet commits.
+  Use when the user says "canon review" (alone or in a sentence), or asks to "review the fleet's
+  commits against the canon", "did anything drift from the motto", or to review fleet commits
+  since a date or sha. On demand and run locally: it judges every fleet commit since the last
+  review TOWARD / NEUTRAL / AWAY per § Motto handle (kattakath/nix-config's claude/CLAUDE.md,
+  read live) with diff evidence, runs the leak gates including the client literals, and renders
+  a deterministic ok/problem state plus a stable body for issue-keeper. Read-only except one
+  report dispatch.
 ---
 
-# canon-review: the fleet's recent commits against the canon
+# canon-review: the fleet's commits against the canon, on demand
 
-**Read-only, always.** Never push, comment, open an issue or edit a file in any fleet repo.
-The daily cloud task's **one** write is the report dispatch in step 4. The workflow it starts
-runs issue-keeper, which is the only thing that touches an issue.
+**"canon review" starts it.** It runs **here, locally**, so the client-literal gate runs too.
+
+**Read-only, always.** Never push, comment, open an issue or edit a file in any fleet repo. The
+**one** write is the report dispatch in step 4. The workflow it starts runs issue-keeper, which
+is the only thing that touches an issue.
 
 - `<scripts>` means this skill's `scripts/` directory (`${CLAUDE_PLUGIN_ROOT}/skills/canon-review/scripts`).
 - `$OUT` is a fresh directory (`OUT=$(mktemp -d)`).
-- **Needs:** `git`, `curl`, `jq` and `python3`. No `gh`, no local path. The scripts clone the
+- **Needs:** `git`, `curl`, `jq` and `python3`; `gh` for step 4 only. The scripts clone the
   public fleet repos themselves.
 
-## 1. Inputs, live
+## 1. Inputs, live, and the size up front
 
 ```bash
-bash <scripts>/inputs.sh "$OUT"    # --since ISO to review a chosen window instead
+bash <scripts>/inputs.sh "$OUT"    # or: --since 2026-11-01T00:00:00Z | --since <sha>
 bash <scripts>/scan.sh "$OUT"      # leak gates over the same window
 ```
+
+- **No window start known** (no successful report yet, or the API unreadable): inputs.sh exits 3.
+  Ask the user where to start: a date, or a sha from which to review on (inclusive).
+- **Tell the user the size before reading:** `$OUT/window.json` has `commits` and
+  `changed_lines`.
+  - **Large window** (roughly past 150 commits or 20,000 changed lines, more than one sitting):
+    say so, and offer to split it with `--since`. The measured cost is about 4 minutes and
+    ~320k tokens for 48 commits and ~7,000 diff lines.
+  - **Never** shrink the window silently. There's no cap, on purpose.
 
 - **`$OUT/motto.md` is the rubric.** It is § Motto of nix-config's `claude/CLAUDE.md`, read now
   from `main`. Judge against **that text**, its handle table and bullets. Never against a summary
@@ -33,15 +45,15 @@ bash <scripts>/scan.sh "$OUT"      # leak gates over the same window
 - **`$OUT/commits.json`** lists each fleet repo, cloned blob-less into `$OUT/work/<owner>_<repo>`,
   with its default-branch commits in the window. The list itself comes from nix-config's
   `.claude/skills/fleet-doctor/fleet-repos.txt`.
-- **`$OUT/window.json`** records the start:
-  - normally the last **successful** `canon-review-report.yml` run in kattakath/.github, minus
-    2 h, so there's no gap and no double review;
-  - with no readable run, 26 h back;
-  - never more than 7 days back.
+- **`$OUT/window.json`** records the start. By default that's the last **successful**
+  `canon-review-report.yml` run in kattakath/.github, minus 2 h. The report is dispatched at a
+  review's end, so the overlap catches commits pushed while it ran.
 - **`$OUT/gates.json`** holds the mechanical leak gates:
-  - **gitleaks** comes from `PATH`, else a pinned release verified by sha256 (the resolver ci-land shares).
-  - **The client literals** run only if the list is reachable. In a cloud session it isn't, so
-    they record `skipped`, and the body says so.
+  - **gitleaks** comes from `PATH`, else a pinned release verified by sha256 (the resolver
+    ci-land shares).
+  - **The client literals** come from ci-land's config (`$CI_LAND_LITERALS`, else
+    `~/.config/ci-land/literals`), which this Mac has. `skipped` means that list wasn't
+    reachable here, so say so; on the operator's Mac it is a setup gap to fix.
 
 ## 2. Judge each commit
 
@@ -149,11 +161,11 @@ Its first line is the state (`state=ok` or `state=problem`).
   lowest-ranked findings drop first, with a count of how many.
 - An invalid findings file exits 1 and renders nothing.
 
-## 4. Report: the cloud task only
+## 4. Report
 
-**By hand, stop here** and show the user the state and the body. Only the daily cloud task
-runs this step, and it runs it as one script, so nothing in between can edit the body or
-overrule the state:
+Show the user the state and the body first. Then report, as one script, so nothing in between
+can edit the body or overrule the state. The report **also records the review**: the next run's
+window starts from this report's run, so skipping it makes the next review start too early.
 
 ```bash
 bash <scripts>/report.sh "$OUT"      # --dry-run prints the plan and sends nothing
@@ -162,9 +174,10 @@ bash <scripts>/report.sh "$OUT"      # --dry-run prints the plan and sends nothi
 `report.sh` renders the findings again (with `--gates` and `--commits`). It dispatches
 kattakath/.github's `canon-review-report.yml` only when render finished with a state of exactly
 `ok` or `problem`:
-- **Through the REST `dispatches` endpoint, not `gh workflow run`.** In a claude.ai cloud
-  session `gh workflow run` fails with "HTTP 403: GitHub GraphQL is not available from Claude
-  Code sessions" (measured 2026-11-28).
+- **Through the REST `dispatches` endpoint, not `gh workflow run`.** It works from any session;
+  `gh workflow run` resolves the branch through GraphQL, which some Claude Code environments
+  block ("HTTP 403: GitHub GraphQL is not available from Claude Code sessions", measured in a
+  cloud session, 2026-11-28).
 - **With exactly two inputs, `state` and `body`.** The scheduler heartbeat is retired, and the
   workflow refuses an input it doesn't declare (422).
 - **Exit 1 means nothing was dispatched.** Say why instead: a review that didn't finish must not

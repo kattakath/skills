@@ -55,12 +55,13 @@ check "cap: stable across runs" "$(render "$F/away.json" --max-chars 700 | md5su
 check "cap: the default leaves the fixture whole" "$(render "$F/away.json" | grep -c 'not shown')" 0
 render "$F/away.json" --max-chars 10 >/dev/null 2>&1; check "cap below 200: usage, exit 2" "$?" 2
 
-# The window: last successful report run minus 2 h, else 26 h back, never more than 7 days.
+# The window: last successful report run minus 2 h, NO cap; no prior report means exit 3.
 W="$H/scripts/window.py"
 NOW=2026-11-28T12:00:00Z
 check "window: last run minus 2 h" "$(python3 -I "$W" 2026-11-28T07:30:00Z --now $NOW)" 2026-11-28T05:30:00Z
-check "window: no last run, 26 h back" "$(python3 -I "$W" --now $NOW)" 2026-11-27T10:00:00Z
-check "window: capped at 7 days" "$(python3 -I "$W" 2026-10-01T00:00:00Z --now $NOW)" 2026-11-21T12:00:00Z
+out=$(python3 -I "$W" --now $NOW 2>/dev/null); rc=$?
+check "window: no prior report -> exit 3, no start printed (the caller must pass --since)" "$rc:$out" "3:"
+check "window: no cap, weeks back stays weeks back" "$(python3 -I "$W" 2026-10-01T00:00:00Z --now $NOW)" 2026-09-30T22:00:00Z
 python3 -I "$W" not-a-date --now $NOW >/dev/null 2>&1; check "window: an unreadable timestamp: exit 2" "$?" 2
 
 # --gates / --commits: the scripts' own files win over what the model copied.

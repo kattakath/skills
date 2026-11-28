@@ -129,7 +129,7 @@
     },
     {
       "name": "canon-review",
-      "description": "A read-only daily review of the fleet's recent commits against the operator's canon (the § Motto handles in kattakath/nix-config's CLAUDE.md, read live): TOWARD / NEUTRAL / AWAY per handle with file:line evidence, the leak gates, and a deterministic ok/problem state plus a stable issue body for issue-keeper. Runs as a daily cloud task or by hand.",
+      "description": "Say 'canon review': an on-demand, read-only review of every fleet commit since the last one against the operator's canon (the § Motto handles in kattakath/nix-config's CLAUDE.md, read live). TOWARD / NEUTRAL / AWAY per handle with diff evidence, the leak gates (client literals included, since it runs locally), and a deterministic ok/problem state plus a stable issue body for issue-keeper.",
       "author": {
         "name": "Ismail Kattakath"
       },
