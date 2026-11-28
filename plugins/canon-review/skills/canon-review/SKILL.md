@@ -45,8 +45,23 @@ bash <scripts>/scan.sh "$OUT"      # leak gates over the same window
 
 ## 2. Judge each commit
 
-Read each diff from its clone: `git -C "$OUT/work/<owner>_<repo>" show <sha>`. For every handle
-in `motto.md` that a commit touches, give a verdict:
+**Read every commit. Judging from subjects is a failure, not a shortcut.** Work repo by repo,
+and for each listed commit:
+
+```bash
+git -C "$OUT/work/<owner>_<repo>" show --stat --format='%H %s' <sha>     # what it touched
+git -C "$OUT/work/<owner>_<repo>" show --format= <sha> | head -400         # the diff, capped
+```
+
+If the diff is longer than 400 lines, judge what you read and write `(truncated at 400 lines)`
+in that commit's evidence.
+
+**`render.py` enforces coverage.** Every repo@sha in `commits.json` needs at least one finding:
+a verdict whose evidence names a file or hunk you read. A NEUTRAL counts. A commit with no
+finding makes render refuse, so **nothing is dispatched** and the report goes late on its
+heartbeat, which alerts. A skipped review is loud, never a clean day.
+
+For every handle in `motto.md` that a commit touches, give a verdict:
 
 | Verdict | Means |
 |---|---|
@@ -92,6 +107,9 @@ Write `$OUT/findings.json`:
 
 - `gates` is `$OUT/gates.json` verbatim.
 - `handle` is spelled exactly as in `motto.md`.
+- **One finding per listed commit, at least.** A commit no handle bears on still gets one
+  `NEUTRAL` finding, whose evidence says what the diff did (`"evidence": "plugin.json:4 version
+  bump only"`).
 - `severity` is `high` | `medium` | `low` (default `medium`); `kind` is `leftover` or absent.
 
 Then render. It's deterministic, and no model takes part:

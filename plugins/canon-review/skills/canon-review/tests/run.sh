@@ -71,6 +71,18 @@ check "--commits: findings on listed commits render" "$(render "$F/clean.json" -
 out=$(render "$F/away.json" --commits "$T/commits.json" 2>/dev/null); rc=$?
 check "--commits: a finding on an unlisted repo@sha is refused, nothing rendered" "$rc:$out" "1:"
 
+# Coverage: every listed commit needs a verdict with evidence (the first live run rubber-stamped
+# 43 commits with "findings": []).
+printf '{"schema": "canon-review/findings@1", "gates": {"gitleaks": "clean", "literals": "skipped"}, "findings": []}' >"$T/empty.json"
+out=$(render "$T/empty.json" --commits "$T/commits.json" 2>"$T/err"); rc=$?
+check "coverage: commits listed, findings empty -> refused, nothing rendered" "$rc:$out" "1:"
+check "coverage: the refusal counts what is missing" "$(grep -c '2 of 2 listed commit(s) have no verdict' "$T/err")" 1
+python3 -I -c 'import json,sys; d=json.load(open(sys.argv[1])); d["findings"]=d["findings"][:1]; json.dump(d, open(sys.argv[2], "w"))' "$F/clean.json" "$T/partial.json"
+out=$(render "$T/partial.json" --commits "$T/commits.json" 2>/dev/null); rc=$?
+check "coverage: one of two commits judged -> refused" "$rc:$out" "1:"
+printf '[]' >"$T/nocommits.json"
+check "coverage: no commits in the window, no findings -> ok" "$(render "$T/empty.json" --commits "$T/nocommits.json" | head -1)" "state=ok"
+
 # scan.sh offline: a fixture repo, a hand-written commits.json, a stub gitleaks (exit $STUB_GL).
 SO="$T/scan"; mkdir -p "$SO/bin" "$SO/repo"
 git -C "$SO/repo" init -q
@@ -111,6 +123,9 @@ rep "$RO"; check "report: invalid findings (unlisted sha): exit 1, nothing dispa
 cp "$F/clean.json" "$RO/findings.json"
 rep "$RO" --dry-run; check "report: --dry-run dispatches nothing" "$?:$(test -f "$RO/gh.argv" && echo sent || echo none)" "0:none"
 STUB_GH=1 rep "$RO"; check "report: a failed dispatch exits 1" "$?" 1
+cp "$T/empty.json" "$RO/findings.json"
+rep "$RO"; check "report: a rubber stamp (no verdicts) dispatches nothing" "$?:$(test -f "$RO/gh.argv" && echo sent || echo none)" "1:none"
+cp "$F/clean.json" "$RO/findings.json"
 
 render 2>/dev/null; check "no arguments: usage, exit 2" "$?" 2
 out=$(render --help); rc=$?

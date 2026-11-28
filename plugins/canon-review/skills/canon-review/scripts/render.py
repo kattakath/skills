@@ -181,9 +181,19 @@ def main(argv):
         d["gates"] = load(gates_file)
     if commits_file:
         listed = {(c.get("repo"), s.get("sha")) for c in load(commits_file) for s in c.get("commits", [])}
+        judged = set()
         for i, f in enumerate(d.get("findings", []) if isinstance(d, dict) else []):
             if isinstance(f, dict) and (f.get("repo"), f.get("sha")) not in listed:
                 fail(f"findings[{i}] names {f.get('repo')}@{str(f.get('sha'))[:12]}, which is not in the reviewed commits")
+            if isinstance(f, dict) and str(f.get("evidence", "")).strip():
+                judged.add((f.get("repo"), f.get("sha")))
+        # Coverage is a script's call too: a skipped judgement must not look like a clean day
+        # (the first live run wrote "findings": [] after reading subjects only). Every listed
+        # commit needs at least one verdict with evidence, or nothing renders.
+        missing = sorted(listed - judged)
+        if missing:
+            r, s = missing[0]
+            fail(f"{len(missing)} of {len(listed)} listed commit(s) have no verdict with evidence (first: {r}@{str(s)[:12]})")
     state, body = render(d, max_chars)
     if out:
         with open(out, "w", encoding="utf-8") as fh:
