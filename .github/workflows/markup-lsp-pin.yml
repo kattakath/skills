@@ -68,7 +68,7 @@ jobs:
       # variable OPERATOR_ID (declared in nix-config's terranix from its identity). Unset, it
       # reads as "" and the issue opens unassigned. The title must stay byte-identical, or
       # the next run opens a duplicate.
-      - uses: kattakath/.github/actions/issue-keeper@723ae79656b5155bd170287c3ec70327c4310956
+      - uses: kattakath/.github/actions/issue-keeper@3a1a3c59c92aa76e77d52e52313499182feb4864 # v1.0.0
         with:
           title: "markup-lsp: nixpkgs pin lags nix-config"
           state: ${{ steps.parity.outputs.state }}

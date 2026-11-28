@@ -93,7 +93,7 @@ jobs:
       # Shared assertion (kattakath/.github). `expect` holds a deliberate SECOND copy of
       # `validate`'s `if:`; if the two ever disagree, gate goes red in both directions, so a
       # bad edit fails closed instead of quietly skipping the suite.
-      - uses: kattakath/.github/actions/gate@60981e562aec38c13e15be1b6307b23a42f5b8d3
+      - uses: kattakath/.github/actions/gate@3a1a3c59c92aa76e77d52e52313499182feb4864 # v1.0.0
         with:
           needs: ${{ toJSON(needs) }}
           expect: >-
@@ -471,7 +471,7 @@ jobs:
   # nix-flake-check workflow (kattakath/.github). Every event runs it, so gate always expects
   # success.
   flake-check:
-    uses: kattakath/.github/.github/workflows/nix-flake-check.yml@cad98392a903fd89ec732ea116f38ec871e38ac0 # main
+    uses: kattakath/.github/.github/workflows/nix-flake-check.yml@3a1a3c59c92aa76e77d52e52313499182feb4864 # v1.0.0
 
   # The `stable` release channel (operator 2026-11-25: own marketplaces auto-update on
   # `stable`; nix-config registers this marketplace with `ref = "stable"`). `stable` is the
