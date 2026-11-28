@@ -2,15 +2,8 @@
 
 Push to the default branch and keep working. A `PostToolUse` **asyncRewake** hook waits on
 every GitHub Actions run (or, for a gitlab.com remote, every GitLab pipeline) the pushed
-commit triggered:
-
-| Outcome | What reaches the session |
-|---|---|
-| all runs pass | a one-line `ci-watch GREEN` FYI — nothing to do |
-| a run fails, is cancelled or times out | a `ci-watch RED` wake-up |
-| no run appears | `NO_RUNS` |
-| a run is still going at the ceiling | `STILL_RUNNING` |
-| the push landed but GitHub/GitLab lookups failed | `WATCH_FAILED` |
+commit triggered, and wakes the session on every outcome, green included. Each status, and what it needs, is
+in one table: [`skills/ci-watch/SKILL.md` § When a wake-up arrives](skills/ci-watch/SKILL.md#when-a-wake-up-arrives).
 
 **Green wakes too, on purpose** (since 1.2.0). A silent green looked exactly like a watch
 that was lost, so no push could be told apart from an unwatched one. Every watched push now

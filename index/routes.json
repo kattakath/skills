@@ -306,7 +306,7 @@
       "steps": [
         "ci-watch"
       ],
-      "note": "asyncRewake hook: wakes the session on every outcome — a one-line FYI on green, a resolved report on red, no runs or still running."
+      "note": "asyncRewake hook: wakes the session on every outcome. The statuses are listed in the plugin's SKILL.md."
     },
     {
       "goal": "Give each git repo its own named background session and hand work to it",

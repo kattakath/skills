@@ -1,8 +1,8 @@
 {
   "$schema": "https://www.schemastore.org/claude-code-plugin-manifest.json",
   "name": "ci-watch",
-  "version": "1.2.0",
-  "description": "Push to main and keep working: a PostToolUse asyncRewake hook waits on every GitHub Actions run (or gitlab.com pipeline) the pushed commit triggered, and wakes the session on EVERY outcome: a one-line GREEN FYI when they all pass, or the full detail on red, no runs (or all skipped), a run still going at the ceiling, or a watch that failed after the push landed. The wake-up carries a resolved report (run, job and step ids, numbered log lines around the error, changed files, rerun commands), so nothing has to be looked up. Deterministic: gh or glab only, no model in the loop.",
+  "version": "1.2.1",
+  "description": "Push to main and keep working: a PostToolUse asyncRewake hook watches every CI run the pushed commit triggered (GitHub Actions through gh, gitlab.com pipelines through glab) and wakes the session on every outcome, green included, with a resolved report on anything else. Deterministic, no model in the loop. The statuses are listed in skills/ci-watch/SKILL.md.",
   "author": {
     "name": "Ismail Kattakath"
   },

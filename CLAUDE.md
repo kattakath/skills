@@ -115,8 +115,8 @@ is valid JavaScript that loads as **zero workflows, with no error emitted**.
   global `claude/CLAUDE.md` § Landing on the fleet). Run the local checks in § Validating
   and the two leak gates, then push. `validate.yml` runs the full suite on the push (its
   version-bump base is `github.event.before`), and the `ci-watch` plugin wakes the session
-  on every watched push: `GREEN` is a one-line FYI that needs no action, while `RED`,
-  `NO_RUNS`, `STILL_RUNNING` and `WATCH_FAILED` need action.
+  on every watched push. Its statuses, and what each needs, are in one table:
+  [`plugins/ci-watch/skills/ci-watch/SKILL.md`](plugins/ci-watch/skills/ci-watch/SKILL.md).
 - **The PR lane stays for bots and forks.** `auto-merge.yml` arms same-repo, non-draft PRs.
   `gate` is the ONLY required check: it asserts every job in `validate.yml` ended as the
   event expects. The full suite runs **once**, in the merge queue (own-branch PRs get the
