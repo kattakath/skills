@@ -12,6 +12,7 @@ work to it with `SendMessage` and keeps only coordination.
 | Part | What it does |
 |---|---|
 | `bin/project-session` | `name`, `ensure`, `status`. bash 3.2 + `git` + `jq`; macOS and Linux; no Nix |
+| `bin/ghostty-split` | Runs (or types, `--type-only`) a command in a Ghostty split below the focused pane; macOS (`osascript`). `ensure` uses it for the trust prompt. Ported from kattakath/nix-config `packages/ghostty-split.nix` (b4c732a5), with the exit codes moved to nix-dev-toolkit's CLI contract: **2** usage (was 64), **3** Ghostty unavailable (was 69), and `--help` on stdout with exit 0 (it was a usage error). |
 | `hooks/session-start` | SessionStart: in auto mode, resumes a stopped session (detached) and names it; otherwise names it and the skill |
 | `hooks/user-prompt-submit` | UserPromptSubmit, auto mode only: one line per prompt; creates a missing session in the caller's mode (detached) |
 | `hooks/lib.sh` | Shared by the two: the gate, the 2 s bound, the detached `ensure` |
@@ -37,7 +38,8 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   would drift. Ids never reach stdout unless `--debug`.
 - **`--bg` refuses an untrusted folder.** The operator trusts the folder once by running
   `claude` there.
-  - **With nix-config's `ghostty-split` on PATH,** `ensure` opens that `claude` itself, in a
+  - **On macOS with Ghostty,** `ensure` opens that `claude` itself through this plugin's own
+    [`bin/ghostty-split`](bin/ghostty-split), in a
     Ghostty split below his focused pane (`ghostty-split --cwd <repo> -- claude`). It exits
     **77** with "the trust prompt is open in a Ghostty split below; accept it there, then
     retry". It never waits: `claude` stays open, so `--wait` would block on it.
@@ -46,8 +48,8 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
     `TERM_PROGRAM` is the signal there.
   - **At most one split per repo per 10 min** (`PROJECT_SESSION_SPLIT_QUIET_S`), so a retry
     can't loop.
-  - **Otherwise** (not on PATH, CI, no operator, a recent split, or `ghostty-split` failing,
-    e.g. exit 69 with Ghostty not running), Claude Code's message passes through verbatim, as
+  - **Otherwise** (CI, no operator, a recent split, or `ghostty-split` failing,
+    e.g. exit 3 with Ghostty not running or no osascript), Claude Code's message passes through verbatim, as
     before.
   - A plain run is right only because the line is always `claude`, which no deny or ask rule
     guards. A guarded command would have to go through `ghostty-split --type-only`, so the
@@ -151,7 +153,9 @@ Any doubt — no jq, bad JSON, an unknown mode — and it prints nothing. A wrap
 the suite asserts the exact create and resume argv, that no id reaches stdout, the lock, the
 auto-mode gating matrix, that SessionStart returns while a slow `--bg` still runs, the
 UserPromptSubmit lines, fail-open on garbage input, and what the mode hook amends and leaves
-alone.
+alone. It also runs `tests/ghostty-split-cases.sh`: 18 cases against a stub `osascript`.
+Those are nix-config's 16, moved to the new exit codes, plus `--help` and an unknown option.
+They check that the command reaches AppleScript only as an argv item, never as script text.
 
 ## Known gaps
 

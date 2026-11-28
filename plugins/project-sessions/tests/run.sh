@@ -253,6 +253,25 @@ check "split: CI set: never a split" "$RC:$(splits)" "1:0"
 run split TERM_PROGRAM=Apple_Terminal
 check "split: no TTY and not Ghostty: never a split" "$RC:$(splits)" "1:0"
 rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
+# With no override, ensure reaches THIS plugin's bin/ghostty-split (no cross-repo dependency):
+# a stub osascript sees the line `claude` and the repo as the cwd.
+mkdir -p "$T/osa"
+printf '#!/usr/bin/env bash\nshift\ncat >/dev/null\nprintf "%%s\\n" "$@" >"%s/osa.argv"\necho TERM-ID-9\n' "$T" >"$T/osa/osascript"
+chmod +x "$T/osa/osascript"
+run env -u CI -u PROJECT_SESSION_GHOSTTY_SPLIT TERM_PROGRAM=ghostty PATH="$T/osa:$PATH" STUB_UNTRUSTED=1 "$PS" ensure "$R" </dev/null
+check "split: the default is the plugin's own ghostty-split (claude, at the repo)" "$RC:$(head -2 "$T/osa.argv" 2>/dev/null | tr '\n' ' ')" "77:claude $R "
+rm -rf "$T/state/project-sessions/"*.trust-split
+
+# bin/ghostty-split's own cases (ported from nix-config), counted into this suite.
+gs_out=$(bash "$HERE/ghostty-split-cases.sh")
+gs_rc=$?
+printf '%s\n' "$gs_out" | grep '^FAIL' || true
+gs_line=$(printf '%s\n' "$gs_out" | tail -1)
+gs_pass=$(printf '%s' "$gs_line" | sed -n 's/^ghostty-split: \([0-9]*\) passed.*/\1/p')
+gs_fail=$(printf '%s' "$gs_line" | sed -n 's/.* \([0-9]*\) failed$/\1/p')
+pass=$((pass + ${gs_pass:-0}))
+fail=$((fail + ${gs_fail:-1}))
+[ "$gs_rc" -eq 0 ] || [ "${gs_fail:-1}" -gt 0 ] || fail=$((fail + 1))
 
 printf 'not json' >"$STUB_AGENTS"
 : >"$STUB_LOG"

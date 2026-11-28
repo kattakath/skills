@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# ghostty-split — run (or type) a command in a NEW Ghostty split below the focused pane of the
+# front window, in the operator's own login shell. Ported from kattakath/nix-config
+# packages/ghostty-split.nix (b4c732a5); project-session is its one consumer, so it lives here.
+#
+# MECHANISM: Ghostty's own AppleScript dictionary (Ghostty 1.4.0): `split <terminal> direction
+# down with configuration <cfg>`, cfg a `new surface configuration` with `initial working
+# directory` and `initial input`. Chosen over `input text` into a plain split (two steps, racing
+# the new shell's prompt) and over the configuration's `command` (it REPLACES the shell: no rc
+# files, PATH or direnv). Measured 2026-11-28 (nix-config): the split honoured the cwd, got a
+# quoted line verbatim and ran it in the login zsh.
+#
+# NO INJECTION: the script comes in on stdin (`osascript -`) and the command reaches it as an
+# argv item (`on run argv`), never spliced into the script text.
+#
+# --type-only types without Enter, for a command a deny or ask rule guards: typing it for him is
+# a handover, running it would be a tool swap past the guard. NEVER PASS A SECRET VALUE: the
+# line is typed visibly and lands in shell history.
+#
+# CLI contract: nix-dev-toolkit's references/cli-contract.md (help on stdout exit 0, 2 = usage).
+# Portable on purpose: bash 3.2 and POSIX tools; osascript is macOS's own.
+set -u -o pipefail
+
+USAGE='usage: ghostty-split [--cwd DIR] [--wait | --type-only] -- <shell line> | <argv...>
+
+Open a split below the focused Ghostty pane and run (default) or type a command there.
+  ONE argument     a shell line, typed verbatim (pipes, &&, globs are yours)
+  SEVERAL          an argv, each word %q-quoted, so it runs exactly as given
+  --cwd DIR        the split'"'"'s working directory (default: the current one)
+  --type-only      type the line but do not press Enter (for guarded commands)
+  --wait           block until the command ends; exit with its status
+  -h, --help       this text
+
+Exit: 0 opened (or, with --wait, the command'"'"'s own status); 2 usage error or a bad --cwd;
+      3 Ghostty unavailable: not running, no window, or the AppleScript call failed. It never
+      launches Ghostty. Never pass a secret value: the line is typed visibly.'
+
+usage() { printf '%s\n' "$USAGE" >&2; exit 2; }
+
+script() {
+  cat <<'APPLESCRIPT'
+on run argv
+  set theInput to item 1 of argv
+  set theDir to item 2 of argv
+  set pressEnter to (item 3 of argv) is "run"
+  if application "Ghostty" is not running then error "Ghostty is not running" number 1001
+  tell application "Ghostty"
+    if (count of windows) is 0 then error "Ghostty has no window" number 1002
+    set t to focused terminal of selected tab of front window
+    set cfg to new surface configuration
+    set initial working directory of cfg to theDir
+    if pressEnter then
+      set initial input of cfg to theInput & linefeed
+    else
+      set initial input of cfg to theInput
+    end if
+    set nt to split t direction down with configuration cfg
+    return id of nt
+  end tell
+end run
+APPLESCRIPT
+}
+
+cwd=$PWD wait=0 enter="run"
+while [ $# -gt 0 ]; do
+  case $1 in
+    -h | --help) printf '%s\n' "$USAGE"; exit 0 ;;
+    --cwd) [ $# -ge 2 ] || usage; cwd=$2; shift 2 ;;
+    --wait) wait=1; shift ;;
+    --type-only) enter="type"; shift ;;
+    --) shift; break ;;
+    *) usage ;;
+  esac
+done
+[ $# -gt 0 ] || usage
+if [ "$wait" = 1 ] && [ "$enter" = type ]; then
+  echo "ghostty-split: --wait and --type-only exclude each other" >&2
+  exit 2
+fi
+[ -d "$cwd" ] || { echo "ghostty-split: --cwd $cwd is not a directory" >&2; exit 2; }
+
+if [ $# -eq 1 ]; then cmd=$1; else cmd=$(printf '%q ' "$@"); cmd=${cmd% }; fi
+marker=
+if [ "$wait" = 1 ]; then
+  marker=$(mktemp "${TMPDIR:-/tmp}/ghostty-split.XXXXXX") || exit 1
+  # A subshell, so an `exit` in the command cannot end the shell before the status is written
+  # (it did: `exit 7` left --wait polling forever). Its cd/export do not outlive it.
+  cmd="( $cmd ); printf %s \$? > $(printf %q "$marker")"
+fi
+if ! id=$(script | osascript - "$cmd" "$cwd" "$enter" 2>&1); then
+  echo "ghostty-split: $id" >&2
+  [ -n "$marker" ] && rm -f "$marker"
+  exit 3
+fi
+echo "ghostty-split: opened split $id below the focused pane" >&2
+[ "$wait" = 1 ] || exit 0
+while [ ! -s "$marker" ]; do sleep 0.5; done
+status=$(cat "$marker")
+rm -f "$marker"
+exit "$status"

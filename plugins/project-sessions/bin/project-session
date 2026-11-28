@@ -24,7 +24,8 @@
 set -u -o pipefail
 
 CLAUDE=${PROJECT_SESSION_CLAUDE:-claude}
-SPLIT=${PROJECT_SESSION_GHOSTTY_SPLIT:-ghostty-split} # nix-config's; tests point this at a stub
+# This plugin's own ghostty-split, beside this script (tests point this at a stub).
+SPLIT=${PROJECT_SESSION_GHOSTTY_SPLIT:-$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/ghostty-split}
 SPLIT_QUIET_S=${PROJECT_SESSION_SPLIT_QUIET_S:-600} # one trust split per repo per window
 LOCK_STALE_S=${PROJECT_SESSION_LOCK_STALE_S:-120}
 LOCK_WAIT_S=${PROJECT_SESSION_LOCK_WAIT_S:-30}
@@ -161,7 +162,8 @@ run_claude() { # root args...
 # Runs `ghostty-split --cwd <root> -- claude`, a split below his focused Ghostty pane, and
 # exits 77 so the caller retries once he has accepted. Returns (falls back to today's message)
 # when any condition fails:
-#   - ghostty-split is not on PATH, or it exits non-zero (69: Ghostty not running / no window)
+#   - bin/ghostty-split is missing, or it exits non-zero (3: Ghostty not running, no window, or
+#     no osascript, i.e. not macOS)
 #   - CI is set, or there is no sign of an operator at a terminal: neither a TTY on stdin nor
 #     TERM_PROGRAM=ghostty. Claude Code's Bash tool and the hooks run without a TTY even when he
 #     is at the keyboard, so the inherited TERM_PROGRAM is the signal that counts there.
