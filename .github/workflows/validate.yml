@@ -437,6 +437,10 @@ jobs:
       - name: tool-habits cases
         run: bash plugins/tool-habits/tests/run.sh
 
+      # canon-review's deterministic half: the state, the stable capped body, the window.
+      - name: canon-review cases
+        run: bash plugins/canon-review/skills/canon-review/tests/run.sh
+
       # slack-etiquette's send guard: a normal send gets the checklist and no decision, a
       # URL-labelled link or a hand-typed footer is denied, every connector prefix matches,
       # and garbage input fails open. Pure node, no network. The suite has a case floor.

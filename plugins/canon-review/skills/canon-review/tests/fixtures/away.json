@@ -1,0 +1,44 @@
+{
+  "schema": "canon-review/findings@1",
+  "gates": { "gitleaks": "clean", "literals": "skipped" },
+  "findings": [
+    {
+      "repo": "kattakath/skills",
+      "sha": "1111111111111111111111111111111111111111",
+      "handle": "receipts",
+      "verdict": "TOWARD",
+      "confidence": "CONFIRMED",
+      "evidence": "README cites the measured count"
+    },
+    {
+      "repo": "kattakath/skills",
+      "sha": "2222222222222222222222222222222222222222",
+      "handle": "one source",
+      "verdict": "AWAY",
+      "confidence": "CONFIRMED",
+      "severity": "high",
+      "evidence": "plugins/x/README.md:12 restates the  fleet list\n that fleet-repos.txt owns",
+      "fix": "link to fleet-repos.txt instead of listing the repos"
+    },
+    {
+      "repo": "kattakath/nix-config",
+      "sha": "3333333333333333333333333333333333333333",
+      "handle": "look first",
+      "verdict": "AWAY",
+      "confidence": "PLAUSIBLE",
+      "evidence": "scripts/foo.sh hand-rolls a retry loop; an upstream flag may exist",
+      "fix": "check the tool's --retry before keeping the loop"
+    },
+    {
+      "repo": "kattakath/.github",
+      "sha": "4444444444444444444444444444444444444444",
+      "handle": "one source",
+      "verdict": "AWAY",
+      "confidence": "CONFIRMED",
+      "severity": "low",
+      "kind": "leftover",
+      "evidence": "actions/old/ survives the revert in 4444444",
+      "fix": "delete actions/old/"
+    }
+  ]
+}

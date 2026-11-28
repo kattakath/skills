@@ -350,6 +350,13 @@
         "ci-watch"
       ],
       "gap": true
+    },
+    {
+      "goal": "Review the fleet's recent commits against the canon, daily or by hand",
+      "steps": [
+        "canon-review"
+      ],
+      "gap": true
     }
   ]
 }

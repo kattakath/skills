@@ -1,0 +1,22 @@
+{
+  "schema": "canon-review/findings@1",
+  "gates": { "gitleaks": "clean", "literals": "clean" },
+  "findings": [
+    {
+      "repo": "kattakath/skills",
+      "sha": "5555555555555555555555555555555555555555",
+      "handle": "plain shape",
+      "verdict": "NEUTRAL",
+      "confidence": "CONFIRMED",
+      "evidence": "a version bump only"
+    },
+    {
+      "repo": "kattakath/skills",
+      "sha": "6666666666666666666666666666666666666666",
+      "handle": "as-code",
+      "verdict": "TOWARD",
+      "confidence": "CONFIRMED",
+      "evidence": "the manual step became a CI check"
+    }
+  ]
+}

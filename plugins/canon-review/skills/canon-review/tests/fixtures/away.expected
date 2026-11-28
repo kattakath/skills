@@ -1,0 +1,13 @@
+state=problem
+Canon review: 2 confirmed AWAY finding(s).
+
+## AWAY (confirmed)
+
+- **AWAY** `kattakath/skills@222222222222` · **one source** · high — plugins/x/README.md:12 restates the fleet list that fleet-repos.txt owns. **Fix:** link to fleet-repos.txt instead of listing the repos
+- **AWAY** `kattakath/.github@444444444444` · **one source** · leftover · low — actions/old/ survives the revert in 4444444. **Fix:** delete actions/old/
+
+## Unverified (PLAUSIBLE, does not open the issue)
+
+- **AWAY** `kattakath/nix-config@333333333333` · **look first** · medium — scripts/foo.sh hand-rolls a retry loop; an upstream flag may exist. **Fix:** check the tool's --retry before keeping the loop
+
+Gates: gitleaks clean; client literals skipped (the pattern list is not reachable here).

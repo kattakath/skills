@@ -128,6 +128,24 @@
       "source": "./plugins/brain-signals"
     },
     {
+      "name": "canon-review",
+      "description": "A read-only daily review of the fleet's recent commits against the operator's canon (the § Motto handles in kattakath/nix-config's CLAUDE.md, read live): TOWARD / NEUTRAL / AWAY per handle with file:line evidence, the leak gates, and a deterministic ok/problem state plus a stable issue body for issue-keeper. Runs as a daily cloud task or by hand.",
+      "author": {
+        "name": "Ismail Kattakath"
+      },
+      "category": "development",
+      "keywords": [
+        "review",
+        "fleet",
+        "canon",
+        "github-actions",
+        "issue-keeper"
+      ],
+      "homepage": "https://github.com/kattakath/skills/tree/main/plugins/canon-review",
+      "license": "MIT",
+      "source": "./plugins/canon-review"
+    },
+    {
       "name": "capability-broker",
       "description": "When a goal needs a capability the session lacks: take stock of what is installed, find and vet candidates (MCP servers, skills, plugins, tools), and adopt the least powerful one that works.",
       "author": {
