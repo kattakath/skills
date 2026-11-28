@@ -40,10 +40,15 @@ The prompt line:
 
 > Follow `plugins/canon-review/skills/canon-review/SKILL.md` in the kattakath/skills checkout
 > end to end, read-only, with its `scripts/` directory as `<scripts>`. Run inputs.sh and
-> scan.sh, judge every commit in the window, write findings.json, render it with `--gates` and
-> `--commits`, then do step 4: dispatch `canon-review-report.yml` through the REST `dispatches`
-> endpoint (`gh api -X POST`, not `gh workflow run`) with render's state and body unchanged, and
-> only if the state is exactly `ok` or `problem`.
+> scan.sh, judge every commit in the window, write findings.json, then do step 4 by running
+> `bash <scripts>/report.sh "$OUT"`, which renders and dispatches. Never dispatch by hand.
+
+- **What `report.sh` sends:** render's state and body, unchanged, to `canon-review-report.yml`
+  through the REST `dispatches` endpoint (not `gh workflow run`), with `source=cloud` for the
+  scheduler heartbeat.
+- **When:** only if the state is exactly `ok` or `problem`.
+- **An earlier prompt still works.** A task whose prompt reads "render it, then dispatch" still
+  reaches step 4 as SKILL.md now writes it, because the prompt says to follow the skill.
 
 - **Why REST:** in a cloud session (measured 2026-11-28), `gh workflow run` fails with "HTTP 403:
   GitHub GraphQL is not available from Claude Code sessions", while REST calls succeed.
@@ -80,7 +85,7 @@ fresh directory and shows you the state and the body, with no dispatch.
 
 ## Tests
 
-`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 38 cases on `render.py`, `window.py` and `scan.sh`:
+`bash plugins/canon-review/skills/canon-review/tests/run.sh` runs 47 cases on `render.py`, `window.py`, `scan.sh` and `report.sh`:
 
 - golden bodies: a fixture with a confirmed AWAY and leftover gives `problem`; a clean one
   gives `ok`;

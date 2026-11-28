@@ -92,6 +92,26 @@ check "scan: a planted literal is found" "$(scan "$SO/lits" 0)" "clean found"
 check "scan: a broken pattern is failed, not 'not reachable'" "$(scan "$SO/badre" 0)" "clean failed"
 check "scan: no pattern text reaches its output" "$(scan "$SO/lits" 0 >/dev/null; grep -ci 'acme-secret' "$SO/err" "$SO/gates.json" | awk -F: '{s+=$2} END {print s}')" 0
 
+# report.sh (step 4) against a stub gh that records its argv, one word per line.
+RO="$T/report"; mkdir -p "$RO/bin"
+printf '#!/usr/bin/env bash\nprintf "%%s\\n" "$@" >"%s/gh.argv"\nexit "${STUB_GH:-0}"\n' "$RO" >"$RO/bin/gh"; chmod +x "$RO/bin/gh"
+cp "$F/clean.json" "$RO/findings.json"
+printf '{"gitleaks": "clean", "literals": "skipped"}' >"$RO/gates.json"
+cp "$T/commits.json" "$RO/commits.json"
+rep() { rm -f "$RO/gh.argv"; PATH="$RO/bin:$PATH" bash "$H/scripts/report.sh" "$@" >/dev/null 2>&1; }
+rep "$RO"; rc=$?
+check "report: dispatches, exit 0" "$rc" 0
+check "report: REST dispatches endpoint, never gh workflow run" "$(head -4 "$RO/gh.argv" | tr '\n' ' ')" "api -X POST repos/kattakath/.github/actions/workflows/canon-review-report.yml/dispatches "
+check "report: sends source=cloud (the scheduler heartbeat)" "$(grep -cx 'inputs\[source\]=cloud' "$RO/gh.argv")" 1
+check "report: sends render's state" "$(grep -cx 'inputs\[state\]=ok' "$RO/gh.argv")" 1
+check "report: sends the body file unchanged" "$(grep -c '^inputs\[body\]=Canon review: no confirmed AWAY' "$RO/gh.argv")" 1
+check "report: on ref main" "$(grep -cx 'ref=main' "$RO/gh.argv")" 1
+cp "$F/away.json" "$RO/findings.json"
+rep "$RO"; check "report: invalid findings (unlisted sha): exit 1, nothing dispatched" "$?:$(test -f "$RO/gh.argv" && echo sent || echo none)" "1:none"
+cp "$F/clean.json" "$RO/findings.json"
+rep "$RO" --dry-run; check "report: --dry-run dispatches nothing" "$?:$(test -f "$RO/gh.argv" && echo sent || echo none)" "0:none"
+STUB_GH=1 rep "$RO"; check "report: a failed dispatch exits 1" "$?" 1
+
 render 2>/dev/null; check "no arguments: usage, exit 2" "$?" 2
 out=$(render --help); rc=$?
 check "--help: stdout, exit 0" "$rc:$(printf '%s' "$out" | grep -c 'render.py FINDINGS.json')" "0:1"

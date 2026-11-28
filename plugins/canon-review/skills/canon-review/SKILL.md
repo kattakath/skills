@@ -113,23 +113,21 @@ python3 -I <scripts>/render.py "$OUT/findings.json" --gates "$OUT/gates.json" \
 
 ## 4. Report: the cloud task only
 
-**By hand, stop here** and show the user the state and the body. In the daily cloud task, pass
-render's output on **unchanged**: never edit the body or overrule the state.
+**By hand, stop here** and show the user the state and the body. Only the daily cloud task
+runs this step, and it runs it as one script, so nothing in between can edit the body or
+overrule the state:
 
 ```bash
-state=$(python3 -I <scripts>/render.py "$OUT/findings.json" --gates "$OUT/gates.json" \
-  --commits "$OUT/commits.json" --out "$OUT/body.md" | head -1 | cut -d= -f2)
-case $state in
-  ok | problem) gh api -X POST repos/kattakath/.github/actions/workflows/canon-review-report.yml/dispatches \
-                  -f ref=main -f "inputs[state]=$state" -f "inputs[body]=$(cat "$OUT/body.md")" ;;
-  *) echo "canon-review: render did not finish; nothing dispatched" >&2 ;;
-esac
+bash <scripts>/report.sh "$OUT"      # --dry-run prints the plan and sends nothing
 ```
 
-**Use the REST call, not `gh workflow run`.** Measured in a claude.ai cloud session on
-2026-11-28: `gh workflow run` fails with "HTTP 403: GitHub GraphQL is not available from Claude
-Code sessions; use the REST API", because it resolves the default branch through GraphQL. The
-REST endpoint works there.
-
-Dispatch nothing unless the state is exactly `ok` or `problem`, and report why instead. A
-review that didn't finish must not close an open issue.
+`report.sh` renders the findings again (with `--gates` and `--commits`). It dispatches
+kattakath/.github's `canon-review-report.yml` only when render finished with a state of exactly
+`ok` or `problem`:
+- **Through the REST `dispatches` endpoint, not `gh workflow run`.** In a claude.ai cloud
+  session `gh workflow run` fails with "HTTP 403: GitHub GraphQL is not available from Claude
+  Code sessions" (measured 2026-11-28).
+- **With `source=cloud`,** so the report workflow pings its scheduler heartbeat. A hand
+  dispatch defaults to `manual`, so it can't mask a dead schedule.
+- **Exit 1 means nothing was dispatched.** Say why instead: a review that didn't finish must not
+  close an open issue.
