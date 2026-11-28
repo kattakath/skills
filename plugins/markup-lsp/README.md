@@ -77,7 +77,7 @@ keeper's own logic and stubbed-`gh` cases live in that repo.
 - the pins differ: it opens **one** issue, *markup-lsp: nixpkgs pin lags nix-config*,
   **assigned** to the operator. Assignment is what notifies someone; a bot-opened issue
   alone reaches only repo watchers. The workflow passes the operator's **immutable numeric
-  account id**, the one kattakath/nix-config's `auto-merge.yml` and `bump-watch.yml` use,
+  account id** from the kattakath org variable `OPERATOR_ID` (declared in nix-config's terranix),
   and the keeper resolves it to a login at run time, so a renamed login still works. Only
   a `User` account is assigned. If the lookup fails, or names a bot, the issue opens
   **unassigned**, never on a bot. It doesn't use `github.triggering_actor`: on scheduled

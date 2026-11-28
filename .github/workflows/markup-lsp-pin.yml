@@ -64,12 +64,13 @@ jobs:
       # The fleet's ONE issue-keeper (kattakath/.github, pinned by sha; its cases run there).
       # It assigns only a User account: a bot-opened issue notifies only repo watchers, and
       # github.triggering_actor resolves to a bot on scheduled runs (measured by nix-config).
-      # assignee-id is the operator's immutable account id, a literal until the kattakath
-      # org variable OPERATOR_ID exists. The title must stay byte-identical, or the next run
-      # opens a duplicate.
+      # assignee-id is the operator's immutable account id, read from the kattakath org
+      # variable OPERATOR_ID (declared in nix-config's terranix from its identity). Unset, it
+      # reads as "" and the issue opens unassigned. The title must stay byte-identical, or
+      # the next run opens a duplicate.
       - uses: kattakath/.github/actions/issue-keeper@723ae79656b5155bd170287c3ec70327c4310956
         with:
           title: "markup-lsp: nixpkgs pin lags nix-config"
           state: ${{ steps.parity.outputs.state }}
           body: ${{ steps.parity.outputs.msg }}
-          assignee-id: "8927166"
+          assignee-id: ${{ vars.OPERATOR_ID }}
