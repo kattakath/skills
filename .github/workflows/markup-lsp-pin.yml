@@ -2,7 +2,7 @@ name: markup-lsp-pin
 
 # markup-lsp's flake.lock is bumped by hand to follow nix-config's nixpkgs pin (the plugin
 # README says why no bot). This is the watcher for that hand step, and it must reach a human:
-#   - pins differ   -> open ONE issue, assigned (or comment on the open one with new revs)
+#   - pins differ   -> open ONE issue, assigned (or comment once when the revs change)
 #   - pins match    -> close that issue
 #   - check broken  -> this run FAILS (GitHub notifies per the schedule owner's Actions
 #                      notification settings)
@@ -46,15 +46,30 @@ jobs:
           path: .nix-config
           persist-credentials: false
 
-      # ASSIGNEE_ID: a bot-opened issue notifies only repo watchers, so the issue is assigned.
-      # The operator's IMMUTABLE numeric id (the identity kattakath/nix-config's auto-merge.yml
-      # and bump-watch.yml use) is resolved to a login at run time; a renamed login still
-      # works. Not github.triggering_actor: on scheduled runs nix-config measured it resolving
-      # to a bot. If the lookup fails or names no User, the issue opens unassigned, never on a
-      # bot. Logic and its stubbed-gh cases: plugins/markup-lsp/tests/.
-      - name: Compare pins and keep one issue in step
-        env:
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-          ASSIGNEE_ID: "8927166"
-        run: bash plugins/markup-lsp/tests/pin-watch.sh .nix-config/flake.lock
+      # lock-parity.py exit codes: 0 match, 3 lag, anything else a broken check, which fails
+      # here so the keeper never runs on a check that measured nothing.
+      - name: Compare pins
+        id: parity
+        run: |
+          rc=0
+          msg=$(python3 -I plugins/markup-lsp/tests/lock-parity.py .nix-config/flake.lock) || rc=$?
+          echo "$msg"
+          case "$rc" in
+            0) echo "state=ok" >>"$GITHUB_OUTPUT" ;;
+            3) echo "state=problem" >>"$GITHUB_OUTPUT" ;;
+            *) echo "::error::lock-parity.py failed (exit $rc); the pin watcher is blind"; exit 1 ;;
+          esac
+          { echo "msg<<EOF_MSG"; echo "$msg"; echo "EOF_MSG"; } >>"$GITHUB_OUTPUT"
+
+      # The fleet's ONE issue-keeper (kattakath/.github, pinned by sha; its cases run there).
+      # It assigns only a User account: a bot-opened issue notifies only repo watchers, and
+      # github.triggering_actor resolves to a bot on scheduled runs (measured by nix-config).
+      # assignee-id is the operator's immutable account id, a literal until the kattakath
+      # org variable OPERATOR_ID exists. The title must stay byte-identical, or the next run
+      # opens a duplicate.
+      - uses: kattakath/.github/actions/issue-keeper@723ae79656b5155bd170287c3ec70327c4310956
+        with:
+          title: "markup-lsp: nixpkgs pin lags nix-config"
+          state: ${{ steps.parity.outputs.state }}
+          body: ${{ steps.parity.outputs.msg }}
+          assignee-id: "8927166"

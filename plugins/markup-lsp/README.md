@@ -71,16 +71,18 @@ after a pin bump.
 `flake.lock` has **no updater**, and the cache verdict above holds only for the rev it pins.
 Bump it by hand, on a Mac, when nix-config's own nixpkgs pin moves. **A GitHub issue
 tells you when.** The daily `markup-lsp-pin` workflow runs `tests/lock-parity.py` against
-nix-config's `main` (logic in `tests/pin-watch.sh`, cases in `tests/lock-parity-cases.sh`):
+nix-config's `main`. Its exit code (cases in `tests/lock-parity-cases.sh`) feeds the
+fleet's one issue-keeper, `kattakath/.github/actions/issue-keeper`, pinned by sha. The
+keeper's own logic and stubbed-`gh` cases live in that repo.
 - the pins differ: it opens **one** issue, *markup-lsp: nixpkgs pin lags nix-config*,
   **assigned** to the operator. Assignment is what notifies someone; a bot-opened issue
-  alone reaches only repo watchers. The workflow carries the operator's **immutable numeric
+  alone reaches only repo watchers. The workflow passes the operator's **immutable numeric
   account id**, the one kattakath/nix-config's `auto-merge.yml` and `bump-watch.yml` use,
-  and resolves it to a login at run time, so a renamed login still works. Only a `User`
-  account is assigned. If the lookup fails, or names a bot, the issue opens **unassigned**,
-  never on a bot. It doesn't use `github.triggering_actor`: on scheduled runs nix-config
-  measured that resolving to a bot. It comments on that issue only when the revs change
-  again;
+  and the keeper resolves it to a login at run time, so a renamed login still works. Only
+  a `User` account is assigned. If the lookup fails, or names a bot, the issue opens
+  **unassigned**, never on a bot. It doesn't use `github.triggering_actor`: on scheduled
+  runs nix-config measured that resolving to a bot. It comments on that issue only when the
+  revs change again;
 - the pins match: it closes that issue;
 - the check itself breaks: the run **fails**. Whether that sends mail depends on the
   schedule owner's GitHub Actions notification settings.
@@ -119,8 +121,8 @@ How the watcher reports, and what it beat:
 | `repository_dispatch` from nix-config's bump | It needs a token that can write to this repo from nix-config, and it couples nix-config's lock bump to one plugin here. |
 | Warnings in ci-watch's GREEN line | ci-watch wakes only on pushes to this repo, and the lag is created by a nix-config merge, not by a push here. |
 
-**What has not run for real.** `pin-watch.sh`'s create, comment and close paths are tested
-against a stub `gh` only (`tests/lock-parity-cases.sh`). The one live run so far hit the
+**What has not run for real.** The keeper's create, comment and close paths are tested
+against a stub `gh` only, in kattakath/.github. This workflow's live runs so far hit the
 match path. A real `gh` call that **errors** fails the step, so the run goes **red** rather
 than passing silently. A call that succeeds but returns a different shape from the stub's
 (say, a title that no longer matches) is **not** caught, and could open a second issue.
