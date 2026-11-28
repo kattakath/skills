@@ -41,7 +41,7 @@ No remote: `local:<repo root>`. A worktree maps to its main repo through
   - **On macOS with Ghostty,** `ensure` opens that `claude` itself through this plugin's own
     [`bin/ghostty-split`](bin/ghostty-split), in a
     Ghostty split below his focused pane (`ghostty-split --cwd <repo> -- claude`). It exits
-    **77** with "the trust prompt is open in a Ghostty split below; accept it there, then
+    **6** with "the trust prompt is open in a Ghostty split below; accept it there, then
     retry". It never waits: `claude` stays open, so `--wait` would block on it.
   - **Only with an operator present:** never when `CI` is set, and only with a TTY on stdin
     or `TERM_PROGRAM=ghostty`. The Bash tool and the hooks have no TTY, so the inherited

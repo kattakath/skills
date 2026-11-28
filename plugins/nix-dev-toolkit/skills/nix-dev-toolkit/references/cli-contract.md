@@ -37,7 +37,7 @@ names its source, checked at the source on 2026-11-28.
   "Map the non-zero exit codes to the most important failure modes."
 - **Not sysexits** (64 usage, 69 unavailable, …). FreeBSD sysexits(3): "This interface has
   been deprecated and is retained only for compatibility."
-- **An existing documented code that callers depend on stays** until a major version bump.
+- **House rule, not sourced: an existing documented code that callers depend on stays** until a major version bump.
   Renumbering one silently is worse than an odd number.
 
 ## Never wire a CLI straight in as a hook

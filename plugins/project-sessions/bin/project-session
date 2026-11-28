@@ -5,6 +5,10 @@
 #   project-session ensure [dir] [--prompt TEXT] [--permission-mode MODE] [--dry-run] [--debug]
 #                                                   live | resumed | created <name>
 #   project-session status [dir] [--session ID]     "<name> <state>" | "<name> none"
+#   exit: 0 ok; 1 failed (claude's own message on stderr); 2 not a git repo; 3 unknown session
+#         state; 4 `claude agents` failed; 5 a resume started a copy; 6 untrusted folder, the
+#         trust prompt is open in a Ghostty split (retry after accepting); 75 another ensure
+#         holds the lock (retry once)
 #
 # Facts this relies on (measured on Claude Code 2.1.330):
 #   - session names are NOT unique; this script matches name AND repo root, and reports duplicates
@@ -160,7 +164,7 @@ run_claude() { # root args...
 
 # "Workspace not trusted": open the trust prompt for the operator instead of only printing it.
 # Runs `ghostty-split --cwd <root> -- claude`, a split below his focused Ghostty pane, and
-# exits 77 so the caller retries once he has accepted. Returns (falls back to today's message)
+# exits 6 so the caller retries once he has accepted. Returns (falls back to today's message)
 # when any condition fails:
 #   - bin/ghostty-split is missing, or it exits non-zero (3: Ghostty not running, no window, or
 #     no osascript, i.e. not macOS)
@@ -185,7 +189,7 @@ trust_split() { # root
   [ $((now - at)) -ge "$SPLIT_QUIET_S" ] || return 0
   "$SPLIT" --cwd "$root" -- claude >/dev/null 2>&1 || return 0
   printf '%s\n' "$now" >"$mark"
-  RC=77 die "Workspace not trusted: the trust prompt is open in a Ghostty split below; accept it there, then retry"
+  RC=6 die "Workspace not trusted: the trust prompt is open in a Ghostty split below; accept it there, then retry"
 }
 
 resolve() { # dir -> sets ROOT NAME
@@ -314,6 +318,6 @@ case ${1:-} in
   ensure) shift; cmd_ensure "$@" ;;
   status) shift; cmd_status "$@" ;;
   url-name) shift; url_name "${1:?url}" ;; # test seam
-  -h | --help | help | '') sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//' ;;
+  -h | --help | help | '') sed -n '2,11p' "$0" | sed 's/^# \{0,1\}//' ;;
   *) die "unknown subcommand: $1 (name | ensure | status)" ;;
 esac

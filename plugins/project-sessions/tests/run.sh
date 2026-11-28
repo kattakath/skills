@@ -236,7 +236,7 @@ split() { # [env...] -> runs an untrusted ensure in a Ghostty-looking, non-CI co
 splits() { [ -f "$T/split.log" ] && grep -c . "$T/split.log" || echo 0; }
 rm -f "$T/split.log"; rm -rf "$T/state/project-sessions/"*.trust-split
 run split
-check "split: opens claude in a split at the repo, exits 77" "$RC:$(cat "$T/split.log" 2>/dev/null)" "77:--cwd $R -- claude"
+check "split: opens claude in a split at the repo, exits 6" "$RC:$(cat "$T/split.log" 2>/dev/null)" "6:--cwd $R -- claude"
 contains "split: says the prompt is waiting there" "$ERR" "the trust prompt is open in a Ghostty split below; accept it there, then retry"
 run split
 check "split: untrusted again within the window: no second split, today's message" "$RC:$(splits)" "1:1"
@@ -259,7 +259,11 @@ mkdir -p "$T/osa"
 printf '#!/usr/bin/env bash\nshift\ncat >/dev/null\nprintf "%%s\\n" "$@" >"%s/osa.argv"\necho TERM-ID-9\n' "$T" >"$T/osa/osascript"
 chmod +x "$T/osa/osascript"
 run env -u CI -u PROJECT_SESSION_GHOSTTY_SPLIT TERM_PROGRAM=ghostty PATH="$T/osa:$PATH" STUB_UNTRUSTED=1 "$PS" ensure "$R" </dev/null
-check "split: the default is the plugin's own ghostty-split (claude, at the repo)" "$RC:$(head -2 "$T/osa.argv" 2>/dev/null | tr '\n' ' ')" "77:claude $R "
+check "split: the default is the plugin's own ghostty-split (claude, at the repo)" "$RC:$(head -2 "$T/osa.argv" 2>/dev/null | tr '\n' ' ')" "6:claude $R "
+# 77 (a sysexits code) was this exit in 1.5.0/1.6.0 only; the CLI contract retired it.
+check "split: exit 77 is gone from the script" "$(grep -c 'RC=77' "$PS")" 0
+run "$PS" --help
+check "--help: stdout, exit 0, lists exit 6" "$RC:$(printf '%s' "$OUT" | grep -c '6 untrusted folder')" "0:1"
 rm -rf "$T/state/project-sessions/"*.trust-split
 
 # bin/ghostty-split's own cases (ported from nix-config), counted into this suite.
