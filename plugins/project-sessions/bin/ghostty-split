@@ -29,11 +29,12 @@ Open a split below the focused Ghostty pane and run (default) or type a command 
   --cwd DIR        the split'"'"'s working directory (default: the current one)
   --type-only      type the line but do not press Enter (for guarded commands)
   --wait           block until the command ends; exit with its status
+  --timeout SECS   with --wait, give up after SECS (default 3600) and exit 4
   -h, --help       this text
 
 Exit: 0 opened (or, with --wait, the command'"'"'s own status); 2 usage error or a bad --cwd;
       3 Ghostty unavailable: not running, no window, or the AppleScript call failed. It never
-      launches Ghostty. Never pass a secret value: the line is typed visibly.'
+      launches Ghostty; 4 --wait timed out (the command may still be running in the split). Never pass a secret value: the line is typed visibly.'
 
 usage() { printf '%s\n' "$USAGE" >&2; exit 2; }
 
@@ -61,12 +62,13 @@ end run
 APPLESCRIPT
 }
 
-cwd=$PWD wait=0 enter="run"
+cwd=$PWD wait=0 enter="run" timeout=3600
 while [ $# -gt 0 ]; do
   case $1 in
     -h | --help) printf '%s\n' "$USAGE"; exit 0 ;;
     --cwd) [ $# -ge 2 ] || usage; cwd=$2; shift 2 ;;
     --wait) wait=1; shift ;;
+    --timeout) [ $# -ge 2 ] && [ "$2" -gt 0 ] 2>/dev/null || usage; timeout=$2; shift 2 ;;
     --type-only) enter="type"; shift ;;
     --) shift; break ;;
     *) usage ;;
@@ -94,7 +96,17 @@ if ! id=$(script | osascript - "$cmd" "$cwd" "$enter" 2>&1); then
 fi
 echo "ghostty-split: opened split $id below the focused pane" >&2
 [ "$wait" = 1 ] || exit 0
-while [ ! -s "$marker" ]; do sleep 0.5; done
+# Bounded: a split closed before its command finished never writes the marker, and an
+# unbounded wait would hold the caller forever (canon-review flagged it, 2026-11-28).
+SECONDS=0
+while [ ! -s "$marker" ]; do
+  if [ "$SECONDS" -ge "$timeout" ]; then
+    rm -f "$marker"
+    echo "ghostty-split: --wait gave up after ${timeout}s; split $id may still be running" >&2
+    exit 4
+  fi
+  sleep 0.5
+done
 status=$(cat "$marker")
 rm -f "$marker"
 exit "$status"

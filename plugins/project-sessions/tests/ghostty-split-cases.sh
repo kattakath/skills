@@ -20,6 +20,7 @@ case "${MODE:-ok}" in
   norun) echo "execution error: Ghostty is not running (1001)" >&2; exit 1 ;;
   nowin) echo "execution error: Ghostty has no window (1002)" >&2; exit 1 ;;
   wait) cmd=$(tr '\0' '\n' <"$T/argv" | head -1); (cd /tmp && bash -c "$cmd") >/dev/null 2>&1 & echo "TERM-ID-2" ;;
+  hang) echo "TERM-ID-3" ;; # the split opens, but its command never finishes (or the pane closed)
 esac
 EOS
 chmod +x "$T/bin/osascript"
@@ -61,6 +62,18 @@ MODE="wait" "$GS" --wait -- 'true' 2>/dev/null; rc=$?
 [ "$rc" = 2 ] && ok || bad "no command rc $rc, want 2"
 "$GS" --cwd /nonexistent -- true 2>/dev/null; rc=$?
 [ "$rc" = 2 ] && ok || bad "missing --cwd rc $rc, want 2"
+
+# Added: --wait is bounded. A command that never writes its status times out with exit 4 and
+# leaves no marker behind; a bad --timeout is a usage error.
+before=$(ls "${TMPDIR:-/tmp}" | grep -c '^ghostty-split\.' || true)
+MODE=hang "$GS" --wait --timeout 1 -- 'sleep 999' 2>"$T/err"; rc=$?
+[ "$rc" = 4 ] && grep -q 'gave up after 1s' "$T/err" && ok || bad "--wait timeout: rc $rc, want 4: $(cat "$T/err")"
+after=$(ls "${TMPDIR:-/tmp}" | grep -c '^ghostty-split\.' || true)
+[ "$after" -le "$before" ] && ok || bad "--wait timeout left a marker behind"
+"$GS" --wait --timeout 0 -- true 2>/dev/null; rc=$?
+[ "$rc" = 2 ] && ok || bad "--timeout 0 rc $rc, want 2"
+"$GS" --wait --timeout x -- true 2>/dev/null; rc=$?
+[ "$rc" = 2 ] && ok || bad "--timeout x rc $rc, want 2"
 
 # Added: --help is the contract's (stdout, exit 0, no osascript call); an unknown flag is usage.
 rm -f "$T/argv"
